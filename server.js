@@ -204,9 +204,9 @@ function getServerSettings(settings, serverId) {
   let s = {};
   if (serverId === '3') {
     s = settings.server3 || {};
-    s.endpoint = s.endpoint || "https://mayoristasunlock.net/";
+    s.endpoint = s.endpoint || "https://www.unlockerfast.com.mx/";
     s.username = s.username || "MegaUnlockPhone";
-    s.apiaccesskey = s.apiaccesskey || "48G-HD3-QBU-IW-3V-IER-8GR-11U";
+    s.apiaccesskey = s.apiaccesskey || "QXU-2HD-MAR-PKM-PAD-RFP-XK5-5ME";
   } else if (serverId === '2') {
     s = settings.server2 || {};
     s.endpoint = s.endpoint || "https://popi-gsm.com/public/";
