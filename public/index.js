@@ -357,6 +357,19 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       const data = await res.json();
       
+      
+      if (res.status === 403 && data.requireEmail) {
+         showEmailLinkModal(data.tempId);
+         return;
+      }
+      if (res.status === 403 && data.require2FA) {
+         showTotpModal(username, password);
+         return;
+      }
+      if (!res.ok) {
+         alert(data.error || 'Error de inicio de sesión');
+         return;
+      }
       if (res.ok) {
         authToken = data.token;
         authRole = data.role;
