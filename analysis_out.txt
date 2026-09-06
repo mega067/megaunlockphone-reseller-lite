@@ -1,0 +1,29 @@
+=== TOP LEVEL ===
+CREDIT
+CUSTOM
+CUSTOM_IMEI
+IMEINAME
+INFO
+MAXQNT
+MINQNT
+QNT
+Requires.Custom
+Requires.Imei
+SERVER
+SERVICEID
+SERVICENAME
+SERVICETYPE
+TIME
+_CLIENT_PRICE
+_REAL_COST
+_SERVICE_TYPE
+
+=== CUSTOM ===
+allow
+bulk
+custominfo
+customlen
+customname
+isalpha
+maxlength
+regex

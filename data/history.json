@@ -1,0 +1,40 @@
+[
+  {
+    "id": "txn_1786853972003",
+    "serverId": "1",
+    "userId": 1786853254911,
+    "username": "Rick",
+    "date": "2026-08-16T04:19:32.003Z",
+    "serviceId": "1",
+    "serviceName": "TEST API",
+    "serviceType": "IMEI",
+    "imei": "178685397163738",
+    "costCharged": 10,
+    "realCost": 0,
+    "profit": 10,
+    "orderId": 265,
+    "status": "pending",
+    "msg": "Order received",
+    "statusText": "Sin respuesta válida",
+    "updateTimestamp": "18/8/2026, 6:44:35 p.m."
+  },
+  {
+    "id": "txn_1786774542758",
+    "serverId": "1",
+    "userId": 1,
+    "username": "Angel",
+    "date": "2026-08-15T06:15:42.758Z",
+    "serviceId": "332",
+    "serviceName": "Disney Premium [1 Mes / 1 Perfil]✅",
+    "serviceType": "SERVER",
+    "imei": "N/A",
+    "costCharged": 51.41,
+    "realCost": 51.41,
+    "profit": 0,
+    "orderId": "249",
+    "status": "success",
+    "msg": "<div>\n<div> Usuario</div>\n<div>pedroivos2.br@platonuma.com</div>\n</div>\n<div>\n<div> Contraseña</div>\n<div>estandar123</div>\n</div>\n<div>\n<div> Perfil</div>\n<div>Perfil 4</div>\n</div>\n<div>\n<div> Garantía</div>\n<div>15 dias<small>Válida hasta 29/08/2026</small></div>\n</div>\n<div>\n<div> Condiciones</div>\n<div>✅ NO CAMBIAR NOMBRE A LOS PERFILES EVITA BANEO SIN REEMBOLSO, EN CASO DE CAMBIO DE CONTRASEÑA PIERDEN GARANTIA USUARIOS EN GENERAL YA QUE POR CAMBIO DE CONTRASEÑA NO HAY GARANTIAS<br />✅ NO CAMBIAR CONTRASEÑA<br />✅ UN SOLO PERFIL<br />✅ REPOCISIONES 24 A 72 HRS<br />OJO: INICIAR SESION CON CONTRASEÑA NO CON CODIGO<br /> NO COMPARTIR</div>\n</div>",
+    "statusText": "<div>\n<div> Usuario</div>\n<div>pedroivos2.br@platonuma.com</div>\n</div>\n<div>\n<div> Contraseña</div>\n<div>estandar123</div>\n</div>\n<div>\n<div> Perfil</div>\n<div>Perfil 4</div>\n</div>\n<div>\n<div> Garantía</div>\n<div>15 dias<small>Válida hasta 29/08/2026</small></div>\n</div>\n<div>\n<div> Condiciones</div>\n<div>✅ NO CAMBIAR NOMBRE A LOS PERFILES EVITA BANEO SIN REEMBOLSO, EN CASO DE CAMBIO DE CONTRASEÑA PIERDEN GARANTIA USUARIOS EN GENERAL YA QUE POR CAMBIO DE CONTRASEÑA NO HAY GARANTIAS<br />✅ NO CAMBIAR CONTRASEÑA<br />✅ UN SOLO PERFIL<br />✅ REPOCISIONES 24 A 72 HRS<br />OJO: INICIAR SESION CON CONTRASEÑA NO CON CODIGO<br /> NO COMPARTIR</div>\n</div>",
+    "updateTimestamp": "15/8/2026, 12:15:44 a.m."
+  }
+]

@@ -1,0 +1,6 @@
+#!/usr/bin/expect -f
+set timeout 20
+spawn ssh -o StrictHostKeyChecking=no megaunlockphone-panel@ssh-megaunlockphone-panel.alwaysdata.net "cat www/data/prices_1.json | grep -i -A 10 -B 5 'PRIME VIDEO 1 MES'"
+expect "password:"
+send "angel067L\r"
+expect eof

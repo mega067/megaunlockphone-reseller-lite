@@ -1,0 +1,35 @@
+[
+  {
+    "id": 1,
+    "username": "Angel",
+    "password": "angel067L",
+    "role": "admin",
+    "createdAt": "2026-08-13T00:00:00Z",
+    "credits_1": 0,
+    "credits_2": 0,
+    "credits_3": 0,
+    "credits": 0
+  },
+  {
+    "id": 1786687491934,
+    "username": "MeloJalas",
+    "password": "melo123",
+    "role": "reseller",
+    "credits_1": 21.5,
+    "credits_2": 0,
+    "createdAt": "2026-08-14T06:04:51.934Z",
+    "credits_3": 0,
+    "markup": 2.4
+  },
+  {
+    "id": 1786853254911,
+    "username": "Rick",
+    "password": "rick123",
+    "role": "reseller",
+    "markup": 10,
+    "credits_1": 20,
+    "credits_2": 0,
+    "credits_3": 0,
+    "createdAt": "2026-08-16T04:07:34.911Z"
+  }
+]

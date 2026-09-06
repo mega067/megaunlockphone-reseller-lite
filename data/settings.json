@@ -1,0 +1,28 @@
+{
+  "server1": {
+    "name": "LatamGSM",
+    "endpoint": "https://latamgsm.com/dhru/",
+    "username": "angeljuares067@gmail.com",
+    "apiaccesskey": "pk60-qXSs-xXsF-qZPa",
+    "resellerMarkup": 2.4,
+    "clientMarkup": 0
+  },
+  "server2": {
+    "name": "POPI-GSM",
+    "endpoint": "https://popi-gsm.com/public/",
+    "username": "angeljuares067@gmail.com",
+    "apiaccesskey": "B29Q-G7EJ-A3OU-629Z-VQYO-5ZX9-F8SE-QCRU",
+    "resellerMarkup": 2.4,
+    "clientMarkup": 0
+  },
+  "exchangeRate": 17.6,
+  "server3": {
+    "name": "UnlockerFast",
+    "endpoint": "https://www.unlockerfast.com.mx/",
+    "username": "MegaUnlockPhone",
+    "apiaccesskey": "QXU-2HD-MAR-PKM-PAD-RFP-XK5-5ME",
+    "resellerMarkup": 0,
+    "clientMarkup": 0
+  },
+  "adminProfitBalance": 10
+}
