@@ -743,17 +743,32 @@ async function processOrder(req, res) {
     if (serverId === '1' || serverId === '3') {
       let customXml = '';
       if (custom_fields && typeof custom_fields === 'object' && Object.keys(custom_fields).length > 0) {
-        // Dhru Fusion API expects CUSTOMFIELD as base64-encoded JSON string
-        const cleanedFields = {};
-        for (const [key, val] of Object.entries(custom_fields)) {
-          const cleanKey = key.replace(/[^A-Za-z0-9]/g, '');
-          if (cleanKey !== '') {
-            cleanedFields[cleanKey] = val;
+        
+        if (serverId === '1') {
+          // Server 1 (LatamGSM) expects CUSTOMFIELD as base64-encoded JSON string
+          const cleanedFields = {};
+          for (const [key, val] of Object.entries(custom_fields)) {
+            const cleanKey = key.replace(/[^A-Za-z0-9]/g, '');
+            if (cleanKey !== '') {
+              cleanedFields[cleanKey] = val;
+            }
           }
-        }
-        if (Object.keys(cleanedFields).length > 0) {
-          const b64 = Buffer.from(JSON.stringify(cleanedFields)).toString('base64');
-          customXml = `<CUSTOMFIELD>${b64}</CUSTOMFIELD>`;
+          if (Object.keys(cleanedFields).length > 0) {
+            const b64 = Buffer.from(JSON.stringify(cleanedFields)).toString('base64');
+            customXml = `<CUSTOMFIELD>${b64}</CUSTOMFIELD>`;
+          }
+        } else {
+          // Server 3 uses the classic XML sub-tags for CUSTOMFIELD
+          let innerCustomXml = '';
+          for (const [key, val] of Object.entries(custom_fields)) {
+            const cleanKey = key.replace(/[^A-Za-z0-9]/g, '');
+            if (cleanKey !== '') {
+              innerCustomXml += `<${cleanKey}>${val}</${cleanKey}>`;
+            }
+          }
+          if (innerCustomXml !== '') {
+            customXml = `<CUSTOMFIELD>${innerCustomXml}</CUSTOMFIELD>`;
+          }
         }
       }
 
