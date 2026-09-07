@@ -43,7 +43,7 @@ async function reportarPagoProveedor(providerAccount, claveRastreo, emisorBankCo
       criterio: claveRastreo,
       emisor: emisorBankCode,
       monto: monto,
-      correo: userEmail || 'angeljuares067@gmail.com',
+      correo: (userEmail && userEmail.includes('@')) ? userEmail : 'angeljuares067@gmail.com',
       banco: 1 // ID fijo usado en su frontend
     };
 
