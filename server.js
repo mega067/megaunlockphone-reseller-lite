@@ -12,25 +12,8 @@ const { getDepositAccount } = require('./paymentRouter');
 const { validarPagoInteligente } = require('./banxicoCEP');
 const { reportarPagoProveedor } = require('./providerPayment');
 
-// Auto-start WhatsApp Bot with Jitter to prevent Passenger multi-worker collisions
-const workerDelay = Math.floor(Math.random() * 8000) + 1000; // Random delay between 1 and 9 segundos
-setTimeout(() => {
-  exec('pgrep -f "node whatsappBot.js"', (err, stdout) => {
-    if (!stdout || stdout.trim() === '') {
-      try {
-        const out = fs.openSync(path.join(__dirname, 'bot_logs.txt'), 'a');
-        const errLog = fs.openSync(path.join(__dirname, 'bot_logs.txt'), 'a');
-        const child = spawn('node', ['whatsappBot.js'], {
-          detached: true,
-          cwd: __dirname,
-          stdio: [ 'ignore', out, errLog ]
-        });
-        child.unref();
-        console.log('Automáticamente arrancando whatsappBot.js (PID: ' + child.pid + ') tras ' + workerDelay + 'ms');
-      } catch (e) {}
-    }
-  });
-}, workerDelay);
+// WhatsApp Bot is now managed via AlwaysData User Services to run as a continuous daemon.
+// The auto-spawn logic has been removed to prevent double connections.
 
 function enqueueWhatsApp(type, message, userId = null) {
   const queueFile = path.join(__dirname, 'queue.json');
@@ -86,17 +69,23 @@ const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 const DATA_DIR = path.join(__dirname, 'data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
 
+let dbCache = {};
 function readDB(file) {
+  if (dbCache[file] !== undefined) return dbCache[file];
   const filepath = path.join(DATA_DIR, file);
   if (!fs.existsSync(filepath)) return null;
   try {
-    return JSON.parse(fs.readFileSync(filepath, 'utf8'));
+    const data = JSON.parse(fs.readFileSync(filepath, 'utf8'));
+    dbCache[file] = data;
+    return data;
   } catch (e) {
     return null;
   }
 }
 
 function writeDB(file, data) {
+  dbCache[file] = data;
+  // Write synchronously to guarantee data integrity across worker reloads
   fs.writeFileSync(path.join(DATA_DIR, file), JSON.stringify(data, null, 2));
 }
 
