@@ -491,6 +491,10 @@ app.get('/api/products', requireAuth, async (req, res) => {
             clientPrice = Math.ceil(resellerCost + parseFloat(clientMarkup));
           }
           
+          // Enforce minimum price (must be at least API cost)
+          if (isNaN(resellerCost) || resellerCost < realCredit) resellerCost = Math.ceil(realCredit);
+          if (isNaN(clientPrice) || clientPrice < resellerCost) clientPrice = resellerCost;
+
           service.CREDIT = resellerCost.toString();
           service._RESELLER_COST = resellerCost.toString();
           service._CLIENT_PRICE = clientPrice.toString();
@@ -743,32 +747,17 @@ async function processOrder(req, res) {
     if (serverId === '1' || serverId === '3') {
       let customXml = '';
       if (custom_fields && typeof custom_fields === 'object' && Object.keys(custom_fields).length > 0) {
-        
-        if (serverId === '1') {
-          // Server 1 (LatamGSM) expects CUSTOMFIELD as base64-encoded JSON string
-          const cleanedFields = {};
-          for (const [key, val] of Object.entries(custom_fields)) {
-            const cleanKey = key.replace(/[^A-Za-z0-9]/g, '');
-            if (cleanKey !== '') {
-              cleanedFields[cleanKey] = val;
-            }
+        // Ambos servidores (LatamGSM y UnlockerFast) aceptan CUSTOMFIELD como JSON en base64
+        // Esto preserva los espacios en los nombres de los campos (ej. "ESCRIBE 1 PARA ORDENAR")
+        const cleanedFields = {};
+        for (const [key, val] of Object.entries(custom_fields)) {
+          if (key.trim() !== '') {
+            cleanedFields[key] = val;
           }
-          if (Object.keys(cleanedFields).length > 0) {
-            const b64 = Buffer.from(JSON.stringify(cleanedFields)).toString('base64');
-            customXml = `<CUSTOMFIELD>${b64}</CUSTOMFIELD>`;
-          }
-        } else {
-          // Server 3 uses the classic XML sub-tags for CUSTOMFIELD
-          let innerCustomXml = '';
-          for (const [key, val] of Object.entries(custom_fields)) {
-            const cleanKey = key.replace(/[^A-Za-z0-9]/g, '');
-            if (cleanKey !== '') {
-              innerCustomXml += `<${cleanKey}>${val}</${cleanKey}>`;
-            }
-          }
-          if (innerCustomXml !== '') {
-            customXml = `<CUSTOMFIELD>${innerCustomXml}</CUSTOMFIELD>`;
-          }
+        }
+        if (Object.keys(cleanedFields).length > 0) {
+          const b64 = Buffer.from(JSON.stringify(cleanedFields)).toString('base64');
+          customXml = `<CUSTOMFIELD>${b64}</CUSTOMFIELD>`;
         }
       }
 
