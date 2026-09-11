@@ -3,7 +3,7 @@ echo "🚀 Iniciando despliegue hacia AlwaysData..."
 
 # Se suben los archivos sincronizando la carpeta actual pero EXCLUYENDO carpetas sensibles
 # para no sobreescribir la base de datos real (data) ni la de node_modules.
-rsync -avzc \
+rsync -avzc --delete \
   --exclude 'node_modules' \
   --exclude '.git' \
   --exclude 'data' \

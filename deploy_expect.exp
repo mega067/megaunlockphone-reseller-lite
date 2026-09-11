@@ -1,6 +1,0 @@
-#!/usr/bin/expect -f
-set timeout -1
-spawn rsync -avzc -e "ssh -o StrictHostKeyChecking=no" --exclude node_modules --exclude .git --exclude data --exclude baileys_auth --exclude .wwebjs_auth --exclude package-lock.json ./ megaunlockphone-panel@ssh-megaunlockphone-panel.alwaysdata.net:~/www/
-expect "password:"
-send "angel067L\r"
-expect eof
