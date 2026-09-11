@@ -1403,9 +1403,9 @@ app.post('/api/admin/bot/start', requireAuth, requireAdmin, (req, res) => {
       const out = fs.openSync(path.join(__dirname, 'bot_logs.txt'), 'a');
       const errLog = fs.openSync(path.join(__dirname, 'bot_logs.txt'), 'a');
       
-      // Iniciamos a través de 'bash -lc' para simular un inicio de sesión SSH
-      // Esto carga NVM y asegura que use la misma versión de Node.js (v24) que en SSH
-      const child = spawn('bash', ['-lc', 'node whatsappBot.js'], {
+      // Usar process.execPath garantiza que usamos la misma ruta exacta de Node.js
+      // que está ejecutando el server.js, evitando errores si NVM cambia de versión.
+      const child = spawn(process.execPath, ['whatsappBot.js'], {
         detached: true,
         cwd: __dirname,
         stdio: [ 'ignore', out, errLog ]
