@@ -137,4 +137,4 @@ function writeDB(file, data) {
   fs.writeFileSync(filepath, JSON.stringify(data, null, 2));
 }
 
-module.exports = { readDB, writeDB };
+module.exports = { readDB, writeDB, DATA_DIR };
