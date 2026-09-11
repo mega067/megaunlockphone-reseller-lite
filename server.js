@@ -1269,10 +1269,10 @@ app.get('/api/users', requireAuth, requireAdmin, (req, res) => {
 
 app.put('/api/users/:id/password', requireAuth, (req, res) => {
   const { password } = req.body;
-  const userId = parseInt(req.params.id);
+  const userId = String(req.params.id);
   
   // User can only change their own password, unless they are admin
-  if (req.user.role !== 'admin' && req.user.id !== userId) {
+  if (req.user.role !== 'admin' && String(req.user.id) !== userId) {
     return res.status(403).json({ error: 'Permiso denegado' });
   }
   
@@ -1281,7 +1281,7 @@ app.put('/api/users/:id/password', requireAuth, (req, res) => {
   }
   
   const users = readDB('users.json') || [];
-  const userIndex = users.findIndex(u => u.id === userId);
+  const userIndex = users.findIndex(u => String(u.id) === userId);
   
   if (userIndex === -1) {
     return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -1321,7 +1321,7 @@ app.put('/api/users/:id', requireAuth, requireAdmin, (req, res) => {
   const { credits, password, role, markup } = req.body;
   const serverId = getServerId(req);
   const users = readDB('users.json') || [];
-  const user = users.find(u => u.id === parseInt(req.params.id));
+  const user = users.find(u => String(u.id) === String(req.params.id));
   if (!user) return res.status(404).json({ error: 'User not found' });
 
   if (credits !== undefined) {
@@ -1365,9 +1365,9 @@ app.put('/api/users/:id', requireAuth, requireAdmin, (req, res) => {
 
 app.delete('/api/users/:id', requireAuth, requireAdmin, (req, res) => {
   const users = readDB('users.json') || [];
-  if (parseInt(req.params.id) === req.user.id) return res.status(400).json({ error: 'Cannot delete yourself' });
+  if (String(req.params.id) === String(req.user.id)) return res.status(400).json({ error: 'Cannot delete yourself' });
   
-  const newUsers = users.filter(u => u.id !== parseInt(req.params.id));
+  const newUsers = users.filter(u => String(u.id) !== String(req.params.id));
   writeDB('users.json', newUsers);
   createAutoBackup('Eliminacion_Usuario');
   res.json({ success: true });
