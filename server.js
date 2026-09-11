@@ -66,28 +66,7 @@ let catalogVersion = 1;
 const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 
 // Database functions
-const DATA_DIR = path.join(__dirname, 'data');
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
-
-let dbCache = {};
-function readDB(file) {
-  if (dbCache[file] !== undefined) return dbCache[file];
-  const filepath = path.join(DATA_DIR, file);
-  if (!fs.existsSync(filepath)) return null;
-  try {
-    const data = JSON.parse(fs.readFileSync(filepath, 'utf8'));
-    dbCache[file] = data;
-    return data;
-  } catch (e) {
-    return null;
-  }
-}
-
-function writeDB(file, data) {
-  dbCache[file] = data;
-  // Write synchronously to guarantee data integrity across worker reloads
-  fs.writeFileSync(path.join(DATA_DIR, file), JSON.stringify(data, null, 2));
-}
+const { readDB, writeDB, DATA_DIR } = require('./src/db');
 
 // Auto-repair script: Wipe any legacy negative debt from Admin accounts
 try {
@@ -1018,6 +997,19 @@ app.get('/api/history', requireAuth, (req, res) => {
   }
 });
 
+app.get('/api/recharges', requireAuth, (req, res) => {
+  const recharges = readDB('recharges.json') || [];
+  const userRecharges = recharges.filter(r => r.userId === req.user.id).sort((a,b) => new Date(b.date) - new Date(a.date));
+  res.json(userRecharges);
+});
+
+app.get('/api/admin/recharges', requireAuth, (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Unauthorized' });
+  const recharges = readDB('recharges.json') || [];
+  const sortedRecharges = recharges.sort((a,b) => new Date(b.date) - new Date(a.date));
+  res.json(sortedRecharges);
+});
+
 app.post('/api/history/add', requireAuth, (req, res) => {
   const user = req.user;
   if (user.role !== 'admin') {
@@ -1885,6 +1877,10 @@ app.post('/api/bot/add_money', async (req, res) => {
     }
     enqueueWhatsApp('private', msgToReseller, users[resellerIdx].id);
     enqueueWhatsApp('group', groupMsg);
+
+    if (numAmount > 0) {
+      logRecharge(users[resellerIdx].id, users[resellerIdx].username, numAmount, 'MANUAL_BOT', adminUser.username, serverId);
+    }
 
     res.json({ success: true, newBalance: users[resellerIdx][creditKey], resellerName: users[resellerIdx].username });
   } catch (e) {

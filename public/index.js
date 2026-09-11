@@ -275,6 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
       btnRechargeBalance.classList.add('hidden');
       btnWhatsappBot.classList.add('hidden');
       btnUserProfile.classList.add('hidden');
+      if (btnRechargesHistory) btnRechargesHistory.classList.add('hidden');
       btnLogout.classList.add('hidden');
       
       loginView.classList.add('hidden');
@@ -298,6 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       } else {
         btnUserProfile.classList.remove('hidden');
+        if (btnRechargesHistory) btnRechargesHistory.classList.remove('hidden');
       }
       
       btnRechargeBalance.classList.remove('hidden'); // Shown for EVERYONE now
@@ -385,6 +387,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (btnImportOrder) btnImportOrder.classList.remove('hidden');
         } else {
           btnUserProfile.classList.remove('hidden');
+          if (btnRechargesHistory) btnRechargesHistory.classList.remove('hidden');
         }
 
         btnRechargeBalance.classList.remove('hidden'); // Shown for EVERYONE now
@@ -423,6 +426,7 @@ document.addEventListener('DOMContentLoaded', () => {
     productsSection.classList.remove('hidden');
     historySection.classList.add('hidden');
     if (adminSection) adminSection.classList.add('hidden');
+    if (typeof rechargesSection !== 'undefined' && rechargesSection) rechargesSection.classList.add('hidden');
     if (!categoriesGrid.classList.contains('hidden')) {
       renderProducts(productsList);
     }
@@ -435,6 +439,7 @@ document.addEventListener('DOMContentLoaded', () => {
     historySection.classList.remove('hidden');
     productsSection.classList.add('hidden');
     if (adminSection) adminSection.classList.add('hidden');
+    if (typeof rechargesSection !== 'undefined' && rechargesSection) rechargesSection.classList.add('hidden');
     fetchOrderHistory(); // Refresh history every time the tab is opened
   });
   
@@ -446,6 +451,7 @@ document.addEventListener('DOMContentLoaded', () => {
       adminSection.classList.remove('hidden');
       productsSection.classList.add('hidden');
       historySection.classList.add('hidden');
+      if (typeof rechargesSection !== 'undefined' && rechargesSection) rechargesSection.classList.add('hidden');
       
       await loadAdminData();
       await fetchMasterHistory();
@@ -2165,6 +2171,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div style="display: flex; gap: 0.5rem;">
                   <button type="button" class="btn btn-sm btn-copy-raw" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 0.3rem; font-weight: bold;"><i data-lucide="copy" style="width: 14px; height: 14px;"></i> Copiar</button>
                   ${item.status === 'success' ? `<button type="button" class="btn btn-sm btn-ticket" style="background: rgba(0,240,255,0.1); color: #00f0ff; border: 1px solid rgba(0,240,255,0.3); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 0.3rem; font-weight: bold;"><i data-lucide="image" style="width: 14px; height: 14px;"></i> Generar Ticket</button>` : ''}
+                  ${authRole === 'admin' && !item.isRefunded && item.status !== 'success' ? `<button type="button" class="btn btn-sm btn-refund" style="background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 0.3rem; font-weight: bold;" data-orderid="${item.orderId}" data-serverid="${item.serverId}"><i data-lucide="undo-2" style="width: 14px; height: 14px;"></i> Reembolsar Cliente</button>` : ''}
+                  ${item.isRefunded ? `<span style="background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: bold; display: flex; align-items: center; gap: 0.3rem;"><i data-lucide="check-circle" style="width: 14px; height: 14px;"></i> Dinero Reembolsado</span>` : ''}
                 </div>
               </div>
               <pre class="detail-val-pre">${colorizeServerResponse(item.statusText || item.msg || 'N/A')}</pre>
@@ -2236,6 +2244,44 @@ document.addEventListener('DOMContentLoaded', () => {
           } catch (e) {
             console.error('Error al copiar', e);
             alert('Error al copiar al portapapeles');
+          }
+        });
+      }
+
+      // Refund Button Event Listener
+      const btnRefund = trDetails.querySelector('.btn-refund');
+      if (btnRefund) {
+        btnRefund.addEventListener('click', async () => {
+          if (!confirm(`¿Estás seguro de que quieres reembolsar la orden #${item.orderId} a ${item.username}?`)) return;
+          
+          const orderId = btnRefund.getAttribute('data-orderid');
+          const serverId = btnRefund.getAttribute('data-serverid');
+          
+          btnRefund.disabled = true;
+          btnRefund.innerHTML = 'Reembolsando...';
+          
+          try {
+            const res = await fetch('/api/admin/refund', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+              body: JSON.stringify({ orderId, serverId })
+            });
+            const data = await res.json();
+            if (data.success) {
+              alert('Orden reembolsada correctamente al usuario.');
+              btnRefund.innerHTML = 'Reembolsado ✅';
+              btnRefund.classList.remove('btn-refund');
+              // Auto-refresh the page or trigger fetchHistory
+              if (typeof fetchHistory === 'function') fetchHistory();
+            } else {
+              alert(data.error || 'Error al reembolsar');
+              btnRefund.disabled = false;
+              btnRefund.innerHTML = 'Reintentar Reembolso';
+            }
+          } catch (e) {
+            alert('Error de conexión');
+            btnRefund.disabled = false;
+            btnRefund.innerHTML = 'Reintentar Reembolso';
           }
         });
       }
@@ -4391,3 +4437,81 @@ document.addEventListener('DOMContentLoaded', () => {
   }, 15000);
 
 });
+
+// Recharges Logic
+const btnRechargesHistory = document.getElementById('btnRechargesHistory');
+const rechargesSection = document.getElementById('rechargesSection');
+const rechargesBody = document.getElementById('rechargesBody');
+const rechargesCount = document.getElementById('rechargesCount');
+const btnSyncRecharges = document.getElementById('btnSyncRecharges');
+
+let rechargesHistory = [];
+
+function formatType(type) {
+  if (type === 'SPEI') return '<span style="color:#10b981;">SPEI / Banco</span>';
+  if (type === 'MANUAL_ADMIN') return '<span style="color:#8b5cf6;">Manual (Admin)</span>';
+  if (type === 'MANUAL_BOT') return '<span style="color:#3b82f6;">Bot WhatsApp</span>';
+  return escapeHtml(type);
+}
+
+async function fetchRecharges() {
+  try {
+    const url = authRole === 'admin' ? '/api/admin/recharges' : '/api/recharges';
+    const res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + authToken }});
+    const data = await res.json();
+    if (res.ok) {
+      rechargesHistory = data;
+      renderRecharges();
+    }
+  } catch (e) {
+    console.error('Error fetching recharges', e);
+  }
+}
+
+function renderRecharges() {
+  if (!rechargesBody) return;
+  rechargesBody.innerHTML = '';
+  rechargesCount.textContent = rechargesHistory.length;
+  
+  if (authRole === 'admin') {
+    document.querySelectorAll('.admin-col-recharge').forEach(e => e.classList.remove('hidden'));
+  }
+
+  if (rechargesHistory.length === 0) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem;">No hay recargas registradas.</td>`;
+    rechargesBody.appendChild(tr);
+    return;
+  }
+
+  rechargesHistory.forEach(item => {
+    const tr = document.createElement('tr');
+    const displayServer = item.serverId === '3' ? 'OMEGA' : (item.serverId === '2' ? 'ALPHA' : 'MEGA');
+    const colorServer = item.serverId === '3' ? '#f59e0b' : (item.serverId === '2' ? '#3b82f6' : '#ec4899');
+    
+    tr.innerHTML = `
+      <td>${new Date(item.date).toLocaleString()}</td>
+      ${authRole === 'admin' ? `<td style="color:#a78bfa; font-weight:bold;">${escapeHtml(item.username)}</td>` : ''}
+      <td style="color:#10b981; font-weight:bold;">$${parseFloat(item.amount).toFixed(2)} MXN</td>
+      <td>${formatType(item.type)}</td>
+      <td>${escapeHtml(item.adminUsername || 'Sistema')}</td>
+      <td><span style="color:${colorServer}; font-weight:bold;">${displayServer}</span></td>
+    `;
+    rechargesBody.appendChild(tr);
+  });
+}
+
+if (btnRechargesHistory) {
+  btnRechargesHistory.addEventListener('click', () => {
+    productsSection.classList.add('hidden');
+    historySection.classList.add('hidden');
+    if (typeof adminSection !== 'undefined' && adminSection) adminSection.classList.add('hidden');
+    rechargesSection.classList.remove('hidden');
+    fetchRecharges();
+  });
+}
+if (btnSyncRecharges) {
+  btnSyncRecharges.addEventListener('click', () => {
+    fetchRecharges();
+  });
+}
