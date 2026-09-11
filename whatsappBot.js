@@ -175,7 +175,12 @@ async function connectToWhatsApp() {
             } else if (cmd === '/servicios' || cmd === '!servicios') {
                 await sock.sendMessage(remoteJid, { text: '🚀 *Servicios MegaUnlock*\n\nOfrecemos desbloqueos, liberaciones y recargas al mejor precio. ¡Regístrate en nuestro panel web para ver el catálogo completo y hacer tus pedidos!' });
             } else if (cmd === '/ayuda' || cmd === '!ayuda' || cmd === 'ayuda' || cmd === '/comandos' || cmd === '!comandos' || cmd === 'comandos') {
-                let helpText = '🤖 *¡Hola! Soy MegaBOOT, tu asistente personal.*\n\nAquí tienes mis comandos mágicos:\n\n🔎 *BÚSQUEDA DE SERVICIOS*\n(Disponibles en el grupo)\n📱 */bus1 <modelo>* - Buscar en Servidor 1\n📱 */bus2 <modelo>* - Buscar en Servidor 2\n📱 */bus3 <modelo>* - Buscar en Servidor 3\n\n🛒 *COMPRAS*\n(Realiza pedidos directamente)\n🛒 */pedir1 <ID>* - Pedir en Servidor 1\n🛒 */pedir2 <ID>* - Pedir en Servidor 2\n🛒 */pedir3 <ID>* - Pedir en Servidor 3\n\n🔐 *COMANDOS PRIVADOS*\n(Envíamelos por Mensaje Privado)\n🧾 */ticket <ID>* - Generar un recibo para tu cliente\n🛍️ */pedidos* - Ver tus últimos 5 pedidos\n💳 */saldo* - Consultar tu saldo en los servidores\n👤 */perfil* - Ver los datos de tu cuenta\n🎧 */soporte* - Opciones de ayuda\n🔌 */desvincular* - Desconectar tu cuenta\n\n_🔔 ¡Te enviaré un mensajito en cuanto tus pedidos cambien de estado!_';
+                let helpText = '🤖 *¡Hola! Soy MegaBOOT, tu asistente personal.*\n\nAquí tienes mis comandos mágicos:\n\n🔎 *BÚSQUEDA DE SERVICIOS*\n(Disponibles en el grupo)\n📱 */bus1 <modelo>* - Buscar en Servidor 1\n📱 */bus2 <modelo>* - Buscar en Servidor 2\n📱 */bus3 <modelo>* - Buscar en Servidor 3\n\n🛒 *COMPRAS*\n(Realiza pedidos directamente)\n🛒 */pedir1 <ID>* - Pedir en Servidor 1\n🛒 */pedir2 <ID>* - Pedir en Servidor 2\n🛒 */pedir3 <ID>* - Pedir en Servidor 3\n\n🔐 *COMANDOS PRIVADOS*\n(Envíamelos por Mensaje Privado)\n🧾 */ticket <ID>* - Generar un recibo para tu cliente\n🛍️ */pedidos* - Ver tus últimos 5 pedidos\n💳 */saldo* - Consultar tu saldo en los servidores\n👤 */perfil* - Ver los datos de tu cuenta\n💸 */recargar* - Recarga tu saldo automáticamente 24/7\n🎧 */soporte* - Opciones de ayuda\n🔌 */desvincular* - Desconectar tu cuenta\n\n_🔔 ¡Te enviaré un mensajito en cuanto tus pedidos cambien de estado!_';
+                const users = readDB(USERS_FILE) || [];
+                const user = users.find(u => u.id === linkedUserId);
+                if (user && user.role === 'admin') {
+                    helpText += '\n\n👑 *COMANDOS ADMIN:*\n💰 */addMoney* - Agregar saldo a un revendedor\n📉 */removeMoney* - Quitar saldo a revendedor\n🌐 */historial* - Ver últimos 10 pedidos globales\n📢 */msggrup* - Enviar anuncio al grupo oficial';
+                }
                 await sock.sendMessage(remoteJid, { text: helpText });
             } else if (cmd === '/historial' || cmd === '!historial' || cmd === 'historial') {
                 const senderJid = msg.key.participant || remoteJid;
@@ -659,7 +664,8 @@ async function connectToWhatsApp() {
                     }
                     const o = session.order;
                     let cleanStatus = (o.statusText || o.status || 'Completado').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').trim();
-                    const receipt = `🧾 *MEGAUNLOCKPHONE TICKET* 🧾\n━━━━━━━━━━━━━━━━━━━━━━\n\n🆔 *Orden:* #${o.orderId}\n📅 *Fecha:* ${new Date(o.date).toLocaleDateString()}\n📱 *IMEI/SN:* ${o.imei || 'N/A'}\n🔧 *Servicio:* ${o.serviceName}\n\n💲 *Total Pagado:* $${clientPrice.toFixed(2)}\n\n🔑 *Respuesta / Código:*\n${cleanStatus}\n\n🎉 *Estado:* Completado\n\n━━━━━━━━━━━━━━━━━━━━━━\n_¡Gracias por tu preferencia!_ 🌐`;
+                    const dateStr = o.date ? new Date(o.date).toLocaleString('es-MX', { timeZone: 'America/Mexico_City' }) : 'N/A';
+                    const receipt = `🧾 *MEGAUNLOCKPHONE TICKET* 🧾\n━━━━━━━━━━━━━━━━━━━━━━\n\n🆔 *Orden:* #${o.orderId}\n📅 *Fecha y Hora:* ${dateStr}\n📱 *IMEI/SN:* ${o.imei || 'N/A'}\n🔧 *Servicio:* ${o.serviceName}\n\n💲 *Total Pagado:* $${clientPrice.toFixed(2)}\n\n🔑 *Respuesta / Código:*\n${cleanStatus}\n\n🎉 *Estado:* Completado\n\n━━━━━━━━━━━━━━━━━━━━━━\n_¡Gracias por tu preferencia!_ 🌐`;
                     await sock.sendMessage(remoteJid, { text: receipt });
                     delete ticketSessions[remoteJid];
                     return;
@@ -708,9 +714,10 @@ async function connectToWhatsApp() {
                         let emoji = o.status === 'success' ? '✅' : (o.status === 'rejected' ? '❌' : '⏳');
                         let cleanStatus = (o.statusText || o.status || 'N/A').replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, '').trim();
                         if (cleanStatus.length > 50) cleanStatus = cleanStatus.substring(0, 47) + '...';
-                        resText += `📦 *${o.serviceName}*\n🆔 Orden: #${o.orderId}\n📱 IMEI: ${o.imei || 'N/A'}\n${emoji} Estado: ${cleanStatus}\n━━━━━━━━━━━━━━━━━━━━━━\n`;
+                        const dateStr = o.date ? new Date(o.date).toLocaleString('es-MX', { timeZone: 'America/Mexico_City' }) : 'N/A';
+                        resText += `📦 *${o.serviceName}*\n🆔 *Orden:* #${o.orderId}\n📱 *IMEI:* ${o.imei || 'N/A'}\n📅 *Fecha:* ${dateStr}\n${emoji} *Estado:* ${cleanStatus}\n━━━━━━━━━━━━━━━━━━━━━━\n`;
                     });
-                    resText += `\n_Para ver detalles completos, visita tu web._`;
+                    resText += `\n_Para ver detalles completos o tu historial antiguo, visita tu web._`;
                     await sock.sendMessage(remoteJid, { text: resText });
                 }
 
@@ -724,14 +731,15 @@ async function connectToWhatsApp() {
                     if (allOrders.length === 0) {
                         await sock.sendMessage(remoteJid, { text: '👻 *¡Qué vacío!* No hay pedidos recientes en todo el panel.' });
                     } else {
-                        let resText = '🌐 *Últimos 10 pedidos GLOBALES:*\n\n';
+                        let resText = '🌐 *ÚLTIMOS 10 PEDIDOS GLOBALES*\n━━━━━━━━━━━━━━━━━━━━━━\n';
                         allOrders.forEach(o => {
                             const reseller = users.find(u => u.id === o.userId);
                             const rName = reseller ? reseller.username : 'Desconocido';
                             let emoji = o.status === 'success' ? '✅' : (o.status === 'rejected' ? '❌' : '⏳');
                             let cleanStatus = (o.statusText || o.status || 'N/A').replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, '').trim();
                             if (cleanStatus.length > 50) cleanStatus = cleanStatus.substring(0, 47) + '...';
-                            resText += `👤 *${rName}*\n📦 *${o.serviceName}*\n🆔 ID Orden: #${o.orderId}\n📱 IMEI: ${o.imei || 'N/A'}\n${emoji} Estado: ${cleanStatus}\n---\n`;
+                            const dateStr = o.date ? new Date(o.date).toLocaleString('es-MX', { timeZone: 'America/Mexico_City' }) : 'N/A';
+                            resText += `👤 *Usuario:* ${rName}\n📦 *${o.serviceName}*\n🆔 *ID Orden:* #${o.orderId}\n📱 *IMEI:* ${o.imei || 'N/A'}\n📅 *Fecha:* ${dateStr}\n${emoji} *Estado:* ${cleanStatus}\n━━━━━━━━━━━━━━━━━━━━━━\n`;
                         });
                         await sock.sendMessage(remoteJid, { text: resText });
                     }
@@ -886,11 +894,11 @@ async function connectToWhatsApp() {
             } else if (cmd === '/soporte' || cmd === '!soporte' || cmd === 'soporte') {
                 await sock.sendMessage(remoteJid, { text: `🎧 *Soporte Técnico*\n\n¿Necesitas ayuda con un pedido o tienes dudas? ¡Estamos para apoyarte!\n\nPor favor, contacta directamente al administrador del panel o envía un mensaje detallando tu problema.\n_Tip: Si tu duda es sobre un pedido, ten tu ID a la mano._` });
             } else if (cmd === '/comandos' || cmd === '!comandos' || cmd === 'comandos' || cmd === 'ayuda' || cmd === '/ayuda') {
-                let helpText = '🤖 *¡Hola! Soy MegaBOOT, tu asistente personal.*\n\nAquí tienes mis comandos mágicos:\n\n🔎 *BÚSQUEDA DE SERVICIOS*\n📱 */bus1 <modelo>* - Buscar en Servidor 1\n📱 */bus2 <modelo>* - Buscar en Servidor 2\n📱 */bus3 <modelo>* - Buscar en Servidor 3\n\n🛒 *COMPRAS*\n🛒 */pedir1 <ID>* - Pedir en Servidor 1\n🛒 */pedir2 <ID>* - Pedir en Servidor 2\n🛒 */pedir3 <ID>* - Pedir en Servidor 3\n\n🔐 *MI CUENTA Y HERRAMIENTAS*\n💸 */recargar* - Recarga tu saldo automáticamente 24/7\n🧾 */ticket <ID>* - Generar un recibo para tu cliente final\n🛍️ */pedidos* - Ver tus últimos 5 pedidos\n💳 */saldo* - Consultar tu saldo en los servidores\n👤 */perfil* - Ver los datos de tu cuenta\n🎧 */soporte* - Opciones de ayuda\n🔌 */desvincular* - Desconectar tu cuenta';
+                let helpText = '🤖 *¡Hola! Soy MegaBOOT, tu asistente personal.*\n\nAquí tienes mis comandos mágicos:\n\n🔎 *BÚSQUEDA DE SERVICIOS*\n📱 */bus1 <modelo>* - Buscar en Servidor 1\n📱 */bus2 <modelo>* - Buscar en Servidor 2\n📱 */bus3 <modelo>* - Buscar en Servidor 3\n\n🛒 *COMPRAS*\n🛒 */pedir1 <ID>* - Pedir en Servidor 1\n🛒 */pedir2 <ID>* - Pedir en Servidor 2\n🛒 */pedir3 <ID>* - Pedir en Servidor 3\n\n🔐 *MI CUENTA Y HERRAMIENTAS*\n💸 */recargar* - Recarga tu saldo automáticamente 24/7\n🧾 */ticket <ID>* - Generar un recibo para tu cliente\n🛍️ */pedidos* - Ver tus últimos 5 pedidos\n💳 */saldo* - Consultar tu saldo en los servidores\n👤 */perfil* - Ver los datos de tu cuenta\n🎧 */soporte* - Opciones de ayuda\n🔌 */desvincular* - Desconectar tu cuenta';
                 const users = readDB(USERS_FILE) || [];
                 const user = users.find(u => u.id === linkedUserId);
                 if (user && user.role === 'admin') {
-                    helpText += '\n\n👑 *Comandos Admin:*\n💰 */addMoney* - Agregar saldo a un revendedor\n📉 */removeMoney* - Quitar saldo a un revendedor\n🌐 */historial* - Ver últimos 10 pedidos de todos los usuarios';
+                    helpText += '\n\n👑 *COMANDOS ADMIN:*\n💰 */addMoney* - Agregar saldo a un revendedor\n📉 */removeMoney* - Quitar saldo a revendedor\n🌐 */historial* - Ver últimos 10 pedidos globales\n📢 */msggrup* - Enviar anuncio al grupo oficial';
                 }
                 helpText += '\n\n_🔔 ¡Te enviaré un mensajito en cuanto tus pedidos cambien de estado!_';
                 await sock.sendMessage(remoteJid, { text: helpText });
