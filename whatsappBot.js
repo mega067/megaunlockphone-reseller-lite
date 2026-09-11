@@ -26,17 +26,7 @@ const WHATSAPP_USERS_FILE = path.join(DATA_DIR, 'whatsapp_users.json');
 const WHATSAPP_SETTINGS_FILE = path.join(DATA_DIR, 'whatsapp_settings.json');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 
-function readDB(file) {
-  try {
-    return JSON.parse(fs.readFileSync(file, 'utf8'));
-  } catch (e) {
-    return null;
-  }
-}
-
-function writeDB(file, data) {
-  fs.writeFileSync(file, JSON.stringify(data, null, 2));
-}
+const { readDB, writeDB } = require('./src/db');
 
 let wusers = readDB(WHATSAPP_USERS_FILE) || {};
 let wsettings = readDB(WHATSAPP_SETTINGS_FILE) || { adminGroupId: null };
@@ -100,6 +90,7 @@ async function connectToWhatsApp() {
         
         if (!text) return;
         
+        try {
         const isGroup = remoteJid.endsWith('@g.us');
 
         if (text.toLowerCase().trim() === 'cancelar' && orderSessions[remoteJid]) {
@@ -907,6 +898,16 @@ async function connectToWhatsApp() {
                 if (cmd.length < 30) {
                     await sock.sendMessage(remoteJid, { text: '🤖 ¡Hola! No reconocí ese comando.\n\nPor favor, escribe */ayuda* o */comandos* para ver todo lo que puedo hacer por ti.' });
                 }
+            }
+        }
+        } catch (err) {
+            console.error('WhatsApp Bot Error:', err);
+            try {
+                await sock.sendMessage(remoteJid, { text: '❌ Ocurrió un error inesperado al procesar tu mensaje. El equipo de soporte ha sido notificado.' });
+                // Enviar log al admin (usando la función existente enqueueWhatsAppAdmin)
+                enqueueWhatsAppAdmin(`🚨 *ERROR INTERNO EN EL BOT* 🚨\n\nUsuario: ${remoteJid}\nMensaje: ${text.substring(0, 50)}\nError: ${err.message}`);
+            } catch (e) {
+                console.error('Error enviando mensaje de fallo:', e);
             }
         }
     });
