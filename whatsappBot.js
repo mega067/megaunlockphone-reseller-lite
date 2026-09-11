@@ -45,6 +45,7 @@ let orderSessions = {};
 let addMoneySessions = {};
 let ticketSessions = {};
 let autoFundSessions = {};
+let msgGrupSessions = {};
 let sock = null;
 let isReady = false;
 
@@ -250,8 +251,27 @@ async function connectToWhatsApp() {
                 if (addMoneySessions[remoteJid]) delete addMoneySessions[remoteJid];
                 if (ticketSessions[remoteJid]) delete ticketSessions[remoteJid];
                 if (autoFundSessions[remoteJid]) delete autoFundSessions[remoteJid];
+                if (msgGrupSessions[remoteJid]) delete msgGrupSessions[remoteJid];
                 await sock.sendMessage(remoteJid, { text: '🚫 Acción cancelada exitosamente.' });
                 return;
+            }
+
+            if (msgGrupSessions[remoteJid]) {
+                const session = msgGrupSessions[remoteJid];
+                if (session.step === 1) {
+                    const messageToSend = text.trim();
+                    if (!wsettings.adminGroupId) {
+                        await sock.sendMessage(remoteJid, { text: '❌ No hay ningún grupo oficial configurado. Agrégame a un grupo y escribe !setgroup' });
+                        delete msgGrupSessions[remoteJid];
+                        return;
+                    }
+                    
+                    const groupMsg = `📢 *COMUNICADO OFICIAL* 📢\n━━━━━━━━━━━━━━━━━━━━━━\n${messageToSend}\n━━━━━━━━━━━━━━━━━━━━━━\n👤 Enviado por Admin`;
+                    await sock.sendMessage(wsettings.adminGroupId, { text: groupMsg });
+                    await sock.sendMessage(remoteJid, { text: '✅ ¡Anuncio enviado con éxito al grupo oficial!' });
+                    delete msgGrupSessions[remoteJid];
+                    return;
+                }
             }
 
             if (orderSessions[remoteJid]) {
@@ -644,8 +664,21 @@ async function connectToWhatsApp() {
                     delete ticketSessions[remoteJid];
                     return;
                 }
+                }
             }
             
+            if (firstWord === '/msggrup' || firstWord === '!msggrup') {
+                const users = readDB(USERS_FILE) || [];
+                const user = users.find(u => u.id === linkedUserId);
+                if (!user || user.role !== 'admin') {
+                    await sock.sendMessage(remoteJid, { text: '❌ Este comando es exclusivo para administradores.' });
+                    return;
+                }
+                msgGrupSessions[remoteJid] = { step: 1 };
+                await sock.sendMessage(remoteJid, { text: '📢 _Modo Anuncio activado._\n\nEscribe el mensaje que deseas enviar al grupo oficial (o escribe "cancelar" para abortar):' });
+                return;
+            }
+
             if (firstWord === '/pedir1' || firstWord === '/pedir2' || firstWord === '/pedir3') {
                 const sId = firstWord.replace('/pedir', '');
                 if (!linkedUserId) {
@@ -671,12 +704,12 @@ async function connectToWhatsApp() {
                 if (myOrders.length === 0) {
                     await sock.sendMessage(remoteJid, { text: '👻 *¡Qué vacío!* No tienes pedidos recientes. ¡Anímate a hacer uno en el panel!' });
                 } else {
-                    let resText = '📋 *Tus últimos pedidos estrella:*\n\n';
+                    let resText = '📋 *TUS ÚLTIMOS PEDIDOS*\n━━━━━━━━━━━━━━━━━━━━━━\n';
                     myOrders.forEach(o => {
                         let emoji = o.status === 'success' ? '✅' : (o.status === 'rejected' ? '❌' : '⏳');
                         let cleanStatus = (o.statusText || o.status || 'N/A').replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, '').trim();
                         if (cleanStatus.length > 50) cleanStatus = cleanStatus.substring(0, 47) + '...';
-                        resText += `📦 *${o.serviceName}*\n🆔 ID Orden: #${o.orderId}\n📱 IMEI: ${o.imei || 'N/A'}\n${emoji} Estado: ${cleanStatus}\n---\n`;
+                        resText += `📦 *${o.serviceName}*\n🆔 Orden: #${o.orderId}\n📱 IMEI: ${o.imei || 'N/A'}\n${emoji} Estado: ${cleanStatus}\n━━━━━━━━━━━━━━━━━━━━━━\n`;
                     });
                     resText += `\n_Para ver detalles completos, visita tu web._`;
                     await sock.sendMessage(remoteJid, { text: resText });
@@ -766,9 +799,9 @@ async function connectToWhatsApp() {
                         }
                         
                         if (!hasCredits) {
-                            saldoText += `💸 *Saldo Total:* $0.00\n`;
+                            saldoText += `💸 *Saldo Total:* $0.00 MXN\n`;
                         }
-                        saldoText += `\n🚀 _¡Listo para seguir desbloqueando!_`;
+                        saldoText += `━━━━━━━━━━━━━━━━━━━━━━\n🚀 _¡Listo para seguir desbloqueando!_`;
                         
                         await sock.sendMessage(remoteJid, { text: saldoText });
                     }
@@ -778,7 +811,8 @@ async function connectToWhatsApp() {
                 const user = users.find(u => u.id === linkedUserId);
                 if (user) {
                     const role = user.role === 'admin' ? '👑 Administrador' : (user.role === 'reseller' ? '💼 Revendedor' : '👤 Usuario');
-                    await sock.sendMessage(remoteJid, { text: `👤 *Mi Perfil*\n\n*Usuario:* ${user.username}\n*Rol:* ${role}\n*ID:* ${user.id}\n\n_Tu cuenta está conectada de forma segura a MegaUnlock._` });
+                    const profileMsg = `👤 *PERFIL MEGAUNLOCK* 👤\n━━━━━━━━━━━━━━━━━━━━━━\n📛 *Usuario:* ${user.username}\n🛡️ *Rol:* ${role}\n#️⃣ *ID de Cuenta:* ${user.id}\n━━━━━━━━━━━━━━━━━━━━━━\n_Tu cuenta está conectada de forma segura._`;
+                    await sock.sendMessage(remoteJid, { text: profileMsg });
                 }
             } else if (cmd === '/forceaddmoneyserver' || cmd === '/forceaddmoneyadmin') {
                 const users = readDB(USERS_FILE) || [];

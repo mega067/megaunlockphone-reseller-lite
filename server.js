@@ -861,7 +861,7 @@ async function processOrder(req, res) {
       const adminMsg = `🛒 *Nuevo Pedido*\n👤 Usuario: ${user.username}\n📦 Servicio: ${serviceName || 'N/A'}\n🔍 Info: ${imeiDataString}\n💰 Precio: $${resellerCost}\n🏢 ${getServerDisplayName(serverId)}\n#️⃣ Orden ID: ${orderId}`;
       enqueueWhatsAppAdmin(adminMsg);
       
-      const groupMsg = `🛒 *Nuevo Pedido*\n👤 Usuario: ${user.username}\n🔧 Servicio: ${serviceName || 'Servicio'}\n#️⃣ Orden ID: ${orderId}\n✅ Estado: En proceso`;
+      const groupMsg = `🛒 *NUEVO PEDIDO RECIBIDO*\n━━━━━━━━━━━━━━━━━━━━━━\n👤 *Usuario:* ${user.username}\n🔧 *Servicio:* ${serviceName || 'Servicio'}\n#️⃣ *Orden ID:* ${orderId}\n✅ *Estado:* En proceso\n━━━━━━━━━━━━━━━━━━━━━━`;
       enqueueWhatsApp('group', groupMsg);
 
       const clientMsg = `📨 ORDEN EN PROCESO\n\n🆔 Orden: #${orderId}\n📱 IMEI: ${imeiDataString || 'N/A'}\n🔧 Servicio: ${serviceName || 'Servicio'}\n💲 Costo: $${parseFloat(finalCostToDeduct).toFixed(2)} MXN\n🔑 Código / Respuesta: Procesando...\n🎉 Estado: En proceso\n\n━━━━━━━━━━━━━━\n🌐 MegaUnlockPhone`;
@@ -1127,7 +1127,7 @@ app.put('/api/history', requireAuth, (req, res) => {
           enqueueWhatsApp('private', privateMsg, history[idx].userId);
           
           const statusStr = isSuccess ? 'Completado ✅' : (isRejected ? 'Rechazado ❌' : 'En proceso ⏳');
-          const adminMsg = `🔄 *Orden #${history[idx].orderId}*\nUsuario: ${history[idx].username}\n🔧 Servicio: ${history[idx].serviceName}\nEstado: ${statusStr}`;
+          const adminMsg = `🔄 *ACTUALIZACIÓN DE ORDEN*\n━━━━━━━━━━━━━━━━━━━━━━\n#️⃣ *Orden:* #${history[idx].orderId}\n👤 *Usuario:* ${history[idx].username}\n🔧 *Servicio:* ${history[idx].serviceName}\n📊 *Estado:* ${statusStr}\n━━━━━━━━━━━━━━━━━━━━━━`;
           enqueueWhatsAppAdmin(adminMsg);
 
           const groupMsg = adminMsg;
@@ -1878,10 +1878,10 @@ app.post('/api/bot/add_money', async (req, res) => {
     let groupMsg = '';
     if (numAmount > 0) {
         msgToReseller = `💰 *¡RECARGA EXITOSA!*\n\nTu administrador ha agregado *+$${numAmount.toFixed(2)} MXN* a tu saldo en ${getServerDisplayName(serverId)}.\n\n💳 *Saldo actual (${getServerDisplayName(serverId)}):* $${users[resellerIdx][creditKey].toFixed(2)} MXN\n\n_¡A desbloquear se ha dicho!_ 🚀`;
-        groupMsg = `💰 *MOVIMIENTO DE SALDO*\nAdmin ${adminUser.username} ha AGREGADO +$${numAmount.toFixed(2)} a ${getServerDisplayName(serverId)} del revendedor ${users[resellerIdx].username}.`;
+        groupMsg = `💰 *RECARGA APROBADA*\n━━━━━━━━━━━━━━━━━━━━━━\n👮 *Admin:* ${adminUser.username}\n👤 *Revendedor:* ${users[resellerIdx].username}\n🏢 *Servidor:* ${getServerDisplayName(serverId)}\n💲 *Monto:* +$${numAmount.toFixed(2)} MXN\n━━━━━━━━━━━━━━━━━━━━━━`;
     } else {
         msgToReseller = `📉 *REDUCCIÓN DE SALDO*\n\nTu administrador ha descontado *-$${Math.abs(numAmount).toFixed(2)} MXN* de tu saldo en ${getServerDisplayName(serverId)}.\n\n💳 *Saldo actual (${getServerDisplayName(serverId)}):* $${users[resellerIdx][creditKey].toFixed(2)} MXN`;
-        groupMsg = `📉 *MOVIMIENTO DE SALDO*\nAdmin ${adminUser.username} ha DESCONTADO -$${Math.abs(numAmount).toFixed(2)} de ${getServerDisplayName(serverId)} del revendedor ${users[resellerIdx].username}.`;
+        groupMsg = `📉 *RETIRO DE SALDO*\n━━━━━━━━━━━━━━━━━━━━━━\n👮 *Admin:* ${adminUser.username}\n👤 *Revendedor:* ${users[resellerIdx].username}\n🏢 *Servidor:* ${getServerDisplayName(serverId)}\n💲 *Monto:* -$${Math.abs(numAmount).toFixed(2)} MXN\n━━━━━━━━━━━━━━━━━━━━━━`;
     }
     enqueueWhatsApp('private', msgToReseller, users[resellerIdx].id);
     enqueueWhatsApp('group', groupMsg);
@@ -2391,24 +2391,24 @@ async function pollPendingOrders() {
                   hasUpdates = true;
                   
                   let isSuccess = remoteStatus.status === 'success';
-                  let headerIcon = isSuccess ? '✅ SERVICIO COMPLETADO' : '❌ SERVICIO RECHAZADO';
+                  let headerIcon = isSuccess ? '✅ *SERVICIO COMPLETADO*' : '❌ *SERVICIO RECHAZADO*';
                   let statusTxt = isSuccess ? 'Completado' : 'Rechazado';
                   
-                  let resMsg = `${headerIcon}\n\n`;
-                  resMsg += `🆔 Orden: #${history[idx].orderId}\n`;
-                  resMsg += `📱 IMEI: ${history[idx].imei}\n`;
-                  resMsg += `🔧 Servicio: ${history[idx].serviceName}${isSuccess ? '✅' : '❌'}\n`;
-                  resMsg += `💲 Costo: $${parseFloat(history[idx].costCharged || 0).toFixed(2)} MXN\n`;
-                  resMsg += `🔑 Código / Respuesta: ${remoteStatus.msg}\n`;
-                  resMsg += `🎉 Estado: ${statusTxt}\n\n`;
-                  resMsg += `━━━━━━━━━━━━━━\n🌐 MegaUnlockPhone`;
+                  let resMsg = `${headerIcon}\n━━━━━━━━━━━━━━━━━━━━━━\n`;
+                  resMsg += `🆔 *Orden:* #${history[idx].orderId}\n`;
+                  resMsg += `📱 *IMEI:* ${history[idx].imei || 'N/A'}\n`;
+                  resMsg += `🔧 *Servicio:* ${history[idx].serviceName} ${isSuccess ? '✅' : '❌'}\n`;
+                  resMsg += `💲 *Costo:* $${parseFloat(history[idx].costCharged || 0).toFixed(2)} MXN\n`;
+                  resMsg += `🔑 *Respuesta:* ${remoteStatus.msg}\n`;
+                  resMsg += `🎉 *Estado:* ${statusTxt}\n\n`;
+                  resMsg += `━━━━━━━━━━━━━━━━━━━━━━\n🌐 MegaUnlockPhone`;
                   
                   enqueueWhatsApp('private', resMsg, history[idx].userId);
 
-                  let adminMsg = `🔄 *Orden #${history[idx].orderId}*\nUsuario: ${history[idx].username}\n🔧 Servicio: ${history[idx].serviceName}\nEstado: ${statusTxt} ${isSuccess ? '✅' : '❌'}`;
+                  let adminMsg = `🔄 *ACTUALIZACIÓN AUTOMÁTICA*\n━━━━━━━━━━━━━━━━━━━━━━\n#️⃣ *Orden:* #${history[idx].orderId}\n👤 *Usuario:* ${history[idx].username}\n🔧 *Servicio:* ${history[idx].serviceName}\n📊 *Estado:* ${statusTxt} ${isSuccess ? '✅' : '❌'}\n━━━━━━━━━━━━━━━━━━━━━━`;
                   enqueueWhatsAppAdmin(adminMsg);
                   
-                  let groupMsg = `🔄 *Orden #${history[idx].orderId}*\nUsuario: ${history[idx].username}\n🔧 Servicio: ${history[idx].serviceName}\nEstado: ${statusTxt} ${isSuccess ? '✅' : '❌'}`;
+                  let groupMsg = adminMsg;
                   enqueueWhatsApp('group', groupMsg);
               }
           }
