@@ -664,7 +664,6 @@ async function connectToWhatsApp() {
                     delete ticketSessions[remoteJid];
                     return;
                 }
-                }
             }
             
             if (firstWord === '/msggrup' || firstWord === '!msggrup') {
