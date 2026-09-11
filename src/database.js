@@ -23,8 +23,15 @@ const initTables = () => {
             role TEXT DEFAULT 'reseller',
             credit REAL DEFAULT 0,
             phone TEXT,
-            createdAt TEXT
+            createdAt TEXT,
+            data TEXT
         );
+
+        try {
+            db.exec('ALTER TABLE Users ADD COLUMN data TEXT');
+        } catch (e) {
+            // Ignorar si la columna ya existe
+        }
 
         CREATE TABLE IF NOT EXISTS OrdersHistory (
             orderId TEXT PRIMARY KEY,

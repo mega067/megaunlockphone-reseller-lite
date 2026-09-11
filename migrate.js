@@ -32,9 +32,18 @@ const migrate = () => {
     // 2. Migrar Usuarios
     const users = readJSON('users.json');
     if (users && Array.isArray(users)) {
-        const stmt = db.prepare(`INSERT OR REPLACE INTO Users (id, username, password, role, credit, phone, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)`);
+        const stmt = db.prepare(`INSERT OR REPLACE INTO Users (id, username, password, role, credit, phone, createdAt, data) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
         users.forEach(u => {
-            stmt.run(u.id, u.username, u.password, u.role, u.credit || 0, u.phone || null, u.createdAt || null);
+            stmt.run(
+                String(u.id), 
+                u.username, 
+                u.password, 
+                u.role, 
+                u.credit || 0, 
+                u.phone || null, 
+                u.createdAt || null, 
+                JSON.stringify(u)
+            );
         });
         console.log(`✅ ${users.length} usuarios migrados.`);
     }

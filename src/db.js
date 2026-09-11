@@ -12,8 +12,9 @@ function readDB(file) {
 
   // 1. Interceptar peticiones para Users
   if (baseFile === 'users.json') {
-    const stmt = sqliteDb.prepare(`SELECT * FROM Users`);
-    return stmt.all();
+    const stmt = sqliteDb.prepare(`SELECT data FROM Users`);
+    const rows = stmt.all();
+    return rows.map(r => r.data ? JSON.parse(r.data) : null).filter(Boolean);
   }
 
   // 2. Interceptar peticiones para History
@@ -72,12 +73,12 @@ function writeDB(file, data) {
 
   // 1. Interceptar escritura para Users
   if (baseFile === 'users.json') {
-    const stmt = sqliteDb.prepare(`INSERT OR REPLACE INTO Users (id, username, password, role, credit, phone, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)`);
+    const stmt = sqliteDb.prepare(`INSERT OR REPLACE INTO Users (id, username, password, role, credit, phone, createdAt, data) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
     const deleteStmt = sqliteDb.prepare(`DELETE FROM Users`);
     const transaction = sqliteDb.transaction(() => {
       deleteStmt.run(); // Wipe and rewrite array to simulate JSON overwrite
       data.forEach(u => {
-        stmt.run(u.id, u.username, u.password, u.role, u.credit || 0, u.phone || null, u.createdAt || null);
+        stmt.run(String(u.id), u.username, u.password, u.role, u.credit || 0, u.phone || null, u.createdAt || null, JSON.stringify(u));
       });
     });
     transaction();
