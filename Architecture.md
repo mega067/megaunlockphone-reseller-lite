@@ -3,7 +3,13 @@
 ## Estructura General
 Este proyecto es el cliente web para la API de Dhru Fusion y otros servicios de desbloqueo (GSM).
 
-- `server.js`: El corazón del sistema. Contiene los endpoints HTTP (Express), las llamadas a la base de datos, las validaciones de pagos SPEI (Banxico) y los webhooks.
+- `server.js`: Archivo de orquestación principal (Express). Inicializa middlewares globales, pero la lógica de enrutamiento y negocio se está trasladando a la carpeta `src/`.
+- `src/`: Lógica centralizada.
+  - `db.js`: Caché en memoria y lectura/escritura (I/O) síncrona a archivos JSON.
+  - `utils.js`: Helpers globales compartidos.
+  - `middleware.js`: Capa de seguridad y autenticación (requireAuth).
+  - `payments.js`: Controlador de depósitos y validaciones Banxico/SPEI.
+  - `history.js`: Controlador de historial de órdenes.
 - `public/`: Carpeta con todo el frontend (HTML, CSS, JS).
   - `public/index.html`: La vista principal (SPA) que agrupa Perfil, Catálogo, Historial de Órdenes, y ahora Historial de Recargas.
   - `public/index.js`: Contiene toda la lógica del frontend, consumo de las APIs, renderizado dinámico de las tablas y apertura de modales (incluyendo los tickets y devoluciones).

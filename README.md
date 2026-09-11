@@ -8,6 +8,16 @@ El panel soporta múltiples servidores Dhru configurables desde `settings.json`:
 - **Servidor 2:** POPI-GSM.
 - **Servidor 3:** UnlockerFast.
 
+## 🚀 Nuevas Funcionalidades
+- **Historial de Recargas**: Registro inmutable de cada ingreso de saldo (vía SPEI, Bot o Panel Admin).
+- **Sistema Inteligente de Reembolsos**: Automáticos (cuando Dhru rechaza) y Manuales (desde el panel Admin).
+- **Soporte Directo**: Botón flotante de WhatsApp para soporte.
+
+## 🏗️ Nueva Arquitectura Modular
+El servidor se está refactorizando en la carpeta `src/` para separar la lógica masiva de `server.js` y facilitar su mantenimiento:
+- `src/db.js`: Manejo de la caché y persistencia JSON.
+- *(En proceso)* `src/payments.js` y `src/history.js`.
+
 ## Cambios Recientes y Correcciones Críticas
 
 ### Solución al Error "Faltan Varios Campos" en Servicios Free Fire (Servicio 154 - LatamGSM)

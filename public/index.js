@@ -1479,10 +1479,19 @@ document.addEventListener('DOMContentLoaded', () => {
       if (authRole === 'admin' || authRole === 'colaborador') {
         const real = formatPrice(p.rawItem._REAL_COST || '0');
         const client = formatPrice(p.rawItem._CLIENT_PRICE || '0');
+        
+        const isOff = p.rawItem._DISABLED;
+        const toggleBtnHtml = `
+          <button type="button" class="btn btn-secondary btn-toggle-service" data-id="${escapeHtml(p.serviceid)}" data-disabled="${isOff ? 'true' : 'false'}" style="margin-top: 10px; width: 100%; border: 1px solid ${isOff ? '#ef4444' : '#10b981'}; color: ${isOff ? '#ef4444' : '#10b981'};">
+            <i data-lucide="${isOff ? 'power-off' : 'power'}" style="width: 14px;"></i> ${isOff ? 'SERVICIO APAGADO (ON)' : 'SERVICIO ACTIVO (OFF)'}
+          </button>
+        `;
+
         adminPricesHtml = `
           <div style="font-size: 0.8rem; margin-top: 5px; background: rgba(0,0,0,0.2); padding: 5px; border-radius: 4px;">
             <div style="color: #10b981; margin-bottom: 2px;">Costo API: <strong>${real}</strong></div>
             <div style="color: #c4b5fd;">Precio Cliente: <strong>${client}</strong></div>
+            ${toggleBtnHtml}
           </div>
         `;
         
@@ -1545,9 +1554,15 @@ document.addEventListener('DOMContentLoaded', () => {
           <button type="button" class="btn-action-details" data-id="${escapeHtml(p.serviceid)}">
             <i data-lucide="info"></i> Detalles
           </button>
-          <button type="button" class="btn-action-buy" data-id="${escapeHtml(p.serviceid)}">
-            <i data-lucide="shopping-cart"></i> Comprar
-          </button>
+          ${p.rawItem._DISABLED ? `
+            <button type="button" class="btn-action-buy" style="background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.5); color: #ef4444; cursor: not-allowed;" disabled>
+              <i data-lucide="x-circle"></i> OFF
+            </button>
+          ` : `
+            <button type="button" class="btn-action-buy" data-id="${escapeHtml(p.serviceid)}">
+              <i data-lucide="shopping-cart"></i> Comprar
+            </button>
+          `}
         </div>
         <div class="product-card-extra hidden" id="extra_${escapeHtml(p.serviceid)}">
           <div class="extra-content">
@@ -1661,6 +1676,33 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       });
     }
+
+    document.querySelectorAll('.btn-toggle-service').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const serviceId = btn.getAttribute('data-id');
+        const isDisabled = btn.getAttribute('data-disabled') === 'true';
+        const newStatus = !isDisabled;
+        if (!confirm(`¿Estás seguro de que deseas ${newStatus ? 'APAGAR' : 'ENCENDER'} este servicio para los clientes?`)) return;
+        
+        try {
+          const res = await fetch('/api/admin/toggle-service', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Server-Id': currentServerId, 'Authorization': `Bearer ${authToken}` },
+            body: JSON.stringify({ serviceid: serviceId, disabled: newStatus })
+          });
+          
+          if (res.ok) {
+            alert(`Servicio ${newStatus ? 'apagado' : 'encendido'} exitosamente.`);
+            await syncProducts(true);
+          } else {
+            const errText = await res.text();
+            alert(`Error al cambiar el estado del servicio: ${errText}`);
+          }
+        } catch (err) {
+          alert('Error de conexión.');
+        }
+      });
+    });
   }
 
   let activeUserServiceId = null;

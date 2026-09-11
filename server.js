@@ -429,6 +429,12 @@ app.get('/api/products', requireAuth, async (req, res) => {
         for (const serviceKey in mergedList[groupKey].SERVICES || {}) {
           const service = mergedList[groupKey].SERVICES[serviceKey];
           const realServiceId = service.SERVICEID || service.serviceid || serviceKey;
+          
+          const disabledDb = readDB('disabled_services.json') || {};
+          const disabledServicesForServer = disabledDb['server' + serverId] || [];
+          if (disabledServicesForServer.includes(realServiceId)) {
+             service._DISABLED = true;
+          }
           const exchangeRate = parseFloat(settingsDb.exchangeRate || 17.60);
           const rate = serverId === '3' ? 1 : exchangeRate;
           const realCredit = parseFloat(service.CREDIT || '0') * rate;
@@ -713,10 +719,9 @@ async function processOrder(req, res) {
     let msg = 'Exitoso';
 
     if (serverId === '1' || serverId === '3') {
-      let customXml = '';
+      let customXmlBase64 = '';
+      let customXmlRaw = '';
       if (custom_fields && typeof custom_fields === 'object' && Object.keys(custom_fields).length > 0) {
-        // Ambos servidores (LatamGSM y UnlockerFast) aceptan CUSTOMFIELD como JSON en base64
-        // Esto preserva los espacios en los nombres de los campos (ej. "ESCRIBE 1 PARA ORDENAR")
         const cleanedFields = {};
         for (const [key, val] of Object.entries(custom_fields)) {
           if (key.trim() !== '') {
@@ -724,8 +729,17 @@ async function processOrder(req, res) {
           }
         }
         if (Object.keys(cleanedFields).length > 0) {
+          // Format 1: Base64
           const b64 = Buffer.from(JSON.stringify(cleanedFields)).toString('base64');
-          customXml = `<CUSTOMFIELD>${b64}</CUSTOMFIELD>`;
+          customXmlBase64 = `<CUSTOMFIELD>${b64}</CUSTOMFIELD>`;
+          
+          // Format 2: Raw XML
+          let rawXml = '';
+          for (const [key, val] of Object.entries(cleanedFields)) {
+            const cleanKey = key.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            if (cleanKey) rawXml += `<${cleanKey}>${val}</${cleanKey}>`;
+          }
+          customXmlRaw = `<CUSTOMFIELD>${rawXml}</CUSTOMFIELD>`;
         }
       }
 
@@ -735,15 +749,13 @@ async function processOrder(req, res) {
         notesXml = '<NOTES>' + notes.trim() + '</NOTES>';
       }
 
-      let xmlParameters = '<PARAMETERS><ID>' + serviceid + '</ID><IMEI>' + (finalImei && finalImei.trim() !== '' ? finalImei : '111111111111111') + '</IMEI>';
-      if (quantity > 1 || serviceType === 'SERVER' || serviceType === 'server') {
-         xmlParameters += '<QNT>' + quantity + '</QNT>';
-      }
-      xmlParameters += customXml + notesXml + '</PARAMETERS>';
+      const baseParameters = '<ID>' + serviceid + '</ID><IMEI>' + (finalImei && finalImei.trim() !== '' ? finalImei : '111111111111111') + '</IMEI>' + (quantity > 1 || serviceType === 'SERVER' || serviceType === 'server' ? '<QNT>' + quantity + '</QNT>' : '');
 
-      let action = (serviceType === 'SERVER' || serviceType === 'server') ? 'placeserverorder' : 'placeimeiorder';
+      let primaryAction = (serviceType === 'SERVER' || serviceType === 'server') ? 'placeserverorder' : 'placeimeiorder';
+      let secondaryAction = primaryAction === 'placeserverorder' ? 'placeimeiorder' : 'placeserverorder';
 
-      const sendDhruRequest = async (currentAction) => {
+      const sendDhruRequest = async (currentAction, currentCustomXml) => {
+        const xmlParameters = `<PARAMETERS>${baseParameters}${currentCustomXml}${notesXml}</PARAMETERS>`;
         const params = new URLSearchParams();
         params.append('username', username);
         params.append('apiaccesskey', apiaccesskey);
@@ -761,12 +773,47 @@ async function processOrder(req, res) {
         return response.data;
       };
 
-      responseData = await sendDhruRequest(action);
+      // Try combinations in order
+      const combinations = [
+        { action: primaryAction, xml: customXmlBase64 },
+        { action: secondaryAction, xml: customXmlBase64 },
+        { action: primaryAction, xml: customXmlRaw },
+        { action: secondaryAction, xml: customXmlRaw }
+      ];
 
-      if (responseData && responseData.ERROR && responseData.ERROR[0] && responseData.ERROR[0].MESSAGE === 'Invalid Action') {
-        const fallbackAction = action === 'placeserverorder' ? 'placeimeiorder' : 'placeserverorder';
-        responseData = await sendDhruRequest(fallbackAction);
+      for (const combo of combinations) {
+        responseData = await sendDhruRequest(combo.action, combo.xml);
+        
+        // If it succeeds, break out of loop
+        if (responseData && responseData.SUCCESS) {
+          break;
+        }
+
+        // Check if error is 'Invalid Action' or 'Command Not Found'
+        if (responseData && responseData.ERROR && responseData.ERROR.length > 0) {
+          let errorMsg = '';
+          if (typeof responseData.ERROR[0] === 'object') {
+            errorMsg = responseData.ERROR[0].MESSAGE || responseData.ERROR[0].message || responseData.ERROR[0].Error || responseData.ERROR[0].error || '';
+          } else if (typeof responseData.ERROR[0] === 'string') {
+            errorMsg = responseData.ERROR[0];
+          }
+          
+          // Only continue loop if it's one of these specific routing errors, otherwise it's a real user error
+          if (errorMsg !== 'Invalid Action' && errorMsg !== 'Command Not Found') {
+            break;
+          }
+        }
       }
+
+      // If we exhausted all loops and it's STILL an error, decorate it
+      if (responseData && responseData.ERROR && responseData.ERROR.length > 0) {
+        if (typeof responseData.ERROR[0] === 'object') {
+           responseData.ERROR[0].MESSAGE = `Todos los intentos (Base64/Raw, IMEI/Server) fallaron. Original: ` + (responseData.ERROR[0].MESSAGE || responseData.ERROR[0].Error || '');
+        } else if (typeof responseData.ERROR[0] === 'string') {
+           responseData.ERROR[0] = `Todos los intentos (Base64/Raw, IMEI/Server) fallaron. Original: ` + responseData.ERROR[0];
+        }
+      }
+
     } else {
       // SERVER 2: GSM THEME API
       let gsmParams = { ID: serviceid };
@@ -979,163 +1026,8 @@ app.post('/api/orders/bulk-status', requireAuth, async (req, res) => {
   }
 });
 
-// History Endpoint
-app.get('/api/history', requireAuth, (req, res) => {
-  const serverId = getServerId(req);
-  const history = readDB('history.json') || [];
-  
-  if (req.user.role === 'admin') {
-    if (req.query.allServers === 'true') {
-       return res.json(history); // Admin sees EVERYTHING across ALL servers
-    }
-    const serverHistory = history.filter(h => (h.serverId || '1') === serverId);
-    return res.json(serverHistory); // Admin sees everything for this server
-  } else {
-    // Reseller sees only their own orders for this server
-    const serverHistory = history.filter(h => (h.serverId || '1') === serverId);
-    return res.json(serverHistory.filter(h => h.userId === req.user.id));
-  }
-});
-
-app.get('/api/recharges', requireAuth, (req, res) => {
-  const recharges = readDB('recharges.json') || [];
-  const userRecharges = recharges.filter(r => r.userId === req.user.id).sort((a,b) => new Date(b.date) - new Date(a.date));
-  res.json(userRecharges);
-});
-
-app.get('/api/admin/recharges', requireAuth, (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Unauthorized' });
-  const recharges = readDB('recharges.json') || [];
-  const sortedRecharges = recharges.sort((a,b) => new Date(b.date) - new Date(a.date));
-  res.json(sortedRecharges);
-});
-
-app.post('/api/history/add', requireAuth, (req, res) => {
-  const user = req.user;
-  if (user.role !== 'admin') {
-    return res.status(403).json({ error: 'Sólo el administrador puede agregar pedidos manualmente.' });
-  }
-
-  const { orderId, serviceId, serviceName, imei, status, statusText, serverId: reqServerId, serviceType, cost } = req.body;
-  if (!orderId) {
-    return res.status(400).json({ error: 'Order ID is required' });
-  }
-
-  const serverId = reqServerId || getServerId(req);
-  let history = readDB('history.json') || [];
-  
-  const existingIdx = history.findIndex(o => String(o.orderId) === String(orderId) && (o.serverId || '1') === serverId);
-  
-  if (existingIdx !== -1) {
-    history[existingIdx] = {
-      ...history[existingIdx],
-      serviceId: serviceId || history[existingIdx].serviceId,
-      serviceName: serviceName || history[existingIdx].serviceName,
-      serviceType: serviceType || history[existingIdx].serviceType,
-      imei: (imei && imei !== 'N/A') ? imei : history[existingIdx].imei,
-      costCharged: (cost !== undefined) ? Number(cost) : history[existingIdx].costCharged,
-      realCost: (cost !== undefined) ? Number(cost) : history[existingIdx].realCost,
-      status: status || history[existingIdx].status,
-      msg: statusText || history[existingIdx].msg,
-      date: new Date().toISOString()
-    };
-  } else {
-    history.unshift({
-      id: 'txn_' + Date.now(),
-      serverId: serverId,
-      userId: user.id,
-      username: user.username,
-      date: new Date().toISOString(),
-      serviceId: serviceId || 'N/A',
-      serviceName: serviceName || `Pedido Importado (ID: ${orderId})`,
-      serviceType: serviceType || 'IMEI',
-      imei: imei || 'N/A',
-      costCharged: Number(cost || 0),
-      realCost: Number(cost || 0),
-      profit: 0,
-      orderId: String(orderId),
-      status: status || 'success',
-      msg: statusText || 'Importado manualmente'
-    });
-  }
-
-  if (history.length > 500) history.pop();
-  writeDB('history.json', history);
-  createAutoBackup('Admin_Import_S' + serverId);
-  
-  return res.json({ success: true, message: 'Pedido importado exitosamente.' });
-});
-
-app.delete('/api/history', requireAuth, (req, res) => {
-  const user = req.user;
-  const serverId = getServerId(req);
-  let history = readDB('history.json') || [];
-  
-  if (user.role === 'admin') {
-    history = history.filter(h => (h.serverId || '1') !== serverId);
-  } else {
-    history = history.filter(h => h.userId !== user.id || (h.serverId || '1') !== serverId);
-  }
-  
-  writeDB('history.json', history);
-  return res.json({ success: true });
-});
-
-app.put('/api/history', requireAuth, (req, res) => {
-  const { updatedOrders } = req.body;
-  if (!updatedOrders || !Array.isArray(updatedOrders)) return res.status(400).json({ error: 'Missing updatedOrders' });
-  const serverId = getServerId(req);
-  const history = readDB('history.json') || [];
-  
-  let changed = false;
-  updatedOrders.forEach(uo => {
-    const idx = history.findIndex(h => String(h.orderId) === String(uo.orderId) && (h.serverId || '1') === serverId);
-    if (idx !== -1) {
-      if (req.user.role === 'admin' || history[idx].userId === req.user.id) {
-        const oldStatus = history[idx].status;
-        history[idx].status = uo.status;
-        history[idx].statusText = uo.statusText;
-        history[idx].updateTimestamp = uo.updateTimestamp;
-        
-        if (oldStatus !== uo.status) {
-          const isSuccess = uo.status === 'success';
-          const isRejected = uo.status === 'rejected';
-          const settingsDb = readDB('settings.json') || {};
-          
-          let privateMsg = '';
-          const costToUse = history[idx].costCharged !== undefined ? history[idx].costCharged : (history[idx].realCost || 0);
-          const usdEq = (parseFloat(costToUse) / parseFloat(settingsDb.exchangeRate || 17.6)).toFixed(3);
-          
-          let cleanStatusText = (uo.statusText || 'Completado').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').trim();
-
-          if (isSuccess) {
-            privateMsg = `✅ SERVICIO COMPLETADO\n\n🆔 Orden: #${history[idx].orderId}\n📱 IMEI: ${history[idx].imei || 'N/A'}\n🔧 Servicio: ${history[idx].serviceName}✅\n💲 Costo: $${parseFloat(costToUse).toFixed(2)} MXN\n🔑 Código / Respuesta: ${cleanStatusText}\n🎉 Estado: Completado\n\n━━━━━━━━━━━━━━\n🌐 MegaUnlockPhone`;
-          } else if (isRejected) {
-            privateMsg = `❌ SERVICIO RECHAZADO\n\n🆔 Orden: #${history[idx].orderId}\n📱 IMEI: ${history[idx].imei || 'N/A'}\n🔧 Servicio: ${history[idx].serviceName}❌\n❗ Motivo: ${cleanStatusText}\n💲 Costo: $${parseFloat(costToUse).toFixed(2)} MXN\n💸 Créditos: Reembolsados\n🎉 Estado: Rechazado\n\n━━━━━━━━━━━━━━\n🌐 MegaUnlockPhone`;
-          } else {
-            privateMsg = `🔔 ACTUALIZACIÓN DE ORDEN\n\n🆔 Orden: #${history[idx].orderId}\n📱 IMEI: ${history[idx].imei || 'N/A'}\n🔧 Servicio: ${history[idx].serviceName}\n📊 Estado: ${uo.status}\n📝 Detalles: ${cleanStatusText}\n\n━━━━━━━━━━━━━━\n🌐 MegaUnlockPhone`;
-          }
-          
-          enqueueWhatsApp('private', privateMsg, history[idx].userId);
-          
-          const statusStr = isSuccess ? 'Completado ✅' : (isRejected ? 'Rechazado ❌' : 'En proceso ⏳');
-          const adminMsg = `🔄 *ACTUALIZACIÓN DE ORDEN*\n━━━━━━━━━━━━━━━━━━━━━━\n#️⃣ *Orden:* #${history[idx].orderId}\n👤 *Usuario:* ${history[idx].username}\n🔧 *Servicio:* ${history[idx].serviceName}\n📊 *Estado:* ${statusStr}\n━━━━━━━━━━━━━━━━━━━━━━`;
-          enqueueWhatsAppAdmin(adminMsg);
-
-          const groupMsg = adminMsg;
-          enqueueWhatsApp('group', groupMsg);
-        }
-        
-        changed = true;
-      }
-    }
-  });
-
-  if (changed) {
-    writeDB('history.json', history);
-  }
-  res.json({ success: true });
-});
+// History Endpoints Modularized
+require('./src/history')(app, { requireAuth, readDB, writeDB, getServerId, enqueueWhatsApp, enqueueWhatsAppAdmin });
 
 // --- WHATSAPP BOT ENDPOINTS ---
 const BOT_SECRET = process.env.BOT_SECRET || 'MEGA_BOT_SECRET_2026';
@@ -1579,6 +1471,27 @@ app.post('/api/admin/settings', requireAuth, requireAdmin, (req, res) => {
   res.json(settings);
 });
 
+app.post('/api/admin/toggle-service', requireAuth, requireAdminOrColaborador, (req, res) => {
+  const { serviceid, disabled } = req.body;
+  const serverId = getServerId(req);
+  if (!serviceid) return res.status(400).json({ error: 'Falta serviceid' });
+
+  const disabledDb = readDB('disabled_services.json') || {};
+  if (!disabledDb['server' + serverId]) disabledDb['server' + serverId] = [];
+  
+  if (disabled) {
+    if (!disabledDb['server' + serverId].includes(serviceid.toString())) {
+      disabledDb['server' + serverId].push(serviceid.toString());
+    }
+  } else {
+    disabledDb['server' + serverId] = disabledDb['server' + serverId].filter(id => id !== serviceid.toString());
+  }
+
+  writeDB('disabled_services.json', disabledDb);
+  catalogVersion++;
+  res.json({ success: true, disabled });
+});
+
 app.post('/api/admin/product-price', requireAuth, requireAdminOrColaborador, (req, res) => {
   const { serviceid, resellerPrice, clientPrice, bulk } = req.body;
   const serverId = getServerId(req);
@@ -1891,214 +1804,10 @@ app.post('/api/bot/add_money', async (req, res) => {
 // Proxy Image to bypass CORS for html2canvas
 // --- SPEI Automated Top-Up APIs ---
 
-app.post('/api/fund/route', requireAuth, async (req, res) => {
-  const { amount, bankCode, serverId } = req.body;
-  if (!amount || !bankCode || !serverId) return res.status(400).json({ error: 'Faltan datos (monto, banco o servidor)' });
+// Payments Endpoints Modularized
+require('./src/payments')(app, { requireAuth, readDB, writeDB, enqueueWhatsApp });
 
-  const requestedAmount = parseFloat(amount);
-  const settingsDb = readDB('settings.json') || {};
-  let serverLiquidity = 0;
-  let targetProviderKey = null;
 
-  try {
-    // Calculamos liquidez específica del servidor seleccionado
-    const server = settingsDb['server' + serverId];
-    if (server) {
-      if (String(serverId) === '1') targetProviderKey = 'latamgsm';
-      if (String(serverId) === '3') targetProviderKey = 'unlockerfast';
-      const conf = {
-        username: server.username,
-        apiaccesskey: server.apiaccesskey,
-        url: server.endpoint,
-      };
-      
-      let targetUrl = conf.url;
-
-      if (!targetUrl.includes('/api/')) {
-        targetUrl = targetUrl.endsWith('/') ? `${targetUrl}api/index.php` : `${targetUrl}/api/index.php`;
-      } else if (targetUrl.endsWith('/api/')) {
-        targetUrl += 'index.php';
-      }
-
-      const params = new URLSearchParams();
-      params.append('username', conf.username);
-      params.append('apiaccesskey', conf.apiaccesskey);
-      params.append('action', 'accountinfo');
-      params.append('requestformat', 'JSON');
-      
-      const response = await axios.post(targetUrl, params.toString(), {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-      });
-      
-      const exRate = parseFloat(settingsDb.exchangeRate || 17.60);
-      const rate = String(serverId) === '3' ? 1 : exRate;
-      const serverCreditsRaw = parseFloat(response.data?.SUCCESS?.[0]?.AccountInfo?.creditraw || 0);
-      
-      if (!isNaN(serverCreditsRaw)) {
-        const creditMXN = serverCreditsRaw * rate;
-        
-        // Calculate cedido (suma de saldo de usuarios para este servidor)
-        let cedido = 0;
-        const allUsers = readDB('users.json') || [];
-        allUsers.forEach(u => {
-            if (u['credits_' + serverId] !== undefined) {
-                cedido += parseFloat(u['credits_' + serverId]);
-            }
-        });
-        
-        serverLiquidity = creditMXN - cedido;
-      }
-    }
-
-    let overrideMode = 'INTELLIGENT';
-    const overrideSettings = readDB('payment_override.json');
-    if (overrideSettings && overrideSettings.mode) {
-      overrideMode = overrideSettings.mode;
-    }
-
-    // Si el usuario es el ADMIN, siempre mandarlo directo al proveedor
-    if (req.session && req.session.role === 'admin') {
-      overrideMode = 'FORCE_SERVER';
-    }
-
-    const routeResult = await getDepositAccount(requestedAmount, bankCode, serverLiquidity, overrideMode, targetProviderKey);
-    res.json(routeResult);
-
-  } catch (err) {
-    console.error('Error calculando liquidez:', err.message);
-    res.status(500).json({ error: 'Error del sistema calculando liquidez', details: err.message });
-  }
-});
-
-app.post('/api/fund/verify', requireAuth, async (req, res) => {
-  const { amount, bankCode, trackingNumber, accountId, providerKey, serverId } = req.body;
-  
-  if (!amount || !trackingNumber || !accountId || !serverId) {
-    return res.status(400).json({ error: 'Faltan datos para la validación (incluyendo servidor)' });
-  }
-
-  // Verificar que el tracking number no haya sido usado antes
-  const processedRastros = readDB('processed_rastreos.json') || [];
-  if (processedRastros.includes(trackingNumber)) {
-    return res.status(400).json({ error: 'Esta clave de rastreo ya fue procesada anteriormente.' });
-  }
-
-  try {
-    const requestedAmount = parseFloat(amount);
-    
-    if (providerKey) {
-      // 1. DEPÓSITO AL PROVEEDOR
-      const config = require('./bankConfig');
-      const provider = config.PROVIDER_ACCOUNTS[providerKey];
-      if (!provider) return res.status(400).json({ error: 'Proveedor no encontrado' });
-      
-      const providerAccount = provider.accounts.find(a => a.id === accountId);
-      if (!providerAccount) return res.status(400).json({ error: 'Cuenta de proveedor no encontrada' });
-
-      // Agregamos el API data faltante al providerAccount temporal
-      providerAccount.providerKey = providerKey;
-      providerAccount.providerApiKey = provider.apiKey;
-      providerAccount.providerApiUrl = provider.apiUrl;
-
-      // Obtener el correo del admin en Dhru (generalmente el apiusername)
-      const settingsDb = readDB('settings.json') || {};
-      let serverConf = null;
-      if (providerKey === 'latamgsm') serverConf = settingsDb.server1;
-      if (providerKey === 'unlockerfast') serverConf = settingsDb.server3;
-      
-      const userEmail = serverConf ? serverConf.username : '';
-
-      const reportResult = await reportarPagoProveedor(providerAccount, trackingNumber, bankCode, requestedAmount, userEmail);
-      
-      if (!reportResult.success) {
-        return res.status(400).json({ error: reportResult.message });
-      }
-
-    } else {
-      // 2. DEPÓSITO AL ADMIN (Validación Banxico)
-      const config = require('./bankConfig');
-      const adminAccount = config.ADMIN_ACCOUNTS.find(a => a.id === accountId);
-      if (!adminAccount) return res.status(400).json({ error: 'Cuenta de admin no encontrada' });
-
-      const banxicoResult = await validarPagoInteligente(trackingNumber, bankCode, adminAccount.bankCode, adminAccount.clabe, requestedAmount);
-      
-      if (!banxicoResult || !banxicoResult.valido) {
-        return res.status(400).json({ error: 'No se encontró la transferencia en Banxico. Por favor verifica que la transferencia se haya completado o intenta más tarde.' });
-      }
-      
-      // Validar monto
-      if (banxicoResult.montoValidado < requestedAmount) {
-        return res.status(400).json({ error: `El monto reportado por Banxico ($${banxicoResult.montoValidado}) es menor al solicitado.` });
-      }
-    }
-
-    // SI LLEGAMOS AQUÍ: El pago es válido!
-    // Dar saldo al reseller en todos los servidores para simplificar, 
-    // o darle saldo en el servidor primario. Vamos a darle en general
-    const users = readDB('users.json') || [];
-    const userId = req.user.id;
-    const userIndex = users.findIndex(u => u.id === userId);
-    
-    if (userIndex === -1) return res.status(404).json({ error: 'Usuario no encontrado en la base de datos' });
-    
-    // Sumar el saldo en el Server seleccionado por el usuario.
-    const serverIdToCredit = String(serverId);
-    const creditKey = 'credits_' + serverIdToCredit;
-    users[userIndex][creditKey] = (parseFloat(users[userIndex][creditKey]) || 0) + requestedAmount;
-    
-    writeDB('users.json', users);
-
-    // Guardar el rastro para evitar dobles recargas
-    processedRastros.push(trackingNumber);
-    writeDB('processed_rastreos.json', processedRastros);
-
-    // Registrar en el historial de Movimientos
-    const history = readDB('history.json') || [];
-    history.unshift({
-      id: "txn_" + Date.now(),
-      serverId: serverIdToCredit,
-      userId: userId,
-      username: users[userIndex].username,
-      date: new Date().toISOString(),
-      serviceId: "RECARGA",
-      serviceName: "Recarga de Saldo - SPEI",
-      serviceType: "FUNDS",
-      imei: trackingNumber,
-      costCharged: requestedAmount,
-      realCost: requestedAmount,
-      profit: 0,
-      orderId: "DEP-" + trackingNumber.substring(0,6),
-      status: "success",
-      msg: `Recarga aplicada por $${requestedAmount} MXN`,
-      statusText: `Transferencia SPEI verificada con éxito. Clave: ${trackingNumber}`,
-      updateTimestamp: new Date().toLocaleString('es-MX')
-    });
-    writeDB('history.json', history);
-
-    // Enviar notificación por WhatsApp al admin y al usuario
-    try {
-      const wsettings = readDB('data/whatsapp_settings.json') || {};
-      const destText = providerKey ? 'Proveedor (' + providerKey + ')' : 'TU CUENTA ADMINISTRADOR';
-      
-      if (wsettings.adminGroupId) {
-        const adminMsg = `✅ *NUEVA RECARGA SPEI*\nUsuario: ${users[userIndex].username}\nMonto: $${requestedAmount} MXN\nDestino: ${destText}\nRastreo: ${trackingNumber}`;
-        enqueueWhatsApp('group', adminMsg);
-      }
-      
-      const userMsg = `🎉 *¡Recarga Exitosa!*\nSe han abonado *$${requestedAmount} MXN* a tu cuenta exitosamente.\n\nDestino: ${destText}\nRastreo: ${trackingNumber}`;
-      enqueueWhatsApp('private', userMsg, userId);
-      
-    } catch (e) {
-      console.error('Error notificando la recarga:', e.message);
-    }
-
-    res.json({ success: true, message: `Se abonaron $${requestedAmount} MXN a tu cuenta exitosamente.` });
-
-  } catch (err) {
-    console.error('Error en verificación de pago:', err);
-    res.status(500).json({ error: 'Error interno verificando el pago', details: err.message });
-  }
-});
 
 app.get('/api/proxy-image', async (req, res) => {
   try {

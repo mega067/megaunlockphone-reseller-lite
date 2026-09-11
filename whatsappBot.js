@@ -261,14 +261,14 @@ async function connectToWhatsApp() {
                 if (session.step === 1) {
                     const messageToSend = text.trim();
                     if (!wsettings.adminGroupId) {
-                        await sock.sendMessage(remoteJid, { text: '❌ No hay ningún grupo oficial configurado. Agrégame a un grupo y escribe !setgroup' });
+                        await sock.sendMessage(remoteJid, { text: '❌ *ERROR:* No hay ningún grupo oficial configurado. Agrégame a un grupo y escribe !setgroup' });
                         delete msgGrupSessions[remoteJid];
                         return;
                     }
                     
-                    const groupMsg = `📢 *COMUNICADO OFICIAL* 📢\n━━━━━━━━━━━━━━━━━━━━━━\n${messageToSend}\n━━━━━━━━━━━━━━━━━━━━━━\n👤 Enviado por Admin`;
+                    const groupMsg = `🟢 *COMUNICADO OFICIAL* 🟢\n━━━━━━━━━━━━━━━━━━━━━━\n\n${messageToSend}\n\n━━━━━━━━━━━━━━━━━━━━━━\n🛡️ _MegaUnlockPhone_ | 👤 _Administración_`;
                     await sock.sendMessage(wsettings.adminGroupId, { text: groupMsg });
-                    await sock.sendMessage(remoteJid, { text: '✅ ¡Anuncio enviado con éxito al grupo oficial!' });
+                    await sock.sendMessage(remoteJid, { text: '✅ *¡Anuncio enviado con éxito al grupo oficial!*' });
                     delete msgGrupSessions[remoteJid];
                     return;
                 }
@@ -675,7 +675,7 @@ async function connectToWhatsApp() {
                     return;
                 }
                 msgGrupSessions[remoteJid] = { step: 1 };
-                await sock.sendMessage(remoteJid, { text: '📢 _Modo Anuncio activado._\n\nEscribe el mensaje que deseas enviar al grupo oficial (o escribe "cancelar" para abortar):' });
+                await sock.sendMessage(remoteJid, { text: '📢 *MODO ANUNCIO ACTIVADO*\n━━━━━━━━━━━━━━━━━━━━━━\n✍️ Escribe el mensaje que deseas transmitir a todos en el grupo oficial.\n\n_💡 Tip: Puedes usar emojis y formato de WhatsApp (*negrita*, _cursiva_)._\n\n(Escribe *cancelar* para salir)' });
                 return;
             }
 
