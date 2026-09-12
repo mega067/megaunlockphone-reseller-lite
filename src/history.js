@@ -136,11 +136,17 @@ module.exports = function(app, deps) {
             
             enqueueWhatsApp('private', privateMsg, history[idx].userId);
             
+            const users = readDB('users.json') || [];
+            const userObj = users.find(u => String(u.id) === String(history[idx].userId));
+            const userNameDisplay = userObj ? (userObj.role === 'admin' ? 'Admin' : userObj.username) : 'Desconocido';
+            
+            const serverName = history[idx].serverId === '2' ? 'LatamGSM' : 'MegaUnlockPhone';
+            
             const statusStr = isSuccess ? '✅ *Completado*' : (isRejected ? '❌ *Rechazado*' : '⏳ *En proceso*');
-            const adminMsg = `🔄 *ACTUALIZACIÓN DE ORDEN*\n━━━━━━━━━━━━━━━━━━━━━━\n#️⃣ *Orden:* #${history[idx].orderId}\n👤 *Usuario:* ${history[idx].username}\n🔧 *Servicio:* ${history[idx].serviceName}\n📊 *Estado:* ${statusStr}\n━━━━━━━━━━━━━━━━━━━━━━\n🛡️ _MegaUnlockPhone_`;
+            const adminMsg = `🔄 *ACTUALIZACIÓN DE ORDEN*\n━━━━━━━━━━━━━━━━━━━━━━\n#️⃣ *Orden:* #${history[idx].orderId}\n👤 *Usuario:* ${userNameDisplay}\n🔧 *Servicio:* ${history[idx].serviceName}\n📊 *Estado:* ${statusStr}\n━━━━━━━━━━━━━━━━━━━━━━\n🛡️ _${serverName}_`;
             enqueueWhatsAppAdmin(adminMsg);
 
-            const groupMsg = `📢 *REPORTE DE ORDEN*\n━━━━━━━━━━━━━━━━━━━━━━\n#️⃣ *Orden:* #${history[idx].orderId}\n👤 *Cliente:* ${history[idx].username}\n🔧 *Servicio:* ${history[idx].serviceName}\n📊 *Estado:* ${statusStr}\n━━━━━━━━━━━━━━━━━━━━━━\n🌐 _MegaUnlockPhone_`;
+            const groupMsg = `📢 *REPORTE DE ORDEN*\n━━━━━━━━━━━━━━━━━━━━━━\n#️⃣ *Orden:* #${history[idx].orderId}\n👤 *Cliente:* ${userNameDisplay}\n🔧 *Servicio:* ${history[idx].serviceName}\n📊 *Estado:* ${statusStr}\n━━━━━━━━━━━━━━━━━━━━━━\n🌐 _${serverName}_`;
             enqueueWhatsApp('group', groupMsg);
           }
           
