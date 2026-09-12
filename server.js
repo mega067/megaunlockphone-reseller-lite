@@ -884,7 +884,8 @@ async function processOrder(req, res) {
       
       createAutoBackup('Nuevo_Pedido_S' + serverId);
 
-      const adminMsg = `🛒 *Nuevo Pedido*\n👤 Usuario: ${user.username}\n📦 Servicio: ${serviceName || 'N/A'}\n🔍 Info: ${imeiDataString}\n💰 Precio: $${resellerCost}\n🏢 ${getServerDisplayName(serverId)}\n#️⃣ Orden ID: ${orderId}`;
+      const userNameDisplay = user.role === 'admin' ? 'Admin #1' : user.username;
+      const adminMsg = `🛒 NUEVO PEDIDO RECIBIDO\n━━━━━━━━━━━━━━━━━━━━━━\n#️⃣ Orden: #${orderId}\n👨🏽💻 Usuario: ${userNameDisplay}\n🔧 Servicio: ${serviceName || 'N/A'}\n🔍 Detalles: ${imeiDataString}\n💲 Precio: $${parseFloat(resellerCost).toFixed(2)} MXN\n🖥️ Servidor: ${getServerDisplayName(serverId)}\n━━━━━━━━━━━━━━━━━━━━━━\n🛡️ MegaUnlockPhone`;
       enqueueWhatsAppAdmin(adminMsg);
       
       const groupMsg = `🛒 *NUEVO PEDIDO RECIBIDO*\n━━━━━━━━━━━━━━━━━━━━━━\n👤 *Usuario:* ${user.username}\n🔧 *Servicio:* ${serviceName || 'Servicio'}\n#️⃣ *Orden ID:* ${orderId}\n✅ *Estado:* En proceso\n━━━━━━━━━━━━━━━━━━━━━━`;
