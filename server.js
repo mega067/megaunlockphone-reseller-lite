@@ -2056,15 +2056,25 @@ async function pollPendingOrders() {
            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
          });
          
-         if ((!res.data || !res.data.SUCCESS || res.data.SUCCESS.length === 0) && ids.length > 0) {
-             params.set('action', 'getserverorder');
-             const res2 = await axios.post(targetUrl, params.toString(), {
-               headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-             });
-             if (res2.data && res2.data.SUCCESS) {
-                res.data = res2.data;
-             }
+         // Always check IMEI orders
+         let imeiData = [];
+         if (res.data && res.data.SUCCESS) {
+             imeiData = Array.isArray(res.data.SUCCESS) ? res.data.SUCCESS : [res.data.SUCCESS];
          }
+         
+         // Always check Server orders too
+         params.set('action', 'getserverorder');
+         const res2 = await axios.post(targetUrl, params.toString(), {
+           headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+         });
+         
+         let serverData = [];
+         if (res2.data && res2.data.SUCCESS) {
+             serverData = Array.isArray(res2.data.SUCCESS) ? res2.data.SUCCESS : [res2.data.SUCCESS];
+         }
+         
+         // Merge results
+         res.data = { SUCCESS: [...imeiData, ...serverData] };
          
          if (res.data && res.data.SUCCESS) {
              res.data.SUCCESS.forEach(item => {
