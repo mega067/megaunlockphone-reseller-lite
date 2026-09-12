@@ -146,7 +146,10 @@ module.exports = function(app, deps) {
             
             const statusStr = isSuccess ? '✅ Completado' : (isRejected ? '❌ Rechazado' : '⏳ En proceso');
             
-            const adminMsg = `🔄 ACTUALIZACIÓN DE ORDEN\n━━━━━━━━━━━━━━━━━━━━━━\n#️⃣ Orden: #${history[idx].orderId}\n👨🏽💻 Usuario: ${userNameDisplay}\n🔧 Servicio: ${history[idx].serviceName} \n📊 Estado: ${statusStr}\n🖥️ Servidor: ${serverName}\n━━━━━━━━━━━━━━━━━━━━━━\n🛡️ MegaUnlockPhone`;
+            let adminMsg = `🔄 ACTUALIZACIÓN DE ORDEN\n━━━━━━━━━━━━━━━━━━━━━━\n#️⃣ Orden: #${history[idx].orderId}\n👨🏽💻 Usuario: ${userNameDisplay}\n🔧 Servicio: ${history[idx].serviceName} \n📊 Estado: ${statusStr}\n🖥️ Servidor: ${serverName}\n━━━━━━━━━━━━━━━━━━━━━━\n🛡️ MegaUnlockPhone`;
+            if (isSuccess || isRejected) {
+                adminMsg = `👨🏽💻 Cliente: ${userNameDisplay}\n${privateMsg}`;
+            }
             enqueueWhatsAppAdmin(adminMsg);
 
             const groupMsg = `📢 REPORTE DE ORDEN\n━━━━━━━━━━━━━━━━━━━━━━\n#️⃣ Orden: #${history[idx].orderId}\n👨🏽💻 Cliente: ${userNameDisplay}\n🔧 Servicio: ${history[idx].serviceName} \n📊 Estado: ${statusStr}\n🖥️ Servidor: ${serverName}\n━━━━━━━━━━━━━━━━━━━━━━\n🌐 MegaUnlockPhone`;

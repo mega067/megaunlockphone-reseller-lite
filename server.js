@@ -888,7 +888,7 @@ async function processOrder(req, res) {
       const adminMsg = `🛒 NUEVO PEDIDO RECIBIDO\n━━━━━━━━━━━━━━━━━━━━━━\n#️⃣ Orden: #${orderId}\n👨🏽💻 Usuario: ${userNameDisplay}\n🔧 Servicio: ${serviceName || 'N/A'}\n🔍 Detalles: ${imeiDataString}\n💲 Precio: $${parseFloat(resellerCost).toFixed(2)} MXN\n🖥️ Servidor: ${getServerDisplayName(serverId)}\n━━━━━━━━━━━━━━━━━━━━━━\n🛡️ MegaUnlockPhone`;
       enqueueWhatsAppAdmin(adminMsg);
       
-      const groupMsg = `🛒 *NUEVO PEDIDO RECIBIDO*\n━━━━━━━━━━━━━━━━━━━━━━\n👤 *Usuario:* ${user.username}\n🔧 *Servicio:* ${serviceName || 'Servicio'}\n#️⃣ *Orden ID:* ${orderId}\n✅ *Estado:* En proceso\n━━━━━━━━━━━━━━━━━━━━━━`;
+      const groupMsg = `🛒 NUEVO PEDIDO RECIBIDO\n━━━━━━━━━━━━━━━━━━━━━━\n#️⃣ Orden: #${orderId}\n👨🏽💻 Usuario: ${userNameDisplay}\n🔧 Servicio: ${serviceName || 'N/A'}\n🖥️ Servidor: ${getServerDisplayName(serverId)}\n━━━━━━━━━━━━━━━━━━━━━━\n🌐 MegaUnlockPhone`;
       enqueueWhatsApp('group', groupMsg);
 
       const clientMsg = `📨 ORDEN EN PROCESO\n\n🆔 Orden: #${orderId}\n📱 IMEI: ${imeiDataString || 'N/A'}\n🔧 Servicio: ${serviceName || 'Servicio'}\n💲 Costo: $${parseFloat(finalCostToDeduct).toFixed(2)} MXN\n🔑 Código / Respuesta: Procesando...\n🎉 Estado: En proceso\n\n━━━━━━━━━━━━━━\n🌐 MegaUnlockPhone`;
@@ -2111,10 +2111,13 @@ async function pollPendingOrders() {
                   
                   enqueueWhatsApp('private', resMsg, history[idx].userId);
 
-                  let adminMsg = `🔄 *ACTUALIZACIÓN AUTOMÁTICA*\n━━━━━━━━━━━━━━━━━━━━━━\n#️⃣ *Orden:* #${history[idx].orderId}\n👤 *Usuario:* ${history[idx].username}\n🔧 *Servicio:* ${history[idx].serviceName}\n📊 *Estado:* ${statusTxt} ${isSuccess ? '✅' : '❌'}\n━━━━━━━━━━━━━━━━━━━━━━`;
+                  let adminMsg = `🔄 ACTUALIZACIÓN AUTOMÁTICA\n━━━━━━━━━━━━━━━━━━━━━━\n#️⃣ Orden: #${history[idx].orderId}\n👨🏽💻 Usuario: ${history[idx].username}\n🔧 Servicio: ${history[idx].serviceName}\n📊 Estado: ${statusTxt} ${isSuccess ? '✅' : '❌'}\n━━━━━━━━━━━━━━━━━━━━━━`;
+                  if (isSuccess || remoteStatus.status === 'failed') {
+                      adminMsg = `👨🏽💻 Cliente: ${history[idx].username}\n${resMsg}`;
+                  }
                   enqueueWhatsAppAdmin(adminMsg);
                   
-                  let groupMsg = adminMsg;
+                  let groupMsg = `🔄 ACTUALIZACIÓN AUTOMÁTICA\n━━━━━━━━━━━━━━━━━━━━━━\n#️⃣ Orden: #${history[idx].orderId}\n👨🏽💻 Usuario: ${history[idx].username}\n🔧 Servicio: ${history[idx].serviceName}\n📊 Estado: ${statusTxt} ${isSuccess ? '✅' : '❌'}\n━━━━━━━━━━━━━━━━━━━━━━`;
                   enqueueWhatsApp('group', groupMsg);
               }
           }
