@@ -138,15 +138,18 @@ module.exports = function(app, deps) {
             
             const users = readDB('users.json') || [];
             const userObj = users.find(u => String(u.id) === String(history[idx].userId));
-            const userNameDisplay = userObj ? (userObj.role === 'admin' ? 'Admin' : userObj.username) : 'Desconocido';
+            const userNameDisplay = userObj ? (userObj.role === 'admin' ? 'Admin #1' : userObj.username) : 'Desconocido';
             
-            const serverName = history[idx].serverId === '2' ? 'LatamGSM' : 'MegaUnlockPhone';
+            let serverName = '⚡ MEGA-SERVER';
+            if (String(history[idx].serverId) === '2') serverName = '🛡 ALPHA-SERVER';
+            if (String(history[idx].serverId) === '3') serverName = '🔱 OMEGA-SERVER';
             
-            const statusStr = isSuccess ? '✅ *Completado*' : (isRejected ? '❌ *Rechazado*' : '⏳ *En proceso*');
-            const adminMsg = `🔄 *ACTUALIZACIÓN DE ORDEN*\n━━━━━━━━━━━━━━━━━━━━━━\n#️⃣ *Orden:* #${history[idx].orderId}\n👤 *Usuario:* ${userNameDisplay}\n🔧 *Servicio:* ${history[idx].serviceName}\n📊 *Estado:* ${statusStr}\n━━━━━━━━━━━━━━━━━━━━━━\n🛡️ _${serverName}_`;
+            const statusStr = isSuccess ? '✅ Completado' : (isRejected ? '❌ Rechazado' : '⏳ En proceso');
+            
+            const adminMsg = `🔄 ACTUALIZACIÓN DE ORDEN\n━━━━━━━━━━━━━━━━━━━━━━\n#️⃣ Orden: #${history[idx].orderId}\n👨🏽💻 Usuario: ${userNameDisplay}\n🔧 Servicio: ${history[idx].serviceName} \n📊 Estado: ${statusStr}     🖥️: ${serverName}\n━━━━━━━━━━━━━━━━━━━━━━\n🛡️ MegaUnlockPhone`;
             enqueueWhatsAppAdmin(adminMsg);
 
-            const groupMsg = `📢 *REPORTE DE ORDEN*\n━━━━━━━━━━━━━━━━━━━━━━\n#️⃣ *Orden:* #${history[idx].orderId}\n👤 *Cliente:* ${userNameDisplay}\n🔧 *Servicio:* ${history[idx].serviceName}\n📊 *Estado:* ${statusStr}\n━━━━━━━━━━━━━━━━━━━━━━\n🌐 _${serverName}_`;
+            const groupMsg = `📢 REPORTE DE ORDEN\n━━━━━━━━━━━━━━━━━━━━━━\n#️⃣ Orden: #${history[idx].orderId}\n👨🏽💻 Cliente: ${userNameDisplay}\n🔧 Servicio: ${history[idx].serviceName} \n📊 Estado: ${statusStr}     🖥️: ${serverName}\n━━━━━━━━━━━━━━━━━━━━━━\n🌐 MegaUnlockPhone`;
             enqueueWhatsApp('group', groupMsg);
           }
           
