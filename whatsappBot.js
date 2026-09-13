@@ -687,7 +687,7 @@ async function connectToWhatsApp() {
             }
 
             if (firstWord === '/sync' || firstWord === '/sincronizar') {
-                if (authRole !== 'admin') {
+                if (!user || user.role !== 'admin') {
                     await sock.sendMessage(remoteJid, { text: '❌ Comando exclusivo para administradores.' });
                     return;
                 }
