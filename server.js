@@ -2098,39 +2098,43 @@ async function pollPendingOrders() {
       let bulkResults = {};
       
       const requests = orders.map(async (o) => {
-        let action = o.serviceType === 'SERVER' ? 'getserverorder' : 'getimeiorder';
-        if (sId === '1' || sId === '3') {
-           const params = new URLSearchParams();
-           params.append('username', settings.username);
-           params.append('apiaccesskey', settings.apiaccesskey);
-           params.append('action', action);
-           params.append('requestformat', 'JSON');
-           params.append('parameters', `<PARAMETERS><ID>${o.orderId}</ID></PARAMETERS>`);
-           let res = await axios.post(targetUrl, params.toString(), {
-             headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-           });
-           
-           if (res.data && res.data.SUCCESS) {
-               const itemArr = Array.isArray(res.data.SUCCESS) ? res.data.SUCCESS : [res.data.SUCCESS];
-               itemArr.forEach(item => {
-                   bulkResults[String(o.orderId)] = {
-                       status: String(item.STATUS) === '4' ? 'success' : (String(item.STATUS) === '3' ? 'failed' : 'pending'),
-                       msg: item.REPLY || item.REJECT_REASON || item.CODE || item.MESSAGE || (String(item.STATUS) === '4' ? 'Completado' : (String(item.STATUS) === '3' ? 'Rechazado' : 'En proceso'))
-                   };
+        try {
+            let action = o.serviceType === 'SERVER' ? 'getserverorder' : 'getimeiorder';
+            if (sId === '1' || sId === '3') {
+               const params = new URLSearchParams();
+               params.append('username', settings.username);
+               params.append('apiaccesskey', settings.apiaccesskey);
+               params.append('action', action);
+               params.append('requestformat', 'JSON');
+               params.append('parameters', `<PARAMETERS><ID>${o.orderId}</ID></PARAMETERS>`);
+               let res = await axios.post(targetUrl, params.toString(), {
+                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
                });
-           }
-        } else {
-           const gsmParams = { ID: o.orderId };
-           const res = await callGsmThemeApi(targetUrl, action, gsmParams, settings.username, settings.apiaccesskey);
-           if (res && res.data && res.data.SUCCESS) {
-               const itemArr = Array.isArray(res.data.SUCCESS) ? res.data.SUCCESS : [res.data.SUCCESS];
-               itemArr.forEach(item => {
-                   bulkResults[String(o.orderId)] = {
-                       status: String(item.STATUS) === '4' ? 'success' : (String(item.STATUS) === '3' ? 'failed' : 'pending'),
-                       msg: item.REPLY || item.REJECT_REASON || item.CODE || item.MESSAGE || (String(item.STATUS) === '4' ? 'Completado' : (String(item.STATUS) === '3' ? 'Rechazado' : 'En proceso'))
-                   };
-               });
-           }
+               
+               if (res.data && res.data.SUCCESS) {
+                   const itemArr = Array.isArray(res.data.SUCCESS) ? res.data.SUCCESS : [res.data.SUCCESS];
+                   itemArr.forEach(item => {
+                       bulkResults[String(o.orderId)] = {
+                           status: String(item.STATUS) === '4' ? 'success' : (String(item.STATUS) === '3' ? 'failed' : 'pending'),
+                           msg: item.REPLY || item.REJECT_REASON || item.CODE || item.MESSAGE || (String(item.STATUS) === '4' ? 'Completado' : (String(item.STATUS) === '3' ? 'Rechazado' : 'En proceso'))
+                       };
+                   });
+               }
+            } else {
+               const gsmParams = { ID: o.orderId };
+               const res = await callGsmThemeApi(targetUrl, action, gsmParams, settings.username, settings.apiaccesskey);
+               if (res && res.data && res.data.SUCCESS) {
+                   const itemArr = Array.isArray(res.data.SUCCESS) ? res.data.SUCCESS : [res.data.SUCCESS];
+                   itemArr.forEach(item => {
+                       bulkResults[String(o.orderId)] = {
+                           status: String(item.STATUS) === '4' ? 'success' : (String(item.STATUS) === '3' ? 'failed' : 'pending'),
+                           msg: item.REPLY || item.REJECT_REASON || item.CODE || item.MESSAGE || (String(item.STATUS) === '4' ? 'Completado' : (String(item.STATUS) === '3' ? 'Rechazado' : 'En proceso'))
+                       };
+                   });
+               }
+            }
+        } catch (e) {
+            console.error(`Poll error for order ${o.orderId} on server ${sId}:`, e.message);
         }
       });
       

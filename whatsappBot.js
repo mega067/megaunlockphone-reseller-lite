@@ -686,6 +686,26 @@ async function connectToWhatsApp() {
                 return;
             }
 
+            if (firstWord === '/sync' || firstWord === '/sincronizar') {
+                if (authRole !== 'admin') {
+                    await sock.sendMessage(remoteJid, { text: '❌ Comando exclusivo para administradores.' });
+                    return;
+                }
+                await sock.sendMessage(remoteJid, { text: '⏳ *Iniciando Sincronización Manual...*' });
+                try {
+                    const axios = require('axios');
+                    const res = await axios.get('https://megaunlockphone-panel.alwaysdata.net/api/cron/sync');
+                    if (res.data && res.data.status === 'ok') {
+                        await sock.sendMessage(remoteJid, { text: '✅ *Sincronización completada.*\n\nSi había pedidos pendientes con respuesta, deberías recibir las notificaciones en un momento.' });
+                    } else {
+                        await sock.sendMessage(remoteJid, { text: '⚠️ Sincronización finalizada con advertencias.' });
+                    }
+                } catch (e) {
+                    await sock.sendMessage(remoteJid, { text: '❌ Error al sincronizar: ' + e.message });
+                }
+                return;
+            }
+
             const cmd = text.toLowerCase().trim();
             
             if (cmd === '/desvincular' || cmd === '!desvincular' || cmd === 'desvincular') {
