@@ -122,14 +122,14 @@ module.exports = function(app, deps) {
             const settingsDb = readDB('settings.json') || {};
             
             let privateMsg = '';
-            const costToUse = history[idx].costCharged !== undefined ? history[idx].costCharged : (history[idx].realCost || 0);
+            let costToUse = parseFloat(history[idx].resellerCost || history[idx].costCharged || 0);
             
             let cleanStatusText = (uo.statusText || 'Completado').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').trim();
 
             if (isSuccess) {
-              privateMsg = `✅ SERVICIO COMPLETADO\n\n🆔 Orden: #${history[idx].orderId}\n📱 IMEI: ${history[idx].imei || 'N/A'}\n🔧 Servicio: ${history[idx].serviceName}✅\n💲 Costo: $${parseFloat(costToUse).toFixed(2)} MXN\n🔑 Código / Respuesta: ${cleanStatusText}\n🎉 Estado: Completado\n\n━━━━━━━━━━━━━━\n🌐 MegaUnlockPhone`;
+              privateMsg = `✅ SERVICIO COMPLETADO\n\n🆔 Orden: #${history[idx].orderId}\n📱 IMEI: ${history[idx].imei || 'N/A'}\n🔧 Servicio: ${history[idx].serviceName}✅\n💲 Costo: $${costToUse.toFixed(2)} MXN\n🔑 Código / Respuesta: ${cleanStatusText}\n🎉 Estado: Completado\n\n━━━━━━━━━━━━━━\n🌐 MegaUnlockPhone`;
             } else if (isRejected) {
-              privateMsg = `❌ SERVICIO RECHAZADO\n\n🆔 Orden: #${history[idx].orderId}\n📱 IMEI: ${history[idx].imei || 'N/A'}\n🔧 Servicio: ${history[idx].serviceName}❌\n❗ Motivo: ${cleanStatusText}\n💲 Costo: $${parseFloat(costToUse).toFixed(2)} MXN\n💸 Créditos: Reembolsados\n🎉 Estado: Rechazado\n\n━━━━━━━━━━━━━━\n🌐 MegaUnlockPhone`;
+              privateMsg = `❌ SERVICIO RECHAZADO\n\n🆔 Orden: #${history[idx].orderId}\n📱 IMEI: ${history[idx].imei || 'N/A'}\n🔧 Servicio: ${history[idx].serviceName}❌\n❗ Motivo: ${cleanStatusText}\n💲 Costo: $${costToUse.toFixed(2)} MXN\n💸 Créditos: Reembolsados\n🎉 Estado: Rechazado\n\n━━━━━━━━━━━━━━\n🌐 MegaUnlockPhone`;
             } else {
               privateMsg = `🔔 ACTUALIZACIÓN DE ORDEN\n\n🆔 Orden: #${history[idx].orderId}\n📱 IMEI: ${history[idx].imei || 'N/A'}\n🔧 Servicio: ${history[idx].serviceName}\n📊 Estado: ${uo.status}\n📝 Detalles: ${cleanStatusText}\n\n━━━━━━━━━━━━━━\n🌐 MegaUnlockPhone`;
             }

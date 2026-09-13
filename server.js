@@ -872,6 +872,7 @@ async function processOrder(req, res) {
         serviceType: serviceType || 'IMEI',
         imei: imeiDataString,
         costCharged: finalCostToDeduct,
+        resellerCost: resellerCost,
         realCost: realCost,
         profit: isReseller ? profit : 0,
         orderId,
@@ -891,7 +892,7 @@ async function processOrder(req, res) {
       const groupMsg = `🛒 NUEVO PEDIDO RECIBIDO\n━━━━━━━━━━━━━━━━━━━━━━\n#️⃣ Orden: #${orderId}\n👨🏽💻 Usuario: ${userNameDisplay}\n🔧 Servicio: ${serviceName || 'N/A'}\n🖥️ Servidor: ${getServerDisplayName(serverId)}\n━━━━━━━━━━━━━━━━━━━━━━\n🌐 MegaUnlockPhone`;
       enqueueWhatsApp('group', groupMsg);
 
-      const clientMsg = `📨 ORDEN EN PROCESO\n\n🆔 Orden: #${orderId}\n📱 IMEI: ${imeiDataString || 'N/A'}\n🔧 Servicio: ${serviceName || 'Servicio'}\n💲 Costo: $${parseFloat(finalCostToDeduct).toFixed(2)} MXN\n🔑 Código / Respuesta: Procesando...\n🎉 Estado: En proceso\n\n━━━━━━━━━━━━━━\n🌐 MegaUnlockPhone`;
+      const clientMsg = `📨 ORDEN EN PROCESO\n\n🆔 Orden: #${orderId}\n📱 IMEI: ${imeiDataString || 'N/A'}\n🔧 Servicio: ${serviceName || 'Servicio'}\n💲 Costo: $${parseFloat(resellerCost).toFixed(2)} MXN\n🔑 Código / Respuesta: Procesando...\n🎉 Estado: En proceso\n\n━━━━━━━━━━━━━━\n🌐 MegaUnlockPhone`;
       enqueueWhatsApp('private', clientMsg, user.id);
 
       return res.json(responseData);
@@ -2167,7 +2168,7 @@ async function pollPendingOrders() {
                   resMsg += `🆔 *Orden:* #${history[idx].orderId}\n`;
                   resMsg += `📱 *IMEI:* ${history[idx].imei || 'N/A'}\n`;
                   resMsg += `🔧 *Servicio:* ${history[idx].serviceName} ${isSuccess ? '✅' : '❌'}\n`;
-                  resMsg += `💲 *Costo:* $${parseFloat(history[idx].costCharged || 0).toFixed(2)} MXN\n`;
+                  resMsg += `💲 *Costo:* $${parseFloat(history[idx].resellerCost || history[idx].costCharged || 0).toFixed(2)} MXN\n`;
                   resMsg += `🔑 *Respuesta:* ${remoteStatus.msg}\n`;
                   resMsg += `🎉 *Estado:* ${statusTxt}\n\n`;
                   resMsg += `━━━━━━━━━━━━━━━━━━━━━━\n🌐 MegaUnlockPhone`;
