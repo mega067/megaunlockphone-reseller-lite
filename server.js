@@ -2094,62 +2094,47 @@ async function pollPendingOrders() {
     const settings = getServerSettings(settingsDb, sId);
     if (!settings || !settings.endpoint) continue;
     
-    const ids = orders.map(o => o.orderId).join(',');
-    let targetUrl = settings.endpoint.endsWith('/') ? settings.endpoint + 'api/index.php' : settings.endpoint + '/api/index.php';
-    
     try {
       let bulkResults = {};
-      if (sId === '1' || sId === '3') {
-         const params = new URLSearchParams();
-         params.append('username', settings.username);
-         params.append('apiaccesskey', settings.apiaccesskey);
-         params.append('action', 'getimeiorder');
-         params.append('requestformat', 'JSON');
-         params.append('parameters', `<PARAMETERS><ID>${ids}</ID></PARAMETERS>`);
-         let res = await axios.post(targetUrl, params.toString(), {
-           headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-         });
-         
-         // Always check IMEI orders
-         let imeiData = [];
-         if (res.data && res.data.SUCCESS) {
-             imeiData = Array.isArray(res.data.SUCCESS) ? res.data.SUCCESS : [res.data.SUCCESS];
-         }
-         
-         // Always check Server orders too
-         params.set('action', 'getserverorder');
-         const res2 = await axios.post(targetUrl, params.toString(), {
-           headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-         });
-         
-         let serverData = [];
-         if (res2.data && res2.data.SUCCESS) {
-             serverData = Array.isArray(res2.data.SUCCESS) ? res2.data.SUCCESS : [res2.data.SUCCESS];
-         }
-         
-         // Merge results
-         res.data = { SUCCESS: [...imeiData, ...serverData] };
-         
-         if (res.data && res.data.SUCCESS) {
-             res.data.SUCCESS.forEach(item => {
-                 bulkResults[String(item.REFERENCEID)] = {
-                     status: String(item.STATUS) === '4' ? 'success' : (String(item.STATUS) === '3' ? 'failed' : 'pending'),
-                     msg: item.REPLY || item.REJECT_REASON || item.CODE || item.MESSAGE || (String(item.STATUS) === '4' ? 'Completado' : (String(item.STATUS) === '3' ? 'Rechazado' : 'En proceso'))
-                 };
-             });
-         }
-      } else {
-         const gsmParams = { ID: ids };
-         const res = await callGsmThemeApi(targetUrl, 'getimeiorder', gsmParams, settings.username, settings.apiaccesskey);
-         if (res && res.data && res.data.SUCCESS) {
-             res.data.SUCCESS.forEach(item => {
-                 bulkResults[String(item.REFERENCEID)] = {
-                     status: String(item.STATUS) === '4' ? 'success' : (String(item.STATUS) === '3' ? 'failed' : 'pending'),
-                     msg: item.REPLY || item.REJECT_REASON || item.CODE || item.MESSAGE || (String(item.STATUS) === '4' ? 'Completado' : (String(item.STATUS) === '3' ? 'Rechazado' : 'En proceso'))
-                 };
-             });
-         }
-      }
+      
+      const requests = orders.map(async (o) => {
+        let action = o.serviceType === 'SERVER' ? 'getserverorder' : 'getimeiorder';
+        if (sId === '1' || sId === '3') {
+           const params = new URLSearchParams();
+           params.append('username', settings.username);
+           params.append('apiaccesskey', settings.apiaccesskey);
+           params.append('action', action);
+           params.append('requestformat', 'JSON');
+           params.append('parameters', `<PARAMETERS><ID>${o.orderId}</ID></PARAMETERS>`);
+           let res = await axios.post(targetUrl, params.toString(), {
+             headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+           });
+           
+           if (res.data && res.data.SUCCESS) {
+               const itemArr = Array.isArray(res.data.SUCCESS) ? res.data.SUCCESS : [res.data.SUCCESS];
+               itemArr.forEach(item => {
+                   bulkResults[String(item.REFERENCEID)] = {
+                       status: String(item.STATUS) === '4' ? 'success' : (String(item.STATUS) === '3' ? 'failed' : 'pending'),
+                       msg: item.REPLY || item.REJECT_REASON || item.CODE || item.MESSAGE || (String(item.STATUS) === '4' ? 'Completado' : (String(item.STATUS) === '3' ? 'Rechazado' : 'En proceso'))
+                   };
+               });
+           }
+        } else {
+           const gsmParams = { ID: o.orderId };
+           const res = await callGsmThemeApi(targetUrl, action, gsmParams, settings.username, settings.apiaccesskey);
+           if (res && res.data && res.data.SUCCESS) {
+               const itemArr = Array.isArray(res.data.SUCCESS) ? res.data.SUCCESS : [res.data.SUCCESS];
+               itemArr.forEach(item => {
+                   bulkResults[String(item.REFERENCEID || item.ID || o.orderId)] = {
+                       status: String(item.STATUS) === '4' ? 'success' : (String(item.STATUS) === '3' ? 'failed' : 'pending'),
+                       msg: item.REPLY || item.REJECT_REASON || item.CODE || item.MESSAGE || (String(item.STATUS) === '4' ? 'Completado' : (String(item.STATUS) === '3' ? 'Rechazado' : 'En proceso'))
+                   };
+               });
+           }
+        }
+      });
+      
+      await Promise.all(requests);
       
       orders.forEach(order => {
           const remoteStatus = bulkResults[String(order.orderId)];
