@@ -2094,6 +2094,8 @@ async function pollPendingOrders() {
     const settings = getServerSettings(settingsDb, sId);
     if (!settings || !settings.endpoint) continue;
     
+    let targetUrl = settings.endpoint.endsWith('/') ? settings.endpoint + 'api/index.php' : settings.endpoint + '/api/index.php';
+    
     try {
       let bulkResults = {};
       
