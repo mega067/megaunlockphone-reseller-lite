@@ -2111,6 +2111,12 @@ async function pollPendingOrders() {
                  headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
                });
                
+               // --- DEBUG ---
+               const fs = require('fs');
+               const path = require('path');
+               fs.writeFileSync(path.join(__dirname, 'data', 'debug_poll.json'), JSON.stringify(res.data, null, 2));
+               // ------------
+
                if (res.data && res.data.SUCCESS) {
                    const itemArr = Array.isArray(res.data.SUCCESS) ? res.data.SUCCESS : [res.data.SUCCESS];
                    itemArr.forEach(item => {
@@ -2142,6 +2148,13 @@ async function pollPendingOrders() {
       
       orders.forEach(order => {
           const remoteStatus = bulkResults[String(order.orderId)];
+          
+          // --- DEBUG ---
+          const fs = require('fs');
+          const path = require('path');
+          fs.writeFileSync(path.join(__dirname, 'data', 'debug_bulkResults.json'), JSON.stringify(bulkResults, null, 2));
+          // ------------
+          
           if (remoteStatus && remoteStatus.status !== 'pending' && remoteStatus.status !== order.status) {
               const idx = history.findIndex(h => h.id === order.id);
               if (idx !== -1) {
@@ -2192,6 +2205,18 @@ app.get('/api/cron/sync', async (req, res) => {
   try {
     await pollPendingOrders();
     res.json({ status: 'ok', message: 'Sync cron executed' });
+  } catch (e) {
+    res.status(500).json({ status: 'error', message: e.message });
+  }
+});
+
+app.get('/api/debug-poll', async (req, res) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const dbg1 = fs.existsSync(path.join(__dirname, 'data', 'debug_poll.json')) ? JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'debug_poll.json'))) : null;
+    const dbg2 = fs.existsSync(path.join(__dirname, 'data', 'debug_bulkResults.json')) ? JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'debug_bulkResults.json'))) : null;
+    res.json({ dhru_response: dbg1, bulkResults: dbg2 });
   } catch (e) {
     res.status(500).json({ status: 'error', message: e.message });
   }
