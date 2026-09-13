@@ -899,6 +899,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         data = await response.json();
 
+        if (data.error_msg) {
+            alert(data.error_msg);
+            setLoadingState(false);
+            if (document.getElementById('globalLoadingOverlay')) document.getElementById('globalLoadingOverlay').classList.add('hidden');
+            updateStatus('offline', 'Error API');
+            return;
+        }
+
         if (!response.ok) {
           if (response.status === 401) {
             alert('Tu sesión ha expirado o el servidor se reinició. Por favor, inicia sesión de nuevo.');

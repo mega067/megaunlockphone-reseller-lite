@@ -483,11 +483,17 @@ app.get('/api/products', requireAuth, async (req, res) => {
       const finalData = { SUCCESS: [ { LIST: mergedList } ] };
       return res.json(finalData);
     } else {
-      return res.status(500).json({ error: 'Failed to fetch catalogs from API.' });
+      if (serverId === '1') {
+         return res.status(200).json({ error_msg: 'El servidor de MEGA (LatamGSM) está bloqueando la conexión del Panel por su Firewall (Error 403). Contacta a su soporte para que permitan la conexión.' });
+      }
+      return res.status(200).json({ error_msg: 'Fallo al obtener el catálogo de servicios de la API.' });
     }
   } catch (error) {
     console.error('API Proxy Error:', error.message);
-    return res.status(500).json({ error: 'Internal Server Error' });
+    if (serverId === '1' && error.message && error.message.includes('403')) {
+        return res.status(200).json({ error_msg: 'El servidor de MEGA (LatamGSM) está bloqueando la conexión del Panel por su Firewall (Error 403).' });
+    }
+    return res.status(200).json({ error_msg: 'Error interno del servidor al conectar con la API.' });
   }
 });
 
