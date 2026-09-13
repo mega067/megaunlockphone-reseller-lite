@@ -690,6 +690,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!silent) {
       btnSyncHistory.setAttribute('disabled', 'true');
       btnSyncHistory.querySelector('span').textContent = 'Sincronizando...';
+      const icon = btnSyncHistory.querySelector('i');
+      if (icon) icon.classList.add('fa-spin');
     }
 
     let updatedCount = 0;
@@ -799,6 +801,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!silent) {
       btnSyncHistory.removeAttribute('disabled');
       btnSyncHistory.querySelector('span').textContent = 'Sincronizar Pedidos';
+      const icon = btnSyncHistory.querySelector('i');
+      if (icon) icon.classList.remove('fa-spin');
       if (updatedCount > 0) {
         alert(`Sincronización completada. Se actualizaron ${updatedCount} pedidos.`);
       } else {
