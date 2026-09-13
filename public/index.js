@@ -871,6 +871,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setLoadingState(true);
     updateStatus('loading', 'Sincronizando...');
+    
+    const loadingOverlay = document.getElementById('globalLoadingOverlay');
+    if (loadingOverlay) {
+        loadingOverlay.classList.remove('hidden');
+        lucide.createIcons(); // ensure the icon renders inside the modal
+    }
 
     try {
       let data;
@@ -1039,12 +1045,14 @@ document.addEventListener('DOMContentLoaded', () => {
       
       updateStatus('online', 'Conectado');
       setLoadingState(false);
+      if (document.getElementById('globalLoadingOverlay')) document.getElementById('globalLoadingOverlay').classList.add('hidden');
 
     } catch (err) {
       console.error(err);
       showError(err.message);
       updateStatus('offline', 'Error de conexión');
       setLoadingState(false);
+      if (document.getElementById('globalLoadingOverlay')) document.getElementById('globalLoadingOverlay').classList.add('hidden');
     }
   }
 
