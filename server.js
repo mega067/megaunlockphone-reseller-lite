@@ -1177,9 +1177,62 @@ app.post('/api/bot/service_info', requireBotSecret, async (req, res) => {
   let list = (catalogCache[serverKey] && catalogCache[serverKey].data) ? catalogCache[serverKey].data : null;
   
   if (!list) {
-      // Si la lista está vacía (servidor recién reiniciado), le decimos al bot que no se encontró para no complicar, 
-      // o podríamos copiar la misma lógica de arriba. Lo más seguro es que el /search ya lo haya llenado.
-      list = {};
+    const settingsDb = readDB('settings.json') || {};
+    const settings = getServerSettings(settingsDb, serverId);
+    if (settings && settings.username && settings.apiaccesskey) {
+        const { apiaccesskey, username, endpoint } = settings;
+        let targetUrl = endpoint.endsWith('/') ? endpoint + 'api/index.php' : endpoint + '/api/index.php';
+        try {
+            let mergedList = {};
+            let hasSuccess = false;
+            if (serverId === '1' || serverId === '3') {
+                const p1 = new URLSearchParams(); p1.append('username', username); p1.append('apiaccesskey', apiaccesskey); p1.append('action', 'imeiservicelist'); p1.append('requestformat', 'JSON');
+                const p2 = new URLSearchParams(); p2.append('username', username); p2.append('apiaccesskey', apiaccesskey); p2.append('action', 'serverservicelist'); p2.append('requestformat', 'JSON');
+                const [r1, r2] = await Promise.all([
+                    axios.post(targetUrl, p1.toString(), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 15000 }).catch(e=>({})),
+                    axios.post(targetUrl, p2.toString(), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 15000 }).catch(e=>({}))
+                ]);
+                if (r1.data && r1.data.SUCCESS && r1.data.SUCCESS[0] && r1.data.SUCCESS[0].LIST) {
+                    mergedList = { ...r1.data.SUCCESS[0].LIST }; hasSuccess = true;
+                }
+                if (r2.data && r2.data.SUCCESS && r2.data.SUCCESS[0] && r2.data.SUCCESS[0].LIST) {
+                    const sList = r2.data.SUCCESS[0].LIST;
+                    for (const g in sList) {
+                        if (mergedList[g]) mergedList[g].SERVICES = { ...mergedList[g].SERVICES, ...sList[g].SERVICES };
+                        else mergedList[g] = sList[g];
+                    }
+                    hasSuccess = true;
+                }
+            } else {
+                const [r1, r2] = await Promise.all([
+                    callGsmThemeApi(targetUrl, 'imeiservicelist', null, username, apiaccesskey).catch(e=>({})),
+                    callGsmThemeApi(targetUrl, 'serverservicelist', null, username, apiaccesskey).catch(e=>({}))
+                ]);
+                if (r1.data && r1.data.SUCCESS && r1.data.SUCCESS[0] && r1.data.SUCCESS[0].LIST) {
+                    mergedList = { ...r1.data.SUCCESS[0].LIST }; hasSuccess = true;
+                }
+                if (r2.data && r2.data.SUCCESS && r2.data.SUCCESS[0] && r2.data.SUCCESS[0].LIST) {
+                    const sList = r2.data.SUCCESS[0].LIST;
+                    for (const g in sList) {
+                        if (mergedList[g]) mergedList[g].SERVICES = { ...mergedList[g].SERVICES, ...sList[g].SERVICES };
+                        else mergedList[g] = sList[g];
+                    }
+                    hasSuccess = true;
+                }
+            }
+            if (hasSuccess) {
+                if (!catalogCache[serverKey]) catalogCache[serverKey] = {};
+                catalogCache[serverKey].data = JSON.parse(JSON.stringify(mergedList));
+                list = catalogCache[serverKey].data;
+            } else {
+                list = {};
+            }
+        } catch (e) {
+            list = {};
+        }
+    } else {
+        list = {};
+    }
   }
   
   for (const g in list) {
