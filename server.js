@@ -2113,7 +2113,7 @@ async function pollPendingOrders() {
            if (res.data && res.data.SUCCESS) {
                const itemArr = Array.isArray(res.data.SUCCESS) ? res.data.SUCCESS : [res.data.SUCCESS];
                itemArr.forEach(item => {
-                   bulkResults[String(item.REFERENCEID)] = {
+                   bulkResults[String(o.orderId)] = {
                        status: String(item.STATUS) === '4' ? 'success' : (String(item.STATUS) === '3' ? 'failed' : 'pending'),
                        msg: item.REPLY || item.REJECT_REASON || item.CODE || item.MESSAGE || (String(item.STATUS) === '4' ? 'Completado' : (String(item.STATUS) === '3' ? 'Rechazado' : 'En proceso'))
                    };
@@ -2125,7 +2125,7 @@ async function pollPendingOrders() {
            if (res && res.data && res.data.SUCCESS) {
                const itemArr = Array.isArray(res.data.SUCCESS) ? res.data.SUCCESS : [res.data.SUCCESS];
                itemArr.forEach(item => {
-                   bulkResults[String(item.REFERENCEID || item.ID || o.orderId)] = {
+                   bulkResults[String(o.orderId)] = {
                        status: String(item.STATUS) === '4' ? 'success' : (String(item.STATUS) === '3' ? 'failed' : 'pending'),
                        msg: item.REPLY || item.REJECT_REASON || item.CODE || item.MESSAGE || (String(item.STATUS) === '4' ? 'Completado' : (String(item.STATUS) === '3' ? 'Rechazado' : 'En proceso'))
                    };
