@@ -690,8 +690,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!silent) {
       btnSyncHistory.setAttribute('disabled', 'true');
       btnSyncHistory.querySelector('span').textContent = 'Sincronizando...';
-      const icon = btnSyncHistory.querySelector('i');
-      if (icon) icon.classList.add('fa-spin');
+      const icon = btnSyncHistory.querySelector('svg');
+      if (icon) icon.classList.add('icon-spin');
     }
 
     let updatedCount = 0;
@@ -801,8 +801,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!silent) {
       btnSyncHistory.removeAttribute('disabled');
       btnSyncHistory.querySelector('span').textContent = 'Sincronizar Pedidos';
-      const icon = btnSyncHistory.querySelector('i');
-      if (icon) icon.classList.remove('fa-spin');
+      const icon = btnSyncHistory.querySelector('svg');
+      if (icon) icon.classList.remove('icon-spin');
       if (updatedCount > 0) {
         alert(`Sincronización completada. Se actualizaron ${updatedCount} pedidos.`);
       } else {
