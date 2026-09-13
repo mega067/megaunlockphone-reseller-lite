@@ -2108,15 +2108,9 @@ async function pollPendingOrders() {
                params.append('requestformat', 'JSON');
                params.append('parameters', `<PARAMETERS><ID>${o.orderId}</ID></PARAMETERS>`);
                let res = await axios.post(targetUrl, params.toString(), {
-                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 15000, httpsAgent: ipv4Agent
                });
                
-               // --- DEBUG ---
-               const fs = require('fs');
-               const path = require('path');
-               fs.writeFileSync(path.join(__dirname, 'data', 'debug_poll.json'), JSON.stringify(res.data, null, 2));
-               // ------------
-
                if (res.data && res.data.SUCCESS) {
                    const itemArr = Array.isArray(res.data.SUCCESS) ? res.data.SUCCESS : [res.data.SUCCESS];
                    itemArr.forEach(item => {
@@ -2148,12 +2142,6 @@ async function pollPendingOrders() {
       
       orders.forEach(order => {
           const remoteStatus = bulkResults[String(order.orderId)];
-          
-          // --- DEBUG ---
-          const fs = require('fs');
-          const path = require('path');
-          fs.writeFileSync(path.join(__dirname, 'data', 'debug_bulkResults.json'), JSON.stringify(bulkResults, null, 2));
-          // ------------
           
           if (remoteStatus && remoteStatus.status !== 'pending' && remoteStatus.status !== order.status) {
               const idx = history.findIndex(h => h.id === order.id);
