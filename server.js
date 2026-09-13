@@ -2204,11 +2204,15 @@ app.get('/api/debug-poll', async (req, res) => {
   try {
     const fs = require('fs');
     const path = require('path');
-    const dbg1 = fs.existsSync(path.join(__dirname, 'data', 'debug_poll.json')) ? JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'debug_poll.json'))) : null;
-    const dbg2 = fs.existsSync(path.join(__dirname, 'data', 'debug_bulkResults.json')) ? JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'debug_bulkResults.json'))) : null;
-    res.json({ dhru_response: dbg1, bulkResults: dbg2 });
+    const history = fs.existsSync(path.join(__dirname, 'data', 'history.json')) ? JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'history.json'))) : [];
+    const myOrders = history.filter(h => h.userId === '1').slice(0, 5); // Assumes admin is user 1
+    res.json({ 
+        dhru_response: "removed", 
+        bulkResults: "removed",
+        history_snippet: myOrders
+    });
   } catch (e) {
-    res.status(500).json({ status: 'error', message: e.message });
+    res.status(500).json({ status: 'error', message: e.message, stack: e.stack });
   }
 });
 // START SERVER
