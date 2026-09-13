@@ -2156,12 +2156,14 @@ async function pollPendingOrders() {
                   let headerIcon = isSuccess ? '✅ *SERVICIO COMPLETADO*' : '❌ *SERVICIO RECHAZADO*';
                   let statusTxt = isSuccess ? 'Completado' : 'Rechazado';
                   
+                  let cleanMsg = String(remoteStatus.msg || '').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').trim();
+                  
                   let resMsg = `${headerIcon}\n━━━━━━━━━━━━━━━━━━━━━━\n`;
                   resMsg += `🆔 *Orden:* #${history[idx].orderId}\n`;
                   resMsg += `📱 *IMEI:* ${history[idx].imei || 'N/A'}\n`;
                   resMsg += `🔧 *Servicio:* ${history[idx].serviceName} ${isSuccess ? '✅' : '❌'}\n`;
                   resMsg += `💲 *Costo:* $${parseFloat(history[idx].resellerCost || history[idx].costCharged || 0).toFixed(2)} MXN\n`;
-                  resMsg += `🔑 *Respuesta:* ${remoteStatus.msg}\n`;
+                  resMsg += `🔑 *Respuesta:* ${cleanMsg}\n`;
                   resMsg += `🎉 *Estado:* ${statusTxt}\n\n`;
                   resMsg += `━━━━━━━━━━━━━━━━━━━━━━\n🌐 MegaUnlockPhone`;
                   
