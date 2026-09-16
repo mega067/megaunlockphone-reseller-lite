@@ -787,3 +787,23 @@ h1, h2, h3, h4 { color: var(--text-primary); font-weight: 600; letter-spacing: -
     transform: rotate(360deg);
   }
 }
+
+/* Admin Price Inputs Dark Theme */
+.admin-price-input,
+.custom-price-form input[type="number"],
+.user-specific-price-input {
+  background-color: #1e293b;
+  color: #f8fafc;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+.admin-price-input:focus,
+.custom-price-form input[type="number"]:focus,
+.user-specific-price-input:focus {
+  outline: none;
+  border-color: #ec4899;
+  box-shadow: 0 0 0 2px rgba(236, 72, 153, 0.2);
+}
+

@@ -11,6 +11,7 @@ const { exec, spawn } = require('child_process');
 const { getDepositAccount } = require('./paymentRouter');
 const { validarPagoInteligente } = require('./banxicoCEP');
 const { reportarPagoProveedor } = require('./providerPayment');
+const { fetchBulkOrdersStatus } = require('./src/syncService');
 
 // WhatsApp Bot is now managed via AlwaysData User Services to run as a continuous daemon.
 // The auto-spawn logic has been removed to prevent double connections.
@@ -44,6 +45,16 @@ const PORT = process.env.PORT || 3000;
 const IP = process.env.IP || '::';
 
 app.use(cors());
+
+// HTTP Security Headers
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  next();
+});
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
@@ -155,124 +166,10 @@ if (!initSettings || !initSettings.server1 || !initSettings.server1.apiaccesskey
   });
 }
 
-// In-memory token store
-const sessions = {};
+const { sessions, requireAuth, requireAdmin, requireAdminOrColaborador } = require('./src/auth');
+const { getServerDisplayName, getServerId, getServerSettings, getUserCredit, setUserCredit, callGsmThemeApi } = require('./src/helpers');
 
-// Multi-Server Helpers
-const SERVER_DISPLAY_NAMES = { '1': '⚡ MEGA-SERVER', '2': '🛡 ALPHA-SERVER', '3': '🔱 OMEGA-SERVER' };
-function getServerDisplayName(id) { return SERVER_DISPLAY_NAMES[String(id)] || 'Servidor ' + id; }
-function getServerId(req) {
-  const id = req.headers['x-server-id'] || req.body?.serverId || '1';
-  return ['1', '2', '3'].includes(id) ? id : '1';
-}
 
-function getServerSettings(settings, serverId) {
-  if (!settings) return null;
-  
-  let s = {};
-  if (serverId === '3') {
-    s = settings.server3 || {};
-    s.endpoint = s.endpoint || "https://www.unlockerfast.com.mx/";
-    s.username = s.username || "MegaUnlockPhone";
-    s.apiaccesskey = s.apiaccesskey || "QXU-2HD-MAR-PKM-PAD-RFP-XK5-5ME";
-  } else if (serverId === '2') {
-    s = settings.server2 || {};
-    s.endpoint = s.endpoint || "https://popi-gsm.com/public/";
-    s.username = s.username || "angeljuares067@gmail.com";
-    s.apiaccesskey = s.apiaccesskey || "B29Q-G7EJ-A3OU-629Z-VQYO-5ZX9-F8SE-QCRU";
-  } else {
-    // Server 1 (LatamGSM) with legacy fallback support
-    s = settings.server1 || {};
-    s.endpoint = s.endpoint || settings.endpoint || "https://latamgsm.com/dhru/";
-    s.username = s.username || settings.username || settings.masterUsername || "angeljuares067@gmail.com";
-    s.apiaccesskey = s.apiaccesskey || settings.apiaccesskey || "pk60-qXSs-xXsF-qZPa";
-  }
-
-  s.resellerMarkup = s.resellerMarkup || settings.resellerMarkup || 0;
-  s.clientMarkup = s.clientMarkup || settings.clientMarkup || 0;
-  
-  return s;
-}
-
-function getUserCredit(user, serverId) {
-  // Migrate legacy users to separated wallets
-  if (user.credits_1 === undefined) {
-    user.credits_1 = parseFloat(user.credits || 0);
-    user.credits_2 = 0;
-    user.credits_3 = 0;
-    delete user.credits;
-  }
-  
-  if (serverId === '3') return parseFloat(user.credits_3 || 0);
-  if (serverId === '2') return parseFloat(user.credits_2 || 0);
-  return parseFloat(user.credits_1 || 0);
-}
-
-function setUserCredit(user, serverId, amount) {
-  if (serverId === '3') user.credits_3 = parseFloat(amount);
-  else if (serverId === '2') user.credits_2 = parseFloat(amount);
-  else user.credits_1 = parseFloat(amount);
-}
-
-// GSM Theme API Caller
-async function callGsmThemeApi(targetUrl, action, parameters, username, apiaccesskey) {
-  const jsonParams = parameters ? Buffer.from(JSON.stringify(parameters)).toString('base64') : '';
-  const params = new URLSearchParams();
-  params.append('username', username);
-  params.append('apiaccesskey', apiaccesskey);
-  params.append('action', action);
-  params.append('requestformat', 'JSON');
-  params.append('parameters', jsonParams);
-
-  const res = await axios.post(targetUrl, params.toString(), {
-    headers: { 
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'User-Agent': 'MegaUnlock/1.0',
-      'X-Powered-By': 'GSM-THEME'
-    },
-    timeout: 30000
-  });
-  return res;
-}
-
-// Auth Middleware
-function requireAuth(req, res, next) {
-  const token = req.headers['authorization']?.split(' ')[1];
-  if (!token) {
-    return res.status(401).json({ error: 'Unauthorized. Please login again.' });
-  }
-
-  if (sessions[token]) {
-    req.user = sessions[token]; // attach user object to request
-    return next();
-  }
-
-  // Fallback para Bot de WhatsApp (Token = userId, con BotSecret en el body)
-  if (req.body && req.body.botSecret === 'MEGA_BOT_SECRET_2026') {
-    const users = readDB('users.json') || [];
-    const botUser = users.find(u => String(u.id) === String(token));
-    if (botUser) {
-      req.user = botUser;
-      return next();
-    }
-  }
-
-  return res.status(401).json({ error: 'Unauthorized. Please login again.' });
-}
-
-function requireAdmin(req, res, next) {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Forbidden. Admin access required.' });
-  }
-  next();
-}
-
-function requireAdminOrColaborador(req, res, next) {
-  if (req.user.role !== 'admin' && req.user.role !== 'colaborador') {
-    return res.status(403).json({ error: 'Forbidden. Admin or Colaborador access required.' });
-  }
-  next();
-}
 
 // Login Endpoint
 app.post('/api/login', (req, res) => {
@@ -714,6 +611,47 @@ async function processOrder(req, res) {
   const currentCredit = getUserCredit(user, serverId);
   if (isReseller && currentCredit < finalCostToDeduct) {
     return res.status(400).json({ error: `Saldo insuficiente. Tienes $${currentCredit.toFixed(2)} y el pedido cuesta $${finalCostToDeduct.toFixed(2)} (Cantidad: ${quantity} x $${baseCostToDeduct.toFixed(2)})` });
+  } else if (!isReseller) {
+    try {
+        let targetUrl = settings.endpoint;
+        if (!targetUrl) {
+            targetUrl = serverId === '3' ? 'https://megaunlockphone-panel.alwaysdata.net/api/index.php' : 'https://latamgsm.com/dhru/';
+        }
+        if (!targetUrl.includes('/api/')) {
+          targetUrl = targetUrl.endsWith('/') ? `${targetUrl}api/index.php` : `${targetUrl}/api/index.php`;
+        } else if (targetUrl.endsWith('/api/')) {
+          targetUrl += 'index.php';
+        }
+        
+        const params = new URLSearchParams();
+        params.append('username', settings.username);
+        params.append('apiaccesskey', settings.apiaccesskey);
+        params.append('action', 'accountinfo');
+        params.append('requestformat', 'JSON');
+        
+        const response = await axios.post(targetUrl, params.toString(), {
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'Dhru-Fusion-Web-Client/1.0' },
+          timeout: 10000
+        });
+        
+        const exRate = parseFloat(settingsDb.exchangeRate || 17.60);
+        const rate = serverId === '3' ? 1 : exRate;
+        const real = parseFloat(response.data?.SUCCESS?.[0]?.AccountInfo?.creditraw || 0) * rate;
+        
+        let cedido = 0;
+        users.forEach(u => {
+          if (u.role !== 'admin' && u['credits_' + serverId]) {
+            cedido += parseFloat(u['credits_' + serverId]);
+          }
+        });
+        
+        const disp = real - cedido;
+        if (disp < finalCostToDeduct) {
+            return res.status(400).json({ error: `Saldo disponible insuficiente. Tienes $${disp.toFixed(2)} disponibles reales (sin el saldo cedido a usuarios) y el pedido cuesta $${finalCostToDeduct.toFixed(2)}.` });
+        }
+    } catch(e) {
+        return res.status(400).json({ error: `Error verificando saldo del admin: ${e.message}` });
+    }
   }
 
   const { apiaccesskey, username, endpoint } = settings;
@@ -966,12 +904,6 @@ app.post('/api/orders/bulk-status', requireAuth, async (req, res) => {
   if (!settingsDb) return res.status(500).json({ error: 'Server misconfigured' });
   const settings = getServerSettings(settingsDb, serverId);
   if (!settings) return res.status(500).json({ error: 'Server misconfigured' });
-  const { apiaccesskey, username, endpoint } = settings;
-
-  let targetUrl = endpoint || 'https://latamgsm.com/dhru/';
-  if (!targetUrl.endsWith('/')) targetUrl += '/';
-  if (!targetUrl.includes('/api/')) targetUrl += 'api/index.php';
-  else if (targetUrl.endsWith('/api/')) targetUrl += 'index.php';
 
   try {
     let syncList = [];
@@ -981,53 +913,7 @@ app.post('/api/orders/bulk-status', requireAuth, async (req, res) => {
       syncList = ids.split(',').map(id => ({ id: id.trim(), type: 'IMEI' })).filter(item => item.id);
     }
 
-    const requests = syncList.map(async (itemObj) => {
-      const orderid = itemObj.id;
-      let action = 'getimeiorder';
-      if (itemObj.type) {
-        let t = String(itemObj.type).toLowerCase().trim();
-        if (t !== 'server' && t !== 'file') {
-          t = 'imei';
-        }
-        action = `get${t}order`; // Ensures remote services fall back to getimeiorder
-      }
-
-      const params = new URLSearchParams();
-      params.append('username', username);
-      params.append('apiaccesskey', apiaccesskey);
-      params.append('action', action);
-      params.append('requestformat', 'JSON');
-      params.append('parameters', `<PARAMETERS><ID>${orderid}</ID></PARAMETERS>`);
-
-      try {
-        let response = await axios.post(targetUrl, params.toString(), {
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 15000, httpsAgent: ipv4Agent
-        });
-
-        // Fallback for providers that mix SERVER orders into the IMEI database
-        if ((!response.data || !response.data.SUCCESS || response.data.SUCCESS.length === 0) && action === 'getserverorder') {
-          params.set('action', 'getimeiorder');
-          response = await axios.post(targetUrl, params.toString(), {
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 15000, httpsAgent: ipv4Agent
-          });
-        }
-
-        if (response.data && response.data.SUCCESS && response.data.SUCCESS.length > 0) {
-          const item = response.data.SUCCESS[0];
-          return {
-            orderid: orderid,
-            status: String(item.STATUS) === '4' ? 'success' : (String(item.STATUS) === '3' ? 'failed' : 'pending'),
-            statusText: item.REPLY || item.REJECT_REASON || item.CODE || item.MESSAGE || (String(item.STATUS) === '4' ? 'Completado' : (String(item.STATUS) === '3' ? 'Rechazado' : 'En proceso')),
-            raw: item
-          };
-        }
-      } catch (err) {
-        return { orderid, status: 'error', statusText: 'Fallo de conexión' };
-      }
-      return { orderid, status: 'unknown', statusText: 'Sin respuesta válida' };
-    });
-
-    const results = await Promise.all(requests);
+    const results = await fetchBulkOrdersStatus(syncList, settings, serverId);
     return res.json({ SUCCESS: results });
   } catch (error) {
     return res.status(500).json({ error: 'Failed to fetch bulk statuses.', details: error.message });
@@ -1045,14 +931,23 @@ function requireBotSecret(req, res, next) {
     return res.status(403).json({ error: 'Forbidden' });
   }
   const users = readDB('users.json') || [];
-  const userIndex = users.findIndex(u => u.id === req.body.userId);
+  const userIndex = users.findIndex(u => String(u.id) === String(req.body.userId));
   if (userIndex === -1) return res.status(404).json({ error: 'User not found' });
   req.user = users[userIndex];
   req.headers['x-server-id'] = req.body.serverId || '1';
   next();
 }
 
-app.post('/api/bot/search', requireBotSecret, async (req, res) => {
+function requireBotSecretOnly(req, res, next) {
+  if (req.body.botSecret !== BOT_SECRET) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  req.headers['x-server-id'] = req.body.serverId || '1';
+  next();
+}
+
+
+app.post('/api/bot/search', requireBotSecretOnly, async (req, res) => {
   const { query } = req.body;
   if (!query) return res.status(400).json({ error: 'Missing query' });
   
@@ -1155,15 +1050,32 @@ app.post('/api/bot/search', requireBotSecret, async (req, res) => {
           }
           
           let resellerCost;
-          const ucp = serverUserCustomPrices[serviceid] && serverUserCustomPrices[serviceid][req.user.id];
-          if (ucp && ucp.resellerPrice !== undefined) {
-            resellerCost = parseFloat(ucp.resellerPrice);
-          } else if (customPrices[serviceid]) {
-            resellerCost = parseFloat(customPrices[serviceid].resellerPrice);
-          } else {
-            const activeMarkup = (req.user.markup !== null && req.user.markup !== undefined && !isNaN(req.user.markup)) ? parseFloat(req.user.markup) : parseFloat(settings.resellerMarkup || 0);
-            resellerCost = Math.ceil(realCost + activeMarkup);
+          let activeMarkup = parseFloat(settings.resellerMarkup || 0);
+
+          if (req.body.userId) {
+            const users = readDB('users.json') || [];
+            const reqUser = users.find(u => String(u.id) === String(req.body.userId));
+            if (reqUser) {
+              const ucp = serverUserCustomPrices[serviceid] && serverUserCustomPrices[serviceid][reqUser.id];
+              if (ucp && ucp.resellerPrice !== undefined) {
+                resellerCost = parseFloat(ucp.resellerPrice);
+              } else if (customPrices[serviceid]) {
+                resellerCost = parseFloat(customPrices[serviceid].resellerPrice);
+              } else {
+                activeMarkup = (reqUser.markup !== null && reqUser.markup !== undefined && !isNaN(reqUser.markup)) ? parseFloat(reqUser.markup) : activeMarkup;
+                resellerCost = Math.ceil(realCost + activeMarkup);
+              }
+            }
           }
+          
+          if (resellerCost === undefined) {
+             if (customPrices[serviceid]) {
+                resellerCost = parseFloat(customPrices[serviceid].resellerPrice);
+             } else {
+                resellerCost = Math.ceil(realCost + activeMarkup);
+             }
+          }
+
           
           results.push({ id: serviceid, name: s.SERVICENAME || s.SERVICE_NAME || s.name, price: resellerCost });
         }
@@ -1173,6 +1085,72 @@ app.post('/api/bot/search', requireBotSecret, async (req, res) => {
   
   results.sort((a, b) => a.price - b.price);
   return res.json({ results: results.slice(0, 20) });
+});
+
+app.post('/api/bot/catalog', requireBotSecretOnly, async (req, res) => {
+  const serverId = getServerId(req);
+  const settingsDb = readDB('settings.json') || {};
+  const settings = getServerSettings(settingsDb, serverId);
+  const serverKey = 'server' + serverId;
+  let list = (catalogCache[serverKey] && catalogCache[serverKey].data) ? catalogCache[serverKey].data : null;
+  
+  if (!list) {
+    if (settings && settings.username && settings.apiaccesskey) {
+        const { apiaccesskey, username, endpoint } = settings;
+        let targetUrl = endpoint.endsWith('/') ? endpoint + 'api/index.php' : endpoint + '/api/index.php';
+        try {
+            let mergedList = {};
+            let hasSuccess = false;
+            if (serverId === '1' || serverId === '3' || serverId === '2') {
+                const [r1, r2] = await Promise.all([
+                    callGsmThemeApi(targetUrl, 'imeiservicelist', null, username, apiaccesskey).catch(e=>({})),
+                    callGsmThemeApi(targetUrl, 'serverservicelist', null, username, apiaccesskey).catch(e=>({}))
+                ]);
+                if (r1.data && r1.data.SUCCESS && r1.data.SUCCESS[0] && r1.data.SUCCESS[0].LIST) {
+                    mergedList = { ...r1.data.SUCCESS[0].LIST }; hasSuccess = true;
+                }
+                if (r2.data && r2.data.SUCCESS && r2.data.SUCCESS[0] && r2.data.SUCCESS[0].LIST) {
+                    const sList = r2.data.SUCCESS[0].LIST;
+                    for (const g in sList) {
+                        if (mergedList[g]) mergedList[g].SERVICES = { ...mergedList[g].SERVICES, ...sList[g].SERVICES };
+                        else mergedList[g] = sList[g];
+                    }
+                    hasSuccess = true;
+                }
+            }
+            if (hasSuccess) {
+                if (!catalogCache[serverKey]) catalogCache[serverKey] = {};
+                catalogCache[serverKey].data = JSON.parse(JSON.stringify(mergedList));
+                catalogCache[serverKey].lastFetch = Date.now();
+                list = catalogCache[serverKey].data;
+            } else list = {};
+        } catch (e) {
+            console.error('[API/BOT/CATALOG] API Fetch Error:', e.message, e.response?.data);
+            list = {};
+        }
+    } else {
+        console.error('[API/BOT/CATALOG] Missing settings to fetch! Settings object:', settings);
+        list = {};
+    }
+  }if (!list || Object.keys(list).length === 0) {
+      console.error('[API/BOT/CATALOG] Catalog empty! ServerId:', serverId, 'Settings:', !!settings, 'Username:', settings?.username, 'Endpoint:', settings?.endpoint);
+      return res.json({ catalog: [] });
+  }
+  
+  const catalogArray = [];
+  for (const g in list) {
+      if (list[g].GROUP_NAME && list[g].SERVICES) {
+          const servicesArray = [];
+          for (const sid in list[g].SERVICES) {
+              servicesArray.push(list[g].SERVICES[sid]);
+          }
+          catalogArray.push({
+              GROUP_NAME: list[g].GROUP_NAME,
+              SERVICES: servicesArray
+          });
+      }
+  }
+  return res.json({ catalog: catalogArray });
 });
 
 app.post('/api/bot/service_info', requireBotSecret, async (req, res) => {
@@ -2079,120 +2057,98 @@ if (usersMigrated) {
 // ==========================================
 // BACKGROUND POLLER FOR ORDER STATUS
 // ==========================================
+let isPollingOrders = false;
 async function pollPendingOrders() {
-  const history = readDB('history.json') || [];
-  const settingsDb = readDB('settings.json') || {};
-  
-  const pendingByServer = {};
-  history.forEach(order => {
-    if (order.status === 'pending') {
-      const sId = order.serverId || '1';
-      if (!pendingByServer[sId]) pendingByServer[sId] = [];
-      pendingByServer[sId].push(order);
-    }
-  });
-  
-  let hasUpdates = false;
-  
-  for (const sId of Object.keys(pendingByServer)) {
-    const orders = pendingByServer[sId];
-    if (orders.length === 0) continue;
-    const settings = getServerSettings(settingsDb, sId);
-    if (!settings || !settings.endpoint) continue;
-    
-    let targetUrl = settings.endpoint.endsWith('/') ? settings.endpoint + 'api/index.php' : settings.endpoint + '/api/index.php';
-    
-    try {
-      let bulkResults = {};
-      
-      const requests = orders.map(async (o) => {
-        try {
-            let action = o.serviceType === 'SERVER' ? 'getserverorder' : 'getimeiorder';
-            if (sId === '1' || sId === '3') {
-               const params = new URLSearchParams();
-               params.append('username', settings.username);
-               params.append('apiaccesskey', settings.apiaccesskey);
-               params.append('action', action);
-               params.append('requestformat', 'JSON');
-               params.append('parameters', `<PARAMETERS><ID>${o.orderId}</ID></PARAMETERS>`);
-               let res = await axios.post(targetUrl, params.toString(), {
-                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 15000, httpsAgent: ipv4Agent
-               });
-               
-               if (res.data && res.data.SUCCESS) {
-                   const itemArr = Array.isArray(res.data.SUCCESS) ? res.data.SUCCESS : [res.data.SUCCESS];
-                   itemArr.forEach(item => {
-                       bulkResults[String(o.orderId)] = {
-                           status: String(item.STATUS) === '4' ? 'success' : (String(item.STATUS) === '3' ? 'failed' : 'pending'),
-                           msg: item.REPLY || item.REJECT_REASON || item.CODE || item.MESSAGE || (String(item.STATUS) === '4' ? 'Completado' : (String(item.STATUS) === '3' ? 'Rechazado' : 'En proceso'))
-                       };
-                   });
-               }
-            } else {
-               const gsmParams = { ID: o.orderId };
-               const res = await callGsmThemeApi(targetUrl, action, gsmParams, settings.username, settings.apiaccesskey);
-               if (res && res.data && res.data.SUCCESS) {
-                   const itemArr = Array.isArray(res.data.SUCCESS) ? res.data.SUCCESS : [res.data.SUCCESS];
-                   itemArr.forEach(item => {
-                       bulkResults[String(o.orderId)] = {
-                           status: String(item.STATUS) === '4' ? 'success' : (String(item.STATUS) === '3' ? 'failed' : 'pending'),
-                           msg: item.REPLY || item.REJECT_REASON || item.CODE || item.MESSAGE || (String(item.STATUS) === '4' ? 'Completado' : (String(item.STATUS) === '3' ? 'Rechazado' : 'En proceso'))
-                       };
-                   });
-               }
-            }
-        } catch (e) {
-            console.error(`Poll error for order ${o.orderId} on server ${sId}:`, e.message);
-        }
-      });
-      
-      await Promise.all(requests);
-      
-      orders.forEach(order => {
-          const remoteStatus = bulkResults[String(order.orderId)];
-          
-          if (remoteStatus && remoteStatus.status !== 'pending' && remoteStatus.status !== order.status) {
-              const idx = history.findIndex(h => h.id === order.id);
-              if (idx !== -1) {
-                  history[idx].status = remoteStatus.status;
-                  history[idx].statusText = remoteStatus.msg;
-                  hasUpdates = true;
-                  
-                  let isSuccess = remoteStatus.status === 'success';
-                  let headerIcon = isSuccess ? '✅ *SERVICIO COMPLETADO*' : '❌ *SERVICIO RECHAZADO*';
-                  let statusTxt = isSuccess ? 'Completado' : 'Rechazado';
-                  
-                  let cleanMsg = String(remoteStatus.msg || '').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').trim();
-                  
-                  let resMsg = `${headerIcon}\n━━━━━━━━━━━━━━━━━━━━━━\n`;
-                  resMsg += `🆔 *Orden:* #${history[idx].orderId}\n`;
-                  resMsg += `📱 *IMEI:* ${history[idx].imei || 'N/A'}\n`;
-                  resMsg += `🔧 *Servicio:* ${history[idx].serviceName} ${isSuccess ? '✅' : '❌'}\n`;
-                  resMsg += `💲 *Costo:* $${parseFloat(history[idx].resellerCost || history[idx].costCharged || 0).toFixed(2)} MXN\n`;
-                  resMsg += `🔑 *Respuesta:* ${cleanMsg}\n`;
-                  resMsg += `🎉 *Estado:* ${statusTxt}\n\n`;
-                  resMsg += `━━━━━━━━━━━━━━━━━━━━━━\n🌐 MegaUnlockPhone`;
-                  
-                  enqueueWhatsApp('private', resMsg, history[idx].userId);
+  if (isPollingOrders) return;
+  isPollingOrders = true;
 
-                  let adminMsg = `🔄 ACTUALIZACIÓN AUTOMÁTICA\n━━━━━━━━━━━━━━━━━━━━━━\n#️⃣ Orden: #${history[idx].orderId}\n👨🏽💻 Usuario: ${history[idx].username}\n🔧 Servicio: ${history[idx].serviceName}\n📊 Estado: ${statusTxt} ${isSuccess ? '✅' : '❌'}\n━━━━━━━━━━━━━━━━━━━━━━`;
-                  if (isSuccess || remoteStatus.status === 'failed') {
-                      adminMsg = `👨🏽💻 Cliente: ${history[idx].username}\n${resMsg}`;
-                  }
-                  enqueueWhatsAppAdmin(adminMsg);
-                  
-                  let groupMsg = `🔄 ACTUALIZACIÓN AUTOMÁTICA\n━━━━━━━━━━━━━━━━━━━━━━\n#️⃣ Orden: #${history[idx].orderId}\n👨🏽💻 Usuario: ${history[idx].username}\n🔧 Servicio: ${history[idx].serviceName}\n📊 Estado: ${statusTxt} ${isSuccess ? '✅' : '❌'}\n━━━━━━━━━━━━━━━━━━━━━━`;
-                  enqueueWhatsApp('group', groupMsg);
-              }
-          }
-      });
-    } catch (e) {
-      console.error('Background poll error on server ' + sId, e.message);
-    }
-  }
+  try {
+    const history = readDB('history.json') || [];
+    const settingsDb = readDB('settings.json') || {};
   
-  if (hasUpdates) {
-    writeDB('history.json', history);
+    const pendingByServer = {};
+    history.forEach(order => {
+      if (order.status === 'pending') {
+        const sId = order.serverId || '1';
+        if (!pendingByServer[sId]) pendingByServer[sId] = [];
+        pendingByServer[sId].push(order);
+      }
+    });
+    
+    let hasUpdates = false;
+    
+    for (const sId of Object.keys(pendingByServer)) {
+      const orders = pendingByServer[sId];
+      if (orders.length === 0) continue;
+      const settings = getServerSettings(settingsDb, sId);
+      if (!settings || !settings.endpoint) continue;
+      
+      try {
+        const syncList = orders.map(o => ({ id: o.orderId, type: o.serviceType }));
+        const bulkResultsArr = await fetchBulkOrdersStatus(syncList, settings, sId);
+        
+        const bulkResults = {};
+        bulkResultsArr.forEach(r => {
+           if (r && r.orderid) {
+               bulkResults[String(r.orderid)] = {
+                   status: r.status,
+                   msg: r.statusText
+               };
+           }
+        });
+        
+        orders.forEach(order => {
+            const remoteStatus = bulkResults[String(order.orderId)];
+            
+            if (remoteStatus && remoteStatus.status !== 'pending' && remoteStatus.status !== order.status) {
+                const idx = history.findIndex(h => h.id === order.id);
+                if (idx !== -1) {
+                    history[idx].status = remoteStatus.status;
+                    history[idx].statusText = remoteStatus.msg;
+                    hasUpdates = true;
+                    
+                    let isSuccess = remoteStatus.status === 'success';
+                    let headerIcon = isSuccess ? '✅ *SERVICIO COMPLETADO*' : '❌ *SERVICIO RECHAZADO*';
+                    let statusTxt = isSuccess ? 'Completado' : 'Rechazado';
+                    
+                    let cleanMsg = String(remoteStatus.msg || '').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').trim();
+                    
+                    let resMsg = `${headerIcon}\n━━━━━━━━━━━━━━━━━━━━━━\n`;
+                    resMsg += `🆔 *Orden:* #${history[idx].orderId}\n`;
+                    resMsg += `📱 *IMEI:* ${history[idx].imei || 'N/A'}\n`;
+                    resMsg += `🔧 *Servicio:* ${history[idx].serviceName} ${isSuccess ? '✅' : '❌'}\n`;
+                    resMsg += `💲 *Costo:* $${parseFloat(history[idx].resellerCost || history[idx].costCharged || 0).toFixed(2)} MXN\n`;
+                    resMsg += `🔑 *Respuesta:* ${cleanMsg}\n`;
+                    resMsg += `🎉 *Estado:* ${statusTxt}\n\n`;
+                    resMsg += `━━━━━━━━━━━━━━━━━━━━━━\n🌐 MegaUnlockPhone`;
+                    
+                    enqueueWhatsApp('private', resMsg, history[idx].userId);
+  
+                    const usersList = readDB('users.json') || [];
+                    const orderUser = usersList.find(u => u.id === history[idx].userId);
+                    const userNameDisplay = (orderUser && orderUser.role === 'admin') ? 'Admin #1' : history[idx].username;
+  
+                    let adminMsg = `🔄 ACTUALIZACIÓN AUTOMÁTICA\n━━━━━━━━━━━━━━━━━━━━━━\n#️⃣ Orden: #${history[idx].orderId}\n👨🏽💻 Usuario: ${userNameDisplay}\n🔧 Servicio: ${history[idx].serviceName}\n📊 Estado: ${statusTxt} ${isSuccess ? '✅' : '❌'}\n━━━━━━━━━━━━━━━━━━━━━━`;
+                    if (isSuccess || remoteStatus.status === 'failed') {
+                        adminMsg = `👨🏽💻 Usuario: ${userNameDisplay}\n${resMsg}`;
+                    }
+                    enqueueWhatsAppAdmin(adminMsg);
+                    
+                    let groupMsg = `🔄 ACTUALIZACIÓN AUTOMÁTICA\n━━━━━━━━━━━━━━━━━━━━━━\n#️⃣ Orden: #${history[idx].orderId}\n👨🏽💻 Usuario: ${userNameDisplay}\n🔧 Servicio: ${history[idx].serviceName}\n📊 Estado: ${statusTxt} ${isSuccess ? '✅' : '❌'}\n━━━━━━━━━━━━━━━━━━━━━━`;
+                    enqueueWhatsApp('group', groupMsg);
+                }
+            }
+        });
+      } catch (e) {
+        console.error('Background poll error on server ' + sId, e.message);
+      }
+    }
+    
+    if (hasUpdates) {
+      writeDB('history.json', history);
+    }
+  } finally {
+    isPollingOrders = false;
   }
 }
 

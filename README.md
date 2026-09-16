@@ -11,12 +11,24 @@ El panel soporta múltiples servidores Dhru configurables desde `settings.json`:
 ## 🚀 Nuevas Funcionalidades
 - **Historial de Recargas**: Registro inmutable de cada ingreso de saldo (vía SPEI, Bot o Panel Admin).
 - **Sistema Inteligente de Reembolsos**: Automáticos (cuando Dhru rechaza) y Manuales (desde el panel Admin).
-- **Soporte Directo**: Botón flotante de WhatsApp para soporte.
+- **Soporte Directo Bot WhatsApp**: Integración con un bot para procesar comandos de búsqueda, cotización y gestión de saldo.
+- **Sistema SPEI Inteligente con Colchón**: Triangulación automatizada de pagos SPEI (Banxico CEP) donde el sistema elige a qué cuenta depositar dependiendo de un "Colchón de Retención" definido por el administrador.
+- **Precios Personalizados (Globales y Especiales)**: Gestión independiente del margen de ganancia a nivel Servidor, Servicio (Personalizado) o Usuario Específico.
 
 ## 🏗️ Nueva Arquitectura Modular
 El servidor se está refactorizando en la carpeta `src/` para separar la lógica masiva de `server.js` y facilitar su mantenimiento:
 - `src/db.js`: Manejo de la caché y persistencia JSON.
-- *(En proceso)* `src/payments.js` y `src/history.js`.
+- `src/payments.js`: Lógica unificada de liquidez SPEI.
+- `src/history.js`: Controlador del historial y devoluciones.
+- `src/syncService.js`: Motor central unificado de sincronización y peticiones (bulk order status) a servidores Dhru/GSM.
+- `paymentRouter.js`: Enrutador avanzado SPEI basado en la liquidez y reglas de los proveedores.
+
+## 🤖 Sistema de Bot de WhatsApp como Demonio
+El bot de WhatsApp (`whatsappBot.js`) ahora funciona como un demonio continuo (User Service) en AlwaysData, a través del script corregido `start_bot.sh`.
+Para evitar que el servidor web se duerma y deje de chequear el estado de los pedidos:
+- El bot ejecuta un ping (`GET /api/cron/sync`) de manera ininterrumpida cada 3 minutos.
+- Este ping despierta a `server.js`, el cual usa `syncService.js` para iterar sobre las órdenes `pending`.
+- Si alguna orden cambió su estado en el proveedor, el servidor lo detecta, escribe el cambio en `queue.json`, y el bot procesa inmediatamente el mensaje de WhatsApp.
 
 ## Cambios Recientes y Correcciones Críticas
 

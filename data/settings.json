@@ -1,11 +1,12 @@
 {
   "server1": {
-    "name": "LatamGSM",
+    "name": "MEGA-SERVER",
     "endpoint": "https://latamgsm.com/dhru/",
     "username": "angeljuares067@gmail.com",
     "apiaccesskey": "pk60-qXSs-xXsF-qZPa",
     "resellerMarkup": 2.4,
-    "clientMarkup": 0
+    "clientMarkup": 0,
+    "enabled": true
   },
   "server2": {
     "name": "POPI-GSM",
@@ -13,16 +14,18 @@
     "username": "angeljuares067@gmail.com",
     "apiaccesskey": "B29Q-G7EJ-A3OU-629Z-VQYO-5ZX9-F8SE-QCRU",
     "resellerMarkup": 2.4,
-    "clientMarkup": 0
+    "clientMarkup": 0,
+    "enabled": false
   },
   "exchangeRate": 17.6,
   "server3": {
-    "name": "UnlockerFast",
+    "name": "OMEGA-SERVER",
     "endpoint": "https://www.unlockerfast.com.mx/",
     "username": "MegaUnlockPhone",
     "apiaccesskey": "QXU-2HD-MAR-PKM-PAD-RFP-XK5-5ME",
     "resellerMarkup": 0,
-    "clientMarkup": 0
+    "clientMarkup": 0,
+    "enabled": true
   },
   "adminProfitBalance": 10
 }

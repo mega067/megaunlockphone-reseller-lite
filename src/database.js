@@ -34,10 +34,11 @@ const initTables = () => {
             serviceName TEXT,
             imei TEXT,
             quantity INTEGER DEFAULT 1,
-            price REAL,
-            status TEXT,
+            price REAL DEFAULT 0,
+            status TEXT DEFAULT 'pending',
             statusText TEXT,
-            date TEXT
+            date TEXT,
+            data TEXT
         );
 
         CREATE TABLE IF NOT EXISTS WhatsAppLinks (
@@ -54,6 +55,12 @@ const initTables = () => {
     
     try {
         db.exec('ALTER TABLE Users ADD COLUMN data TEXT');
+    } catch (e) {
+        // Ignorar si la columna ya existe
+    }
+
+    try {
+        db.exec('ALTER TABLE OrdersHistory ADD COLUMN data TEXT');
     } catch (e) {
         // Ignorar si la columna ya existe
     }

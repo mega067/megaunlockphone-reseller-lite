@@ -10,6 +10,7 @@ rsync -avzc --delete \
   --exclude 'baileys_auth' \
   --exclude '.wwebjs_auth' \
   --exclude 'package-lock.json' \
+  --exclude 'venv' \
   ./ megaunlockphone-panel@ssh-megaunlockphone-panel.alwaysdata.net:~/www/
 
 echo "✅ ¡Subida completada! Recuerda reiniciar tu servidor si hiciste cambios."

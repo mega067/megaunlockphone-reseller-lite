@@ -19,14 +19,9 @@ function readDB(file) {
 
   // 2. Interceptar peticiones para History
   if (baseFile === 'history.json') {
-    const stmt = sqliteDb.prepare(`SELECT * FROM OrdersHistory ORDER BY date DESC`);
+    const stmt = sqliteDb.prepare(`SELECT data FROM OrdersHistory ORDER BY date DESC`);
     const history = stmt.all();
-    // Parsear booleanos y números para mantener compatibilidad con JSON
-    return history.map(h => ({
-      ...h,
-      price: parseFloat(h.price),
-      quantity: parseInt(h.quantity)
-    }));
+    return history.map(h => h.data ? JSON.parse(h.data) : null).filter(Boolean);
   }
 
   // 3. Interceptar AppConfig
@@ -53,6 +48,19 @@ function readDB(file) {
       wUsers[r.phone] = r.userId;
     });
     return wUsers;
+  }
+
+  // Bypass cache for settings.json so separate processes can hot-reload changes
+  if (baseFile === 'settings.json') {
+    const filepath = path.isAbsolute(file) ? file : path.join(DATA_DIR, file);
+    if (!fs.existsSync(filepath)) return null;
+    try {
+      const data = JSON.parse(fs.readFileSync(filepath, 'utf8'));
+      dbCache[baseFile] = data; // Keep in cache just in case, but always read
+      return data;
+    } catch (e) {
+      return dbCache[baseFile] || null;
+    }
   }
 
   // Si no es ninguna de las tablas migradas, leer el JSON normalmente (ej. precios cacheados)
@@ -89,15 +97,15 @@ function writeDB(file, data) {
   if (baseFile === 'history.json') {
     const stmt = sqliteDb.prepare(`
       INSERT OR REPLACE INTO OrdersHistory 
-      (orderId, userId, serverId, serviceId, serviceName, imei, quantity, price, status, statusText, date) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (orderId, userId, serverId, serviceId, serviceName, imei, quantity, price, status, statusText, date, data) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     const deleteStmt = sqliteDb.prepare(`DELETE FROM OrdersHistory`);
     const transaction = sqliteDb.transaction(() => {
       deleteStmt.run();
       data.forEach(o => {
         const statusText = typeof o.statusText === 'string' ? o.statusText : (o.status || 'N/A');
-        stmt.run(String(o.orderId), String(o.userId), o.serverId ? String(o.serverId) : null, o.serviceId ? String(o.serviceId) : null, o.serviceName || 'Desconocido', o.imei || null, o.quantity || 1, o.price || 0, o.status || 'pending', statusText, o.date || null);
+        stmt.run(String(o.orderId), String(o.userId), o.serverId ? String(o.serverId) : null, o.serviceId ? String(o.serviceId) : null, o.serviceName || 'Desconocido', o.imei || null, o.quantity || 1, o.price || 0, o.status || 'pending', statusText, o.date || null, JSON.stringify(o));
       });
     });
     transaction();

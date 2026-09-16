@@ -118,7 +118,7 @@ module.exports = function(app, deps) {
           
           if (oldStatus !== uo.status) {
             const isSuccess = uo.status === 'success';
-            const isRejected = uo.status === 'rejected';
+            const isRejected = uo.status === 'failed' || uo.status === 'rejected';
             const settingsDb = readDB('settings.json') || {};
             
             let privateMsg = '';

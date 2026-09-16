@@ -101,9 +101,9 @@ document.addEventListener('DOMContentLoaded', () => {
         g_currentHistory = [];
         historyCount.textContent = '0';
         historyBody.innerHTML = '';
-        consoleList.innerHTML = '';
-        consoleCount.textContent = '0';
-        consoleEmpty.classList.remove('hidden');
+        if (consoleList) consoleList.innerHTML = '';
+        if (consoleCount) consoleCount.textContent = '0';
+        if (consoleEmpty) consoleEmpty.classList.remove('hidden');
         
         // Hide advanced filter dropdown instantly when switching servers
         if (filterServiceSelect) {
@@ -170,6 +170,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const ticketPassVal = document.getElementById('ticketPassVal');
   const ticketPricePill = document.getElementById('ticketPricePill');
   const ticketPriceVal = document.getElementById('ticketPriceVal');
+
+  const btnCustomTicket = document.getElementById('btnCustomTicket');
+  const customTicketModal = document.getElementById('customTicketModal');
+  const btnCustomTicketClose = document.getElementById('btnCustomTicketClose');
+  const btnCancelCustomTicket = document.getElementById('btnCancelCustomTicket');
+  const btnGenerateCustomTicket = document.getElementById('btnGenerateCustomTicket');
+  const customTicketFormat = document.getElementById('customTicketFormat');
+  const customTicketRawContainer = document.getElementById('customTicketRawContainer');
+  const customTicketLoginContainer = document.getElementById('customTicketLoginContainer');
+  const customTicketTitle = document.getElementById('customTicketTitle');
+  const customTicketOrderId = document.getElementById('customTicketOrderId');
+  const customTicketRaw = document.getElementById('customTicketRaw');
+  const customTicketUser = document.getElementById('customTicketUser');
+  const customTicketPass = document.getElementById('customTicketPass');
+  const customTicketPrice = document.getElementById('customTicketPrice');
   
   // New ticket template elements
   const ticketFormatType = document.getElementById('ticketFormatType');
@@ -553,10 +568,12 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Clear Console
-  btnClearConsole.addEventListener('click', () => {
-    consoleLogList = [];
-    renderConsoleLogs();
-  });
+  if (btnClearConsole) {
+    btnClearConsole.addEventListener('click', () => {
+      consoleLogList = [];
+      renderConsoleLogs();
+    });
+  }
 
   // Synchronize Order History Statuses
   btnSyncHistory.addEventListener('click', async () => {
@@ -2400,6 +2417,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderConsoleLogs() {
+    if (!consoleCount || !consoleEmpty || !consoleList) return;
+    
     consoleCount.textContent = consoleLogList.length;
     if (consoleLogList.length === 0) {
       consoleEmpty.classList.remove('hidden');
@@ -2704,14 +2723,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // OVERRIDE: Always respect the custom IMEI name provided by the DHRU API if present
+    imeiLabel.style = '';
+    imeiInput.style.border = '';
     if (raw && (raw.IMEINAME || raw.CUSTOM_IMEI)) {
       const customName = raw.IMEINAME || raw.CUSTOM_IMEI;
-      imeiLabel.textContent = customName + ' *';
-      imeiInput.placeholder = 'Ingresa ' + customName;
+      imeiLabel.innerHTML = `<span style="font-size: 1.2rem; color: #ef4444; font-weight: 900; background: rgba(239, 68, 68, 0.1); padding: 4px 8px; border-radius: 4px; display: inline-block;">⚠️ ${customName} *</span>`;
+      imeiInput.placeholder = '👉 ¡ATENCIÓN! INGRESA ' + customName.toUpperCase() + ' AQUÍ 👈';
+      imeiInput.style.border = '2px solid #ef4444';
     } else if (raw && raw.CUSTOM && raw.CUSTOM.customname) {
       const customName = raw.CUSTOM.customname;
-      imeiLabel.textContent = customName + ' *';
-      imeiInput.placeholder = 'Ingresa ' + customName;
+      imeiLabel.innerHTML = `<span style="font-size: 1.2rem; color: #ef4444; font-weight: 900; background: rgba(239, 68, 68, 0.1); padding: 4px 8px; border-radius: 4px; display: inline-block;">⚠️ ${customName} *</span>`;
+      imeiInput.placeholder = '👉 ¡ATENCIÓN! INGRESA ' + customName.toUpperCase() + ' AQUÍ 👈';
+      imeiInput.style.border = '2px solid #ef4444';
     }
     
     // Apply Advanced validations if any
@@ -2985,6 +3008,27 @@ document.addEventListener('DOMContentLoaded', () => {
         orderIdNode.textContent = `ID: #${currentTicketData.orderId || 'N/A'}`;
       }
 
+      const dateTimeNode = document.getElementById('ticketDateTime');
+      if (dateTimeNode) {
+        // Fallback to timestamp if date is missing
+        const fallbackDate = currentTicketData.timestamp ? new Date(currentTicketData.timestamp) : new Date();
+        const orderDate = currentTicketData.date ? new Date(currentTicketData.date) : fallbackDate;
+        dateTimeNode.textContent = `Fecha: ${orderDate.toLocaleString('es-MX')}`;
+      }
+      
+      const serverNode = document.getElementById('ticketServerName');
+      if (serverNode) {
+        const sid = currentTicketData.serverId || currentServerId;
+        serverNode.textContent = `Servidor: ${sid === '1' ? 'MEGA' : (sid === '2' ? 'ALPHA' : 'OMEGA')}`;
+      }
+      
+      const resellerNode = document.getElementById('ticketResellerId');
+      if (resellerNode) {
+        // Fallback to authUserId for old tickets that didn't save userId
+        const uId = currentTicketData.userId || authUserId || 'N/A';
+        resellerNode.textContent = authRole === 'admin' ? 'Atendido por: ADMIN' : `Reseller ID: ${uId}`;
+      }
+
       const price = ticketClientPrice.value.trim();
       if (price && !isNaN(price)) {
         ticketPriceVal.textContent = parseFloat(price).toLocaleString('es-MX', { minimumFractionDigits: 2 });
@@ -3177,6 +3221,160 @@ document.addEventListener('DOMContentLoaded', () => {
       lucide.createIcons();
     }
   });
+
+  // --- CUSTOM TICKET LOGIC ---
+  if (btnCustomTicket) {
+    btnCustomTicket.addEventListener('click', () => {
+      customTicketTitle.value = '';
+      customTicketOrderId.value = '';
+      customTicketRaw.value = '';
+      customTicketUser.value = '';
+      customTicketPass.value = '';
+      customTicketPrice.value = '';
+      customTicketFormat.value = 'raw';
+      customTicketRawContainer.classList.remove('hidden');
+      customTicketLoginContainer.classList.add('hidden');
+      customTicketModal.classList.remove('hidden');
+    });
+  }
+
+  if (btnCustomTicketClose) {
+    btnCustomTicketClose.addEventListener('click', () => {
+      customTicketModal.classList.add('hidden');
+    });
+  }
+
+  if (btnCancelCustomTicket) {
+    btnCancelCustomTicket.addEventListener('click', () => {
+      customTicketModal.classList.add('hidden');
+    });
+  }
+
+  if (customTicketFormat) {
+    customTicketFormat.addEventListener('change', (e) => {
+      if (e.target.value === 'login') {
+        customTicketRawContainer.classList.add('hidden');
+        customTicketLoginContainer.classList.remove('hidden');
+      } else {
+        customTicketRawContainer.classList.remove('hidden');
+        customTicketLoginContainer.classList.add('hidden');
+      }
+    });
+  }
+
+  if (btnGenerateCustomTicket) {
+    btnGenerateCustomTicket.addEventListener('click', async () => {
+      const originalBtnHTML = btnGenerateCustomTicket.innerHTML;
+      btnGenerateCustomTicket.innerHTML = '<i data-lucide="loader" class="lucide-spin"></i><span>Generando...</span>';
+      lucide.createIcons();
+      btnGenerateCustomTicket.setAttribute('disabled', 'true');
+
+      try {
+        const title = customTicketTitle.value.trim() || 'UNLOCK TOOL';
+        ticketTitle.textContent = title;
+
+        const orderIdNode = document.getElementById('ticketOrderId');
+        if (orderIdNode) {
+          const manualId = customTicketOrderId.value.trim();
+          orderIdNode.textContent = `ID: #${manualId ? manualId : Math.floor(Math.random() * 90000) + 10000}`;
+        }
+
+        const dateTimeNode = document.getElementById('ticketDateTime');
+        if (dateTimeNode) {
+          dateTimeNode.textContent = `Fecha: ${new Date().toLocaleString('es-MX')}`;
+        }
+        
+        const serverNode = document.getElementById('ticketServerName');
+        if (serverNode) {
+          serverNode.textContent = `Servidor: ${currentServerId === '1' ? 'MEGA' : (currentServerId === '2' ? 'ALPHA' : 'OMEGA')}`;
+        }
+        
+        const resellerNode = document.getElementById('ticketResellerId');
+        if (resellerNode) {
+          resellerNode.textContent = authRole === 'admin' ? 'Atendido por: ADMIN' : `Reseller ID: ${authUserId || 'N/A'}`;
+        }
+
+        const price = customTicketPrice.value.trim();
+        if (price && !isNaN(price)) {
+          ticketPriceVal.textContent = parseFloat(price).toLocaleString('es-MX', { minimumFractionDigits: 2 });
+          ticketPricePill.classList.remove('hidden');
+        } else {
+          ticketPricePill.classList.add('hidden');
+        }
+
+        const formatType = customTicketFormat.value;
+        const ticketStreamingBox = document.getElementById('ticketStreamingBox');
+        
+        if (formatType === 'raw') {
+          ticketParsedBox.classList.add('hidden');
+          if (ticketStreamingBox) ticketStreamingBox.classList.add('hidden');
+          
+          let rawText = customTicketRaw.value.trim();
+          ticketRawTextVal.textContent = rawText;
+          if (rawText) {
+             ticketRawBox.classList.remove('hidden');
+          } else {
+             ticketRawBox.classList.add('hidden');
+          }
+        } else if (formatType === 'login') {
+          ticketRawBox.classList.add('hidden');
+          if (ticketStreamingBox) ticketStreamingBox.classList.add('hidden');
+          ticketParsedBox.classList.remove('hidden');
+          
+          ticketUserVal.textContent = customTicketUser.value.trim() || '---';
+          ticketPassVal.textContent = customTicketPass.value.trim() || '---';
+        }
+
+        ticketTemplateContainer.style.opacity = '1';
+
+        const makeImagePromise = async () => {
+          const blob = await htmlToImage.toBlob(ticketTemplate, {
+            backgroundColor: '#111116',
+            pixelRatio: 2,
+            skipFonts: true,
+            style: { transform: 'scale(1)', transformOrigin: 'top left' }
+          });
+          ticketTemplateContainer.style.opacity = '0';
+          return blob;
+        };
+        
+        const clipboardItem = new ClipboardItem({ 'image/png': makeImagePromise() });
+        await navigator.clipboard.write([clipboardItem]);
+        
+        btnGenerateCustomTicket.innerHTML = '<i data-lucide="check"></i><span>¡Copiado!</span>';
+        lucide.createIcons();
+        
+        // Cierra el modal de custom ticket y muestra el preview normal para que lo vean
+        setTimeout(() => {
+           btnGenerateCustomTicket.removeAttribute('disabled');
+           btnGenerateCustomTicket.innerHTML = originalBtnHTML;
+           lucide.createIcons();
+           customTicketModal.classList.add('hidden');
+           
+           // Show Preview using ticketPreviewModal if available or standard ticketModal
+           ticketModal.classList.remove('hidden');
+           
+           // Run makeImagePromise again just for the preview src
+           htmlToImage.toBlob(ticketTemplate, { backgroundColor: '#111116', pixelRatio: 2, skipFonts: true })
+             .then(blob => {
+               const ticketPreviewContainer = document.getElementById('ticketPreviewContainer');
+               const ticketPreviewImg = document.getElementById('ticketPreviewImg');
+               if (ticketPreviewContainer && ticketPreviewImg) {
+                 ticketPreviewImg.src = URL.createObjectURL(blob);
+                 ticketPreviewContainer.classList.remove('hidden');
+               }
+             });
+        }, 1500);
+        
+      } catch (clipboardErr) {
+        console.error('Clipboard copy failed:', clipboardErr);
+        alert('Copia exitosa, pero el navegador bloqueó el portapapeles. El ticket se mostrará en pantalla.');
+        btnGenerateCustomTicket.removeAttribute('disabled');
+        btnGenerateCustomTicket.innerHTML = originalBtnHTML;
+        lucide.createIcons();
+      }
+    });
+  }
 
   // --- ADMIN USERS MODAL LOGIC ---
   const btnCreateUserFormToggle = document.getElementById('btnCreateUserFormToggle');

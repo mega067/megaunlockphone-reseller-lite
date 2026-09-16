@@ -19,7 +19,7 @@ module.exports = {
     }
   ],
 
-  // Cuentas de los proveedores (LatamGSM y Unlockerfast)
+  // Cuentas de los proveedores (Proveedor 1 y Unlockerfast)
   PROVIDER_ACCOUNTS: {
     'latamgsm': {
       apiKey: 'W5ut-4xC7-ISx5-51Jv', // Extraído de autopay.php

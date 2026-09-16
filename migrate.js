@@ -65,13 +65,12 @@ const migrate = () => {
     if (history && Array.isArray(history)) {
         const stmt = db.prepare(`
             INSERT OR REPLACE INTO OrdersHistory 
-            (orderId, userId, serverId, serviceId, serviceName, imei, quantity, price, status, statusText, date) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (orderId, userId, serverId, serviceId, serviceName, imei, quantity, price, status, statusText, date, data) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
         
         let count = 0;
         history.forEach(o => {
-            // Asegurar que el statusText sea texto puro, en caso de venir como objeto complejo en algunos historiales raros
             const statusText = typeof o.statusText === 'string' ? o.statusText : (o.status || 'N/A');
             try {
                 stmt.run(
@@ -85,7 +84,8 @@ const migrate = () => {
                     o.price || 0, 
                     o.status || 'pending', 
                     statusText, 
-                    o.date || null
+                    o.date || null,
+                    JSON.stringify(o)
                 );
                 count++;
             } catch (err) {

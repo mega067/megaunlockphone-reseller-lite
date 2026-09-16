@@ -58,6 +58,10 @@ module.exports = function(app, deps) {
               }
           });
           serverLiquidity = creditMXN - cedido;
+          
+          const creditCushion = parseFloat(settingsDb.creditCushion || 0);
+          serverLiquidity -= creditCushion;
+          if (serverLiquidity < 0) serverLiquidity = 0;
         }
       }
 
