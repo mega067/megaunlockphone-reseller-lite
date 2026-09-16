@@ -1,6 +1,8 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
+const compression = require('compression');
 
 const https = require('https');
 const ipv4Agent = new https.Agent({ family: 4 });
@@ -45,6 +47,8 @@ const PORT = process.env.PORT || 3000;
 const IP = process.env.IP || '::';
 
 app.use(cors());
+app.use(compression());
+
 
 // HTTP Security Headers
 app.use((req, res, next) => {
@@ -57,6 +61,10 @@ app.use((req, res, next) => {
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
+
+// Mount Modular Routes
+const authRoutes = require('./src/routes/authRoutes');
+app.use('/api', authRoutes);
 
 // Serve static frontend files with no cache for development
 app.use(express.static(path.join(__dirname, 'public'), {
@@ -166,36 +174,10 @@ if (!initSettings || !initSettings.server1 || !initSettings.server1.apiaccesskey
   });
 }
 
-const { sessions, requireAuth, requireAdmin, requireAdminOrColaborador } = require('./src/auth');
+const { requireAuth, requireAdmin, requireAdminOrColaborador } = require('./src/auth');
 const { getServerDisplayName, getServerId, getServerSettings, getUserCredit, setUserCredit, callGsmThemeApi } = require('./src/helpers');
 
 
-
-// Login Endpoint
-app.post('/api/login', (req, res) => {
-  const { username, password } = req.body;
-  const users = readDB('users.json') || [];
-  const user = users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
-  
-  if (!user) {
-    return res.status(401).json({ error: 'Invalid username or password' });
-  }
-  
-  // Generate a simple secure token
-  const token = require('crypto').randomBytes(32).toString('hex');
-  sessions[token] = user;
-  res.json({ token, role: user.role, username: user.username, credits: user.credits, uid: user.id });
-});
-
-// Get My Account Info (Balance)
-app.get('/api/me', requireAuth, (req, res) => {
-  const users = readDB('users.json') || [];
-  const user = users.find(u => u.id === req.user.id);
-  if (!user) return res.status(404).json({ error: 'User not found' });
-  // Update session
-  sessions[req.headers['authorization'].split(' ')[1]] = user;
-  res.json({ username: user.username, role: user.role, credits: user.credits, uid: user.id });
-});
 
 // API proxy endpoint for Products
 app.get('/api/products', requireAuth, async (req, res) => {
@@ -1671,13 +1653,7 @@ app.post('/api/admin/restore', requireAuth, requireAdmin, (req, res) => {
     if (backup.settings) writeDB('settings.json', backup.settings);
     if (backup.coupons) writeDB('coupons.json', backup.coupons);
     
-    // Also clear memory session if we restored users (to force re-login or clear ghosts)
-    for (let token in sessions) {
-      if (sessions[token].role !== 'admin') {
-        delete sessions[token];
-      }
-    }
-    
+
     res.json({ success: true });
   } catch (err) {
     console.error('Restore Error:', err);
@@ -2179,6 +2155,13 @@ app.get('/api/debug-poll', async (req, res) => {
     res.status(500).json({ status: 'error', message: e.message, stack: e.stack });
   }
 });
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error('Unhandled Server Error:', err.stack);
+  res.status(500).json({ error: 'Ocurrió un error interno en el servidor. Por favor, intenta de nuevo más tarde.' });
+});
+
 // START SERVER
 app.listen(PORT, IP, () => {
   console.log(`==================================================`);
