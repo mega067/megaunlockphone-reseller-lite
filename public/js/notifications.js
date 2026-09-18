@@ -16,7 +16,7 @@
    * @param {string} [title='Aviso'] - El título de la notificación.
    */
   window.alert = function(message, title = 'Aviso') {
-    const isSyncMessage = message && message.includes('Sincronización completada');
+    const isSyncMessage = message && (message.includes('Sincronización completada') || message.includes('pedidos pendientes por sincronizar'));
     
     if (isSyncMessage) {
       // Usa el sistema Toast pequeño para la sincronización

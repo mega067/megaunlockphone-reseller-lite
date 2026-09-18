@@ -481,6 +481,13 @@ h1, h2, h3, h4 { color: var(--text-primary); font-weight: 600; letter-spacing: -
 }
 
 @media (max-width: 768px) {
+  /* Prevent horizontal scroll globally */
+  body, html {
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
+  }
+  
   /* Header adjustments */
   .app-header {
     flex-direction: column;
@@ -564,12 +571,23 @@ h1, h2, h3, h4 { color: var(--text-primary); font-weight: 600; letter-spacing: -
   .history-header .header-actions {
     width: 100%;
     justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 0.5rem;
   }
   .history-header .header-actions .btn {
     flex: 1;
+    min-width: 140px;
     padding: 0.6rem;
     font-size: 0.85rem;
     justify-content: center;
+  }
+
+  #btnBulkSavePrices {
+    width: calc(100% - 40px) !important;
+    left: 20px !important;
+    transform: none !important;
+    justify-content: center !important;
+    bottom: 80px !important; /* Above WhatsApp button */
   }
 
   /* Tables force scroll */
