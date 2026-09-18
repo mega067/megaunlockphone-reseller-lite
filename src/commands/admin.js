@@ -13,6 +13,13 @@ async function admin(context) {
 
     const cmd = firstWord.toLowerCase();
     
+    // Setprice command handling
+    const setpriceCmd = require('./setprice');
+    if ((sessionManager.setPriceSessions && sessionManager.setPriceSessions[remoteJid]) || ['/setprice', '!setprice', 'setprice'].includes(cmd)) {
+        const handled = await setpriceCmd(context);
+        if (handled) return true;
+    }
+    
     // /addmoney and /removemoney
     if (['/addmoney', '!addmoney', 'addmoney'].includes(cmd) || ['/removemoney', '!removemoney', 'removemoney'].includes(cmd)) {
         const isRemove = ['/removemoney', '!removemoney', 'removemoney'].includes(cmd);

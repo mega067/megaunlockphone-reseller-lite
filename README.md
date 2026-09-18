@@ -23,6 +23,13 @@ El servidor se está refactorizando en la carpeta `src/` para separar la lógica
 - `src/syncService.js`: Motor central unificado de sincronización y peticiones (bulk order status) a servidores Dhru/GSM.
 - `paymentRouter.js`: Enrutador avanzado SPEI basado en la liquidez y reglas de los proveedores.
 
+### Modularización del Frontend (Vanilla JS)
+Para evitar mantener un archivo gigante monolítico y al mismo tiempo no romper los _closures_ y variables globales en el sistema de eventos actual en `index.js`, se implementó una estrategia de extracción segura de dependencias puras:
+- **`public/js/utils.js`**: Funciones puras extraídas para el formateo de precios (MXN), sanitización XSS (`escapeHtml`) y coloreado inteligente de strings del servidor (`colorizeServerResponse`) con soporte Regex para enlaces y Key-Values.
+- **`public/js/api.js`**: Envoltorio asíncrono para las llamadas `fetch` de red (ej. Login) aislando el manejo de errores HTTP y la inyección de Headers `X-Server-Id` de la lógica de interfaz de usuario.
+- **`public/js/notifications.js`**: Sistema híbrido (Dual) para sobrescribir `window.alert`. Detecta el contexto del mensaje: si es una alerta manual o error usa un Modal Oscuro bloqueante, pero si es un aviso recurrente ("Sincronización completada"), inyecta dinámicamente notificaciones tipo *Toast/Slider* apilables en la esquina inferior derecha con autocierre de 5 segundos.
+
+
 ## 🤖 Sistema de Bot de WhatsApp como Demonio
 El bot de WhatsApp (`whatsappBot.js`) ahora funciona como un demonio continuo (User Service) en AlwaysData, a través del script corregido `start_bot.sh`.
 Para evitar que el servidor web se duerma y deje de chequear el estado de los pedidos:

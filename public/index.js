@@ -192,6 +192,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const ticketRawBox = document.getElementById('ticketRawBox');
   const ticketRawTextVal = document.getElementById('ticketRawTextVal');
 
+  const configNameInput = document.getElementById('configNameInput');
+  const configWaInput = document.getElementById('configWaInput');
+  const configFbInput = document.getElementById('configFbInput');
+  const configLogoInput = document.getElementById('configLogoInput');
+  const configLogoPreview = document.getElementById('configLogoPreview');
+  let customTicketSettings = { nombre: '', whatsapp: '', facebook: '', logoExt: '' };
+
   let currentTicketData = null;
 
   // Application State
@@ -323,6 +330,7 @@ document.addEventListener('DOMContentLoaded', () => {
       syncProducts(true);
       updateAccountCredits();
       fetchOrderHistory();
+      fetchTicketConfig();
       
       document.getElementById('creditsBadgeContainer').classList.remove('hidden');
       const ssc = document.getElementById('serverSwitchContainer');
@@ -365,59 +373,156 @@ document.addEventListener('DOMContentLoaded', () => {
       alert('Por favor completa todos los campos.');
       return;
     }
-
     try {
-      const res = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'X-Server-Id': currentServerId, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
-      const data = await res.json();
+      const data = await window.ApiHelpers.login(username, password, currentServerId);
       
-      if (res.ok) {
-        authToken = data.token;
-        authRole = data.role;
-        authUsername = data.username;
-        authUserId = data.uid;
-        localStorage.setItem('dhru_token', authToken);
-        localStorage.setItem('dhru_role', authRole);
-        localStorage.setItem('dhru_username', authUsername);
-        localStorage.setItem('dhru_uid', authUserId);
-        
-        currentServerId = '1';
-        localStorage.setItem('currentServerId', '1');
-        updateSliderUI();
+      authToken = data.token;
+      authRole = data.role;
+      authUsername = data.username;
+      authUserId = data.uid;
+      localStorage.setItem('dhru_token', authToken);
+      localStorage.setItem('dhru_role', authRole);
+      localStorage.setItem('dhru_username', authUsername);
+      localStorage.setItem('dhru_uid', authUserId);
 
-        loginView.classList.add('hidden');
-        dashboardView.classList.remove('hidden');
-        btnLogout.classList.remove('hidden');
-        
-        const ssc = document.getElementById('serverSwitchContainer');
-        if (ssc) ssc.classList.remove('hidden');
+      currentServerId = '1';
+      localStorage.setItem('currentServerId', '1');
+      updateSliderUI();
 
-        if (authRole === 'admin') {
-          btnAdminManage.classList.remove('hidden');
-          if (typeof btnAdminCoupons !== 'undefined' && btnAdminCoupons) btnAdminCoupons.classList.remove('hidden');
-          btnBulkSavePrices.classList.remove('hidden');
-          if (btnImportOrder) btnImportOrder.classList.remove('hidden');
-        } else {
-          btnUserProfile.classList.remove('hidden');
-          if (btnRechargesHistory) btnRechargesHistory.classList.remove('hidden');
-        }
+      loginView.classList.add('hidden');
+      dashboardView.classList.remove('hidden');
+      btnLogout.classList.remove('hidden');
 
-        btnRechargeBalance.classList.remove('hidden'); // Shown for EVERYONE now
-        btnWhatsappBot.classList.remove('hidden');
+      const ssc = document.getElementById('serverSwitchContainer');
+      if (ssc) ssc.classList.remove('hidden');
 
-        syncProducts(true);
-        updateAccountCredits();
-        fetchOrderHistory();
+      if (authRole === 'admin') {
+        btnAdminManage.classList.remove('hidden');
+        if (typeof btnAdminCoupons !== 'undefined' && btnAdminCoupons) btnAdminCoupons.classList.remove('hidden');
+        btnBulkSavePrices.classList.remove('hidden');
+        if (btnImportOrder) btnImportOrder.classList.remove('hidden');
       } else {
-        alert(data.error || 'Error al iniciar sesión');
+        btnUserProfile.classList.remove('hidden');
+        if (btnRechargesHistory) btnRechargesHistory.classList.remove('hidden');
       }
+
+      btnRechargeBalance.classList.remove('hidden'); // Shown for EVERYONE now
+      btnWhatsappBot.classList.remove('hidden');
+
+      syncProducts(true);
+      updateAccountCredits();
+      fetchOrderHistory();
+      fetchTicketConfig();
+      
     } catch (err) {
-      alert('Error de red al iniciar sesión');
+      // El módulo ApiHelpers ya lanza un error limpio o el de la red
+      alert(err.message || 'Error de red al iniciar sesión');
     }
   });
+
+  // --- TICKET CONFIG LOGIC ---
+  async function fetchTicketConfig() {
+    if (!authToken) return;
+    try {
+      const res = await fetch(`/api/ticket_config?t=${Date.now()}`, {
+        headers: { 
+          'Authorization': `Bearer ${authToken}`,
+          'Cache-Control': 'no-cache'
+        }
+      });
+      if (res.ok) {
+        customTicketSettings = await res.json();
+        if (configNameInput) configNameInput.value = customTicketSettings.nombre || '';
+        if (configWaInput) configWaInput.value = customTicketSettings.whatsapp || '';
+        if (configFbInput) configFbInput.value = customTicketSettings.facebook || '';
+        if (configLogoPreview) {
+          if (customTicketSettings.logoExt) {
+            configLogoPreview.src = `/logos/${authUserId}${customTicketSettings.logoExt}?t=${Date.now()}`;
+          } else {
+            configLogoPreview.src = 'logo.png';
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error fetching ticket config:', e);
+    }
+  }
+
+  async function saveTicketConfig() {
+    if (!configWaInput || !configFbInput || !configNameInput) return;
+    const nombre = configNameInput.value.trim();
+    const wa = configWaInput.value.trim();
+    const fb = configFbInput.value.trim();
+    
+    // Only save if something changed
+    if (nombre === (customTicketSettings.nombre || '') && 
+        wa === (customTicketSettings.whatsapp || '') && 
+        fb === (customTicketSettings.facebook || '') && 
+        (!configLogoInput || !configLogoInput.files[0])) {
+      return;
+    }
+
+    let base64 = null;
+    const file = configLogoInput.files[0];
+    if (file) {
+      base64 = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            const maxDim = 300;
+            if (width > height) {
+              if (width > maxDim) { height *= maxDim / width; width = maxDim; }
+            } else {
+              if (height > maxDim) { width *= maxDim / height; height = maxDim; }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', 0.85));
+          };
+          img.src = evt.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+    
+    try {
+      const payload = { nombre, whatsapp: wa, facebook: fb };
+      if (base64) payload.logoBase64 = base64;
+      
+      const res = await fetch('/api/ticket_config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        // Optimistically update local state
+        customTicketSettings.nombre = nombre;
+        customTicketSettings.whatsapp = wa;
+        customTicketSettings.facebook = fb;
+        await fetchTicketConfig(); // update local state fully
+      }
+    } catch (err) {
+      console.error('Error auto-saving ticket config:', err);
+    }
+  }
+
+  // Handle immediate logo preview on file selection
+  if (configLogoInput) {
+    configLogoInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (evt) => { configLogoPreview.src = evt.target.result; };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
 
   // Setup back button
   btnBackToCategories.addEventListener('click', () => {
@@ -1832,69 +1937,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Format price helper
   function formatPrice(credits) {
-    const rawVal = parseFloat(credits) || 0;
-    return `$${rawVal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN`;
+    if (window.AppUtils) return window.AppUtils.formatPrice(credits);
+    return `$${(parseFloat(credits)||0).toFixed(2)} MXN`;
   }
 
   // Smart Parser for Credentials
   function parseCredentials(text) {
-    if (!text) return { user: 'N/A', pass: 'N/A' };
-    
-    // Replace breaks first so they don't leak into the output
-    let preCleanText = String(text).replace(/<br\s*\/?>/gi, ' ').replace(/<\/div>/gi, ' ').replace(/<[^>]*>?/gm, '').trim();
-
-    // Pattern 0: Explicit check for ✅ separator
-    if (preCleanText.includes('✅')) {
-      let parts = preCleanText.split('✅').map(s => s.trim()).filter(Boolean);
-      if (parts.length >= 2) {
-        return { user: parts[0], pass: parts[parts.length - 1] };
-      }
+    if (window.AppUtils && window.AppUtils.parseCredentials) {
+      return window.AppUtils.parseCredentials(text);
     }
-    
-    // Replace emojis, equal signs, pipes, commas with spaces
-    let cleanText = preCleanText
-      .replace(/[✨⭐★=|,;]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-    
-    // Pattern 1: Explicit labels like "user : xxx pass: yyy"
-    let match = cleanText.match(/(?:username|user|usuario|login|email|correo)\s*[:=-]?\s*(\S+)\s+(?:password|pass|contraseña|clave|pin)\s*[:=-]?\s*(\S+)/i);
-    if (match) {
-      // Clean up captured values (remove trailing colons if any)
-      let u = match[1].replace(/[:=-]+$/, '');
-      let p = match[2].replace(/[:=-]+$/, '');
-      return { user: u, pass: p };
-    }
-
-    // Find email if present
-    let emailMatch = cleanText.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/);
-
-    // Filter out filler words and short prefixes
-    let tokens = cleanText.split(/\s+/).filter(t => 
-      t.length > 2 && 
-      !t.toLowerCase().includes('login') && 
-      !t.toLowerCase().includes('detail') && 
-      !t.toLowerCase().includes('success') && 
-      !/^[=]+$/.test(t)
-    );
-    
-    // If we have an email, prioritize it as the user, and the next most reasonable token as password
-    if (emailMatch && tokens.length >= 2) {
-      const email = emailMatch[1];
-      // Exclude the email itself and any tiny prefix numbers (like '12') from being the password
-      const otherTokens = tokens.filter(t => t !== email && !/^[0-9]{1,3}$/.test(t));
-      if (otherTokens.length > 0) {
-        return { user: email, pass: otherTokens[otherTokens.length - 1] };
-      }
-    }
-
-    // Pattern 2: Two valid strings remaining
-    if (tokens.length >= 2) {
-      return { user: tokens[tokens.length - 2], pass: tokens[tokens.length - 1] };
-    }
-
-    // Fallback if we couldn't parse cleanly
-    return { user: 'VER_HISTORIAL', pass: 'VER_HISTORIAL' };
+    return { user: 'N/A', pass: 'N/A' };
   }
 
   // Bulk save prices logic
@@ -2011,12 +2063,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // HTML sanitization helper
   function escapeHtml(unsafe) {
-    return String(unsafe)
-         .replace(/&/g, "&amp;")
-         .replace(/</g, "&lt;")
-         .replace(/>/g, "&gt;")
-         .replace(/"/g, "&quot;")
-         .replace(/'/g, "&#039;");
+    if (window.AppUtils) return window.AppUtils.escapeHtml(unsafe);
+    return String(unsafe).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
 
   // ============================================
@@ -2028,6 +2076,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Helper to colorize server responses
     function colorizeServerResponse(text) {
+      if (window.AppUtils) return window.AppUtils.colorizeServerResponse(text);
       if (!text) return 'Sin comentarios';
       
       if (typeof text === 'object') {
@@ -2974,6 +3023,43 @@ document.addEventListener('DOMContentLoaded', () => {
   // Ticket Generator Modal & Html2Canvas Logic
   // -------------------------------------------------------------
   
+  function applyTicketSettings() {
+    if (typeof customTicketSettings !== 'undefined' && customTicketSettings) {
+      const dynamicLogo = document.getElementById('ticketDynamicLogo');
+      if (dynamicLogo) {
+        if (customTicketSettings.logoExt) {
+          dynamicLogo.src = `/logos/${authUserId}${customTicketSettings.logoExt}?t=${Date.now()}`;
+        } else {
+          dynamicLogo.src = 'logo.png';
+        }
+      }
+      
+      const fbWrapper = document.getElementById('ticketFbWrapper');
+      const fbText = document.getElementById('ticketFbText');
+      if (fbWrapper && fbText) {
+        fbText.textContent = customTicketSettings.facebook || 'Mega Unlock Phone';
+        fbWrapper.style.display = 'flex';
+      }
+      
+      const waWrapper = document.getElementById('ticketWaWrapper');
+      const waText = document.getElementById('ticketWaText');
+      if (waWrapper && waText) {
+        waText.textContent = customTicketSettings.whatsapp || '+52 2216936720';
+        waWrapper.style.display = 'flex';
+      }
+      
+      const resellerNode = document.getElementById('ticketResellerId');
+      if (resellerNode) {
+        if (customTicketSettings.nombre) {
+          resellerNode.textContent = customTicketSettings.nombre;
+        } else {
+          // Default if they don't have a custom name
+          resellerNode.textContent = 'MegaUnlockPhone';
+        }
+      }
+    }
+  }
+
   const closeTicketModal = () => {
     ticketModal.classList.add('hidden');
     ticketClientPrice.value = '';
@@ -2999,6 +3085,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnGenerateTicketFinal.setAttribute('disabled', 'true');
 
     try {
+      await saveTicketConfig();
       // Populate Template
       const title = String(currentTicketData.serviceName || 'UNLOCK TOOL').split('[')[0].trim();
       ticketTitle.textContent = title;
@@ -3023,7 +3110,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       
       const resellerNode = document.getElementById('ticketResellerId');
-      if (resellerNode) {
+      if (resellerNode && !customTicketSettings.nombre) {
         // Fallback to authUserId for old tickets that didn't save userId
         const uId = currentTicketData.userId || authUserId || 'N/A';
         resellerNode.textContent = authRole === 'admin' ? 'Atendido por: ADMIN' : `Reseller ID: ${uId}`;
@@ -3160,6 +3247,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       // Bring template to view momentarily
+      applyTicketSettings();
       ticketTemplateContainer.style.opacity = '1';
 
       // Copy to Clipboard (Modern approach with Promise to preserve user gesture)
@@ -3270,6 +3358,7 @@ document.addEventListener('DOMContentLoaded', () => {
       btnGenerateCustomTicket.setAttribute('disabled', 'true');
 
       try {
+        await saveTicketConfig();
         const title = customTicketTitle.value.trim() || 'UNLOCK TOOL';
         ticketTitle.textContent = title;
 
@@ -3290,7 +3379,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         const resellerNode = document.getElementById('ticketResellerId');
-        if (resellerNode) {
+        if (resellerNode && !customTicketSettings.nombre) {
           resellerNode.textContent = authRole === 'admin' ? 'Atendido por: ADMIN' : `Reseller ID: ${authUserId || 'N/A'}`;
         }
 
@@ -3325,6 +3414,7 @@ document.addEventListener('DOMContentLoaded', () => {
           ticketPassVal.textContent = customTicketPass.value.trim() || '---';
         }
 
+        applyTicketSettings();
         ticketTemplateContainer.style.opacity = '1';
 
         const makeImagePromise = async () => {

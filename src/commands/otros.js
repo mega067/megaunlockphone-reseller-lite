@@ -73,11 +73,37 @@ async function otros(context) {
             const ticketUser = usersList.find(u => u.id === linkedUserId);
             const userName = (ticketUser && ticketUser.role === 'admin') ? 'Admin #1' : (ticketUser ? ticketUser.username : 'Socio');
             
-            const receipt = `🧾 *MEGAUNLOCKPHONE TICKET* 🧾\n━━━━━━━━━━━━━━━━━━━━━━\n\n🆔 *Orden:* #${o.orderId}\n👤 *Atendido por:* ${userName} (ID: ${linkedUserId})\n📅 *Fecha y Hora:* ${dateStr}\n📱 *IMEI/SN:* ${o.imei || 'N/A'}\n🔧 *Servicio:* ${o.serviceName}\n\n💲 *Total Pagado:* $${clientPrice.toFixed(2)}\n\n🔑 *Respuesta / Código:*\n${cleanStatus}\n\n🎉 *Estado:* Completado\n\n━━━━━━━━━━━━━━━━━━━━━━\n_¡Gracias por tu preferencia!_ 🌐`;
-            await sock.sendMessage(remoteJid, { text: receipt });
+            const configDb = readDB('ticket_configs.json') || {};
+            const userConfig = configDb[linkedUserId] || {};
+            
+            let receipt = `🧾 *MEGAUNLOCKPHONE TICKET* 🧾\n━━━━━━━━━━━━━━━━━━━━━━\n\n🆔 *Orden:* #${o.orderId}\n👤 *Atendido por:* ${userName} (ID: ${linkedUserId})\n📅 *Fecha y Hora:* ${dateStr}\n📱 *IMEI/SN:* ${o.imei || 'N/A'}\n🔧 *Servicio:* ${o.serviceName}\n\n💲 *Total Pagado:* $${clientPrice.toFixed(2)}\n\n🔑 *Respuesta / Código:*\n${cleanStatus}\n\n🎉 *Estado:* Completado\n\n━━━━━━━━━━━━━━━━━━━━━━\n_¡Gracias por tu preferencia!_ 🌐\n\n`;
+            
+            if (userConfig.whatsapp) receipt += `📱 *WhatsApp:* ${userConfig.whatsapp}\n`;
+            if (userConfig.facebook) receipt += `📘 *Facebook:* ${userConfig.facebook}\n`;
+            
+            receipt += `\n_Powered By MegaUnlockPhone_`;
+            
+            if (userConfig.logoExt) {
+                const logoPath = path.join(__dirname, '../../data/logos', `${linkedUserId}${userConfig.logoExt}`);
+                if (require('fs').existsSync(logoPath)) {
+                    await sock.sendMessage(remoteJid, { image: { url: logoPath }, caption: receipt });
+                } else {
+                    await sock.sendMessage(remoteJid, { text: receipt });
+                }
+            } else {
+                await sock.sendMessage(remoteJid, { text: receipt });
+            }
+            
             delete context.sessionManager.ticketSessions[remoteJid];
             return true;
         }
+    }
+    
+    // configticket routing
+    const configticket = require('./configticket');
+    if (context.sessionManager.configTicketSessions[remoteJid] || ['/configticket', '!configticket', 'configticket'].includes(cmd)) {
+        const handled = await configticket(context);
+        if (handled) return true;
     }
 
     if (['/ordenes', '!ordenes', 'ordenes', '/pedidos', '!pedidos', 'pedidos'].includes(cmd)) {

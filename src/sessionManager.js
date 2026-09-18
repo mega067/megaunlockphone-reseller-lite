@@ -8,6 +8,7 @@ class SessionManager {
         this.busSessions = {};
         this.msgUserSessions = {};
         this.setPriceSessions = {};
+        this.configTicketSessions = {};
     }
 
     clearSession(remoteJid) {
@@ -20,6 +21,7 @@ class SessionManager {
         if (this.busSessions[remoteJid]) { delete this.busSessions[remoteJid]; deleted = true; }
         if (this.msgUserSessions[remoteJid]) { delete this.msgUserSessions[remoteJid]; deleted = true; }
         if (this.setPriceSessions[remoteJid]) { delete this.setPriceSessions[remoteJid]; deleted = true; }
+        if (this.configTicketSessions[remoteJid]) { delete this.configTicketSessions[remoteJid]; deleted = true; }
         return deleted;
     }
 }
