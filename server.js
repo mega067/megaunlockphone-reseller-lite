@@ -71,7 +71,7 @@ app.use('/api', ticketConfigRoutes({ requireAuth, readDB, writeDB }));
 
 // Legacy Modular Routes
 require('./src/history')(app, { requireAuth, readDB, writeDB, getServerId, enqueueWhatsApp, enqueueWhatsAppAdmin });
-require('./src/payments')(app, { requireAuth, readDB, writeDB, enqueueWhatsApp });
+require('./src/payments')(app, { requireAuth, readDB, writeDB, enqueueWhatsApp, enqueueWhatsAppAdmin });
 
 // Utility Endpoints
 app.get('/api/kill', (req, res) => {

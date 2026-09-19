@@ -33,10 +33,57 @@ function getServerSettings(settings, serverId) {
     s.apiaccesskey = s.apiaccesskey || settings.apiaccesskey || "pk60-qXSs-xXsF-qZPa";
   }
 
-  s.resellerMarkup = s.resellerMarkup || settings.resellerMarkup || 0;
-  s.clientMarkup = s.clientMarkup || settings.clientMarkup || 0;
+  s.resellerTier1 = parseFloat(s.resellerTier1 || settings.resellerTier1 || s.resellerMarkup || settings.resellerMarkup || 0);
+  s.resellerTier2 = parseFloat(s.resellerTier2 || settings.resellerTier2 || s.resellerMarkup || settings.resellerMarkup || 0);
+  s.resellerTier3 = parseFloat(s.resellerTier3 || settings.resellerTier3 || 0);
   
+  s.clientTier1 = parseFloat(s.clientTier1 || settings.clientTier1 || s.clientMarkup || settings.clientMarkup || 0);
+  s.clientTier2 = parseFloat(s.clientTier2 || settings.clientTier2 || s.clientMarkup || settings.clientMarkup || 0);
+  s.clientTier3 = parseFloat(s.clientTier3 || settings.clientTier3 || 0);
+
+  // Keep legacy properties for backward compatibility
+  s.resellerMarkup = s.resellerTier1;
+  s.clientMarkup = s.clientTier1;
+
   return s;
+}
+
+function calculateMarkup(basePrice, tier1 = 0, tier2 = 0, tier3 = 0) {
+  const price = parseFloat(basePrice) || 0;
+  let percentage = 0;
+  
+  if (price <= 100) {
+    percentage = parseFloat(tier1) || 0;
+  } else if (price <= 500) {
+    percentage = parseFloat(tier2) || 0;
+  } else {
+    percentage = parseFloat(tier3) || 0;
+  }
+  
+  return price * (percentage / 100);
+}
+
+function calculateGroupMarkup(basePrice, groupMarkupObj, isClient = false, settings = null) {
+  if (!groupMarkupObj) return null;
+  const type = isClient ? groupMarkupObj.clientType : groupMarkupObj.type;
+  let value = parseFloat(isClient ? groupMarkupObj.clientValue : groupMarkupObj.value);
+  
+  if (type === 'tier1' && settings) {
+    value = parseFloat(isClient ? (settings.clientTier1 || settings.clientMarkup) : (settings.resellerTier1 || settings.resellerMarkup));
+  } else if (type === 'tier2' && settings) {
+    value = parseFloat(isClient ? (settings.clientTier2 || settings.clientMarkup) : (settings.resellerTier2 || settings.resellerMarkup));
+  } else if (type === 'tier3' && settings) {
+    value = parseFloat(isClient ? settings.clientTier3 : settings.resellerTier3);
+  } else {
+    if (isNaN(value)) return null;
+  }
+
+  const price = parseFloat(basePrice) || 0;
+  if (type === 'percent' || type === 'tier1' || type === 'tier2' || type === 'tier3') {
+    return price * (value / 100);
+  } else {
+    return value;
+  }
 }
 
 function getUserCredit(user, serverId) {
@@ -97,6 +144,8 @@ module.exports = {
   getServerDisplayName,
   getServerId,
   getServerSettings,
+  calculateMarkup,
+  calculateGroupMarkup,
   getUserCredit,
   setUserCredit,
   callGsmThemeApi,

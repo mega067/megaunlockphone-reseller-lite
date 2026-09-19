@@ -146,31 +146,40 @@ exports.getSettings = (req, res) => {
   const settings = readDB('settings.json') || {};
   
   const safeSettings = { exchangeRate: settings.exchangeRate || 17.60 };
-  
-  if (settings.server1) safeSettings.server1 = { resellerMarkup: settings.server1.resellerMarkup, clientMarkup: settings.server1.clientMarkup };
-  if (settings.server2) safeSettings.server2 = { resellerMarkup: settings.server2.resellerMarkup, clientMarkup: settings.server2.clientMarkup };
-  if (settings.server3) safeSettings.server3 = { resellerMarkup: settings.server3.resellerMarkup, clientMarkup: settings.server3.clientMarkup };
-  
+  if (settings.server1) safeSettings.server1 = { ...settings.server1 };
+  if (settings.server2) safeSettings.server2 = { ...settings.server2 };
+  if (settings.server3) safeSettings.server3 = { ...settings.server3 };
+
   res.json(safeSettings);
 };
 
 exports.updateSettings = (req, res) => {
   const { server1, server2, server3, exchangeRate } = req.body;
   const settings = readDB('settings.json') || {};
+  
+  const applyTiers = (target, source) => {
+    target.resellerTier1 = parseFloat(source.resellerTier1) || 0;
+    target.resellerTier2 = parseFloat(source.resellerTier2) || 0;
+    target.resellerTier3 = parseFloat(source.resellerTier3) || 0;
+    target.clientTier1 = parseFloat(source.clientTier1) || 0;
+    target.clientTier2 = parseFloat(source.clientTier2) || 0;
+    target.clientTier3 = parseFloat(source.clientTier3) || 0;
+    // Keep backward compatibility
+    target.resellerMarkup = target.resellerTier1;
+    target.clientMarkup = target.clientTier1;
+  };
+
   if (server1) {
     settings.server1 = settings.server1 || {};
-    settings.server1.resellerMarkup = parseFloat(server1.resellerMarkup) || 0;
-    settings.server1.clientMarkup = parseFloat(server1.clientMarkup) || 0;
+    applyTiers(settings.server1, server1);
   }
   if (server2) {
     settings.server2 = settings.server2 || {};
-    settings.server2.resellerMarkup = parseFloat(server2.resellerMarkup) || 0;
-    settings.server2.clientMarkup = parseFloat(server2.clientMarkup) || 0;
+    applyTiers(settings.server2, server2);
   }
   if (server3) {
     settings.server3 = settings.server3 || {};
-    settings.server3.resellerMarkup = parseFloat(server3.resellerMarkup) || 0;
-    settings.server3.clientMarkup = parseFloat(server3.clientMarkup) || 0;
+    applyTiers(settings.server3, server3);
   }
   if (exchangeRate !== undefined) {
     settings.exchangeRate = parseFloat(exchangeRate) || 17.60;
@@ -178,6 +187,21 @@ exports.updateSettings = (req, res) => {
   writeDB('settings.json', settings);
   incrementCatalogVersion();
   res.json(settings);
+};
+
+exports.getGroupMarkups = (req, res) => {
+  const markups = readDB('group_markups.json') || {};
+  res.json(markups);
+};
+
+exports.updateGroupMarkups = (req, res) => {
+  const serverId = req.headers['x-server-id'] || '1';
+  const groupMarkups = req.body;
+  const markups = readDB('group_markups.json') || {};
+  markups['server' + serverId] = groupMarkups;
+  writeDB('group_markups.json', markups);
+  incrementCatalogVersion();
+  res.json({ success: true, markups: markups['server' + serverId] });
 };
 
 exports.startBot = (req, res) => {
@@ -386,4 +410,18 @@ exports.deleteCoupon = (req, res) => {
   writeDB('coupons.json', filtered);
   createAutoBackup('Eliminar_Cupon');
   res.json({ success: true });
+};
+
+exports.clearCustomPrices = (req, res) => {
+  const serverId = require('../helpers').getServerId(req);
+  const serverKey = 'server' + serverId;
+  const allCustomPrices = readDB('custom_prices.json') || {};
+  if (allCustomPrices[serverKey]) {
+      allCustomPrices[serverKey] = {};
+      writeDB('custom_prices.json', allCustomPrices);
+      createAutoBackup('Clear_Custom_Prices');
+      res.json({ success: true, message: 'Todos los precios personalizados por producto han sido eliminados para este servidor.' });
+  } else {
+      res.json({ success: true, message: 'No había precios personalizados.' });
+  }
 };

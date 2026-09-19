@@ -1,7 +1,7 @@
 const axios = require('axios');
 const https = require('https');
 const { readDB, writeDB } = require('../db');
-const { getServerId, getServerSettings, callGsmThemeApi, getServerDisplayName } = require('../helpers');
+const { getServerId, getServerSettings, callGsmThemeApi, getServerDisplayName, calculateMarkup, calculateGroupMarkup } = require('../helpers');
 const { catalogCache, incrementCatalogVersion } = require('../cacheManager');
 const { enqueueWhatsApp } = require('../whatsappQueue');
 const { logRecharge } = require('../history'); // Assuming logRecharge is exported, though it might need to be imported properly
@@ -20,6 +20,8 @@ exports.searchProducts = async (req, res) => {
   const customPrices = allCustomPrices['server' + serverId] || {};
   const allUserCustomPrices = readDB('user_custom_prices.json') || {};
   const serverUserCustomPrices = allUserCustomPrices['server' + serverId] || {};
+  const allGroupMarkups = readDB('group_markups.json') || {};
+  const serverGroupMarkups = allGroupMarkups['server' + serverId] || {};
   
   const serverKey = 'server' + serverId;
   let list = (catalogCache[serverKey] && catalogCache[serverKey].data) ? catalogCache[serverKey].data : null;
@@ -110,6 +112,7 @@ exports.searchProducts = async (req, res) => {
             realCost = parseFloat(s.CREDIT || '0') * rate;
           }
           
+          const groupMarkupObj = serverGroupMarkups[g];
           let resellerCost;
           let activeMarkup = parseFloat(settings.resellerMarkup || 0);
 
@@ -123,8 +126,15 @@ exports.searchProducts = async (req, res) => {
               } else if (customPrices[serviceid]) {
                 resellerCost = parseFloat(customPrices[serviceid].resellerPrice);
               } else {
-                activeMarkup = (reqUser.markup !== null && reqUser.markup !== undefined && !isNaN(reqUser.markup)) ? parseFloat(reqUser.markup) : activeMarkup;
-                resellerCost = Math.ceil(realCost + activeMarkup);
+                let markupVal = 0;
+                if (reqUser.markup !== null && reqUser.markup !== undefined && !isNaN(reqUser.markup)) {
+                  markupVal = parseFloat(reqUser.markup);
+                } else {
+                  let rMarkup = calculateGroupMarkup(realCost, groupMarkupObj, false, settings);
+                  if (rMarkup === null) rMarkup = calculateMarkup(realCost, settings.resellerTier1, settings.resellerTier2, settings.resellerTier3);
+                  markupVal = rMarkup;
+                }
+                resellerCost = Math.ceil(realCost + markupVal);
               }
             }
           }
@@ -133,7 +143,9 @@ exports.searchProducts = async (req, res) => {
              if (customPrices[serviceid]) {
                 resellerCost = parseFloat(customPrices[serviceid].resellerPrice);
              } else {
-                resellerCost = Math.ceil(realCost + activeMarkup);
+                let defaultMarkup = calculateGroupMarkup(realCost, groupMarkupObj, false, settings);
+                if (defaultMarkup === null) defaultMarkup = calculateMarkup(realCost, settings.resellerTier1, settings.resellerTier2, settings.resellerTier3);
+                resellerCost = Math.ceil(realCost + defaultMarkup);
              }
           }
 
@@ -386,13 +398,17 @@ exports.getServiceInfo = async (req, res) => {
         const allUserCustomPrices = readDB('user_custom_prices.json') || {};
         const serverUserCustomPrices = allUserCustomPrices['server' + serverId] || {};
         
+        const allGroupMarkups = readDB('group_markups.json') || {};
+        const serverGroupMarkups = allGroupMarkups['server' + serverId] || {};
+        const groupMarkupObj = serverGroupMarkups[g];
+
         let realCost = prices[serviceid] !== undefined ? prices[serviceid] : null;
         if (realCost === null) {
           const exchangeRate = parseFloat(settingsDb.exchangeRate || 17.60);
           const rate = serverId === '3' ? 1 : exchangeRate;
           realCost = parseFloat(s.CREDIT || '0') * rate;
         }
-        
+
         let resellerCost;
         const ucp = serverUserCustomPrices[serviceid] && serverUserCustomPrices[serviceid][req.user.id];
         if (ucp && ucp.resellerPrice !== undefined) {
@@ -400,7 +416,14 @@ exports.getServiceInfo = async (req, res) => {
         } else if (customPrices[serviceid]) {
           resellerCost = parseFloat(customPrices[serviceid].resellerPrice);
         } else {
-          const activeMarkup = (req.user.markup !== null && req.user.markup !== undefined && !isNaN(req.user.markup)) ? parseFloat(req.user.markup) : parseFloat(settings.resellerMarkup);
+          let activeMarkup = 0;
+          if (req.user.markup !== null && req.user.markup !== undefined && !isNaN(req.user.markup)) {
+            activeMarkup = parseFloat(req.user.markup);
+          } else {
+            let rMarkup = calculateGroupMarkup(realCost, groupMarkupObj, false, settingsDb);
+            if (rMarkup === null) rMarkup = calculateMarkup(realCost, settingsDb.resellerTier1, settingsDb.resellerTier2, settingsDb.resellerTier3);
+            activeMarkup = rMarkup;
+          }
           resellerCost = Math.ceil(realCost + activeMarkup);
         }
         

@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const { readDB, writeDB, DATA_DIR } = require('../db');
-const { getServerId, getServerSettings, getUserCredit, setUserCredit, callGsmThemeApi, getServerDisplayName } = require('../helpers');
+const { getServerId, getServerSettings, getUserCredit, setUserCredit, callGsmThemeApi, getServerDisplayName, calculateMarkup, calculateGroupMarkup } = require('../helpers');
 const { catalogCache } = require('../cacheManager');
 const { enqueueWhatsApp, enqueueWhatsAppAdmin } = require('../whatsappQueue');
 const { fetchBulkOrdersStatus } = require('../syncService');
@@ -75,38 +75,45 @@ exports.processOrder = async (req, res) => {
   const user = users[userIndex];
 
   let realCost = prices[serviceid] !== undefined ? prices[serviceid] : null;
-  if (realCost === null) {
-    const serverKey = 'server' + serverId;
-    if (catalogCache[serverKey] && catalogCache[serverKey].data) {
-       const list = catalogCache[serverKey].data;
-       for (const g in list) {
-         if (list[g].SERVICES) {
-            let s = null;
-            if (Array.isArray(list[g].SERVICES)) {
-                s = list[g].SERVICES.find(x => x && (x.SERVICEID == serviceid || x.serviceid == serviceid));
-            } else {
-                s = list[g].SERVICES[serviceid] || Object.values(list[g].SERVICES).find(x => x && (x.SERVICEID == serviceid || x.serviceid == serviceid));
-            }
-            if (s) {
+  const serverKey = 'server' + serverId;
+  let serviceGroupKey = null;
+  
+  if (catalogCache[serverKey] && catalogCache[serverKey].data) {
+     const list = catalogCache[serverKey].data;
+     for (const g in list) {
+       if (list[g].SERVICES) {
+          let s = null;
+          if (Array.isArray(list[g].SERVICES)) {
+              s = list[g].SERVICES.find(x => x && (x.SERVICEID == serviceid || x.serviceid == serviceid));
+          } else {
+              s = list[g].SERVICES[serviceid] || Object.values(list[g].SERVICES).find(x => x && (x.SERVICEID == serviceid || x.serviceid == serviceid));
+          }
+          if (s) {
+              serviceGroupKey = g;
+              if (realCost === null) {
                 const exchangeRate = parseFloat(settingsDb.exchangeRate || 17.60);
                 const rate = serverId === '3' ? 1 : exchangeRate;
                 realCost = parseFloat(s.CREDIT || '0') * rate;
                 prices[serviceid] = realCost;
-                writeDB('prices_' + serverId + '.json', prices); 
-                break;
-            }
-         }
+                writeDB('prices_' + serverId + '.json', prices);
+              }
+              break;
+          }
        }
-    }
-    
-    if (realCost === null) {
-      return res.status(400).json({ error: 'El catálogo se está sincronizando en el servidor. Por favor, espera 5 segundos y vuelve a intentarlo.' });
-    }
+     }
   }
+
+  if (realCost === null) {
+    return res.status(400).json({ error: 'El catálogo se está sincronizando en el servidor. Por favor, espera 5 segundos y vuelve a intentarlo.' });
+  }
+
   const allCustomPrices = readDB('custom_prices.json') || {};
   const customPrices = allCustomPrices['server' + serverId] || {};
   const allUserCustomPrices = readDB('user_custom_prices.json') || {};
   const serverUserCustomPrices = allUserCustomPrices['server' + serverId] || {};
+  const allGroupMarkups = readDB('group_markups.json') || {};
+  const serverGroupMarkups = allGroupMarkups['server' + serverId] || {};
+  const groupMarkupObj = serviceGroupKey ? serverGroupMarkups[serviceGroupKey] : null;
   
   let resellerCost;
   const ucp = serverUserCustomPrices[serviceid] && serverUserCustomPrices[serviceid][user.id];
@@ -116,7 +123,14 @@ exports.processOrder = async (req, res) => {
   } else if (customPrices[serviceid]) {
     resellerCost = parseFloat(customPrices[serviceid].resellerPrice);
   } else {
-    const activeMarkup = (user.markup !== null && user.markup !== undefined && !isNaN(user.markup)) ? parseFloat(user.markup) : parseFloat(settings.resellerMarkup);
+    let activeMarkup = 0;
+    if (user.markup !== null && user.markup !== undefined && !isNaN(user.markup)) {
+      activeMarkup = parseFloat(user.markup);
+    } else {
+      let rMarkup = calculateGroupMarkup(realCost, groupMarkupObj, false, settings);
+      if (rMarkup === null) rMarkup = calculateMarkup(realCost, settings.resellerTier1, settings.resellerTier2, settings.resellerTier3);
+      activeMarkup = rMarkup;
+    }
     resellerCost = Math.ceil(realCost + activeMarkup);
   }
   

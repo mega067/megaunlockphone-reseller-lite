@@ -4,7 +4,7 @@ const { reportarPagoProveedor } = require('../providerPayment');
 const axios = require('axios');
 
 module.exports = function(app, deps) {
-  const { requireAuth, readDB, writeDB, enqueueWhatsApp } = deps;
+  const { requireAuth, readDB, writeDB, enqueueWhatsApp, enqueueWhatsAppAdmin } = deps;
 
   app.post('/api/fund/route', requireAuth, async (req, res) => {
     const { amount, bankCode, serverId } = req.body;
@@ -196,6 +196,10 @@ module.exports = function(app, deps) {
         if (wsettings.enabled) {
           const userPhone = users[userIndex].phone || userId;
           enqueueWhatsApp('private', `✅ Tu recarga de *$${requestedAmount}* mediante SPEI (Rastreo: ${trackingNumber}) ha sido confirmada. Ya tienes el saldo en tu cuenta.`, userPhone);
+          
+          const adminMsg = `💸 *Recarga SPEI Confirmada*\n\nEl usuario *${users[userIndex].username}* ha recargado saldo vía SPEI.\n\n💰 Monto: $${requestedAmount} MXN\n🧾 Rastreo: ${trackingNumber}\n📈 Nuevo saldo: $${parseFloat(newCredits).toFixed(2)}`;
+          enqueueWhatsAppAdmin(adminMsg);
+          enqueueWhatsApp('group', adminMsg);
         }
       } catch(e) {}
 

@@ -358,7 +358,9 @@ setInterval(async () => {
     
     try {
         let queue = JSON.parse(fs.readFileSync(QUEUE_FILE));
+        // console.log(`[QUEUE] Current queue length: ${queue.length}`); // Too noisy for every 5s, only log if > 0
         if (queue.length > 0) {
+            console.log(`[QUEUE] Found item:`, queue[0]);
             const item = queue.shift();
             fs.writeFileSync(QUEUE_FILE, JSON.stringify(queue, null, 2));
             
@@ -371,6 +373,26 @@ setInterval(async () => {
                 const phoneId = Object.keys(wusersLocal).find(key => wusersLocal[key] === item.userId);
                 if (phoneId) {
                     await sock.sendMessage(phoneId, { text: item.message });
+                }
+            } else if (item.type === 'direct') {
+                console.log(`[QUEUE] Processing direct message to: ${item.phoneId}`);
+                if (item.phoneId) {
+                    let targetJid = item.phoneId;
+                    
+                    try {
+                        const [result] = await sock.onWhatsApp(targetJid) || [];
+                        console.log(`[QUEUE] onWhatsApp(${targetJid}) result:`, result);
+                        await sock.sendMessage(targetJid, { text: item.message });
+                        console.log(`[QUEUE] Message sent to primary ${targetJid}`);
+
+                        if (targetJid.startsWith('52') && targetJid.length === 27) { 
+                            const fallbackJid = targetJid.replace(/^52/, '521');
+                            await sock.sendMessage(fallbackJid, { text: item.message });
+                            console.log(`[QUEUE] Message ALSO sent to fallback ${fallbackJid}`);
+                        }
+                    } catch (err) {
+                        console.log(`[QUEUE] Send failed:`, err);
+                    }
                 }
             }
         }

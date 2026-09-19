@@ -362,6 +362,108 @@ document.addEventListener('DOMContentLoaded', () => {
     btnTogglePass.innerHTML = `<i data-lucide="${isPassword ? 'eye-off' : 'eye'}"></i>`;
     lucide.createIcons();
   });
+  // ==========================================
+  // REGISTRATION & OTP LOGIC
+  // ==========================================
+  const btnShowRegister = document.getElementById('btnShowRegister');
+  const registerModalOverlay = document.getElementById('registerModalOverlay');
+  const btnRegisterClose = document.getElementById('btnRegisterClose');
+  const registerForm = document.getElementById('registerForm');
+  const regUsername = document.getElementById('regUsername');
+  const regPassword = document.getElementById('regPassword');
+  const regPhone = document.getElementById('regPhone');
+  
+  const otpModalOverlay = document.getElementById('otpModalOverlay');
+  const otpForm = document.getElementById('otpForm');
+  const otpInput = document.getElementById('otpInput');
+  const otpDisplayPhone = document.getElementById('otpDisplayPhone');
+  let currentRegPhone = '';
+
+  if (btnShowRegister) {
+    btnShowRegister.addEventListener('click', (e) => {
+      e.preventDefault();
+      registerModalOverlay.classList.remove('hidden');
+    });
+  }
+  if (btnRegisterClose) {
+    btnRegisterClose.addEventListener('click', () => {
+      registerModalOverlay.classList.add('hidden');
+    });
+  }
+
+  if (registerForm) {
+    registerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const u = regUsername.value.trim();
+      const p = regPassword.value.trim();
+      const pConfirm = document.getElementById('regPasswordConfirm').value.trim();
+      const ph = regPhone.value.trim();
+      
+      if (p !== pConfirm) {
+        alert('Las contraseñas no coinciden. Intenta de nuevo.');
+        return;
+      }
+
+      const btn = document.getElementById('btnRegisterSubmit');
+      btn.disabled = true;
+      btn.innerHTML = `<i data-lucide="loader" class="icon-spin"></i> Procesando...`;
+      if (window.lucide) window.lucide.createIcons();
+
+      try {
+        const data = await window.ApiHelpers.register(u, p, ph);
+        currentRegPhone = data.phone;
+        otpDisplayPhone.textContent = data.phone;
+        registerModalOverlay.classList.add('hidden');
+        otpModalOverlay.classList.remove('hidden');
+      } catch (err) {
+        alert(err.message || 'Error al registrar.');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="send"></i> Enviar Código por WhatsApp`;
+        if (window.lucide) window.lucide.createIcons();
+      }
+    });
+  }
+
+  if (otpForm) {
+    otpForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const code = otpInput.value.trim();
+      const btn = document.getElementById('btnOtpSubmit');
+      btn.disabled = true;
+      btn.textContent = 'Verificando...';
+
+      try {
+        const data = await window.ApiHelpers.verifyOtp(currentRegPhone, code);
+        
+        // Success! Log them in
+        authToken = data.token;
+        authRole = data.role;
+        authUsername = data.username;
+        authUserId = data.uid;
+        localStorage.setItem('dhru_token', authToken);
+        localStorage.setItem('dhru_role', authRole);
+        localStorage.setItem('dhru_username', authUsername);
+        localStorage.setItem('dhru_uid', authUserId);
+
+        currentServerId = '1';
+        localStorage.setItem('currentServerId', '1');
+        
+        otpModalOverlay.classList.add('hidden');
+        loginView.classList.add('hidden');
+        dashboardView.classList.remove('hidden');
+        
+        initDashboard();
+        updateSliderUI();
+        alert(`¡Registro exitoso! Bienvenido ${authUsername}.`);
+      } catch (err) {
+        alert(err.message || 'Error al verificar el código.');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Verificar y Entrar';
+      }
+    });
+  }
 
   // Handle Login Form Submission
   credentialsForm.addEventListener('submit', async (e) => {
@@ -3477,8 +3579,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnDownloadBackup = document.getElementById('btnDownloadBackup');
   const btnUploadBackup = document.getElementById('btnUploadBackup');
   const fileRestoreBackup = document.getElementById('fileRestoreBackup');
-  const inputResellerMarkup = document.getElementById('inputResellerMarkup');
-  const inputClientMarkup = document.getElementById('inputClientMarkup');
+  const btnClearCustomPrices = document.getElementById('btnClearCustomPrices');
+  const inputResellerTier1 = document.getElementById('inputResellerTier1');
+  const inputResellerTier2 = document.getElementById('inputResellerTier2');
+  const inputResellerTier3 = document.getElementById('inputResellerTier3');
+  const inputClientTier1 = document.getElementById('inputClientTier1');
+  const inputClientTier2 = document.getElementById('inputClientTier2');
+  const inputClientTier3 = document.getElementById('inputClientTier3');
 
   // Recharge server info card dynamic update
   const rechargeServerSelect = document.getElementById('rechargeServer');
@@ -3789,8 +3896,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const set = await settingsRes.json();
         const currentSet = currentServerId === '3' ? set.server3 : (currentServerId === '2' ? set.server2 : set.server1);
         if (currentSet) {
-          inputResellerMarkup.value = parseFloat(currentSet.resellerMarkup || 0).toFixed(2);
-          inputClientMarkup.value = parseFloat(currentSet.clientMarkup || 0).toFixed(2);
+          if (inputResellerTier1) inputResellerTier1.value = parseFloat(currentSet.resellerTier1 || currentSet.resellerMarkup || 0).toFixed(2);
+          if (inputResellerTier2) inputResellerTier2.value = parseFloat(currentSet.resellerTier2 || currentSet.resellerMarkup || 0).toFixed(2);
+          if (inputResellerTier3) inputResellerTier3.value = parseFloat(currentSet.resellerTier3 || 0).toFixed(2);
+          if (inputClientTier1) inputClientTier1.value = parseFloat(currentSet.clientTier1 || currentSet.clientMarkup || 0).toFixed(2);
+          if (inputClientTier2) inputClientTier2.value = parseFloat(currentSet.clientTier2 || currentSet.clientMarkup || 0).toFixed(2);
+          if (inputClientTier3) inputClientTier3.value = parseFloat(currentSet.clientTier3 || 0).toFixed(2);
         }
         const inputExchangeRate = document.getElementById('inputExchangeRate');
         if (inputExchangeRate) {
@@ -3802,6 +3913,66 @@ document.addEventListener('DOMContentLoaded', () => {
       if (lbl) {
         const sNames = {'1': '⚡ MEGA-SERVER', '2': '🛡 ALPHA-SERVER', '3': '🔱 OMEGA-SERVER'};
         lbl.textContent = sNames[currentServerId] || 'MEGA-SERVER';
+      }
+
+      // Load Group Markups
+      const groupMarkupsContainer = document.getElementById('groupMarkupsContainer');
+      if (groupMarkupsContainer) {
+        try {
+          const gmRes = await fetch('/api/admin/group-markups', { headers: { 'X-Server-Id': currentServerId, 'Authorization': `Bearer ${authToken}` }});
+          if (gmRes.ok) {
+            const gmData = await gmRes.json();
+            const serverGmData = gmData['server' + currentServerId] || {};
+            
+            // Extract unique groups from productsList
+            const uniqueGroups = [...new Set(productsList.map(p => p.group || 'Otros Servicios'))].sort();
+            
+            if (uniqueGroups.length === 0) {
+              groupMarkupsContainer.innerHTML = '<div style="text-align: center; color: #6b7280; padding: 20px; grid-column: 1 / -1;">No hay grupos cargados. Asegúrate de sincronizar los productos primero.</div>';
+            } else {
+              groupMarkupsContainer.innerHTML = '';
+              uniqueGroups.forEach(groupName => {
+                const gm = serverGmData[groupName] || { type: 'tier1', value: '', clientType: 'tier1', clientValue: '' };
+                const safeId = groupName.replace(/[^a-zA-Z0-9]/g, '_');
+                
+                const card = document.createElement('div');
+                card.className = 'group-markup-card';
+                card.dataset.groupname = groupName.toLowerCase();
+                card.style.cssText = 'background: rgba(0,0,0,0.2); padding: 12px; border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.1);';
+                card.innerHTML = `
+                  <h4 style="margin: 0 0 10px 0; font-size: 0.95rem; color: #fff;">${escapeHtml(groupName)}</h4>
+                  <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                      <label style="width: 70px; font-size: 0.8rem; color: #9ca3af;">Reseller:</label>
+                      <select id="gm_type_r_${safeId}" class="form-control" style="width: auto; padding: 4px; font-size: 0.8rem;" onchange="document.getElementById('gm_val_r_${safeId}').style.display = (this.value.startsWith('tier') ? 'none' : 'block')">
+                        <option value="fixed" ${gm.type === 'fixed' ? 'selected' : ''}>$ MXN</option>
+                        <option value="percent" ${gm.type === 'percent' ? 'selected' : ''}>% Porc.</option>
+                        <option value="tier1" ${gm.type === 'tier1' ? 'selected' : ''}>Económicos (Tier 1)</option>
+                        <option value="tier2" ${gm.type === 'tier2' ? 'selected' : ''}>Medios (Tier 2)</option>
+                        <option value="tier3" ${gm.type === 'tier3' ? 'selected' : ''}>Premium (Tier 3)</option>
+                      </select>
+                      <input type="number" id="gm_val_r_${safeId}" step="0.01" min="0" value="${gm.value || ''}" placeholder="Ej: 20" class="form-control" style="flex: 1; padding: 4px; font-size: 0.8rem; display: ${gm.type && gm.type.startsWith('tier') ? 'none' : 'block'};" data-group="${escapeHtml(groupName)}">
+                    </div>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                      <label style="width: 70px; font-size: 0.8rem; color: #9ca3af;">Cliente:</label>
+                      <select id="gm_type_c_${safeId}" class="form-control" style="width: auto; padding: 4px; font-size: 0.8rem;" onchange="document.getElementById('gm_val_c_${safeId}').style.display = (this.value.startsWith('tier') ? 'none' : 'block')">
+                        <option value="fixed" ${gm.clientType === 'fixed' ? 'selected' : ''}>$ MXN</option>
+                        <option value="percent" ${gm.clientType === 'percent' ? 'selected' : ''}>% Porc.</option>
+                        <option value="tier1" ${gm.clientType === 'tier1' ? 'selected' : ''}>Económicos (Tier 1)</option>
+                        <option value="tier2" ${gm.clientType === 'tier2' ? 'selected' : ''}>Medios (Tier 2)</option>
+                        <option value="tier3" ${gm.clientType === 'tier3' ? 'selected' : ''}>Premium (Tier 3)</option>
+                      </select>
+                      <input type="number" id="gm_val_c_${safeId}" step="0.01" min="0" value="${gm.clientValue || ''}" placeholder="Ej: 50" class="form-control" style="flex: 1; padding: 4px; font-size: 0.8rem; display: ${gm.clientType && gm.clientType.startsWith('tier') ? 'none' : 'block'};" data-group="${escapeHtml(groupName)}">
+                    </div>
+                  </div>
+                `;
+                groupMarkupsContainer.appendChild(card);
+              });
+            }
+          }
+        } catch (e) {
+          console.error('Error loading group markups', e);
+        }
       }
 
       // Load Auto-Backups
@@ -4027,7 +4198,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.querySelectorAll('.btn-delete-user').forEach(btn => {
           btn.addEventListener('click', async (e) => {
-            const id = e.target.dataset.id;
+            const id = e.currentTarget.dataset.id;
             if (confirm('¿Eliminar este usuario?')) {
               await fetch(`/api/users/${id}`, { method: 'DELETE', headers: { 'X-Server-Id': currentServerId, 'Authorization': `Bearer ${authToken}` }});
               loadAdminData();
@@ -4087,10 +4258,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnAdminTabUsers = document.getElementById('btnAdminTabUsers');
   const btnAdminTabHistory = document.getElementById('btnAdminTabHistory');
   const btnAdminTabSettings = document.getElementById('btnAdminTabSettings');
+  const btnAdminTabGroups = document.getElementById('btnAdminTabGroups');
   
   const adminTabUsers = document.getElementById('adminTabUsersContent');
   const adminTabHistory = document.getElementById('adminTabHistoryContent');
   const adminTabSettings = document.getElementById('adminTabSettingsContent');
+  const adminTabGroups = document.getElementById('adminTabGroupsContent');
 
   if (btnAdminTabUsers) {
     btnAdminTabUsers.addEventListener('click', () => {
@@ -4099,6 +4272,8 @@ document.addEventListener('DOMContentLoaded', () => {
       adminTabUsers.classList.remove('hidden');
       adminTabHistory.classList.add('hidden');
       adminTabSettings.classList.add('hidden');
+      if (adminTabGroups) adminTabGroups.classList.add('hidden');
+      if (adminTabGroups) adminTabGroups.style.display = 'none';
     });
   }
 
@@ -4109,6 +4284,8 @@ document.addEventListener('DOMContentLoaded', () => {
       adminTabHistory.classList.remove('hidden');
       adminTabUsers.classList.add('hidden');
       adminTabSettings.classList.add('hidden');
+      if (adminTabGroups) adminTabGroups.classList.add('hidden');
+      if (adminTabGroups) adminTabGroups.style.display = 'none';
       fetchMasterHistory(); // Fetch data when entering the tab
     });
   }
@@ -4120,6 +4297,60 @@ document.addEventListener('DOMContentLoaded', () => {
       adminTabSettings.classList.remove('hidden');
       adminTabUsers.classList.add('hidden');
       adminTabHistory.classList.add('hidden');
+      if (adminTabGroups) adminTabGroups.classList.add('hidden');
+      if (adminTabGroups) adminTabGroups.style.display = 'none';
+    });
+  }
+
+  if (btnAdminTabGroups) {
+    btnAdminTabGroups.addEventListener('click', () => {
+      document.querySelectorAll('.admin-sub-tab').forEach(t => t.classList.remove('active'));
+      btnAdminTabGroups.classList.add('active');
+      if (adminTabGroups) {
+        adminTabGroups.classList.remove('hidden');
+        adminTabGroups.style.display = 'block';
+      }
+      adminTabSettings.classList.add('hidden');
+      adminTabUsers.classList.add('hidden');
+      adminTabHistory.classList.add('hidden');
+      
+      // Attempt to load products if not loaded, so groups can render
+      if (!productsList || productsList.length === 0) {
+        if (typeof syncProducts === 'function') {
+          syncProducts(true);
+        } else if (typeof fetchProducts === 'function') {
+          fetchProducts(true);
+        }
+      }
+    });
+  }
+
+  const groupSearchInput = document.getElementById('groupSearchInput');
+  if (groupSearchInput) {
+    groupSearchInput.addEventListener('input', (e) => {
+      const term = e.target.value.toLowerCase();
+      const cards = document.querySelectorAll('.group-markup-card');
+      cards.forEach(card => {
+        const name = card.dataset.groupname || '';
+        if (name.includes(term)) {
+          card.style.display = 'block';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    });
+  }
+
+  const btnForceReloadGroups = document.getElementById('btnForceReloadGroups');
+  if (btnForceReloadGroups) {
+    btnForceReloadGroups.addEventListener('click', () => {
+      if (typeof syncProducts === 'function') {
+        syncProducts(true);
+      } else if (typeof fetchProducts === 'function') {
+        fetchProducts(true);
+      } else {
+        alert('No se pudo recargar. Sincroniza desde el catálogo.');
+      }
     });
   }
 
@@ -4347,21 +4578,96 @@ document.addEventListener('DOMContentLoaded', () => {
     loadBotLogs();
   }
 
+  const btnSaveGroupMarkups = document.getElementById('btnSaveGroupMarkups');
+  if (btnSaveGroupMarkups) {
+    btnSaveGroupMarkups.addEventListener('click', async () => {
+      const groupMarkupsContainer = document.getElementById('groupMarkupsContainer');
+      if (!groupMarkupsContainer) return;
+      
+      const inputsR = groupMarkupsContainer.querySelectorAll('input[id^="gm_val_r_"]');
+      const payload = {};
+      
+      inputsR.forEach(inputR => {
+        const groupName = inputR.getAttribute('data-group');
+        const safeId = groupName.replace(/[^a-zA-Z0-9]/g, '_');
+        const typeR = document.getElementById('gm_type_r_' + safeId).value;
+        const valR = inputR.value;
+        
+        const typeC = document.getElementById('gm_type_c_' + safeId).value;
+        const valC = document.getElementById('gm_val_c_' + safeId).value;
+        
+        if (valR !== '' || valC !== '' || typeR.startsWith('tier') || typeC.startsWith('tier')) {
+          payload[groupName] = {
+            type: typeR,
+            value: parseFloat(valR) || 0,
+            clientType: typeC,
+            clientValue: parseFloat(valC) || 0
+          };
+        }
+      });
+      
+      try {
+        btnSaveGroupMarkups.disabled = true;
+        btnSaveGroupMarkups.innerHTML = 'Guardando...';
+        const res = await fetch('/api/admin/group-markups', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Server-Id': currentServerId,
+            'Authorization': `Bearer ${authToken}`
+          },
+          body: JSON.stringify(payload)
+        });
+        
+        if (res.ok) {
+          alert('Ganancias por Grupo guardadas exitosamente.');
+          if (typeof syncProducts === 'function') {
+            syncProducts(true);
+          } else if (typeof fetchProducts === 'function') {
+            fetchProducts(true);
+          }
+        } else {
+          alert('Error al guardar las ganancias por grupo.');
+        }
+      } catch (err) {
+        alert('Error de red al guardar.');
+      } finally {
+        btnSaveGroupMarkups.disabled = false;
+        btnSaveGroupMarkups.innerHTML = '<i data-lucide="save" style="width: 14px; height: 14px;"></i> Guardar Grupos';
+        lucide.createIcons();
+      }
+    });
+  }
+
   if (adminSettingsForm) {
     adminSettingsForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       try {
-        const resellerMarkup = inputResellerMarkup.value;
-        const clientMarkup = inputClientMarkup.value;
+        const resellerTier1 = inputResellerTier1.value;
+        const resellerTier2 = inputResellerTier2.value;
+        const resellerTier3 = inputResellerTier3.value;
+        const clientTier1 = inputClientTier1.value;
+        const clientTier2 = inputClientTier2.value;
+        const clientTier3 = inputClientTier3.value;
         const exchangeRate = document.getElementById('inputExchangeRate') ? document.getElementById('inputExchangeRate').value : 17.60;
+        const creditCushion = document.getElementById('inputCreditCushion') ? document.getElementById('inputCreditCushion').value : 0;
         
-        let payload = { exchangeRate: parseFloat(exchangeRate) };
+        let payload = { exchangeRate: parseFloat(exchangeRate), creditCushion: parseInt(creditCushion) };
+        const tiersObj = {
+          resellerTier1: parseFloat(resellerTier1),
+          resellerTier2: parseFloat(resellerTier2),
+          resellerTier3: parseFloat(resellerTier3),
+          clientTier1: parseFloat(clientTier1),
+          clientTier2: parseFloat(clientTier2),
+          clientTier3: parseFloat(clientTier3)
+        };
+
         if (currentServerId === '3') {
-          payload.server3 = { resellerMarkup: resellerMarkup, clientMarkup: clientMarkup };
+          payload.server3 = tiersObj;
         } else if (currentServerId === '2') {
-          payload.server2 = { resellerMarkup: resellerMarkup, clientMarkup: clientMarkup };
+          payload.server2 = tiersObj;
         } else {
-          payload.server1 = { resellerMarkup: resellerMarkup, clientMarkup: clientMarkup };
+          payload.server1 = tiersObj;
         }
 
         const res = await fetch('/api/admin/settings', {
@@ -4451,6 +4757,31 @@ document.addEventListener('DOMContentLoaded', () => {
       };
       
       reader.readAsText(file);
+    });
+  }
+
+  if (btnClearCustomPrices) {
+    btnClearCustomPrices.addEventListener('click', async () => {
+      if (!confirm('¿Estás seguro de que deseas eliminar TODOS los precios manuales por producto para este servidor? Esto no se puede deshacer.')) return;
+      try {
+        const res = await fetch('/api/admin/custom-prices', {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'X-Server-Id': currentServerId
+          }
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('✅ ' + data.message);
+          syncProducts(true); // Refresca los productos en la UI
+        } else {
+          alert('❌ Error: ' + data.error);
+        }
+      } catch (err) {
+        console.error(err);
+        alert('❌ Error de conexión al limpiar precios.');
+      }
     });
   }
 
@@ -4768,8 +5099,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (authToken) {
       updateAccountCredits();
       if (adminSection && !adminSection.classList.contains('hidden') && authRole === 'admin') {
-         // Only refresh admin table if user is not actively typing
-         if (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+         const settingsTab = document.getElementById('adminTabSettingsContent');
+         const groupsTab = document.getElementById('adminTabGroupsContent');
+         const isFormTabActive = (settingsTab && !settingsTab.classList.contains('hidden')) || (groupsTab && !groupsTab.classList.contains('hidden'));
+         
+         // Only refresh admin table if user is not actively typing AND not in a form tab
+         if (!isFormTabActive && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA' && document.activeElement.tagName !== 'SELECT') {
             loadAdminData();
          }
       }

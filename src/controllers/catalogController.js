@@ -2,7 +2,7 @@ const axios = require('axios');
 const https = require('https');
 const http = require('http');
 const { readDB, writeDB } = require('../db');
-const { getServerId, getServerSettings, callGsmThemeApi } = require('../helpers');
+const { getServerId, getServerSettings, callGsmThemeApi, calculateMarkup, calculateGroupMarkup } = require('../helpers');
 const { catalogCache, CACHE_TTL } = require('../cacheManager');
 
 const ipv4Agent = new https.Agent({ family: 4 });
@@ -16,7 +16,7 @@ exports.getProducts = async (req, res) => {
     return res.status(400).json({ error: 'Settings misconfigured for Server ' + serverId });
   }
 
-  const { apiaccesskey, username, endpoint, resellerMarkup, clientMarkup } = settings;
+  const { apiaccesskey, username, endpoint, resellerTier1, resellerTier2, resellerTier3, clientTier1, clientTier2, clientTier3 } = settings;
   const targetUrl = endpoint.endsWith('/') ? endpoint + 'api/index.php' : endpoint + '/api/index.php';
 
   try {
@@ -130,8 +130,11 @@ exports.getProducts = async (req, res) => {
       
       const allUserCustomPrices = readDB('user_custom_prices.json') || {};
       const serverUserCustomPrices = allUserCustomPrices['server' + serverId] || {};
-      
+      const allGroupMarkups = readDB('group_markups.json') || {};
+      const serverGroupMarkups = allGroupMarkups['server' + serverId] || {};
+
       for (const groupKey in mergedList) {
+        const groupMarkupObj = serverGroupMarkups[groupKey];
         for (const serviceKey in mergedList[groupKey].SERVICES || {}) {
           const service = mergedList[groupKey].SERVICES[serviceKey];
           const realServiceId = service.SERVICEID || service.serviceid || serviceKey;
@@ -160,15 +163,29 @@ exports.getProducts = async (req, res) => {
 
           if (ucp && ucp.resellerPrice !== undefined) {
             resellerCost = parseFloat(ucp.resellerPrice);
-            clientPrice = ucp.clientPrice !== undefined ? parseFloat(ucp.clientPrice) : 
-                (customPrices[realServiceId] ? parseFloat(customPrices[realServiceId].clientPrice) : Math.ceil(resellerCost + parseFloat(clientMarkup)));
+            
+            let cMarkup = calculateGroupMarkup(resellerCost, groupMarkupObj, true, settings);
+            if (cMarkup === null) cMarkup = calculateMarkup(resellerCost, clientTier1, clientTier2, clientTier3);
+            
+            clientPrice = ucp.clientPrice !== undefined ? parseFloat(ucp.clientPrice) :
+                (customPrices[realServiceId] ? parseFloat(customPrices[realServiceId].clientPrice) : Math.ceil(resellerCost + cMarkup));
           } else if (customPrices[realServiceId]) {
             resellerCost = parseFloat(customPrices[realServiceId].resellerPrice);
             clientPrice = parseFloat(customPrices[realServiceId].clientPrice);
           } else {
-            const activeMarkup = (dbUser.markup !== null && dbUser.markup !== undefined && !isNaN(dbUser.markup)) ? parseFloat(dbUser.markup) : parseFloat(resellerMarkup);
+            let activeMarkup = 0;
+            if (dbUser.markup !== null && dbUser.markup !== undefined && !isNaN(dbUser.markup)) {
+              activeMarkup = parseFloat(dbUser.markup);
+            } else {
+              let rMarkup = calculateGroupMarkup(realCredit, groupMarkupObj, false, settings);
+              if (rMarkup === null) rMarkup = calculateMarkup(realCredit, resellerTier1, resellerTier2, resellerTier3);
+              activeMarkup = rMarkup;
+            }
             resellerCost = Math.ceil(realCredit + activeMarkup);
-            clientPrice = Math.ceil(resellerCost + parseFloat(clientMarkup));
+            
+            let cMarkup = calculateGroupMarkup(resellerCost, groupMarkupObj, true, settings);
+            if (cMarkup === null) cMarkup = calculateMarkup(resellerCost, clientTier1, clientTier2, clientTier3);
+            clientPrice = Math.ceil(resellerCost + cMarkup);
           }
           
           // Enforce minimum price (must be at least API cost)

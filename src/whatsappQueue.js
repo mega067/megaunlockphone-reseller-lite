@@ -15,11 +15,25 @@ function enqueueWhatsApp(type, message, userId = null) {
 }
 
 function enqueueWhatsAppAdmin(message) {
+  require('dotenv').config();
+  const queueFile = path.join(__dirname, '..', 'queue.json');
+  let queue = [];
+  try { if (fs.existsSync(queueFile)) queue = JSON.parse(fs.readFileSync(queueFile)); } catch(e) {}
+
+  if (process.env.ADMIN_PHONE) {
+    let cleanPhone = String(process.env.ADMIN_PHONE).replace(/\D/g, '');
+    if (cleanPhone.length === 10) cleanPhone = '52' + cleanPhone;
+    queue.push({ type: 'direct', phoneId: `${cleanPhone}@s.whatsapp.net`, message });
+    fs.writeFileSync(queueFile, JSON.stringify(queue, null, 2));
+    return;
+  }
+
   const users = readDB('users.json') || [];
   const admins = users.filter(u => u.role === 'admin');
   admins.forEach(admin => {
-    enqueueWhatsApp('private', message, admin.id);
+    queue.push({ type: 'private', message, userId: admin.id });
   });
+  fs.writeFileSync(queueFile, JSON.stringify(queue, null, 2));
 }
 
 module.exports = {

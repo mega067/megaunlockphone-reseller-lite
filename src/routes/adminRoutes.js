@@ -14,9 +14,14 @@ router.get('/admin/stats', requireAuth, requireAdmin, adminController.getStats);
 router.get('/admin/settings', requireAuth, requireAdmin, adminController.getSettings);
 router.post('/admin/settings', requireAuth, requireAdmin, adminController.updateSettings);
 
+router.get('/admin/group-markups', requireAuth, requireAdmin, adminController.getGroupMarkups);
+router.post('/admin/group-markups', requireAuth, requireAdmin, adminController.updateGroupMarkups);
+
 router.post('/admin/bot/start', requireAuth, requireAdmin, adminController.startBot);
 router.post('/admin/bot/stop', requireAuth, requireAdmin, adminController.stopBot);
 router.get('/admin/bot/logs', requireAuth, requireAdmin, adminController.getBotLogs);
+
+router.delete('/admin/custom-prices', requireAuth, requireAdmin, adminController.clearCustomPrices);
 
 router.get('/admin/backup', requireAuth, requireAdmin, adminController.getBackup);
 router.post('/admin/restore', requireAuth, requireAdmin, adminController.restoreBackup);

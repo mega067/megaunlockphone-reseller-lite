@@ -141,6 +141,11 @@
             <i data-lucide="log-in"></i>
             <span>Iniciar Sesión</span>
           </button>
+          <div style="text-align: center; margin-top: 1.5rem;">
+            <a href="#" id="btnShowRegister" style="color: #0ea5e9; font-size: 0.95rem; text-decoration: none; font-weight: 500;">
+              ¿No tienes cuenta? Regístrate gratis
+            </a>
+          </div>
         </form>
       </section>
     </div>
@@ -359,6 +364,9 @@
             <button class="btn btn-secondary btn-small" id="btnAdminTabSettings">
               <i data-lucide="settings"></i> Ajustes
             </button>
+            <button class="btn btn-secondary btn-small" id="btnAdminTabGroups">
+              <i data-lucide="layers"></i> Precios por Grupo
+            </button>
           </div>
         </div>
 
@@ -480,14 +488,40 @@
                 <i data-lucide="settings" style="width: 18px; height: 18px;"></i> Comisiones (Markup) - <span id="settingsCurrentServerLabel" style="color: #a78bfa; font-weight: bold;">MEGA-SERVER</span>
               </h3>
               <form id="adminSettingsForm" style="display: flex; flex-direction: column; gap: 15px;">
-                <div class="input-group">
-                  <label>Aumento a Resellers (+ MXN)</label>
-                  <input type="number" id="inputResellerMarkup" step="0.01" min="0" value="0.00" style="width: 100%;">
+                <!-- Reseller Tiers -->
+                <div style="background: rgba(139, 92, 246, 0.1); padding: 10px; border-radius: 6px;">
+                  <h4 style="margin: 0 0 10px 0; font-size: 0.9rem; color: #a78bfa;">Aumento a Resellers</h4>
+                  <div class="input-group" style="margin-bottom: 8px;">
+                    <label>Económicos ($0 - $100) [% Porcentaje]</label>
+                    <input type="number" id="inputResellerTier1" step="0.01" min="0" value="0.00" placeholder="Ej: 20 (sin %)" style="width: 100%;">
+                  </div>
+                  <div class="input-group" style="margin-bottom: 8px;">
+                    <label>Medios ($101 - $500) [% Porcentaje]</label>
+                    <input type="number" id="inputResellerTier2" step="0.01" min="0" value="0.00" placeholder="Ej: 20 (sin %)" style="width: 100%;">
+                  </div>
+                  <div class="input-group">
+                    <label>Premium (>$500) [% Porcentaje]</label>
+                    <input type="number" id="inputResellerTier3" step="0.01" min="0" value="0.00" placeholder="Ej: 20 (sin %)" style="width: 100%;">
+                  </div>
                 </div>
-                <div class="input-group">
-                  <label>Aumento Cliente Final (+ MXN)</label>
-                  <input type="number" id="inputClientMarkup" step="0.01" min="0" value="0.00" style="width: 100%;">
+
+                <!-- Client Tiers -->
+                <div style="background: rgba(59, 130, 246, 0.1); padding: 10px; border-radius: 6px;">
+                  <h4 style="margin: 0 0 10px 0; font-size: 0.9rem; color: #93c5fd;">Aumento Cliente Final</h4>
+                  <div class="input-group" style="margin-bottom: 8px;">
+                    <label>Económicos ($0 - $100) [% Porcentaje]</label>
+                    <input type="number" id="inputClientTier1" step="0.01" min="0" value="0.00" placeholder="Ej: 20 (sin %)" style="width: 100%;">
+                  </div>
+                  <div class="input-group" style="margin-bottom: 8px;">
+                    <label>Medios ($101 - $500) [% Porcentaje]</label>
+                    <input type="number" id="inputClientTier2" step="0.01" min="0" value="0.00" placeholder="Ej: 20 (sin %)" style="width: 100%;">
+                  </div>
+                  <div class="input-group">
+                    <label>Premium (>$500) [% Porcentaje]</label>
+                    <input type="number" id="inputClientTier3" step="0.01" min="0" value="0.00" placeholder="Ej: 20 (sin %)" style="width: 100%;">
+                  </div>
                 </div>
+
                 <div class="input-group">
                   <label>Tasa USD a MXN (Global)</label>
                   <input type="number" id="inputExchangeRate" step="0.01" min="1" value="17.60" style="width: 100%;">
@@ -500,7 +534,6 @@
                   <i data-lucide="save"></i> Guardar Precios
                 </button>
               </form>
-            </div>
             </div>
 
             <!-- Backup Settings -->
@@ -516,6 +549,19 @@
                 <input type="file" id="fileRestoreBackup" accept=".json" style="display: none;">
                 <button type="button" class="btn btn-secondary" id="btnUploadBackup" style="border-color: rgba(34, 197, 94, 0.3); justify-content: center;">
                   <i data-lucide="upload"></i> Restaurar Respaldo
+                </button>
+              </div>
+            </div>
+
+            <!-- Maintenance Tools -->
+            <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px; padding: 16px;">
+              <h3 style="margin-top: 0; margin-bottom: 12px; font-size: 1.1rem; color: #f87171; display: flex; align-items: center; gap: 8px;">
+                <i data-lucide="alert-triangle" style="width: 18px; height: 18px;"></i> Herramientas
+              </h3>
+              <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 15px;">Borra de golpe todos los precios asignados individualmente a los productos (Este Servidor).</p>
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button type="button" class="btn btn-secondary" id="btnClearCustomPrices" style="border-color: rgba(239, 68, 68, 0.3); justify-content: center; color: #fca5a5;">
+                  <i data-lucide="trash-2"></i> Limpiar Precios Manuales
                 </button>
               </div>
             </div>
@@ -549,6 +595,29 @@
               <div id="autobackupList" style="display: flex; gap: 10px; flex-wrap: wrap;">
                 <p style="font-size: 0.85rem; color: var(--text-secondary);">Cargando respaldos automáticos...</p>
               </div>
+            </div>
+          </div>
+
+          <!-- TAB: GRUPOS -->
+          <div id="adminTabGroupsContent" class="hidden">
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05);">
+              <div>
+                <h3 style="margin: 0; font-size: 1.1rem; color: #6ee7b7;">Precios por Grupo</h3>
+                <span style="font-size: 0.8rem; color: var(--text-secondary);">Configura ganancias específicas para ciertos grupos.</span>
+              </div>
+              <div style="display: flex; gap: 10px; align-items: center;">
+                <input type="text" id="groupSearchInput" placeholder="Buscar grupo..." class="form-control" style="width: 200px; padding: 6px; font-size: 0.9rem;">
+                <button id="btnSaveGroupMarkups" class="btn btn-primary btn-sm" style="padding: 6px 12px; font-size: 0.9rem;">
+                  <i data-lucide="save" style="width: 14px; height: 14px;"></i> Guardar Grupos
+                </button>
+                <button id="btnForceReloadGroups" class="btn btn-secondary btn-sm" style="padding: 6px 12px; font-size: 0.9rem;" title="Forzar recarga de grupos desde el proveedor">
+                  <i data-lucide="refresh-cw" style="width: 14px; height: 14px;"></i>
+                </button>
+              </div>
+            </div>
+            
+            <div id="groupMarkupsContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px;">
+              <div style="text-align: center; color: #6b7280; padding: 20px; grid-column: 1 / -1;">Cargando grupos...</div>
             </div>
           </div>
           
@@ -1190,6 +1259,73 @@
   <footer class="app-footer">
     <p>&copy; 2026 Mega Unlock Phone (PANEL). Potenciado por Dhru Fusion API.</p>
   </footer>
+
+  <!-- Modales de Registro y Verificación -->
+  <div id="registerModalOverlay" class="modal-overlay hidden" style="z-index: 999990;">
+    <div class="modal-card" style="max-width: 400px;">
+      <div class="modal-header">
+        <div class="modal-title-area">
+          <i data-lucide="user-plus"></i>
+          <h3>Crear Cuenta</h3>
+        </div>
+        <button type="button" class="btn-close-modal" id="btnRegisterClose"><i data-lucide="x"></i></button>
+      </div>
+      <div style="padding: 1.5rem;">
+        <form id="registerForm">
+          <div class="input-group">
+            <label for="regUsername">Usuario</label>
+            <div class="input-wrapper">
+              <i data-lucide="user"></i>
+              <input type="text" id="regUsername" required placeholder="Elige un nombre de usuario">
+            </div>
+          </div>
+          <div class="input-group">
+            <label for="regPassword">Contraseña</label>
+            <div class="input-wrapper">
+              <i data-lucide="lock"></i>
+              <input type="password" id="regPassword" required placeholder="Elige una contraseña segura">
+            </div>
+          </div>
+          <div class="input-group">
+            <label for="regPasswordConfirm">Confirmar Contraseña</label>
+            <div class="input-wrapper">
+              <i data-lucide="lock"></i>
+              <input type="password" id="regPasswordConfirm" required placeholder="Escribe la contraseña nuevamente">
+            </div>
+          </div>
+          <div class="input-group">
+            <label for="regPhone">WhatsApp (Ej. 522221234567)</label>
+            <div class="input-wrapper">
+              <i data-lucide="smartphone"></i>
+              <input type="tel" id="regPhone" required placeholder="Número de 10 dígitos">
+            </div>
+            <small style="color: #64748b; font-size: 0.8rem; display: block; margin-top: 0.25rem;">
+              Nuestro servicio principal está en México. Si ingresas 10 dígitos, agregaremos el +52 automáticamente. De lo contrario, escribe el código de país.
+            </small>
+          </div>
+          <button type="submit" class="btn btn-primary" id="btnRegisterSubmit" style="width: 100%; justify-content: center; margin-top: 1rem;">
+            <i data-lucide="send"></i> Enviar Código por WhatsApp
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div id="otpModalOverlay" class="modal-overlay hidden" style="z-index: 999995;">
+    <div class="modal-card" style="max-width: 350px; text-align: center; padding: 2rem 1.5rem;">
+      <i data-lucide="message-square" style="width: 48px; height: 48px; margin: 0 auto 1rem; color: #10b981;"></i>
+      <h3 style="margin-bottom: 0.5rem; color: #fff; font-size: 1.25rem;">Verifica tu WhatsApp</h3>
+      <p style="color: #cbd5e1; margin-bottom: 1.5rem; font-size: 0.95rem;">
+        Hemos enviado un código de 6 dígitos al número <strong id="otpDisplayPhone" style="color: #38bdf8;"></strong>. Ingrésalo abajo para activar tu cuenta.
+      </p>
+      <form id="otpForm">
+        <input type="text" id="otpInput" required placeholder="000000" maxlength="6" style="width: 100%; text-align: center; font-size: 1.5rem; letter-spacing: 5px; padding: 0.75rem; border-radius: 8px; background: #0f172a; border: 1px solid #1e293b; color: #fff; margin-bottom: 1rem;">
+        <button type="submit" class="btn btn-primary" id="btnOtpSubmit" style="width: 100%; justify-content: center;">
+          Verificar y Entrar
+        </button>
+      </form>
+    </div>
+  </div>
 
   <!-- Custom Alert Modal (Large) -->
   <div id="customAlertOverlay" class="modal-overlay hidden" style="z-index: 999999;">
