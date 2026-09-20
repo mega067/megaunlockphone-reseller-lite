@@ -39,33 +39,55 @@ async function recargar(context) {
                return true;
             }
             session.serverId = String(opt);
-            session.step = 2;
-            let bankText = '🏦 *Selecciona tu Banco de Origen*\nResponde con el número de la lista:\n\n1️⃣ BBVA\n2️⃣ Banamex\n3️⃣ Banorte\n4️⃣ Santander\n5️⃣ Banco Azteca\n6️⃣ NU\n7️⃣ Spin/OXXO\n8️⃣ HSBC\n9️⃣ Scotiabank\n1️⃣0️⃣ Inbursa\n1️⃣1️⃣ Banregio\n1️⃣2️⃣ Mercado Pago\n1️⃣3️⃣ Klar';
-            await sock.sendMessage(remoteJid, { text: bankText });
+            
+            // Dynamic bank fetching from the new engine
+            await sock.sendMessage(remoteJid, { text: '🔄 Conectando con la bóveda del servidor para obtener bancos disponibles...' });
+            
+            try {
+                const res = await axios.get(`https://megaunlockphone-panel.alwaysdata.net/api/fund/banks/${session.serverId}`, {
+                    headers: { 
+                        'Authorization': 'Bearer ' + linkedUserId,
+                        'x-bot-secret': process.env.MEGA_BOT_SECRET || 'MEGA_BOT_SECRET_2026'
+                    }
+                });
+                
+                if (res.data && res.data.success && res.data.banks) {
+                    const allBanks = res.data.banks;
+                    
+                    // Filter popular banks to avoid spamming WhatsApp with 97 banks
+                    const popularBankCodes = ['40012', '40072', '40014', '40127', '40002', '40638', '90728', '40021', '40044', '40036', '40058', '90722'];
+                    const popularBanks = allBanks.filter(b => popularBankCodes.includes(b.code));
+                    
+                    // If popular filter returns empty (shouldn't happen), use top 10
+                    session.availableBanks = popularBanks.length > 0 ? popularBanks : allBanks.slice(0, 10);
+                    
+                    session.step = 2;
+                    let bankText = '🏦 *Selecciona tu Banco de Origen*\nResponde con el número de la lista:\n\n';
+                    session.availableBanks.forEach((b, index) => {
+                        bankText += `${index + 1}️⃣ ${b.name}\n`;
+                    });
+                    
+                    await sock.sendMessage(remoteJid, { text: bankText });
+                } else {
+                    delete sessionManager.autoFundSessions[remoteJid];
+                    await sock.sendMessage(remoteJid, { text: '❌ Ocurrió un error al cargar los bancos del servidor. Intenta de nuevo más tarde.' });
+                }
+            } catch (e) {
+                delete sessionManager.autoFundSessions[remoteJid];
+                await sock.sendMessage(remoteJid, { text: '❌ Error de conexión al obtener bancos. Intenta de nuevo más tarde.' });
+            }
+            
             return true;
         } else if (session.step === 2) {
             const option = parseInt(text.trim());
-            let userBankCode = '99999';
-            if (option === 1) userBankCode = '40012';
-            else if (option === 2) userBankCode = '40002';
-            else if (option === 3) userBankCode = '40072';
-            else if (option === 4) userBankCode = '40014';
-            else if (option === 5) userBankCode = '40127';
-            else if (option === 6) userBankCode = '40638';
-            else if (option === 7) userBankCode = '90706';
-            else if (option === 8) userBankCode = '40021';
-            else if (option === 9) userBankCode = '40044';
-            else if (option === 10) userBankCode = '40036';
-            else if (option === 11) userBankCode = '40058';
-            else if (option === 12) userBankCode = '40659';
-            else if (option === 13) userBankCode = '40655';
+            const selectedBank = session.availableBanks ? session.availableBanks[option - 1] : null;
             
-            if (userBankCode === '99999') {
-                await sock.sendMessage(remoteJid, { text: '❌ Opción inválida. Responde con un número de la lista.' });
+            if (!selectedBank) {
+                await sock.sendMessage(remoteJid, { text: '❌ Opción inválida. Responde con un número válido de la lista.' });
                 return true;
             }
 
-            session.userBankCode = userBankCode;
+            session.userBankCode = selectedBank.code;
             session.step = 3;
             
             await sock.sendMessage(remoteJid, { text: '🔄 Buscando la mejor bóveda para tu depósito...' });

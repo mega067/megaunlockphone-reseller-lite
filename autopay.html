@@ -1,0 +1,1712 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unlockerfast.com.mx - Sistema de Pagos</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Mercado Pago SDK -->
+    <script src="https://sdk.mercadopago.com/js/v2" type="363c49159a3c9334507df731-text/javascript"></script>
+    
+    <style>
+        :root {
+            --primary: #2d3e50;
+            --secondary: #42b883;
+            --accent: #3498db;
+            --light: #f8f9fa;
+            --dark: #1a202c;
+            --success: #28a745;
+            --warning: #ffc107;
+            --danger: #dc3545;
+            --mercadopago: #009ee3;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7f9;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .navbar {
+            background: linear-gradient(135deg, var(--primary), var(--accent)) !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .brand-logo {
+            font-weight: 700;
+            font-size: 1.5rem;
+        }
+        
+        .btn-mercadopago {
+            background: linear-gradient(to right, var(--mercadopago), #1f4e96);
+            border: none;
+            border-radius: 6px;
+            padding: 10px 20px;
+            font-weight: 500;
+            transition: all 0.3s;
+            color: white;
+        }
+        
+        .btn-mercadopago:hover {
+            background: linear-gradient(to right, #1f4e96, var(--mercadopago));
+            transform: scale(1.05);
+            color: white;
+        }
+        
+        .mercadopago-badge {
+            background: var(--mercadopago);
+        }
+        
+        .mercadopago-icon {
+            color: var(--mercadopago);
+        }
+        
+        #checkout-btn {
+            background: linear-gradient(to right, var(--mercadopago), #1f4e96);
+            border: none;
+            border-radius: 6px;
+            padding: 12px 24px;
+            font-weight: 600;
+            color: white;
+            transition: all 0.3s;
+        }
+        
+        #checkout-btn:hover {
+            background: linear-gradient(to right, #1f4e96, var(--mercadopago));
+            transform: scale(1.05);
+        }
+        
+        .exchange-rate {
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 5px 15px;
+            font-weight: 500;
+        }
+        
+        .payment-card {
+            border: none;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            height: 100%;
+        }
+        
+        .payment-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+        
+        .payment-card .card-img-top {
+            height: 160px;
+            object-fit: contain;
+            padding: 20px;
+            background-color: var(--light);
+        }
+        
+        .payment-card .card-body {
+            padding: 1.5rem;
+        }
+        
+        .payment-card .btn-pay {
+            background: linear-gradient(to right, var(--primary), var(--accent));
+            border: none;
+            border-radius: 6px;
+            padding: 10px 20px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        .payment-card .btn-pay:hover {
+            background: linear-gradient(to right, var(--accent), var(--primary));
+            transform: scale(1.05);
+        }
+        
+        .section-title {
+            position: relative;
+            margin-bottom: 2.5rem;
+            font-weight: 600;
+            text-align: center;
+        }
+        
+        .section-title:after {
+            content: '';
+            display: block;
+            width: 60px;
+            height: 3px;
+            background: var(--secondary);
+            margin: 10px auto;
+        }
+        
+        .info-container {
+            background-color: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            margin-bottom: 2rem;
+        }
+        
+        footer {
+            background: var(--dark);
+            color: white;
+            padding: 2rem 0;
+        }
+        
+        .modal-content {
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .modal-header {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+        }
+        
+        .form-control, .form-select {
+            border-radius: 8px;
+            padding: 12px 15px;
+            border: 1px solid #e1e5eb;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+            border-color: var(--accent);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(to right, var(--primary), var(--accent));
+            border: none;
+            border-radius: 8px;
+            padding: 12px 25px;
+            font-weight: 500;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(to right, var(--accent), var(--primary));
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn-secondary {
+            border-radius: 8px;
+            padding: 12px 25px;
+        }
+        
+        .payment-method-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--secondary);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .payment-tabs {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+        
+        .nav-pills .nav-link {
+            padding: 15px 20px;
+            font-weight: 600;
+            color: #495057;
+            border-radius: 0;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-pills .nav-link.active {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .nav-pills .nav-link:hover:not(.active) {
+            background-color: #f1f5fd;
+        }
+        
+        .tab-content {
+            padding: 30px;
+        }
+        
+        .method-icon {
+            font-size: 24px;
+            margin-right: 10px;
+        }
+        
+        .binance-icon {
+            color: var(--warning);
+        }
+        
+        .bank-icon {
+            color: var(--primary);
+        }
+        
+        .clip-icon {
+            color: var(--accent);
+        }
+        
+        .skrill-icon {
+            color: var(--success);
+        }
+        
+        .trc20-icon {
+            color: var(--danger);
+        }
+        
+        .manual-icon {
+            color: var(--secondary);
+        }
+        
+        @media (max-width: 768px) {
+            .payment-card .card-img-top {
+                height: 140px;
+                padding: 15px;
+            }
+            
+            .payment-card .card-body {
+                padding: 1rem;
+            }
+            
+            .nav-pills .nav-link {
+                padding: 10px 15px;
+                font-size: 14px;
+            }
+        }
+        
+        .transition-hover {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .transition-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.15) !important;
+        }
+        
+        .card {
+            border-radius: 1rem !important;
+        }
+        
+        .btn {
+            border-radius: 0.5rem;
+        }
+        
+        .payment-container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 2.5rem;
+            border-radius: 20px;
+            box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.1);
+            background-color: white;
+        }
+        
+        .logo {
+            color: #009ee3;
+            font-size: 3rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .btn-mp {
+            background: linear-gradient(to right, #009ee3, #007ab3);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .btn-mp:hover {
+            background: linear-gradient(to right, #007ab3, #009ee3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        .amount-input {
+            position: relative;
+        }
+        
+        .amount-input span {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+            font-weight: 500;
+        }
+        
+        .amount-input input {
+            padding-left: 30px;
+            font-weight: 500;
+        }
+        
+        .form-control:focus {
+            border-color: #009ee3;
+            box-shadow: 0 0 0 0.25rem rgba(0, 158, 227, 0.25);
+        }
+        
+        .security-badges {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .security-badge {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+    </style>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+        <div class="container">
+            <a class="navbar-brand brand-logo" href="/">
+                <i class="fas fa-money-bill-wave me-2"></i>Unlockerfast.com.mx
+            </a>
+            
+            <div class="d-flex align-items-center">
+                <span class="exchange-rate text-white">
+                    <i class="fas fa-exchange-alt me-2"></i>1USD = $17.29MXN
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container py-5">
+        
+
+        <!-- Payment Methods Section -->
+        <h2 class="section-title">Métodos de Pago Disponibles</h2>
+        
+        <div class="payment-tabs">
+            <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+                                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" 
+                            id="pills-transferencias-tab" 
+                            data-bs-toggle="pill" 
+                            data-bs-target="#pills-transferencias" 
+                            type="button" 
+                            role="tab" 
+                            aria-controls="pills-transferencias" 
+                            aria-selected="true">
+                        <i class="fas fa-university method-icon bank-icon"></i>Transferencias MX
+                    </button>
+                </li>
+                                
+                                <li class="nav-item" role="presentation">
+                    <button class="nav-link " 
+                            id="pills-clip-tab" 
+                            data-bs-toggle="pill" 
+                            data-bs-target="#pills-clip" 
+                            type="button" 
+                            role="tab" 
+                            aria-controls="pills-clip" 
+                            aria-selected="false">
+                        <i class="fas fa-mobile-alt method-icon mercadopago-icon"></i>Credit/Debit Card
+                    </button>
+                </li>
+                                
+                                <li class="nav-item" role="presentation">
+                    <button class="nav-link " 
+                            id="pills-binance-tab" 
+                            data-bs-toggle="pill" 
+                            data-bs-target="#pills-binance" 
+                            type="button" 
+                            role="tab" 
+                            aria-controls="pills-binance" 
+                            aria-selected="false">
+                        <i class="fab fa-bitcoin method-icon binance-icon"></i>Binance
+                    </button>
+                </li>
+                                
+                                <li class="nav-item" role="presentation">
+                    <button class="nav-link " 
+                            id="pills-skrill-tab" 
+                            data-bs-toggle="pill" 
+                            data-bs-target="#pills-skrill" 
+                            type="button" 
+                            role="tab" 
+                            aria-controls="pills-skrill" 
+                            aria-selected="false">
+                        <i class="fas fa-wallet method-icon skrill-icon"></i>Skrill
+                    </button>
+                </li>
+                                
+                                <li class="nav-item" role="presentation">
+                    <button class="nav-link " 
+                            id="pills-trc20-tab" 
+                            data-bs-toggle="pill" 
+                            data-bs-target="#pills-trc20" 
+                            type="button" 
+                            role="tab" 
+                            aria-controls="pills-trc20" 
+                            aria-selected="false">
+                        <i class="fas fa-coins method-icon trc20-icon"></i>TRC20
+                    </button>
+                </li>
+                                
+                                <li class="nav-item" role="presentation">
+                    <button class="nav-link " 
+                            id="pills-manual-tab" 
+                            data-bs-toggle="pill" 
+                            data-bs-target="#pills-manual" 
+                            type="button" 
+                            role="tab" 
+                            aria-controls="pills-manual" 
+                            aria-selected="false">
+                        <i class="fas fa-hand-holding-usd method-icon manual-icon"></i>Manuales
+                    </button>
+                </li>
+                            </ul>
+            
+            <div class="tab-content" id="pills-tabContent">
+                                <div class="tab-pane fade show active" 
+                     id="pills-transferencias" 
+                     role="tabpanel" 
+                     aria-labelledby="pills-transferencias-tab">
+                    <div class="row">
+                                                <div class="col-12 col-md-6 col-lg-4 mb-4">
+                            <div class="payment-card">
+                                <span class="payment-method-badge">Transferencia</span>
+                                <img src="https://autopay.automatizaciondepagos.com//storage/img/mQwidZWjqAOpghutYcJhm5S2vkIGoP6KRX1pwZjg.jpg" 
+                                     class="card-img-top" alt="Davidulloa">
+                                <div class="card-body">
+                                    <h5 class="card-title">Davidulloa</h5>
+                                    <p class="card-text">4130980402935421</p>
+                                    <p class="card-text">
+                                        <small class="text-muted">
+                                            <i class="fas fa-money-bill-wave me-1"></i>
+                                            Rango: $100 - $100000
+                                        </small>
+                                    </p>
+                                    <div class="text-center mt-3">
+                                        <button class="btn btn-pay text-white w-100" onclick="if (!window.__cfRLUnblockHandlers) return false; abrirModalePagos(7)" data-cf-modified-363c49159a3c9334507df731-="">
+                                            <i class="fas fa-check-circle me-2"></i>Pagar con Transferencia
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                                                <div class="col-12 col-md-6 col-lg-4 mb-4">
+                            <div class="payment-card">
+                                <span class="payment-method-badge">Transferencia</span>
+                                <img src="https://autopay.automatizaciondepagos.com//storage/img/rsDLEebGP3FgfLVnA1I9I2scnHAcsTkUxgpvSZjE.jpg" 
+                                     class="card-img-top" alt="David ulloa">
+                                <div class="card-body">
+                                    <h5 class="card-title">David ulloa</h5>
+                                    <p class="card-text">062180008425137159</p>
+                                    <p class="card-text">
+                                        <small class="text-muted">
+                                            <i class="fas fa-money-bill-wave me-1"></i>
+                                            Rango: $100 - $100000
+                                        </small>
+                                    </p>
+                                    <div class="text-center mt-3">
+                                        <button class="btn btn-pay text-white w-100" onclick="if (!window.__cfRLUnblockHandlers) return false; abrirModalePagos(8)" data-cf-modified-363c49159a3c9334507df731-="">
+                                            <i class="fas fa-check-circle me-2"></i>Pagar con Transferencia
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                                                <div class="col-12 col-md-6 col-lg-4 mb-4">
+                            <div class="payment-card">
+                                <span class="payment-method-badge">Transferencia</span>
+                                <img src="https://autopay.automatizaciondepagos.com//storage/img/kea34OfnzgB9qruUo5v13tcedEfMzbc6acFuVnZA.jpg" 
+                                     class="card-img-top" alt="Jose Luis">
+                                <div class="card-body">
+                                    <h5 class="card-title">Jose Luis</h5>
+                                    <p class="card-text">058597000073916071</p>
+                                    <p class="card-text">
+                                        <small class="text-muted">
+                                            <i class="fas fa-money-bill-wave me-1"></i>
+                                            Rango: $100 - $100000
+                                        </small>
+                                    </p>
+                                    <div class="text-center mt-3">
+                                        <button class="btn btn-pay text-white w-100" onclick="if (!window.__cfRLUnblockHandlers) return false; abrirModalePagos(19)" data-cf-modified-363c49159a3c9334507df731-="">
+                                            <i class="fas fa-check-circle me-2"></i>Pagar con Transferencia
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                                                <div class="col-12 col-md-6 col-lg-4 mb-4">
+                            <div class="payment-card">
+                                <span class="payment-method-badge">Transferencia</span>
+                                <img src="https://autopay.automatizaciondepagos.com//storage/img/vjhdfoQe7wNR2QJS7wDMCzZpyG3kZZdKc07Jboek.jpg" 
+                                     class="card-img-top" alt="Jose Luis">
+                                <div class="card-body">
+                                    <h5 class="card-title">Jose Luis</h5>
+                                    <p class="card-text">4741742955302941</p>
+                                    <p class="card-text">
+                                        <small class="text-muted">
+                                            <i class="fas fa-money-bill-wave me-1"></i>
+                                            Rango: $100 - $100000
+                                        </small>
+                                    </p>
+                                    <div class="text-center mt-3">
+                                        <button class="btn btn-pay text-white w-100" onclick="if (!window.__cfRLUnblockHandlers) return false; abrirModalePagos(20)" data-cf-modified-363c49159a3c9334507df731-="">
+                                            <i class="fas fa-check-circle me-2"></i>Pagar con Transferencia
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                                            </div>
+                </div>
+                                
+                                <div class="tab-pane fade " 
+                     id="pills-clip" 
+                     role="tabpanel" 
+                     aria-labelledby="pills-clip-tab">
+                    <div class="row">
+                                                <div class="col-12 col-md-6 col-lg-4 mb-4">
+                            <div class="payment-card">
+                                <span class="payment-method-badge">Clip</span>
+                                <img src="https://autopay.automatizaciondepagos.com//storage/img/CC.png" 
+                                     class="card-img-top" alt="Pagar con tarjeta crédito / debito">
+                                <div class="card-body">
+                                    <h5 class="card-title">Pagar con tarjeta crédito / debito</h5>
+                                    <p class="card-text">Soporte Mundial.</br> Comision 4.2%</p>
+                                    <p class="card-text">
+                                        <small class="text-muted">
+                                            <i class="fas fa-money-bill-wave me-1"></i>
+                                            Rango: $100 - $1000000
+                                        </small>
+                                    </p>
+                                    <div class="text-center mt-3">
+                                        <button class="btn btn-pay text-white w-100" onclick="if (!window.__cfRLUnblockHandlers) return false; abrirPagoClip('{\&quot;id\&quot;:4,\&quot;user_id\&quot;:\&quot;8\&quot;,\&quot;token\&quot;:\&quot;NDg4NDBlMzMtN2I1My00OGNkLWJjMTgtZDAyZTJjZTM2NmU5OmMzYzhiMzk1LTA5NDMtNDY2Zi1hNjlhLWZiNDUyYmIzNDkyNA==\&quot;,\&quot;banco_name\&quot;:\&quot;Pagar con tarjeta cr\\u00e9dito \\/ debito\&quot;,\&quot;minimo\&quot;:\&quot;100\&quot;,\&quot;maximo\&quot;:\&quot;1000000\&quot;,\&quot;banco_image\&quot;:\&quot;\\/storage\\/img\\/CC.png\&quot;,\&quot;status\&quot;:\&quot;1\&quot;,\&quot;mensaje\&quot;:\&quot;Soporte Mundial.&lt;\\/br&gt; Comision 4.2%\&quot;,\&quot;mensaje2\&quot;:\&quot;El pago se registra en MXN (si tu cuenta esta en USD, 1 USD = 17.55 MXN), este medio de pago cobra una comisi\\u00f3n aproximadamente del 4.2%.\&quot;,\&quot;created_at\&quot;:\&quot;2026-06-03T09:21:22.000000Z\&quot;,\&quot;updated_at\&quot;:\&quot;2026-06-03T09:29:41.000000Z\&quot;}')" data-cf-modified-363c49159a3c9334507df731-="">
+                                            <i class="fas fa-check-circle me-2"></i>Pagar con Clip
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                                                
+                                            </div>
+                </div>
+                                
+                                <div class="tab-pane fade " 
+                     id="pills-binance" 
+                     role="tabpanel" 
+                     aria-labelledby="pills-binance-tab">
+                    <div class="row">
+                                                <div class="col-12 col-md-6 col-lg-4 mb-4">
+                            <div class="payment-card">
+                                <span class="payment-method-badge">Binance</span>
+                                <img src="https://autopay.automatizaciondepagos.com//storage/img/BINANCEPAY1.png" 
+                                     class="card-img-top" alt="Binance Pay">
+                                <div class="card-body">
+                                    <h5 class="card-title">55632412</h5>
+                                    <p class="card-text">
+                                        <small class="text-muted">
+                                            <i class="fas fa-money-bill-wave me-1"></i>
+                                            Rango: $6 - $1000000
+                                        </small>
+                                    </p>
+                                    <div class="text-center mt-3">
+                                        <button class="btn btn-pay text-white w-100" onclick="if (!window.__cfRLUnblockHandlers) return false; enviarBinance(4,'55632412')" data-cf-modified-363c49159a3c9334507df731-="">
+                                            <i class="fas fa-check-circle me-2"></i>Pagar con Binance
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                                            </div>
+                </div>
+                
+                                <div class="tab-pane fade " 
+                     id="pills-skrill" 
+                     role="tabpanel" 
+                     aria-labelledby="pills-skrill-tab">
+                    <div class="row">
+                                                <div class="col-12 col-md-6 col-lg-4 mb-4">
+                            <div class="payment-card">
+                                <span class="payment-method-badge">Skrill</span>
+                                <img src="https://autopay.automatizaciondepagos.com//storage/img/png-transparent-skrill-payment-system-icon.png" 
+                                     class="card-img-top" alt="Skrill">
+                                <div class="card-body">
+                                    <h5 class="card-title"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="badedbccd3deccdfdddb8883838cfaddd7dbd3d694d9d5d7">[email&#160;protected]</a></h5>
+                                    <p class="card-text">
+                                        <small class="text-muted">
+                                            <i class="fas fa-money-bill-wave me-1"></i>
+                                            Rango: $100 - $1000
+                                        </small>
+                                    </p>
+                                    <div class="text-center mt-3">
+                                        <button class="btn btn-pay text-white w-100" onclick="if (!window.__cfRLUnblockHandlers) return false; abrirSkrill(2,'davidvega2996@gmail.com')" data-cf-modified-363c49159a3c9334507df731-="">
+                                            <i class="fas fa-check-circle me-2"></i>Pagar con Skrill
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                                            </div>
+                </div>
+                
+                                <div class="tab-pane fade " 
+                     id="pills-trc20" 
+                     role="tabpanel" 
+                     aria-labelledby="pills-trc20-tab">
+                    <div class="row">
+                                                <div class="col-12 col-md-6 col-lg-4 mb-4">
+                            <div class="payment-card">
+                                <span class="payment-method-badge">TRC20</span>
+                                <img src="https://autopay.automatizaciondepagos.com//storage/img/TRC20.png" 
+                                     class="card-img-top" alt="TRC20">
+                                <div class="card-body">
+                                    <p class="card-text">
+                                        <small class="text-muted">
+                                            <i class="fas fa-money-bill-wave me-1"></i>
+                                            Rango: $6 - $100000
+                                        </small>
+                                    </p>
+                                    <div class="text-center mt-3">
+                                        <a class="btn btn-pay text-white w-100" 
+                                           href="?trcid=2">
+                                            <i class="fas fa-check-circle me-2"></i>Pagar con TRC20
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                                            </div>
+                </div>
+                
+                                <div class="tab-pane fade " 
+                     id="pills-manual" 
+                     role="tabpanel" 
+                     aria-labelledby="pills-manual-tab">
+                    <div class="row">
+                                                <div class="col-12 col-md-6 col-lg-4 mb-4">
+                            <div class="payment-card">
+                                <span class="payment-method-badge">Manual</span>
+                                <img src="https://autopay.automatizaciondepagos.com//storage/img/0TsNL2JvZGT8pbQJalLHkyCVl3LLPiRYsltgLFGH.png" 
+                                     class="card-img-top" alt="BOT WHATS APP">
+                                <div class="card-body">
+                                    <h5 class="card-title">BOT WHATS APP</h5>
+                                    <p class="card-text">Recarga automatica CHAT WHATSAPP</p>
+                                    <p class="card-text">Ahora puedes recargar saldo en tu cuenta directamente desde WhatsApp con nuestro asistente inteligente.
+Solo envía el mensaje: “añadir saldo” y el bot te indicará el proceso completo en segundos.
+Servicio automático, disponible las 24 horas, todos los días, sin esperar a un agente humano. 👉 https://wa.me/527722663629</p>
+                                </div>
+                            </div>
+                        </div>
+                                                <div class="col-12 col-md-6 col-lg-4 mb-4">
+                            <div class="payment-card">
+                                <span class="payment-method-badge">Manual</span>
+                                <img src="https://autopay.automatizaciondepagos.com//storage/img/VISA.jpg" 
+                                     class="card-img-top" alt="Si no encuentra tu pago cargalo">
+                                <div class="card-body">
+                                    <h5 class="card-title">Si no encuentra tu pago cargalo</h5>
+                                    <p class="card-text">https://www.unlockerfast.com.mx/autorecarga.php</p>
+                                    <p class="card-text">Ingresa a https://www.unlockerfast.com.mx/autorecarga.php captura tu clave de rastreo verifica los datos y confirma la recarga usa esta opción solo si tu pago no aparece en la plataforma principal</p>
+                                </div>
+                            </div>
+                        </div>
+                                            </div>
+                </div>
+                            </div>
+        </div>
+        <!-- Information Section -->
+        <div class="row mb-5">
+            <div class="col-12">
+                <div class="info-container">
+                    <section style="max-width:1100px;margin:24px auto;padding:18px;font-family:Segoe UI,Arial,sans-serif;color:#1f2433;">
+  <!-- Header -->
+  <div style="text-align:center;margin-bottom:18px;">
+    <h2 style="margin:0 0 6px;font-size:28px;color:#111827;">Centro de Recargas 24/7</h2>
+    <p style="margin:0;color:#6b7280;font-size:14px;">
+      Registra tu pago · Siempre disponible · Plataforma segura y 100% en línea · Elige tu método de pago
+    </p>
+  </div>
+
+  <!-- Tarjetas de métodos -->
+  <div style="display:flex;gap:20px;flex-wrap:wrap;justify-content:center;margin-bottom:16px;">
+    <!-- Transferencia MX -->
+    <div style="flex:1 1 300px;background:#ffffff;border-radius:16px;border:1px solid #eef0f4;box-shadow:0 10px 24px rgba(17,24,39,.06);padding:18px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:999px;background:#e6f5ec;color:#0ea95c;font-weight:700;">🏦</span>
+        <div>
+          <div style="font-weight:800;color:#111827;">Transferencia Bancaria MX</div>
+          <div style="font-size:12px;color:#6b7280;">Realiza una transferencia desde cualquier banco distinto al nuestro. Necesitas <b>Clave de Rastreo</b>.</div>
+        </div>
+      </div>
+      <a href="#pagar-transfer" style="display:inline-block;margin-top:10px;padding:10px 14px;border-radius:10px;background:#0ea95c;color:#fff;text-decoration:none;font-weight:700;">Pagar con Transferencia</a>
+    </div>
+
+    <!-- Binance / USDT -->
+    <div style="flex:1 1 300px;background:#ffffff;border-radius:16px;border:1px solid #eef0f4;box-shadow:0 10px 24px rgba(17,24,39,.06);padding:18px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:999px;background:#e8f0ff;color:#2563eb;font-weight:700;">🪙</span>
+        <div>
+          <div style="font-weight:800;color:#111827;">Binance Pay &amp; USDT TRC20</div>
+          <div style="font-size:12px;color:#6b7280;">Paga desde tu billetera Binance y/o cualquier APP en segundos.</div>
+        </div>
+      </div>
+      <a href="#pagar-cripto" style="display:inline-block;margin-top:10px;padding:10px 14px;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:700;">Pagar con Binance/USDT</a>
+    </div>
+
+    <!-- Tarjeta Crédito/Débito -->
+    <div style="flex:1 1 300px;background:#ffffff;border-radius:16px;border:1px solid #eef0f4;box-shadow:0 10px 24px rgba(17,24,39,.06);padding:18px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:999px;background:#ffecec;color:#e11d48;font-weight:700;">💳</span>
+        <div>
+          <div style="font-weight:800;color:#111827;">Tarjeta Crédito o Débito</div>
+          <div style="font-size:12px;color:#6b7280;">Clientes nuevos: primero contactar a soporte por WhatsApp para validar identidad.</div>
+        </div>
+      </div>
+      <a href="#pagar-tarjeta" style="display:inline-block;margin-top:10px;padding:10px 14px;border-radius:10px;background:#e11d48;color:#fff;text-decoration:none;font-weight:700;">Pagar con Tarjeta</a>
+    </div>
+  </div>
+
+  <!-- Panel de información -->
+  <div style="max-width:900px;margin:0 auto 18px;background:#fff8e1;border:1px solid #f4e2a2;border-radius:14px;padding:16px;box-shadow:0 8px 18px rgba(17,24,39,.05);">
+    <div style="font-weight:800;color:#6b4e00;margin-bottom:8px;">Información Importante</div>
+    <ul style="margin:0;padding-left:18px;color:#5b5f6a;font-size:13px;line-height:1.6;">
+      <li>Algunas transferencias en MX pueden demorar de <b>5–60 minutos</b>. Si tienes respuesta de <b>“No Existe Pago”</b> solo espera y reintenta.</li>
+      <li>Si tu banco es <b>MercadoPago</b>: en el comprobante los dígitos van abajo de “Comprobante”. Agrega <b>CPO</b> antes de la clave: <span style="background:#fde68a;padding:1px 6px;border-radius:6px;">CPO99999999</span>.</li>
+      <li>Si tu banco es <b>Azteca</b>, la última letra de la Clave es una <b>I mayúscula</b>, no es “l”.</li>
+      <li>Si al subir el comprobante aparece <b>“No existe pago”</b>, verifica que todos los dígitos se hayan detectado correctamente.</li>
+      <li>Escribe el <b>monto sin signos ni letras</b>, ejemplo: <span style="background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:6px;">100</span>.</li>
+      <li>Selecciona <b>“Pagar”</b> en el método de pago elegido y registra tus datos.</li>
+      <li><b>USDT</b> está en <b>$17.29</b></li>
+      <li>Depósitos en efectivo se reportan en el chat web o por WhatsApp.</li>
+      <li>Si la <b>Clave de rastreo</b> no se llena automáticamente, ingrésala manualmente.</li>
+    </ul>
+  </div>
+
+  <!-- Botonera de canales -->
+  <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;max-width:900px;margin:0 auto;">
+    <a href="https://api.whatsapp.com/send/?phone=525560735641&amp;text&amp;type=phone_number&amp;app_absent=0" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;background:#16a34a;color:#fff;text-decoration:none;font-weight:800;box-shadow:0 6px 16px rgba(22,163,74,.25);">
+       📲 WhatsApp Soporte
+    </a>
+
+    <a href="https://t.me/+2fkhy3Ivsj5kNDQx" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;background:#0ea5e9;color:#fff;text-decoration:none;font-weight:800;box-shadow:0 6px 16px rgba(14,165,233,.25);">
+       ✈️ Telegram
+    </a>
+
+    <a href="https://www.youtube.com/watch?v=ajlCJDKN-io" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;background:#ef4444;color:#fff;text-decoration:none;font-weight:800;box-shadow:0 6px 16px rgba(239,68,68,.25);">
+       ▶️ Ver Tutorial (YouTube)</a>
+
+    <a href="https://www.facebook.com/unlockerfast.davidulloa" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;background:linear-gradient(90deg,#7c3aed,#ec4899);color:#fff;text-decoration:none;font-weight:800;box-shadow:0 6px 16px rgba(236,72,153,.25);">
+       ⭐ Fanpage Oficial
+    </a>
+  </div>
+
+  <!-- Pie -->
+  <p style="text-align:center;margin:14px 0 0;color:#6b7280;font-size:12px;">
+    Monto mínimo: <b>$100 MXN / 6 USD</b> · Si necesitas ayuda, contáctanos por cualquier canal.
+  </p>
+</section>
+
+<a href="https://www.unlockerfast.com.mx/pages/liquidado" target="_blank" rel="noopener" style="display:block;max-width:900px;margin:16px auto 0;padding:12px 16px;border-radius:12px;
+          background:linear-gradient(90deg,#f59e0b,#ef4444);color:#ffffff;text-decoration:none;
+          font-weight:900;text-align:center;box-shadow:0 10px 22px rgba(239,68,68,.30);
+          letter-spacing:.2px;">
+  ⚡ Click si te da error al auto agregar el saldo
+</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-5">
+        <div class="container">
+            <p class="m-0 text-center">
+                                  Pagos Por <a href="">CHJDD</a>
+                             </p>
+        </div>
+    </footer>
+    
+    
+    <!-- Modal para Mercado Pago -->
+    <div class="modal fade" id="mercadopagoModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Pago con Mercado Pago</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="payment-container">
+                        <div class="text-center mb-4">
+                            <i class="bi bi-credit-card logo"></i>
+                            <h2 class="fw-bold">Pago con MercadoPago</h2>
+                            <p class="text-muted">Complete la información para procesar su pago de forma segura</p>
+                        </div>
+
+                        <div class="container">
+                            <div class="row text-center">
+                                <span id="mensajemercado">
+
+                                </span>
+                            </div>
+                        </div>
+
+                        <form id="payment-form">
+                            <div class="mb-4">
+                                <label for="email" class="form-label fw-semibold">Correo electrónico</label>
+                                <input type="email" class="form-control form-control-lg" id="email"
+                                    placeholder="tu@ejemplo.com" required>
+                            </div>
+
+                            <div class="mb-4">
+                                <label for="amount" class="form-label fw-semibold">Monto a pagar (MXN)</label>
+                                <div class="amount-input">
+                                    <span>$</span>
+                                    <input type="number" class="form-control form-control-lg" id="amount" required>
+                                </div>
+                                <div class="form-text text-center">Monto mínimo: $<span id="minmercado"></span> MXN |
+                                    Máximo: $<span id="maxmercado"></span> MXN</div>
+                            </div>
+
+                            <div class="d-grid gap-2 mt-4">
+                                <button type="submit" class="btn btn-lg btn-mp">
+                                    <i class="bi bi-credit-card me-2"></i>Pagar con MercadoPago
+                                </button>
+                            </div>
+                        </form>
+
+                        <div class="alert alert-light mt-4 text-center" role="alert">
+                            <i class="bi bi-shield-check text-primary me-2"></i>Será redirigido a MercadoPago para
+                            completar su pago de forma segura.
+                        </div>
+
+                        <div class="security-badges">
+                            <div class="security-badge">
+                                <i class="bi bi-lock-fill text-success"></i>
+                                <span>Seguro</span>
+                            </div>
+                            <div class="security-badge">
+                                <i class="bi bi-credit-card text-primary"></i>
+                                <span>Pago seguro</span>
+                            </div>
+                            <div class="security-badge">
+                                <i class="bi bi-shield-check text-warning"></i>
+                                <span>Protegido</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Modal para Mercado Pago -->
+    <div class="modal fade" id="clipModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Pago con Clip</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="payment-container">
+                        <div class="text-center mb-4">
+                            <i class="bi bi-credit-card logo"></i>
+                            <h2 class="fw-bold">Pago con Clip</h2>
+                            <p class="text-muted">Complete la información para procesar su pago de forma segura</p>
+                        </div>
+
+                        <div class="container">
+                            <div class="row text-center">
+                                <span id="mensajeclip">
+
+                                </span>
+                            </div>
+                        </div>
+
+                        <form id="payment-form">
+                            <div class="mb-4">
+                                <label for="email" class="form-label fw-semibold">Correo electrónico</label>
+                                <input type="email" class="form-control form-control-lg" id="correo_pago_clip"
+                                    placeholder="tu@ejemplo.com" required>
+                            </div>
+
+                            <div class="mb-4">
+                                <label for="amount" class="form-label fw-semibold">Monto a pagar (MXN)</label>
+                                <div class="amount-input">
+                                    <span>$</span>
+                                    <input type="number" class="form-control form-control-lg" id="montoclip" required>
+                                </div>
+                                <div class="form-text text-center">Monto mínimo: $<span id="minclip"></span> MXN |
+                                    Máximo: $<span id="maxclip"></span> MXN</div>
+                            </div>
+
+                            <div class="d-grid gap-2 mt-4">
+                                <button type="button" onclick="if (!window.__cfRLUnblockHandlers) return false; pagarPagoClip()" class="btn btn-lg btn-mp" data-cf-modified-363c49159a3c9334507df731-="">
+                                    <i class="bi bi-credit-card me-2"></i>Pagar con Clip
+                                </button>
+                            </div>
+                        </form>
+
+                        <div class="alert alert-light mt-4 text-center" role="alert">
+                            <i class="bi bi-shield-check text-primary me-2"></i>Será redirigido a Clip para completar su
+                            pago de forma segura.
+                        </div>
+
+                        <div class="security-badges">
+                            <div class="security-badge">
+                                <i class="bi bi-lock-fill text-success"></i>
+                                <span>Seguro</span>
+                            </div>
+                            <div class="security-badge">
+                                <i class="bi bi-credit-card text-primary"></i>
+                                <span>Pago seguro</span>
+                            </div>
+                            <div class="security-badge">
+                                <i class="bi bi-shield-check text-warning"></i>
+                                <span>Protegido</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="modal fade" id="modalPagos" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Verificar Clave de Rastreo<br> Sube la imagen ó
+                        escribe manualmente</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group mb-3 custom-file-label">
+                        <input type="file" id="archivo" class="form-control">
+                    </div>
+
+                    <div class="input-group flex-nowrap">
+                        <span class="input-group-text">Clave De rastreo</span>
+                        <input type="text" class="form-control" placeholder="Clave de rastreo" aria-label="manualClave"
+                            aria-describedby="addon-wrapping" id="manualClave">
+                    </div>
+
+                    <div class="row mt-3 mb-3">
+                        <img class="img-fluid" id="imagenPrevisualizacion">
+                    </div>
+
+                    <p id="estado"></p>
+
+
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="btnDetectar">Verificar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="bbvaModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content text-white" style="background-image: url('');">
+                <div class="modal-header">
+                    <p class="text-white">No transfieras a mismos bancos porque no genera clave de rastreo. Debes
+                        tener clave de rastreo.<br>
+                        ❗Recuerda poner CPO en Mercado Pago. CPO9999<br>
+                        ❗Banco Azteca el final es i mayuscula (I).<br>
+                        ❗Verifica todos los dígitos correctamente. <br></p>
+                </div>
+                <div class="modal-body">
+
+                    <div class="form-group mb-3">
+                        <label for="my-select" class="text-black mb-2">Selecciona Tu Banco</label>
+                        <select id="my-select" class="form-control" name="emisor">
+                            <option value="40133">ACTINVER</option><option value="40062">AFIRME</option><option value="90721">albo</option><option value="90660">Altor</option><option value="90706">ARCUS FI</option><option value="90659">ASP INTEGRA OPC</option><option value="40127">AZTECA</option><option value="37166">BaBien</option><option value="40030">BAJIO</option><option value="40002">BANAMEX</option><option value="40154">BANCO COVALTO</option><option value="37006">BANCOMEXT</option><option value="40137">BANCOPPEL</option><option value="40160">BANCO S3</option><option value="40152">BANCREA</option><option value="37019">BANJERCITO</option><option value="40147">BANKAOOL</option><option value="40106">BANK OF AMERICA</option><option value="40159">BANK OF CHINA</option><option value="37009">BANOBRAS</option><option value="40072">BANORTE</option><option value="40058">BANREGIO</option><option value="40060">BANSI</option><option value="2001">BANXICO</option><option value="40129">BARCLAYS</option><option value="40145">BBASE</option><option value="40012">BBVA MEXICO</option><option value="40112">BMONEX</option><option value="90677">CAJA POP MEXICA</option><option value="90683">CAJA TELEFONIST</option><option value="90715">CASHI CUENTA</option><option value="40124">CITI MEXICO</option><option value="90730">Clip</option><option value="90901">CLS</option><option value="90903">CoDi Valida</option><option value="40130">COMPARTAMOS</option><option value="40140">CONSUBANCO</option><option value="90725">COOPDESARROLLO</option><option value="90652">CREDICAPITAL</option><option value="90688">CREDICLUB</option><option value="90680">CRISTOBAL COLON</option><option value="90723">Cuenca</option><option value="90729">Dep y Pag Dig</option><option value="40151">DONDE</option><option value="90616">FINAMEX</option><option value="90634">FINCOMUN</option><option value="90734">FINCO PAY</option><option value="90738">FINTOC</option><option value="90699">FONDEADORA</option><option value="90685">FONDO (FIRA)</option><option value="90601">GBM</option><option value="40167">HEY BANCO</option><option value="37168">HIPOTECARIA FED</option><option value="40021">HSBC</option><option value="40155">ICBC</option><option value="40036">INBURSA</option><option value="90902">INDEVAL</option><option value="40150">INMOBILIARIO</option><option value="40136">INTERCAM BANCO</option><option value="40059">INVEX</option><option value="40110">JP MORGAN</option><option value="40128">KAPITAL</option><option value="90661">KLAR</option><option value="90653">KUSPIT</option><option value="90670">LIBERTAD</option><option value="90602">MASARI</option><option value="90722">Mercado Pago W</option><option value="90720">MexPago</option><option value="40042">MIFEL</option><option value="40158">MIZUHO BANK</option><option value="90600">MONEXCB</option><option value="40108">MUFG</option><option value="40132">MULTIVA BANCO</option><option value="37135">NAFIN</option><option value="40638">NUBANK</option><option value="90710">NVIO</option><option value="40148">PAGATODO</option><option value="90732">Peibo</option><option value="90714">PPBALANCEMX</option><option value="90620">PROFUTURO</option><option value="40170">REVOLUT BANK</option><option value="40156">SABADELL</option><option value="40014">SANTANDER</option><option value="40044">SCOTIABANK</option><option value="40157">SHINHAN</option><option value="90728">SPIN BY OXXO</option><option value="90646">STP</option><option value="90703">TESORED</option><option value="90684">TRANSFER</option><option value="90727">TRANSFER DIRECT</option><option value="90631">TRF</option><option value="40138">UALA</option><option value="90656">UNAGRA</option><option value="90617">VALMEX</option><option value="90605">VALUE</option><option value="40113">VE POR MAS</option><option value="40141">VOLKSWAGEN</option>
+                        </select>
+                    </div>
+
+
+
+
+
+                    <div class="input-group mb-3">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text" id="nombreReferencia">Clave De Rastreo</span>
+                        </div>
+                        <input class="form-control" type="text" name="criterio"
+                            placeholder="Ingresa La Clave De Rastreo">
+
+                    </div>
+
+                    <div class="input-group mb-3">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text" id="correo">Tu Correo</span>
+                        </div>
+                        <input class="form-control" type="text" name="correo"
+                            placeholder="Correo De Unlockerfast.com.mx">
+
+                    </div>
+
+                    <div class="input-group mb-3">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text">Monto</span>
+                        </div>
+                        <input class="form-control" type="text" name="monto" placeholder="">
+
+                    </div>
+
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="if (!window.__cfRLUnblockHandlers) return false; cerrarModal()" data-cf-modified-363c49159a3c9334507df731-="">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="if (!window.__cfRLUnblockHandlers) return false; reportarPago('1')" data-cf-modified-363c49159a3c9334507df731-="">Comprobar
+                        Pago</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="binanceModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="background-image: url('');">
+                <div class="modal-header">
+                    <p>BINANCE<br> Send to this account: <span id="correo_binance"></span></p>
+                </div>
+
+                <div class="modal-body">
+
+
+
+
+
+                    <div class="input-group mb-3">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text" id="usernameBinance">Username De Binance</span>
+                        </div>
+                        <input class="form-control" type="text" name="usernameBinance"
+                            placeholder="USERNAME DE BINANCE">
+
+                    </div>
+
+                    <div class="input-group mb-3">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text">Tu Correo</span>
+                        </div>
+                        <input class="form-control" type="text" name="correoBinance"
+                            placeholder="Correo De Unlockerfast.com.mx">
+
+                    </div>
+
+                    <div class="input-group mb-3">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text">Monto</span>
+                        </div>
+                        <input class="form-control" type="text" name="montoBinance" placeholder="">
+
+                    </div>
+
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="if (!window.__cfRLUnblockHandlers) return false; cerrarModal()" data-cf-modified-363c49159a3c9334507df731-="">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="if (!window.__cfRLUnblockHandlers) return false; reportarPagoBinance()" data-cf-modified-363c49159a3c9334507df731-="">Comprobar
+                        Pago</button>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="skrillModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="background-image: url('');">
+                <div class="modal-header">
+                    <p>Skrill<br> Send to this account: <span id="correo_skrill"></span></p>
+                </div>
+
+                <div class="modal-body">
+
+
+
+
+
+                    <div class="input-group mb-3">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text" id="usernameBinance">Nombre de la cuenta Skrill</span>
+                        </div>
+                        <input class="form-control" type="text" name="usernamSkrill"
+                            placeholder="Nombre de la cuenta Skrill">
+
+                    </div>
+
+                    <div class="input-group mb-3">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text">Transaction ID Skrill</span>
+                        </div>
+                        <input class="form-control" type="text" name="txid" placeholder="Transaction ID">
+
+                    </div>
+
+                    <div class="input-group mb-3">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text">Tu Correo</span>
+                        </div>
+                        <input class="form-control" type="text" name="correoSkrill"
+                            placeholder="Correo De Unlockerfast.com.mx">
+
+                    </div>
+
+                    <div class="input-group mb-3">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text">Monto</span>
+                        </div>
+                        <input class="form-control" type="text" name="montoSkrill" placeholder="">
+
+                    </div>
+
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="if (!window.__cfRLUnblockHandlers) return false; cerrarModal()" data-cf-modified-363c49159a3c9334507df731-="">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="if (!window.__cfRLUnblockHandlers) return false; reportarPagoSkrill()" data-cf-modified-363c49159a3c9334507df731-="">Comprobar
+                        Pago</button>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+       
+    <!-- Scripts -->
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="https://code.jquery.com/jquery-3.7.1.min.js" type="363c49159a3c9334507df731-text/javascript"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" type="363c49159a3c9334507df731-text/javascript"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" type="363c49159a3c9334507df731-text/javascript"></script>
+    <script src="https://unpkg.com/tesseract.js@2.0.0-alpha.7/dist/tesseract.min.js" type="363c49159a3c9334507df731-text/javascript"></script>
+    
+    <script type="363c49159a3c9334507df731-text/javascript">
+        // Inicializar las pestañas de Bootstrap
+        var triggerTabList = [].slice.call(document.querySelectorAll('#pills-tab button'))
+        triggerTabList.forEach(function (triggerEl) {
+            new bootstrap.Tab(triggerEl)
+        })
+        
+   
+        function abrirModalePagos(id) {
+
+
+
+            bancoselecionado = id
+            $('#modalPagos').modal('toggle')
+
+
+        }
+
+
+
+        function enviarBinance(id, correoBinance) {
+
+            id_binance = id;
+            $('#correo_binance').html(correoBinance)
+            $('#binanceModal').modal('toggle');
+        }
+
+        function abrirSkrill(id, correoBinance) {
+
+            id_binance = id;
+            $('#correo_skrill').html(correoBinance)
+            $('#skrillModal').modal('toggle');
+        }
+
+        function cambiarRatreo() {
+
+            if ($('#tipoCriterio').val() == 'T') {
+
+                $('#nombreReferencia').html('Clave de rastreo');
+
+            } else {
+                $('#nombreReferencia').html('Número de referencia');
+            }
+
+        }
+
+        function enviarBBVA(clave) {
+            $('[name="criterio"]').val(clave)
+
+
+            $('#bbvaModal').modal('toggle');
+
+
+        }
+
+        function reportarPago(banco) {
+            tarjeta = bancoselecionado;
+            tipoCriterio = $('[name="tipoCriterio"]').val();
+            criterio = $('[name="criterio"]').val();
+            emisor = $('[name="emisor"]').val();
+            monto = $('[name="monto"]').val();
+            correo = $('[name="correo"]').val();
+            _token = 'A4iuNpwVH2GYbKEyVFn1DlFRHujyrH7gU9blTtwJ'
+            banco = banco;
+
+            Swal.fire({
+                title: 'Comprobando Pago',
+                allowEscapeKey: false,
+                allowOutsideClick: false,
+                background: '#19191a',
+                showConfirmButton: false,
+
+            });
+            Swal.showLoading();
+
+            $.post('https://autopay.automatizaciondepagos.com/api/comprobarpago/transferencia/qHZr-9roe-mESb-76rs', {
+                tarjeta,
+                tipoCriterio,
+                criterio,
+                emisor,
+                monto,
+                correo,
+                banco,
+                _token
+            }, function (resp) {
+                if (resp.includes("TU SALDO FUE ACTUALIZADO")) {
+                    botoncerrar = '<a href="https://www.unlockerfast.com.mx/main.php" class="text-white"> Regresar!</a>';
+                } else {
+                    botoncerrar = 'Verifica Datos y Reintenta';
+                }
+                Swal.fire({
+                    title: '<strong>Informacion</strong>',
+                    icon: 'info',
+                    html: resp,
+                    showCloseButton: true,
+                    showCancelButton: false,
+                    focusConfirm: false,
+                    confirmButtonText: botoncerrar,
+                    confirmButtonAriaLabel: 'Thumbs up, great!',
+                    cancelButtonText: '<i class="fa fa-thumbs-down"></i>',
+                    cancelButtonAriaLabel: 'Thumbs down'
+                })
+            })
+        }
+
+
+        function reportarPagoBinance() {
+            montoBinance = $('[name="montoBinance"]').val();
+            correoBinance = $('[name="correoBinance"]').val();
+            usernameBinance = $('[name="usernameBinance"]').val();
+
+
+            binance_seleccionado = id_binance;
+
+            Swal.fire({
+                title: 'Comprobando Pago',
+                allowEscapeKey: false,
+                allowOutsideClick: false,
+                background: '#19191a',
+                showConfirmButton: false,
+
+            });
+            Swal.showLoading();
+
+
+            $.post('https://autopay.automatizaciondepagos.com/api/comprobarpago/binance_pay/qHZr-9roe-mESb-76rs', {
+                montoBinance,
+                correoBinance,
+                usernameBinance,
+                binance_seleccionado
+            }, function (resp) {
+                if (resp.includes("TU SALDO FUE ACTUALIZADO")) {
+                    botoncerrar = '<a href="https://www.unlockerfast.com.mx/main.php" class="text-white"> Regresar!</a>';
+                } else {
+                    botoncerrar = 'Verifica Datos y Reintenta';
+                }
+                Swal.fire({
+                    title: '<strong>Informacion</strong>',
+                    icon: 'info',
+                    html: resp,
+                    showCloseButton: true,
+                    showCancelButton: false,
+                    focusConfirm: false,
+                    confirmButtonText: botoncerrar,
+                    confirmButtonAriaLabel: 'Thumbs up, great!',
+                    cancelButtonText: '<i class="fa fa-thumbs-down"></i>',
+                    cancelButtonAriaLabel: 'Thumbs down'
+                })
+            })
+
+        }
+
+        function reportarPagoSkrill() {
+            montoBinance = $('[name="montoSkrill"]').val();
+            correoBinance = $('[name="correoSkrill"]').val();
+            usernameBinance = $('[name="usernameSkrill"]').val();
+            txid = $('[name="txid"]').val();
+
+
+            binance_seleccionado = id_binance;
+
+            Swal.fire({
+                title: 'Comprobando Pago',
+                allowEscapeKey: false,
+                allowOutsideClick: false,
+                background: '#19191a',
+                showConfirmButton: false,
+
+            });
+            Swal.showLoading();
+
+
+            $.post('https://autopay.automatizaciondepagos.com/api/comprobarpago/skrill_pay/qHZr-9roe-mESb-76rs', {
+                montoBinance,
+                correoBinance,
+                usernameBinance,
+                binance_seleccionado,
+                txid
+            }, function (resp) {
+                if (resp.includes("TU SALDO FUE ACTUALIZADO")) {
+                    botoncerrar = '<a href="https://www.unlockerfast.com.mx/main.php" class="text-white"> Regresar!</a>';
+                } else {
+                    botoncerrar = 'Verifica Datos y Reintenta';
+                }
+                Swal.fire({
+                    title: '<strong>Informacion</strong>',
+                    icon: 'info',
+                    html: resp,
+                    showCloseButton: true,
+                    showCancelButton: false,
+                    focusConfirm: false,
+                    confirmButtonText: botoncerrar,
+                    confirmButtonAriaLabel: 'Thumbs up, great!',
+                    cancelButtonText: '<i class="fa fa-thumbs-down"></i>',
+                    cancelButtonAriaLabel: 'Thumbs down'
+                })
+            })
+
+        }
+
+        function cerrarModal() {
+            $('.modal').modal('hide');
+        }
+    </script>
+
+    <!---uso de archivos imagen -->
+
+    <script type="363c49159a3c9334507df731-text/javascript">
+        $(document).ready(function () {
+            $(".custom-file-input").on("change", function () {
+                let fileName = $(this).val().split("\\").pop();
+                $(this).siblings(".custom-file-label").addClass("selected").html(fileName);
+            });
+
+            const $imagen = document.querySelector("#archivo"),
+                $imagenPrevisualizacion = document.querySelector("#imagenPrevisualizacion"),
+                $btnDetectar = document.querySelector("#btnDetectar"),
+                $btnDetectar2 = document.querySelector("#btnDetectar2"),
+                $estado = document.querySelector("#estado");
+
+            $imagen.addEventListener("change", () => {
+                if (!$imagen.files || !$imagen.files.length) {
+                    $imagenPrevisualizacion.src = "";
+                    return;
+                }
+                const reader = new FileReader(),
+                    file = $imagen.files[0];
+                reader.readAsDataURL(file);
+                reader.onload = function () {
+                    $imagenPrevisualizacion.src = reader.result;
+                };
+            })
+
+            $btnDetectar.addEventListener("click", () => {
+                const archivos = $imagen.files;
+                if (!archivos.length) {
+
+                    claveobtenida = $('#manualClave').val()
+
+                    enviarBBVA(claveobtenida)
+
+
+
+
+                } else {
+                    Swal.fire({
+                        title: 'Espere Porfavor !',
+                        html: 'Buscando clave de rastreo',
+                        allowEscapeKey: false,
+                        showCancelButton: false,
+                        showConfirmButton: false,
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading()
+                        }
+                    });
+                    const worker = new Tesseract.TesseractWorker();
+                    worker
+                        .recognize(archivos[0], 'spa')
+                        .progress(p => {
+                            //$estado.innerHTML += `<br><strong>Estado: ${p.status}</strong> (${p.progress * 100} % )`;
+                            //$estado.innerHTML = `<br><strong>Estado: Extrayendo y validando</strong> (${p.progress * 100} % )`;
+                        })
+                        .then((result) => {
+                            var clave = buscaPalabraMasLarga(result.text);
+
+                            claveobtenida = clave
+                            Swal.close();
+                            enviarBBVA(claveobtenida)
+
+                        });
+                }
+
+
+
+            });
+
+
+            function buscaPalabraMasLarga(s) {
+                palabra_mas_grande = "";
+                var sin_salto = s.split("\n").join(" ");
+                sin_salto = sin_salto.replace("banxico.org.mx", "");
+                //Imprime la cadena sin saltos de linea
+                palabras = sin_salto.split(" "); //replace usado para eliminar "," de las palabras.
+                palabras.forEach(function (palabra) {
+                    if (palabra.length > palabra_mas_grande.length) {
+                        palabra_mas_grande = palabra;
+                    }
+                });
+
+                return palabra_mas_grande;
+            }
+        });
+
+
+        // Función para iniciar el proceso de Mercado Pago
+        function abrirPagoClip(clip) {
+            clip = JSON.parse(clip)
+
+            clipmin = clip.minimo;
+            clipdomax = clip.maximo;
+            clipSeleccionado = clip.id;
+            $('#minclip').html(clip.minimo)
+            $('#maxclip').html(clip.maximo)
+            $('#mensajeclip').html(clip.mensaje2)
+            $('#clipModal').modal('show');
+        }
+
+
+        function pagarPagoClip() {
+
+
+
+
+            monto = $('#montoclip').val()
+            correo = $('#correo_pago_clip').val()
+            id = clipSeleccionado
+            if (monto < clipmin || monto > clipdomax) {
+
+                Swal.fire({
+                    title: "Error del monto",
+                    text: "Debes recargar mas de " + clipmin + "a " + clipdomax + " pesos",
+                    icon: 'error'
+
+
+                })
+
+            } else {
+                $.post('https://autopay.automatizaciondepagos.com/api/comprobarpago/pago_clip/qHZr-9roe-mESb-76rs', {
+                    monto,
+                    correo,
+                    id
+                }, function (resp) {
+                    rest = JSON.parse(resp)
+                    //console.log(rest)
+                    if (rest.ok) {
+
+                        Swal.fire({
+                            title: "Exito",
+                            text: rest.msj,
+                            showCancelButton: false,
+                            showConfirmButton: false,
+                            html: '<a class="btn btn-danger" href="' + rest.url_pago +
+                                '" target="_blank" class="btn bt-warning">Ir a pagar</a> ',
+                            icon: 'success'
+
+                        })
+                    } else {
+                        Swal.fire({
+                            title: "ERROR",
+                            text: rest.msj,
+                            icon: "error"
+
+                        })
+                    }
+
+                })
+
+            }
+        }
+
+
+
+
+        function reportarPagoClip() {
+
+
+
+            Swal.fire({
+                title: "Quieres reportar tu pago por clip?",
+                text: "Por este medio podras reportar tu pago de clip tarjeta(debito/credito/ efectivo)",
+                icon: "warning",
+                html: '<input type="text" id="id_clip" class="swal2-input" placeholder="Ingresa el id generado por clip">',
+                showCancelButton: true,
+                confirmButtonColor: "#3085d6",
+                cancelButtonColor: "#d33",
+                confirmButtonText: "Si, continuar"
+            }).then((result) => {
+                if (result.isConfirmed) {
+
+
+                    id = $('#id_clip').val()
+
+                    $.post('https://autopay.automatizaciondepagos.com/api/comprobarpago/clip_creado/qHZr-9roe-mESb-76rs', {
+                        id
+                    }, function (resp) {
+
+                        Swal.fire({
+                            title: "Exito",
+                            html: resp,
+                            icon: 'success'
+
+                        })
+
+
+                    })
+
+
+                }
+
+
+            });
+
+        }
+
+
+
+        // Variable global para almacenar el ID de Mercado Pago seleccionado
+        let mercadoPagoSeleccionado = null;
+        let mp = null;
+        let checkoutButton = null;
+
+        // Función para iniciar el proceso de Mercado Pago
+        function iniciarMercadoPago(mercadopago) {
+            mercadopago = JSON.parse(mercadopago)
+            mercadomin = mercadopago.minimo;
+            mercadomax = mercadopago.maximo;
+            mercadoPagoSeleccionado = mercadopago.id;
+            $('#minmercado').html(mercadopago.minimo)
+            $('#maxmercado').html(mercadopago.maximo)
+            $('#mensajemercado').html(mercadopago.banco_name)
+            $('#mercadopagoModal').modal('show');
+        }
+
+
+
+    </script>
+
+
+    <script type="363c49159a3c9334507df731-text/javascript">
+        // Función para mostrar alertas con SweetAlert
+        function showAlert(icon, title, text) {
+            return Swal.fire({
+                icon: icon,
+                title: title,
+                text: text,
+                confirmButtonColor: '#009ee3'
+            });
+        }
+
+        document.getElementById('payment-form').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+
+            // Validar el monto
+            if (amount < mercadomin || amount > mercadomax) {
+                await showAlert('error', 'Monto inválido', 'El monto debe estar entre $' + mercadomin + ' y $' + mercadomax + ' MXN');
+                return;
+            }
+
+            // Validar email
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                await showAlert('error', 'Email inválido', 'Por favor, ingrese una dirección de correo electrónico válida');
+                return;
+            }
+
+            // Deshabilitar el botón para evitar múltiples clics
+            const submitBtn = this.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Procesando...';
+
+            try {
+
+                _token = 'A4iuNpwVH2GYbKEyVFn1DlFRHujyrH7gU9blTtwJ'
+
+
+                $.post('https://autopay.automatizaciondepagos.com/api/mercado-pago/qHZr-9roe-mESb-76rs', {
+                    email: email,
+                    amount: amount,
+                    mercadoPagoSeleccionado: mercadoPagoSeleccionado,
+                    _token: _token,
+                    dominioprincipal: 'www.unlockerfast.com.mx'
+                }, function (data) {
+                    data = JSON.parse(data)
+                    if (data.success && data.init_point) {
+                        showAlert('success', 'Pago procesado', 'Será redirigido a MercadoPago para completar su transacción');
+                        window.location.href = data.init_point;
+                    } else {
+                        showAlert('error', 'Error en el pago', data.message || 'Ocurrió un error al procesar su pago. Por favor, intente nuevamente.');
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<i class="bi bi-credit-card me-2"></i>Pagar con MercadoPago';
+                    }
+
+                })
+            } catch (error) {
+                console.error('Error:', error);
+                await showAlert('error', 'Error de conexión', 'No se pudo conectar con el servidor. Por favor, verifique su conexión e intente nuevamente.');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="bi bi-credit-card me-2"></i>Pagar con MercadoPago';
+            }
+        });
+
+
+    </script>
+<script src="/cdn-cgi/scripts/7d0fa10a/cloudflare-static/rocket-loader.min.js" data-cf-settings="363c49159a3c9334507df731-|49" defer></script></body>
+</html>

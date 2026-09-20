@@ -363,7 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (ssc) ssc.classList.remove('hidden');
     }
   }
-  checkPersistedSession();
+  // checkPersistedSession moved to the bottom of the script
 
   async function fetchOrderHistory() {
     if (!authToken) return;
@@ -670,6 +670,8 @@ document.addEventListener('DOMContentLoaded', () => {
     tabHistory.classList.remove('active');
     if (tabAdmin) tabAdmin.classList.remove('active');
     productsSection.classList.remove('hidden');
+    const rechargeSection = document.getElementById('rechargeSection');
+    if (rechargeSection) rechargeSection.classList.add('hidden');
     historySection.classList.add('hidden');
     if (adminSection) adminSection.classList.add('hidden');
     if (typeof rechargesSection !== 'undefined' && rechargesSection) rechargesSection.classList.add('hidden');
@@ -688,6 +690,8 @@ document.addEventListener('DOMContentLoaded', () => {
     tabCatalog.classList.remove('active');
     if (tabAdmin) tabAdmin.classList.remove('active');
     historySection.classList.remove('hidden');
+    const rechargeSection = document.getElementById('rechargeSection');
+    if (rechargeSection) rechargeSection.classList.add('hidden');
     productsSection.classList.add('hidden');
     if (adminSection) adminSection.classList.add('hidden');
     if (typeof rechargesSection !== 'undefined' && rechargesSection) rechargesSection.classList.add('hidden');
@@ -700,6 +704,8 @@ document.addEventListener('DOMContentLoaded', () => {
       tabCatalog.classList.remove('active');
       tabHistory.classList.remove('active');
       adminSection.classList.remove('hidden');
+    const rechargeSection = document.getElementById('rechargeSection');
+    if (rechargeSection) rechargeSection.classList.add('hidden');
       productsSection.classList.add('hidden');
       historySection.classList.add('hidden');
       if (typeof rechargesSection !== 'undefined' && rechargesSection) rechargesSection.classList.add('hidden');
@@ -3652,248 +3658,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  btnRechargeBalance.addEventListener('click', () => {
-    console.log('✅ BOTÓN SALDO CLICKEADO');
-    rechargeStep1.classList.remove('hidden');
-    rechargeStep2.classList.add('hidden');
-    rechargeAmount.value = '';
-    rechargeTracking.value = '';
-    currentRechargeData = null;
-    modalRecharge.classList.remove('hidden');
-    updateRechargeServerInfo();
-  });
-
-  closeRechargeModal.addEventListener('click', () => {
-    modalRecharge.classList.add('hidden');
-  });
-
-  btnRechargeBack.addEventListener('click', () => {
-    modalRecharge.classList.add('hidden');
-  });
-
-  btnGenerarCuenta.addEventListener('click', async () => {
-    const amount = parseFloat(rechargeAmount.value);
-    if (isNaN(amount) || amount <= 0) {
-      alert('Por favor, ingresa un monto válido.');
-      return;
-    }
-    const bankCode = rechargeBank.value;
-    const serverId = document.getElementById('rechargeServer').value;
-    
-    const btnOriginalText = btnGenerarCuenta.innerHTML;
-    btnGenerarCuenta.innerHTML = '<div class="loading-spinner"></div>';
-    btnGenerarCuenta.disabled = true;
-
-    try {
-      const response = await fetch('/api/fund/route', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + authToken
-        },
-        body: JSON.stringify({ amount, bankCode, serverId })
-      });
-      const data = await response.json();
-      
-      if (response.ok && data.accounts) {
-        currentRechargeData = data;
-        // Default to the first account, but let user change it by clicking the cards
-        currentRechargeData.account = data.accounts[0];
-        
-        lblRechargeAmount.textContent = `$${amount.toFixed(2)}`;
-        
-        const container = document.getElementById('rechargeAccountsContainer');
-        container.innerHTML = '';
-        
-        data.accounts.forEach((acc, index) => {
-          const card = document.createElement('div');
-          card.style.cssText = `
-            flex: 1 1 calc(50% - 10px);
-            min-width: 200px;
-            background: rgba(0,0,0,0.3);
-            border: 2px solid rgba(255,255,255,0.1);
-            border-radius: 8px;
-            padding: 15px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-            transform-origin: center top;
-          `;
-          
-          card.innerHTML = `
-            <div class="card-bank-name" style="font-weight: bold; color: #e2e8f0; margin-bottom: 5px; font-size: 1.1rem; transition: all 0.3s;">${acc.bankName}</div>
-            <div class="card-owner-name" style="font-size: 1rem; color: #94a3b8; margin-bottom: 3px; transition: all 0.3s;">${acc.ownerName}</div>
-            <div class="card-clabe" style="font-family: monospace; font-size: 1.2rem; color: #22d3ee; letter-spacing: 1px; transition: all 0.3s;">${acc.clabe}</div>
-            <div class="selection-indicator" style="font-size: 0.85rem; margin-top: 10px; text-align: center; color: #94a3b8; background: rgba(255,255,255,0.05); padding: 5px; border-radius: 4px;">
-              Haz clic para seleccionar esta cuenta
-            </div>
-            
-            <div class="selected-actions hidden" style="margin-top: 20px; display: flex; gap: 10px; flex-direction: column;">
-              <button type="button" class="btn-copy-name" style="background: rgba(56, 189, 248, 0.15); border: 1px solid #38bdf8; color: #38bdf8; border-radius: 6px; padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 1rem; font-weight: bold; transition: all 0.2s;">
-                <i data-lucide="copy" style="width:18px; height:18px;"></i> Copiar Nombre
-              </button>
-              <button type="button" class="btn-copy-clabe" style="background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #10b981; border-radius: 6px; padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 1rem; font-weight: bold; transition: all 0.2s;">
-                <i data-lucide="copy" style="width:18px; height:18px;"></i> Copiar Cuenta / CLABE
-              </button>
-              <button type="button" class="btn-change-account" style="background: transparent; border: 1px dashed rgba(255,255,255,0.2); color: #cbd5e1; border-radius: 6px; padding: 8px; cursor: pointer; font-size: 0.9rem; margin-top: 5px; transition: all 0.2s;">
-                <i data-lucide="refresh-cw" style="width:14px; height:14px; display:inline-block; vertical-align:middle;"></i> Elegir Otra Cuenta
-              </button>
-            </div>
-          `;
-          
-          // Helper para botones de copiar
-          const setupCopyBtn = (btn, text, defaultHtml, color) => {
-            btn.addEventListener('click', (e) => {
-              e.stopPropagation();
-              navigator.clipboard.writeText(text).then(() => {
-                btn.innerHTML = `<i data-lucide="check-circle" style="width:18px; height:18px;"></i> ¡Copiado!`;
-                btn.style.background = color;
-                btn.style.color = '#fff';
-                if (window.lucide) window.lucide.createIcons({ root: btn });
-                setTimeout(() => {
-                  btn.innerHTML = defaultHtml;
-                  btn.style.background = `rgba(${color === '#10b981' ? '16, 185, 129' : '56, 189, 248'}, 0.15)`;
-                  btn.style.color = color;
-                  if (window.lucide) window.lucide.createIcons({ root: btn });
-                }, 2000);
-              });
-            });
-          };
-
-          const btnCopyName = card.querySelector('.btn-copy-name');
-          const btnCopyClabe = card.querySelector('.btn-copy-clabe');
-          
-          setupCopyBtn(btnCopyName, acc.ownerName, '<i data-lucide="copy" style="width:18px; height:18px;"></i> Copiar Nombre', '#38bdf8');
-          setupCopyBtn(btnCopyClabe, acc.clabe, '<i data-lucide="copy" style="width:18px; height:18px;"></i> Copiar Cuenta / CLABE', '#10b981');
-          
-          // Lógica de Cambiar Cuenta
-          const btnChange = card.querySelector('.btn-change-account');
-          btnChange.addEventListener('click', (e) => {
-            e.stopPropagation();
-            
-            // Restablecer estilos de esta tarjeta
-            card.style.flex = '1 1 calc(50% - 10px)';
-            card.style.transform = 'scale(1)';
-            card.style.background = 'rgba(0,0,0,0.3)';
-            card.querySelector('.card-bank-name').style.fontSize = '1.1rem';
-            card.querySelector('.card-owner-name').style.fontSize = '1rem';
-            card.querySelector('.card-clabe').style.fontSize = '1.2rem';
-            
-            // Mostrar todas las tarjetas
-            Array.from(container.children).forEach(c => {
-              c.style.display = 'block';
-              c.style.borderColor = 'rgba(255,255,255,0.1)';
-              c.querySelector('.card-bank-name').style.color = '#e2e8f0';
-              c.querySelector('.selection-indicator').style.display = 'block';
-              c.querySelector('.selected-actions').classList.add('hidden');
-              c.querySelector('.selected-actions').style.display = 'none';
-            });
-          });
-          
-          card.addEventListener('click', () => {
-            currentRechargeData.account = acc;
-            
-            // Ocultar las demás tarjetas
-            Array.from(container.children).forEach(c => {
-              if (c !== card) {
-                c.style.display = 'none';
-              }
-            });
-            
-            // Agrandar y resaltar la tarjeta seleccionada
-            card.style.flex = '1 1 100%'; // Ocupar todo el ancho
-            card.style.transform = 'scale(1.02)'; // Hacerla un poquito más grande
-            card.style.borderColor = '#10b981';
-            card.style.background = 'rgba(16, 185, 129, 0.05)';
-            
-            card.querySelector('.card-bank-name').style.color = '#10b981';
-            card.querySelector('.card-bank-name').style.fontSize = '1.3rem';
-            card.querySelector('.card-owner-name').style.fontSize = '1.1rem';
-            card.querySelector('.card-clabe').style.fontSize = '1.5rem'; // CLABE mucho más grande
-            
-            card.querySelector('.selection-indicator').style.display = 'none';
-            
-            const actions = card.querySelector('.selected-actions');
-            actions.classList.remove('hidden');
-            actions.style.display = 'flex';
-            
-            if (window.lucide) window.lucide.createIcons({ root: card });
-          });
-          
-          container.appendChild(card);
-        });
-        
-        // Comentado para obligar al usuario a elegir manualmente
-        // if (container.firstElementChild) {
-        //   container.firstElementChild.click();
-        // }
-        
-        if (window.lucide) window.lucide.createIcons({ root: container });
-        
-        rechargeStep1.classList.add('hidden');
-        rechargeStep2.classList.remove('hidden');
-      } else {
-        alert(data.error || 'Error al obtener cuenta de depósito.');
-      }
-    } catch (err) {
-      console.error(err);
-      alert('Error de red al contactar al servidor.');
-    } finally {
-      btnGenerarCuenta.innerHTML = btnOriginalText;
-      btnGenerarCuenta.disabled = false;
-    }
-  });
-
-  btnVerificarPago.addEventListener('click', async () => {
-    const amount = parseFloat(rechargeAmount.value);
-    const trackingNumber = rechargeTracking.value.trim();
-    const bankCode = rechargeBank.value;
-    const serverId = document.getElementById('rechargeServer').value;
-    
-    if (!trackingNumber || trackingNumber.length < 5) {
-      alert('Por favor, ingresa una Clave de Rastreo o Folio válido.');
-      return;
-    }
-
-    if (!currentRechargeData || !currentRechargeData.account) return;
-
-    const btnOriginalText = btnVerificarPago.innerHTML;
-    btnVerificarPago.innerHTML = '<div class="loading-spinner" style="margin: 0 auto;"></div> Verificando...';
-    btnVerificarPago.disabled = true;
-
-    try {
-      const response = await fetch('/api/fund/verify', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + authToken
-        },
-        body: JSON.stringify({ 
-          amount, 
-          bankCode, 
-          trackingNumber,
-          serverId: serverId,
-          accountId: currentRechargeData.account.id,
-          providerKey: currentRechargeData.account.providerKey
-        })
-      });
-      const data = await response.json();
-      
-      if (response.ok && data.success) {
-        alert(data.message);
-        modalRecharge.style.display = 'none';
-        fetchUserData(); // Actualizar saldo visualmente
-      } else {
-        alert(data.error || 'Error al verificar la recarga.');
-      }
-    } catch (err) {
-      console.error(err);
-      alert('Error de red. Por favor intenta verificar nuevamente en un minuto.');
-    } finally {
-      btnVerificarPago.innerHTML = btnOriginalText;
-      btnVerificarPago.disabled = false;
-    }
-  });
 
   if (btnAdminManage) {
     btnAdminManage.addEventListener('click', () => {
@@ -5155,4 +4919,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }, 60000); // Increased from 15s to 60s to reduce UI lag
 
+  // Run initial session check after all event listeners and initializers are attached
+  if (window.initRechargeModule) window.initRechargeModule({ fetchUserData: updateAccountCredits });
+  checkPersistedSession();
 });

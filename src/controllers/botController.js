@@ -544,10 +544,10 @@ exports.addMoney = async (req, res) => {
     let groupMsg = '';
     if (numAmount > 0) {
         msgToReseller = `💰 *¡RECARGA EXITOSA!*\n\nTu administrador ha agregado *+$${numAmount.toFixed(2)} MXN* a tu saldo en ${getServerDisplayName(serverId)}.\n\n💳 *Saldo actual (${getServerDisplayName(serverId)}):* $${users[resellerIdx][creditKey].toFixed(2)} MXN\n\n_¡A desbloquear se ha dicho!_ 🚀`;
-        groupMsg = `💰 *RECARGA APROBADA*\n━━━━━━━━━━━━━━━━━━━━━━\n👮 *Admin:* ${adminUser.username}\n👤 *Revendedor:* ${users[resellerIdx].username}\n🏢 *Servidor:* ${getServerDisplayName(serverId)}\n💲 *Monto:* +$${numAmount.toFixed(2)} MXN\n━━━━━━━━━━━━━━━━━━━━━━`;
+        groupMsg = `💰 *RECARGA APROBADA*\n━━━━━━━━━━━━━━━━━━━━━━\n👮 *Admin:* ${adminUser.username}\n👤 *Revendedor:* ID ${users[resellerIdx].id}\n🏢 *Servidor:* ${getServerDisplayName(serverId)}\n💲 *Monto:* +$${numAmount.toFixed(2)} MXN\n━━━━━━━━━━━━━━━━━━━━━━`;
     } else {
         msgToReseller = `📉 *REDUCCIÓN DE SALDO*\n\nTu administrador ha descontado *-$${Math.abs(numAmount).toFixed(2)} MXN* de tu saldo en ${getServerDisplayName(serverId)}.\n\n💳 *Saldo actual (${getServerDisplayName(serverId)}):* $${users[resellerIdx][creditKey].toFixed(2)} MXN`;
-        groupMsg = `📉 *RETIRO DE SALDO*\n━━━━━━━━━━━━━━━━━━━━━━\n👮 *Admin:* ${adminUser.username}\n👤 *Revendedor:* ${users[resellerIdx].username}\n🏢 *Servidor:* ${getServerDisplayName(serverId)}\n💲 *Monto:* -$${Math.abs(numAmount).toFixed(2)} MXN\n━━━━━━━━━━━━━━━━━━━━━━`;
+        groupMsg = `📉 *RETIRO DE SALDO*\n━━━━━━━━━━━━━━━━━━━━━━\n👮 *Admin:* ${adminUser.username}\n👤 *Revendedor:* ID ${users[resellerIdx].id}\n🏢 *Servidor:* ${getServerDisplayName(serverId)}\n💲 *Monto:* -$${Math.abs(numAmount).toFixed(2)} MXN\n━━━━━━━━━━━━━━━━━━━━━━`;
     }
     enqueueWhatsApp('private', msgToReseller, users[resellerIdx].id);
     enqueueWhatsApp('group', groupMsg);

@@ -124,7 +124,7 @@ router.post('/verify-otp', (req, res) => {
   writeDB('pendingUsers.json', pendingUsers);
 
   // Notify Admin
-  const adminMsg = `🆕 *Nuevo Usuario Registrado*\n\nSe ha registrado exitosamente un nuevo usuario:\n\n👤 Usuario: ${newUser.username}\n📱 Teléfono: ${newUser.phone}\n\nEl usuario ya está activo en el panel.`;
+  const adminMsg = `🆕 *Nuevo Usuario Registrado*\n\nSe ha registrado exitosamente un nuevo usuario:\n\n👤 ID de Usuario: ${newUser.id}\n\nEl usuario ya está activo en el panel.`;
   enqueueWhatsAppAdmin(adminMsg);
   enqueueWhatsApp('group', adminMsg);
 

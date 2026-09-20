@@ -1,0 +1,3560 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LatamGSM - Pasarela de Pagos</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- CSS Libraries -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <!-- Scripts Globales (Cargados al inicio para evitar ReferenceError en partials) -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://unpkg.com/tesseract.js@2.0.0-alpha.7/dist/tesseract.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.4.4/build/qrcode.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-main: #f5f7f9;
+            --bg-card: #ffffff;
+            --bg-input: #ffffff;
+            --border-color: #e2e8f0;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --bg-navbar: linear-gradient(135deg, #2d3e50, #3498db);
+            --text-navbar: #ffffff;
+            --placeholder-color: #94a3b8;
+            --btn-close-filter: none;
+            --text-gradient: linear-gradient(135deg, #2d3e50 0%, #3498db 100%);
+            --bg-icon: rgba(0, 0, 0, 0.03);
+            
+            --accent: #3498db; /* PayerLatam Blue */
+            --accent-glow: rgba(52, 152, 219, 0.15);
+            --secondary: #42b883; /* PayerLatam Green */
+            --secondary-glow: rgba(66, 184, 131, 0.15);
+            --danger: #ef4444;
+            --success: #10b981;
+            --warning: #f59e0b;
+        }
+
+        body.dark-theme {
+            --bg-main: #0a0c10;
+            --bg-card: #12151e;
+            --bg-input: #1a1e2a;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-primary: #ffffff;
+            --text-secondary: #9ca3af;
+            --bg-navbar: linear-gradient(135deg, #12151e, #2d3e50);
+            --text-navbar: #ffffff;
+            --placeholder-color: rgba(255, 255, 255, 0.2);
+            --btn-close-filter: invert(1) grayscale(1) brightness(1.5);
+            --text-gradient: linear-gradient(135deg, #ffffff 0%, #93c5fd 100%);
+            --bg-icon: rgba(255, 255, 255, 0.03);
+            --secondary: #42b883;
+            --secondary-glow: rgba(66, 184, 131, 0.15);
+        }
+
+        /* Custom Premium Scrollbar with Hover/Active Animated Glow */
+        @keyframes scrollbarGlow {
+            0% { background-position: 50% 0%; }
+            50% { background-position: 50% 100%; }
+            100% { background-position: 50% 0%; }
+        }
+        
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-main);
+        }
+        /* Default subtle state in light theme */
+        ::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.4);
+            border-radius: 4px;
+            border: 2px solid var(--bg-main);
+            transition: background 0.3s ease;
+        }
+        /* Hover and active scrolling state: Glowing colors in light theme */
+        ::-webkit-scrollbar-thumb:hover,
+        ::-webkit-scrollbar-thumb:active {
+            background: linear-gradient(180deg, var(--accent), var(--secondary), var(--accent));
+            background-size: 100% 200%;
+            animation: scrollbarGlow 3s ease infinite;
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Dark Theme Scrollbar (applies to body itself and descendants) */
+        body.dark-theme ::-webkit-scrollbar-track,
+        body.dark-theme::-webkit-scrollbar-track {
+            background: #0a0c10;
+        }
+        /* Default subtle state in dark theme */
+        body.dark-theme ::-webkit-scrollbar-thumb,
+        body.dark-theme::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: #0a0c10;
+        }
+        /* Hover and active scrolling state: Slate blue gradient glow in dark theme */
+        body.dark-theme ::-webkit-scrollbar-thumb:hover,
+        body.dark-theme::-webkit-scrollbar-thumb:hover,
+        body.dark-theme ::-webkit-scrollbar-thumb:active,
+        body.dark-theme::-webkit-scrollbar-thumb:active {
+            background: linear-gradient(180deg, #2d3e50, #4b627a, #2d3e50) !important;
+            background-size: 100% 200%;
+            animation: scrollbarGlow 3s ease infinite;
+            border-color: #0a0c10 !important;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* Sticky Navbar with original gradient colors (translucent) */
+        .navbar {
+            background: linear-gradient(135deg, rgba(45, 62, 80, 0.95), rgba(52, 152, 219, 0.95)) !important;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 0;
+            transition: background 0.3s ease, border-color 0.3s ease;
+            position: sticky;
+            top: 0;
+            z-index: 1020;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+        
+        body.dark-theme .navbar {
+            background: linear-gradient(135deg, rgba(18, 21, 30, 0.95), rgba(45, 62, 80, 0.95)) !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.4rem;
+            color: #ffffff !important;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .navbar-brand i {
+            color: #ffffff;
+        }
+
+        .exchange-rate {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            border-radius: 20px;
+            padding: 6px 16px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Theme Toggle Button */
+        .theme-toggle-btn {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #ffffff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .theme-toggle-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+            border-color: #ffffff;
+        }
+
+        /* Hero */
+        .hero-section {
+            padding: 40px 0 20px 0;
+            text-align: center;
+        }
+
+        .hero-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: var(--text-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-subtitle {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Cards Grid */
+        .methods-grid {
+            margin-top: 30px;
+            margin-bottom: 60px;
+        }
+
+        .method-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            height: 100%;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .method-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent) 0%, var(--secondary) 100%);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .method-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(66, 184, 131, 0.3);
+            box-shadow: 0 10px 30px -10px var(--accent-glow);
+        }
+
+        .method-card:hover::before {
+            opacity: 1 !important;
+        }
+
+        /* Styling for premium card selectors in modals (transferencias / manual) */
+        .premium-select-card {
+            background: var(--bg-input) !important;
+            border: 1.5px solid rgba(0, 0, 0, 0.1) !important;
+            border-radius: 12px !important;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            position: relative !important;
+            overflow: hidden !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -1px rgba(0, 0, 0, 0.02) !important;
+        }
+
+        body.dark-theme .premium-select-card {
+            border-color: rgba(255, 255, 255, 0.15) !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15), 0 2px 4px -1px rgba(0, 0, 0, 0.1) !important;
+        }
+
+        .premium-select-card::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 4px !important;
+            background: linear-gradient(90deg, var(--accent) 0%, var(--secondary) 100%) !important;
+            opacity: 0 !important;
+            transition: opacity 0.4s ease !important;
+            z-index: 1 !important;
+        }
+
+        .premium-select-card:hover {
+            transform: translateY(-5px) !important;
+            border-color: rgba(66, 184, 131, 0.3) !important;
+            box-shadow: 0 10px 30px -10px var(--accent-glow) !important;
+        }
+
+        .premium-select-card:hover::before {
+            opacity: 1 !important;
+        }
+
+        .method-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .method-icon-container {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            background: var(--bg-icon);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border-color);
+            font-size: 1.4rem;
+            color: var(--accent);
+        }
+
+        .method-badge {
+            background: rgba(66, 184, 131, 0.12);
+            color: var(--secondary);
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .method-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .method-description {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .method-footer {
+            margin-top: auto;
+        }
+
+        .btn-select-method {
+            width: 100%;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-select-method:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        /* Floating Info Icon */
+        .floating-info-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            background: var(--accent);
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 20px var(--accent-glow);
+            border: none;
+            cursor: pointer;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        .floating-info-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 25px rgba(52, 152, 219, 0.4);
+        }
+
+        /* Modals Redesign */
+        .modal-content {
+            background: var(--bg-card) !important;
+            border: 1px solid var(--border-color) !important;
+            border-radius: 16px !important;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15) !important;
+            color: var(--text-primary) !important;
+        }
+
+        .modal-header {
+            border-bottom: 1px solid var(--border-color) !important;
+            padding: 20px 24px !important;
+        }
+
+        .modal-title {
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--text-primary) !important;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .modal-title svg, .modal-title i {
+            flex-shrink: 0;
+        }
+
+        /* Custom styled alerts for MercadoPago and Clip to adapt to Dark Mode */
+        .mp-warning-banner-custom {
+            background-color: rgba(42, 188, 255, 0.08) !important;
+            border: 1px solid rgba(42, 188, 255, 0.25) !important;
+            color: #0A0080 !important;
+        }
+        .mp-warning-banner-custom i {
+            color: #0A0080 !important;
+        }
+        body.dark-theme .mp-warning-banner-custom {
+            background-color: rgba(42, 188, 255, 0.12) !important;
+            border-color: rgba(42, 188, 255, 0.25) !important;
+            color: #2abcff !important;
+        }
+        body.dark-theme .mp-warning-banner-custom i {
+            color: #2abcff !important;
+        }
+
+        .mp-redirect-banner-custom {
+            background-color: rgba(42, 188, 255, 0.08) !important;
+            border: 1px solid rgba(42, 188, 255, 0.2) !important;
+            color: #0A0080 !important;
+        }
+        .mp-redirect-banner-custom i {
+            color: #0c8c3a !important;
+        }
+        body.dark-theme .mp-redirect-banner-custom {
+            background-color: rgba(42, 188, 255, 0.12) !important;
+            border-color: rgba(42, 188, 255, 0.2) !important;
+            color: var(--text-primary) !important;
+        }
+        body.dark-theme .mp-redirect-banner-custom i {
+            color: #42b883 !important;
+        }
+
+        .clip-redirect-banner-custom {
+            background-color: rgba(252, 76, 2, 0.08) !important;
+            border: 1px solid rgba(252, 76, 2, 0.2) !important;
+            color: #b83500 !important;
+        }
+        .clip-redirect-banner-custom i {
+            color: #b83500 !important;
+        }
+        body.dark-theme .clip-redirect-banner-custom {
+            background-color: rgba(252, 76, 2, 0.12) !important;
+            border-color: rgba(252, 76, 2, 0.25) !important;
+            color: var(--text-primary) !important;
+        }
+        body.dark-theme .clip-redirect-banner-custom i {
+            color: #ff6b35 !important;
+        }
+
+        .binance-warning-banner-custom {
+            background-color: rgba(243, 186, 47, 0.08) !important;
+            border: 1px solid rgba(243, 186, 47, 0.25) !important;
+            color: #d0980b !important;
+        }
+        .binance-warning-banner-custom i {
+            color: #d0980b !important;
+        }
+        body.dark-theme .binance-warning-banner-custom {
+            background-color: rgba(243, 186, 47, 0.12) !important;
+            border-color: rgba(243, 186, 47, 0.25) !important;
+            color: #f3ba2f !important;
+        }
+        body.dark-theme .binance-warning-banner-custom i {
+            color: #f3ba2f !important;
+        }
+        body.dark-theme .alert-warning {
+            background-color: rgba(243, 186, 47, 0.12) !important;
+            border-color: rgba(243, 186, 47, 0.25) !important;
+            color: #f3ba2f !important;
+        }
+        body.dark-theme .alert-warning i,
+        body.dark-theme .alert-warning strong {
+            color: #f3ba2f !important;
+        }
+
+        .btn-close {
+            filter: var(--btn-close-filter) !important;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .btn-close:hover {
+            opacity: 1;
+        }
+
+        .modal-body {
+            padding: 24px !important;
+        }
+
+        /* Form Controls */
+        .form-label {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .form-text {
+            color: var(--text-secondary) !important;
+            font-size: 0.8rem;
+        }
+        body.dark-theme .form-text {
+            color: #9ca3af !important;
+        }
+
+        .form-control, .form-select {
+            background-color: var(--bg-input) !important;
+            border: 1px solid var(--border-color) !important;
+            color: var(--text-primary) !important;
+            border-radius: 10px !important;
+            padding: 12px 16px !important;
+            font-size: 0.95rem !important;
+            transition: all 0.2s ease !important;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--accent) !important;
+            box-shadow: 0 0 0 4px var(--accent-glow) !important;
+            outline: none !important;
+        }
+
+        .form-control::placeholder {
+            color: var(--placeholder-color) !important;
+        }
+
+        .amount-input-group {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .amount-input-group span {
+            position: absolute;
+            left: 16px;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .amount-input-group input {
+            padding-left: 32px !important;
+        }
+
+        /* SweetAlert2 Styling Overrides for Themed Mode */
+        .swal2-popup.swal-dark {
+            background: var(--bg-card) !important;
+            color: var(--text-primary) !important;
+            border: 1px solid var(--border-color) !important;
+        }
+        .swal-dark .swal2-title {
+            color: var(--text-primary) !important;
+        }
+        .swal-dark .swal2-html-container {
+            color: var(--text-secondary) !important;
+        }
+        .swal-dark .swal2-confirm {
+            background: var(--accent) !important;
+            color: #ffffff !important;
+            font-weight: 600 !important;
+            box-shadow: 0 4px 10px var(--accent-glow) !important;
+        }
+        .swal-dark .swal2-cancel {
+            background: var(--bg-input) !important;
+            color: var(--text-primary) !important;
+            border: 1px solid var(--border-color) !important;
+        }
+
+        /* Helper Classes */
+        .text-teal { color: var(--secondary) !important; }
+        .bg-teal-light { background: var(--secondary-glow) !important; }
+        .border-teal { border-color: rgba(66, 184, 131, 0.25) !important; }
+
+        /* Theme overrides for Bootstrap utility classes and partials */
+        .modal-body.text-white,
+        .alert.text-white,
+        input.text-white,
+        .spei-input-base,
+        .text-white:not(.btn):not([class*="btn-"]):not(.badge):not(.nav-link):not(.navbar-brand) {
+            color: var(--text-primary) !important;
+        }
+        .border-secondary, .border-secondary-subtle {
+            border-color: var(--border-color) !important;
+        }
+
+        /* Adapt btn-outline-light to theme */
+        .btn-outline-light {
+            --bs-btn-color: var(--text-primary) !important;
+            --bs-btn-border-color: var(--border-color) !important;
+            --bs-btn-hover-color: #ffffff !important;
+            --bs-btn-hover-bg: var(--accent) !important;
+            --bs-btn-hover-border-color: var(--accent) !important;
+            --bs-btn-active-color: #ffffff !important;
+            --bs-btn-active-bg: var(--accent) !important;
+            --bs-btn-active-border-color: var(--accent) !important;
+            color: var(--text-primary) !important;
+            border-color: var(--border-color) !important;
+            background-color: transparent !important;
+        }
+        .btn-outline-light:hover, 
+        .btn-outline-light:focus, 
+        .btn-outline-light:active, 
+        .btn-outline-light.active {
+            background-color: var(--accent) !important;
+            border-color: var(--accent) !important;
+            color: #ffffff !important;
+        }
+
+        /* Branded PayerLatam Primary Button Gradient with sliding animation */
+        .btn-primary {
+            background: linear-gradient(135deg, #2d3e50 0%, var(--accent) 50%, #2d3e50 100%) !important;
+            background-size: 200% auto !important;
+            background-position: right center !important;
+            border: none !important;
+            border-radius: 10px !important;
+            color: #ffffff !important;
+            font-weight: 600 !important;
+            box-shadow: 0 4px 12px var(--accent-glow) !important;
+            transition: all 0.4s ease !important;
+        }
+        .btn-primary:hover, .btn-primary:focus, .btn-primary:active {
+            background-position: left center !important;
+            transform: translateY(-2px) !important;
+            box-shadow: 0 6px 15px rgba(52, 152, 219, 0.35) !important;
+            color: #ffffff !important;
+        }
+
+        /* Animated top border gradient for method-card */
+        .method-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent) 0%, var(--secondary) 100%);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .method-card:hover::before {
+            opacity: 1 !important;
+        }
+
+        /* Theme-aware badge styles */
+        .binance-badge {
+            background: rgba(243, 186, 47, 0.1) !important;
+            color: #d0980b !important;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        body.dark-theme .binance-badge {
+            background: rgba(243, 186, 47, 0.18) !important;
+            color: #f3ba2f !important;
+        }
+
+        .clip-badge {
+            background: rgba(252, 76, 2, 0.1) !important;
+            color: #fc4c02 !important;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        body.dark-theme .clip-badge {
+            background: rgba(252, 76, 2, 0.18) !important;
+            color: #ff6b35 !important;
+        }
+
+        .tron-badge {
+            background: rgba(69, 182, 141, 0.1) !important;
+            color: #45b68d !important;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        body.dark-theme .tron-badge {
+            background: rgba(69, 182, 141, 0.18) !important;
+            color: #52d6a4 !important;
+        }
+
+        .mp-badge {
+            background: rgba(10, 0, 128, 0.05) !important;
+            color: #0A0080 !important;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        body.dark-theme .mp-badge {
+            background: rgba(42, 188, 255, 0.18) !important;
+            color: #2abcff !important;
+        }
+
+        .skrill-badge {
+            background: rgba(129, 27, 85, 0.1) !important;
+            color: #811b55 !important;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        body.dark-theme .skrill-badge {
+            background: rgba(225, 47, 149, 0.18) !important;
+            color: #e12f95 !important;
+        }
+
+        /* Custom Styling overrides for database HTML inside infoGlobalModal */
+        #infoGlobalModal .modal-body {
+            background-color: var(--bg-main) !important;
+            color: var(--text-primary) !important;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        #infoGlobalModal .modal-body .bg-teal-light {
+            background: transparent !important;
+            border: none !important;
+            padding: 0 !important;
+        }
+
+        #infoGlobalModal h3, #infoGlobalModal h4 {
+            color: var(--text-primary) !important;
+            font-weight: 700;
+        }
+        
+        #infoGlobalModal p.text-muted {
+            color: var(--text-secondary) !important;
+        }
+
+        #infoGlobalModal .modal-body .card {
+            background-color: var(--bg-card) !important;
+            border-color: var(--border-color) !important;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05) !important;
+            transition: transform 0.3s ease, background-color 0.3s ease, border-color 0.3s ease;
+        }
+
+        body.dark-theme #infoGlobalModal .modal-body .card {
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4) !important;
+        }
+
+        #infoGlobalModal .modal-body .card:hover {
+            transform: translateY(-3px);
+        }
+
+        #infoGlobalModal .modal-body .card h5 {
+            color: var(--text-primary) !important;
+            font-weight: 600 !important;
+        }
+
+        #infoGlobalModal .modal-body .card p {
+            color: var(--text-secondary) !important;
+        }
+
+        #infoGlobalModal .modal-body .rounded-circle {
+            transition: transform 0.3s ease;
+        }
+        #infoGlobalModal .modal-body .card:hover .rounded-circle {
+            transform: scale(1.1);
+        }
+
+        #infoGlobalModal .modal-body .alert-warning {
+            background-color: var(--bg-card) !important;
+            border-color: var(--border-color) !important;
+            color: var(--text-primary) !important;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+
+        #infoGlobalModal .modal-body .alert-warning h6 {
+            color: var(--warning) !important;
+        }
+
+        #infoGlobalModal .modal-body .alert-warning ul,
+        #infoGlobalModal .modal-body .alert-warning li {
+            color: var(--text-secondary) !important;
+        }
+
+        /* Strict dark theme text overrides for infoGlobalModal */
+        body.dark-theme #infoGlobalModal .modal-body,
+        body.dark-theme #infoGlobalModal .modal-body p,
+        body.dark-theme #infoGlobalModal .modal-body li,
+        body.dark-theme #infoGlobalModal .modal-body span:not([style*="color"]):not([class*="badge"]),
+        body.dark-theme #infoGlobalModal .modal-body strong,
+        body.dark-theme #infoGlobalModal .modal-body div:not([style*="color"]):not([class*="badge"]),
+        body.dark-theme #infoGlobalModal .modal-body h1,
+        body.dark-theme #infoGlobalModal .modal-body h2,
+        body.dark-theme #infoGlobalModal .modal-body h3,
+        body.dark-theme #infoGlobalModal .modal-body h4,
+        body.dark-theme #infoGlobalModal .modal-body h5,
+        body.dark-theme #infoGlobalModal .modal-body h6,
+        body.dark-theme #infoGlobalModal .modal-body .text-dark {
+            color: var(--text-primary) !important;
+        }
+
+        body.dark-theme #infoGlobalModal .modal-body .text-muted {
+            color: var(--text-secondary) !important;
+        }
+
+        /* Footer styling */
+        footer {
+            border-top: 1px solid var(--border-color);
+            background-color: var(--bg-card);
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            padding: 24px 0;
+            width: 100%;
+            transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+        }
+        
+        body.dark-theme footer {
+            background-color: #0b0c10 !important;
+            color: #8b949e !important;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Make footer links and brand colored clearly in dark mode */
+        body.dark-theme footer p a {
+            color: #58a6ff !important;
+        }
+        body.dark-theme footer .text-muted {
+            color: #94a3b8 !important;
+        }
+
+        /* Custom Customization styles if wallpaper/header/logo is set */
+        
+            </style>
+</head>
+<body>
+    <script>
+        // Evitar el flash de tema claro
+        if ((localStorage.getItem('theme') || 'light') === 'dark') {
+            document.body.classList.add('dark-theme');
+        }
+    </script>
+
+    <!-- Top Navbar -->
+    <nav class="navbar navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="javascript:;">
+                                    <i class="bi bi-wallet2"></i>
+                                <span>LatamGSM</span>
+            </a>
+            <div class="d-flex align-items-center gap-3">
+                <div class="exchange-rate">
+                    <i class="bi bi-currency-exchange"></i>
+                    <span>Tasa: 1 USD = $17.60 MXN</span>
+                </div>
+                <button id="theme-toggle" class="theme-toggle-btn" title="Cambiar Tema">
+                    <i id="theme-toggle-icon" class="bi bi-moon-fill"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container flex-grow-1 d-flex flex-column justify-content-center">
+        <!-- Hero Section -->
+        <div class="hero-section">
+            <h1 class="hero-title">Elige tu método de pago</h1>
+            <p class="hero-subtitle">Selecciona una de las siguientes opciones seguras para recargar fondos en tu cuenta.</p>
+        </div>
+
+        <!-- Grid de Métodos de Pago -->
+        <div class="methods-grid">
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 justify-content-center">
+                        <!-- 1. Transferencias MXN (SPEI) -->
+                                <div class="col">
+                    <div class="method-card">
+                        <div>
+                            <div class="method-header">
+                                <div class="method-icon-container">
+                                    <svg width="28px" height="28px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M3 22H21M19 10V19M5 10V19M12 10V19M9 10V19M15 10V19M12 2L2 7H22L12 2Z" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>
+                                <span class="method-badge">Automático</span>
+                            </div>
+                            <h3 class="method-title">Transferencias MX (SPEI)</h3>
+                            <p class="method-description">Realiza transferencias SPEI desde cualquier banco funcionando en México. Acreditación automática al ingresar la clave de rastreo.</p>
+                        </div>
+                        <div class="method-footer">
+                            <button class="btn-select-method" onclick="abrirModalTransferencias()">
+                                <span>Pagar con Transferencia</span>
+                                <i class="bi bi-arrow-right-short"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 2. Binance (Auto & Manual) -->
+                                <div class="col">
+                    <div class="method-card">
+                        <div>
+                            <div class="method-header">
+                                <div class="method-icon-container" style="background: rgba(243, 186, 47, 0.05); border-color: rgba(243, 186, 47, 0.2);">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#F3BA2F" width="28px" height="28px">
+                                        <path d="M16.624 13.9202l2.7175 2.7154-7.353 7.353-7.353-7.352 2.7175-2.7164 4.6355 4.6595 4.6356-4.6595zm4.6366-4.6366L24 12l-2.7154 2.7164L18.5682 12l2.6924-2.7164zm-9.272.001l2.7163 2.6914-2.7164 2.7174v-.001L9.2721 12l2.7164-2.7154zm-9.2722-.001L5.4088 12l-2.6914 2.6924L0 12l2.7164-2.7164zM11.9885.0115l7.353 7.329-2.7174 2.7154-4.6356-4.6356-4.6355 4.6595-2.7174-2.7154 7.353-7.353z"/>
+                                    </svg>
+                                </div>
+                                <span class="method-badge binance-badge">USDT</span>
+                            </div>
+                            <h3 class="method-title">Binance Pay</h3>
+                            <p class="method-description">
+                                Paga con USDT de forma instantánea. Soporta 
+                                 <b>Binance Auto</b> (acreditación instantánea por QR) y  
+                                Binance Manual.
+                            </p>
+                        </div>
+                        <div class="method-footer">
+                            <button class="btn-select-method" onclick="abrirModalBinance()">
+                                <span>Pagar con Binance</span>
+                                <i class="bi bi-arrow-right-short"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 3. BNB Smart Chain BEP20 (USDT) -->
+                                <div class="col">
+                    <div class="method-card">
+                        <div>
+                            <div class="method-header">
+                                <div class="method-icon-container" style="background: rgba(243, 186, 47, 0.05); border-color: rgba(243, 186, 47, 0.2);">
+                                    <svg width="28px" height="28px" viewBox="0 0 2496 2496" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <g>
+                                            <path style="fill-rule:evenodd;clip-rule:evenodd;fill:#F0B90B;" d="M1248,0c689.3,0,1248,558.7,1248,1248s-558.7,1248-1248,1248 S0,1937.3,0,1248S558.7,0,1248,0L1248,0z"/>
+                                            <path style="fill:#FFFFFF;" d="M685.9,1248l0.9,330l280.4,165v193.2l-444.5-260.7v-524L685.9,1248L685.9,1248z M685.9,918v192.3 l-163.3-96.6V821.4l163.3-96.6l164.1,96.6L685.9,918L685.9,918z M1084.3,821.4l163.3-96.6l164.1,96.6L1247.6,918L1084.3,821.4 L1084.3,821.4z"/>
+                                            <path style="fill:#FFFFFF;" d="M803.9,1509.6v-193.2l163.3,96.6v192.3L803.9,1509.6L803.9,1509.6z M1084.3,1812.2l163.3,96.6 l164.1-96.6v192.3l-164.1,96.6l-163.3-96.6V1812.2L1084.3,1812.2z M1645.9,821.4l163.3-96.6l164.1,96.6v192.3l-164.1,96.6V918 L1645.9,821.4L1645.9,821.4L1645.9,821.4z M1809.2,1578l0.9-330l163.3-96.6v524l-444.5,260.7v-193.2L1809.2,1578L1809.2,1578 L1809.2,1578z"/>
+                                            <polygon style="fill:#FFFFFF;" points="1692.1,1509.6 1528.8,1605.3 1528.8,1413 1692.1,1316.4 1692.1,1509.6 	"/>
+                                            <path style="fill:#FFFFFF;" d="M1692.1,986.4l0.9,193.2l-281.2,165v330.8l-163.3,95.7l-163.3-95.7v-330.8l-281.2-165V986.4 L968,889.8l279.5,165.8l281.2-165.8l164.1,96.6H1692.1L1692.1,986.4z M803.9,656.5l443.7-261.6l444.5,261.6l-163.3,96.6 l-281.2-165.8L967.2,753.1L803.9,656.5L803.9,656.5z"/>
+                                        </g>
+                                    </svg>
+                                </div>
+                                <span class="method-badge binance-badge">USDT (BSC)</span>
+                            </div>
+                            <h3 class="method-title">USDT (BEP-20)</h3>
+                            <p class="method-description">Realiza pagos directos en la red BNB Smart Chain usando USDT. Verificación automática.</p>
+                        </div>
+                        <div class="method-footer">
+                                                        <button class="btn-select-method" onclick="abrirModalBEP20(2)">
+                                <span>Pagar con BEP20</span>
+                                <i class="bi bi-arrow-right-short"></i>
+                            </button>
+                                                    </div>
+                    </div>
+                </div>
+                
+                <!-- 4. Tron TRC20 (USDT) -->
+                
+                <!-- 5. Clip Pay (Tarjeta de Crédito/Débito) -->
+                                <div class="col">
+                    <div class="method-card">
+                        <div>
+                            <div class="method-header">
+                                <div class="method-icon-container" style="background: rgba(252, 76, 2, 0.05); border-color: rgba(252, 76, 2, 0.2);">
+                                    <svg width="28px" height="28px" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path fill-rule="evenodd" clip-rule="evenodd" d="M29.9995 5.04859C29.9864 2.2582 27.7205 0 24.9273 0C24.2333 0 23.5531 0.131854 22.9698 0.391894L4.48685 8.24077C1.85272 9.35487 0 11.9652 0 15.0003V24.9276C0 27.7286 2.27076 30 5.07286 30C5.78344 30 6.45933 29.8529 7.07384 29.5889L25.4782 21.7747C28.1307 20.6681 30 18.0491 30 15.0003L29.9995 5.04859Z" fill="#FC4C02"/>
+                                        <path fill-rule="evenodd" clip-rule="evenodd" d="M12.9228 18.9195C12.6682 18.9195 12.4614 18.7228 12.4614 18.4804V9.20511C12.4614 8.96251 12.6682 8.76562 12.9228 8.76562C13.1778 8.76562 13.3845 8.96251 13.3845 9.20511V18.4804C13.3845 18.7228 13.1778 18.9195 12.9228 18.9195" fill="#FEFEFE"/>
+                                        <path fill-rule="evenodd" clip-rule="evenodd" d="M16.6155 18.4957V11.5065C16.6155 11.2699 16.4086 11.0781 16.1528 11.0781C15.8985 11.0781 15.6924 11.2699 15.6924 11.5065V18.4957C15.6924 18.7323 15.8985 18.9243 16.1528 18.9243C16.4086 18.9243 16.6155 18.7323 16.6155 18.4957" fill="#FEFEFE"/>
+                                        <path fill-rule="evenodd" clip-rule="evenodd" d="M16.6155 9.24053V9.21397C16.6155 8.96647 16.4086 8.76562 16.1528 8.76562C15.8985 8.76562 15.6924 8.96647 15.6924 9.21397V9.24053C15.6924 9.48816 15.8985 9.6887 16.1528 9.6887C16.4086 9.6887 16.6155 9.48816 16.6155 9.24053" fill="#FEFEFE"/>
+                                        <path fill-rule="evenodd" clip-rule="evenodd" d="M10.0295 17.7101C10.1952 17.5375 10.1952 17.2574 10.0295 17.085C9.86377 16.9121 9.59531 16.9121 9.4305 17.085C8.20727 18.359 6.21838 18.359 4.9956 17.085C3.77279 15.8092 3.77279 13.7345 4.9956 12.4596C5.58765 11.8421 6.3754 11.5019 7.21248 11.5019C8.05066 11.5019 8.83751 11.8421 9.42956 12.4596C9.59531 12.6327 9.86377 12.6327 10.0295 12.4596C10.1952 12.2866 10.1952 12.0069 10.0295 11.834C9.27728 11.0492 8.27696 10.6172 7.21248 10.6172C6.14849 10.6172 5.14837 11.0492 4.39568 11.834C2.84239 13.4538 2.84239 16.0894 4.39568 17.7101C5.17246 18.5202 6.19204 18.9249 7.21293 18.9249C8.23271 18.9249 9.2527 18.5202 10.0295 17.7101" fill="#FEFEFE"/>
+                                        <path fill-rule="evenodd" clip-rule="evenodd" d="M19.3459 20.3363V14.7001C19.3459 12.9281 20.8123 11.4863 22.6155 11.4863C24.4182 11.4863 25.8851 12.9281 25.8851 14.7001C25.8851 16.4724 24.4182 17.9137 22.6155 17.9137C21.5759 17.9137 20.8724 17.5234 20.867 17.5211C20.6566 17.3997 20.3852 17.4685 20.2618 17.6757C20.1388 17.8832 20.2094 18.1492 20.4197 18.2711C20.456 18.292 21.3237 18.7832 22.6155 18.7832C24.9061 18.7832 26.7691 16.9515 26.7691 14.7001C26.7691 12.4487 24.9061 10.6172 22.6155 10.6172C20.3247 10.6172 18.4614 12.4487 18.4614 14.7001V20.3363C18.4614 20.576 18.6598 20.771 18.9036 20.771C19.1477 20.771 19.3459 20.576 19.3459 20.3363" fill="#FEFEFE"/>
+                                    </svg>
+                                </div>
+                                <span class="method-badge clip-badge">Tarjetas</span>
+                            </div>
+                            <h3 class="method-title">Credit/Debit Card (Clip)</h3>
+                            <p class="method-description">Paga de forma rápida y segura con tarjeta de crédito, débito o American Express a través de la pasarela segura de Clip.</p>
+                        </div>
+                        <div class="method-footer">
+                            <button class="btn-select-method" onclick="abrirModalClipSelection()">
+                                <span>Pagar con Tarjeta</span>
+                                <i class="bi bi-arrow-right-short"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 6. Mercado Pago -->
+                                <div class="col">
+                    <div class="method-card">
+                        <div>
+                            <div class="method-header">
+                                <div class="method-icon-container" style="background: rgba(10, 0, 128, 0.03); border-color: rgba(42, 188, 255, 0.2);">
+                                    <svg xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="32px" height="32px" fill="none" viewBox="0 0 150 104">
+                                        <path fill="#0A0080" d="M150 49.027c0-26.944-33.685-48.87-75-48.87-41.501 0-75 21.926-75 48.87v2.787c0 28.616 29.404 51.843 75 51.843 45.968 0 75-23.227 75-51.843v-2.787Z"/>
+                                        <path fill="#2ABCFF" d="M147.022 49.027c0 25.457-32.196 46.083-72.022 46.083-39.826 0-72.022-20.626-72.022-46.083C2.978 23.57 35.174 2.944 75 2.944c39.826.186 72.022 20.626 72.022 46.083Z"/>
+                                        <path fill="#fff" d="M50.993 34.533s-.745.743-.373 1.487c1.117 1.486 4.653 2.23 8.189 1.486 2.047-.557 4.839-2.601 7.444-4.645 2.792-2.23 5.583-4.46 8.56-5.389 2.979-.93 4.84-.558 6.142-.186 1.49.372 2.978 1.3 5.584 3.345 5.024 3.716 24.751 20.997 28.101 23.97 2.792-1.3 15.075-6.503 31.638-10.22-1.117-8.919-6.514-17.095-14.702-23.784-11.353 4.831-25.31 7.247-39.082.557 0 0-7.444-3.53-14.702-3.345-10.794.186-15.447 5.017-20.472 9.849l-6.327 6.875Z"/>
+                                        <path fill="#fff" d="M114.082 56.274c-.186-.186-23.263-20.44-28.474-24.342-2.978-2.23-4.653-2.788-6.514-3.16-.93-.185-2.233 0-3.163.372-2.42.744-5.584 2.788-8.375 5.017-2.978 2.416-5.77 4.46-8.189 5.017-3.163.93-7.258 0-9.119-1.114-.744-.558-1.303-1.115-1.489-1.673-.744-1.486.559-2.787.745-2.973l6.327-6.875 2.233-2.23c-2.047.186-3.908.743-5.769 1.3-2.233.558-4.466 1.302-6.7 1.302-.93 0-5.955-.744-6.885-1.115-5.77-1.487-10.794-3.16-18.425-6.69C11.166 25.8 5.211 34.161 3.536 43.452c1.303.372 3.35.93 4.28 1.115 20.472 4.46 26.8 9.291 28.102 10.22 1.303-1.3 2.978-2.23 5.025-2.23 2.233 0 4.28 1.115 5.583 2.974 1.117-.93 2.792-1.673 4.839-1.673.93 0 1.86.186 2.977.558a6.83 6.83 0 0 1 4.095 3.716c.744-.372 1.675-.557 2.791-.557 1.117 0 2.233.185 3.35.743 3.722 1.672 4.28 5.389 4.094 8.176h.745c4.466 0 8.189 3.716 8.189 8.176 0 1.3-.373 2.601-.931 3.902 1.303.743 4.28 2.23 7.072 1.858 2.233-.186 2.978-.929 3.35-1.486.186-.372.372-.558.186-.93l-5.77-6.503s-.93-.93-.558-1.3c.373-.372.93.185 1.303.557 2.978 2.415 6.514 6.132 6.514 6.132s.372.557 1.675.743c1.116.186 3.163 0 4.652-1.115.373-.372.745-.743.93-1.115 1.49-1.858-.185-3.716-.185-3.716l-6.7-7.619s-.93-.929-.558-1.3c.372-.372.93.185 1.302.557a253.206 253.206 0 0 1 8.003 7.619c.558.371 3.164 2.044 6.513-.186 2.048-1.301 2.42-2.973 2.42-4.274-.186-1.672-1.489-2.787-1.489-2.787l-9.305-9.291s-.93-.744-.558-1.301c.372-.372.93.186 1.302.557 2.978 2.416 10.98 9.663 10.98 9.663.186 0 2.792 2.044 6.328-.186 1.303-.743 2.047-1.858 2.047-3.345-.372-2.044-2.047-3.53-2.047-3.53Z"/>
+                                        <path fill="#fff" d="M69.417 67.98c-1.489 0-2.978.744-3.164.744-.186 0 0-.558.186-.93.186-.371 2.047-5.946-2.605-7.99-3.536-1.486-5.583.186-6.328.93-.186.185-.372.185-.372 0 0-.93-.558-3.717-3.536-4.646-4.28-1.3-7.072 1.672-7.816 2.787-.373-2.415-2.42-4.46-5.025-4.46a5 5 0 0 0-5.025 5.018 5 5 0 0 0 5.025 5.017c1.303 0 2.605-.558 3.536-1.487v.186c-.186 1.3-.559 5.76 4.094 7.619 1.861.743 3.536.186 4.839-.744.372-.371.372-.185.372.186-.186 1.115 0 3.717 3.536 5.017 2.605 1.115 4.28 0 5.21-.929.373-.371.56-.371.56.372.185 3.345 2.977 5.946 6.327 5.946 3.536 0 6.327-2.787 6.327-6.318.186-3.344-2.605-6.132-6.141-6.318Z"/>
+                                        <path fill="#0A0080" d="M115.012 53.858c-7.072-6.132-23.635-20.44-27.915-23.785-2.606-1.858-4.28-2.973-5.77-3.344-.744-.186-1.674-.372-2.791-.372s-2.42.186-3.536.558c-2.792.929-5.77 3.158-8.56 5.388l-.187.186c-2.605 2.044-5.21 4.088-7.258 4.646-.93.185-1.861.371-2.605.371-2.234 0-4.28-.743-5.025-1.672-.186-.186 0-.372.186-.744l6.141-7.06c4.839-4.832 9.492-9.477 20.1-9.663h.558c6.7 0 13.213 2.973 13.958 3.345 6.327 2.973 12.655 4.46 19.168 4.46 6.7 0 13.586-1.673 21.03-5.018-.744-.743-1.675-1.3-2.605-2.044-6.328 2.787-12.469 4.088-18.425 4.088-5.955 0-12.096-1.486-17.866-4.274-.372-.186-7.63-3.53-15.26-3.53h-.558c-8.933.186-13.958 3.344-17.308 6.132-3.35 0-6.142.929-8.747 1.672-2.233.558-4.28 1.115-6.142 1.115h-2.233c-2.233 0-13.213-2.787-21.96-6.132-.93.557-1.675 1.3-2.605 2.044 9.119 3.716 20.285 6.69 23.82 6.875.931 0 2.048.186 2.979.186 2.233 0 4.652-.557 6.885-1.3 1.303-.372 2.792-.744 4.28-1.116l-1.302 1.301-6.328 6.876c-.558.557-1.674 1.858-.93 3.53.372.743.93 1.3 1.675 1.858 1.489.93 4.28 1.673 6.7 1.673.93 0 1.86 0 2.605-.372 2.606-.557 5.397-2.787 8.375-5.203 2.42-1.858 5.77-4.274 8.188-5.017.745-.186 1.675-.372 2.234-.372h.558c1.675.186 3.35.744 6.328 2.973 5.21 3.903 28.287 24.157 28.473 24.343 0 0 1.489 1.3 1.303 3.344 0 1.115-.744 2.23-1.861 2.974-.93.557-2.047.929-2.978.929-1.488 0-2.605-.744-2.605-.744s-8.002-7.247-10.98-9.662c-.372-.372-.93-.744-1.303-.744-.186 0-.372 0-.558.186-.372.557 0 1.3.744 1.858l9.305 9.291s1.117 1.115 1.303 2.416c0 1.486-.744 2.787-2.233 3.902-1.117.743-2.233 1.115-3.35 1.115-1.489 0-2.42-.557-2.605-.743l-1.303-1.301c-2.42-2.416-4.839-4.831-6.7-6.318-.372-.371-.93-.743-1.303-.743-.186 0-.372 0-.558.186-.186.186-.372.743.186 1.3a2.3 2.3 0 0 0 .372.558l6.7 7.618s1.303 1.673.186 3.16l-.186.37-.558.558c-1.117.93-2.606 1.115-3.35 1.115h-.93c-.745-.186-1.117-.371-1.303-.557-.373-.372-3.722-3.902-6.514-6.132-.372-.372-.744-.743-1.303-.743-.186 0-.372 0-.558.185-.558.558.372 1.487.558 1.859l5.77 6.317s0 .186-.186.372c-.187.372-.931.93-2.978 1.3h-.745c-2.233 0-4.466-1.114-5.583-1.672.559-1.115.745-2.415.745-3.716 0-4.645-3.908-8.548-8.561-8.548h-.372c.186-2.23-.186-6.317-4.28-7.99-1.117-.557-2.42-.743-3.537-.743-.93 0-1.86.186-2.605.557-.93-1.672-2.233-2.973-4.28-3.53-1.117-.372-2.048-.558-3.164-.558-1.675 0-3.35.558-4.839 1.487-1.303-1.672-3.536-2.787-5.583-2.787-1.861 0-3.722.743-5.211 2.044-1.861-1.301-8.933-5.947-27.916-10.22-.93-.186-2.977-.744-4.28-1.115-.186 1.115-.372 2.044-.558 3.159 0 0 3.536.929 4.28.929 19.355 4.274 25.868 8.733 26.985 9.662a7.446 7.446 0 0 0-.558 2.787c0 4.089 3.35 7.247 7.258 7.247.372 0 .93 0 1.303-.185.558 2.973 2.605 5.203 5.397 6.317.93.372 1.675.558 2.605.558.558 0 1.117 0 1.675-.186.558 1.3 1.861 3.159 4.466 4.274.931.372 1.861.557 2.792.557.745 0 1.489-.185 2.233-.371 1.303 3.159 4.467 5.389 8.003 5.389 2.233 0 4.466-.93 6.141-2.602 1.303.743 4.28 2.23 7.258 2.23h1.117c2.978-.372 4.28-1.487 4.839-2.416.186-.186.186-.371.372-.557.744.186 1.489.371 2.233.371 1.675 0 3.164-.557 4.653-1.672 1.489-1.115 2.605-2.601 2.791-4.088.559.186 1.117.186 1.489.186 1.675 0 3.35-.558 4.839-1.487 2.977-2.044 3.536-4.46 3.536-6.132.558.186 1.116.186 1.675.186 1.489 0 2.977-.557 4.466-1.3a6.49 6.49 0 0 0 3.164-5.018c.186-1.486-.186-2.787-.931-4.088 5.025-2.23 16.378-6.318 29.963-9.29 0-1.116-.186-2.045-.372-3.16-16.191 2.974-28.288 8.176-31.452 9.477ZM69.417 80.244c-3.164 0-5.77-2.415-5.956-5.574 0-.186 0-.93-.558-.93-.186 0-.372 1.87-.744.372-.745.558-1.675 1.301-2.792 1.301-.558 0-1.302-.186-1.86-.371-3.35-1.301-3.35-3.717-3.165-4.646 0-.186 0-.557-.186-.743l-.186-.186h-.186c-.186 0-.372 0-.558.186-1.117.743-2.047 1.115-2.978 1.115-.558 0-1.116-.186-1.675-.372-4.466-1.672-4.094-5.946-3.908-7.061 0-.186 0-.372-.186-.557l-.372-.186-.373.371c-.93.744-2.047 1.301-3.163 1.301-2.606 0-4.653-2.044-4.653-4.645 0-2.602 2.047-4.646 4.653-4.646 2.233 0 4.28 1.672 4.466 3.902l.186 1.301.745-1.115c0-.186 1.86-2.973 5.397-2.973.558 0 1.302.186 2.047.372 2.791.743 3.164 3.344 3.164 4.273 0 .558.558.558.558.558.186 0 .372-.186.558-.186.559-.557 1.675-1.486 3.35-1.486.745 0 1.675.185 2.606.557 4.28 1.858 2.419 7.247 2.419 7.433-.372.929-.372 1.3 0 1.486h.372c.186 0 .372 0 .745-.186.558-.185 1.489-.557 2.233-.557 3.164 0 5.955 2.602 5.955 5.946 0 3.345-2.605 5.946-5.955 5.946Z"/>
+                                    </svg>
+                                </div>
+                                <span class="method-badge mp-badge">Mercado Pago</span>
+                            </div>
+                            <h3 class="method-title">Mercado Pago</h3>
+                            <p class="method-description">Completa tu recarga de saldo usando dinero en cuenta, tarjetas o efectivo a través de la interfaz de Mercado Pago.</p>
+                        </div>
+                        <div class="method-footer">
+                                                        <button class="btn-select-method" onclick="abrirModalMercadoPago(16)">
+                                <span>Pagar con Mercado Pago</span>
+                                <i class="bi bi-arrow-right-short"></i>
+                            </button>
+                                                    </div>
+                    </div>
+                </div>
+                
+
+                <!-- 7. Skrill -->
+                
+
+                <!-- 8. Manuales -->
+                
+            </div>
+        </div>
+
+    </div>
+
+    <!-- PayerLatam Branded Footer -->
+    <footer class="text-center mt-5">
+        <div class="container">
+            <p class="mb-1">Powered by <a href="https://payerlatam.com" target="_blank" class="fw-bold text-decoration-none" style="color: var(--accent);">PayerLatam</a> | Pagos procesados de forma segura</p>
+            <p class="mb-0 text-muted" style="font-size: 0.75rem;">&copy; 2026 LatamGSM. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <!-- Floating Help Icon -->
+        <button class="floating-info-btn" onclick="abrirModalInformacion()" title="Información y Consejos">
+        <i class="bi bi-info-circle-fill"></i>
+    </button>
+    
+    <!-- -------------------------------------------------------------------------
+         MODAL GLOBAL DE INFORMACIÓN
+         ------------------------------------------------------------------------- -->
+    <div class="modal fade" id="infoGlobalModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="infoGlobalModalLabel"><i class="bi bi-info-circle me-2" style="color: var(--accent);"></i>Información Importante</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-start">
+                    <div class="p-3 bg-teal-light rounded border border-teal" style="color: var(--text-primary);">
+                        <!-- Nueva Versión Corporativa del Registro de Saldo - Título en negro -->
+<div class="container py-5">
+  <div class="row justify-content-center mb-5">
+    <div class="col-md-10 col-lg-8 text-center">
+      <h2 class="fw-bold text-dark">Centro de Recargas 24/7</h2>
+      <p class="text-muted">Siempre disponible - Plataforma segura y 100% en línea - Elige Tu Método de Pago</p>
+    </div>
+  </div>
+
+  <!-- Sección de Métodos de Pago (en una sola fila) -->
+  <div class="row justify-content-center g-4">
+    <div class="col-md-6">
+      <div class="card border-0 shadow-lg p-3 bg-white rounded-4 transition-hover h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-start">
+            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width:40px; height:40px;">
+              <i class="bi bi-currency-bitcoin"></i>
+            </div>
+            <div>
+              <h5 class="fw-bold mb-1">Binance Pay</h5>
+              <p class="mb-0 text-muted small">Paga desde tu billetera Binance y registra el comprobante en minutos.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card border-0 shadow-lg p-3 bg-white rounded-4 transition-hover h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-start">
+            <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width:40px; height:40px;">
+              <i class="bi bi-bank"></i>
+            </div>
+            <div>
+              <h5 class="fw-bold mb-1">Transferencia Bancaria MX</h5>
+              <p class="mb-0 text-muted small">Realiza una transferencia desde cualquier banco distinto al nuestro. Necesitas Clave de Rastreo.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Información Importante -->
+  <div class="row justify-content-center mt-5">
+    <div class="col-md-10 col-lg-8">
+      <div class="alert alert-warning border-0 shadow-sm rounded-4 px-4 py-3">
+        <h6 class="fw-bold">Información Importante</h6>
+        <ul class="mb-0 ps-3 small">
+          <li>Algunas transferencias en MX pueden demorar de <strong>5-60 minutos.</strong> Si tienes respuesta de "No Existe Pago" solo espera y reintenta.</li>
+          <li>Si tu banco es <strong>MercadoPago</strong>, agrega <strong>CPO</strong> antes de los dígitos de Clave: <code>CPO9999999</code>.</li>
+          <li>Si tu banco es <strong>Azteca</strong>, la última letra de la Clave es una i mayúscula&nbsp;<strong>(I)</strong> no es “1”.&nbsp;</li>
+          <li>Si al subir el comprobante aparece “No existe pago”, verifica que todos los dígitos se hayan detectado correctamente.</li><li>Selecciona "Pagar" en el método de pago seleccionado y registra tus datos.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contacto y Monto -->
+  <div class="text-center mt-4 p-4 border-top">
+    <p class="text-dark fw-bold fs-6">Monto mínimo: 100 MXN / 5 USD</p>
+    <div class="d-flex justify-content-center gap-3">
+      <a href="https://api.whatsapp.com/send?phone=19295666782" target="_blank" class="btn btn-outline-success">
+        <i class="bi bi-whatsapp me-2"></i>WhatsApp
+      </a>
+      <a href="https://t.me/LatamGSMBot" target="_blank" class="btn btn-outline-primary">
+        <i class="bi bi-telegram me-2"></i>Telegram
+      </a>
+    <a href="https://www.youtube.com/watch?v=9_qsTAEEtEE" target="_blank" class="btn btn-outline-danger">
+      <i class="bi bi-youtube me-2"></i>Tutorial Binance Pay
+    </a>
+    <a href="https://youtu.be/407zqlo1L6I" target="_blank" class="btn btn-outline-danger">
+      <i class="bi bi-youtube me-2"></i>Tutorial Transfer MX
+    </a>
+  </div>
+</div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- -------------------------------------------------------------------------
+         SUB-VISTAS / MODALES MODULARES
+         ------------------------------------------------------------------------- -->
+            <!-- Modal Transferencias MX (SPEI) -->
+<div class="modal fade" id="transferenciasModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="transferenciasModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="transferenciasModalLabel">
+                    <i class="bi bi-bank me-2" style="color: var(--accent);"></i>Transferencias SPEI
+                </h5>
+                <div class="ms-auto me-3 d-flex align-items-center gap-2">
+                    <span id="transf-step-indicator" class="badge bg-teal-light text-teal border border-teal">Paso 1 de 3</span>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="resetearModalTransferencias()"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Paso 1: Selección de Banco Emisor -->
+                <div id="transf-step-1">
+                    <div class="text-center mb-4">
+                        <i class="bi bi-search text-teal display-6 mb-2"></i>
+                        <h4 class="fw-bold">¿Desde qué banco transfieres?</h4>
+                        <p class="text-secondary fs-7">Busca el banco emisor desde donde vas a realizar tu transferencia.</p>
+                    </div>
+
+                    <div class="mx-auto position-relative" style="max-width: 500px; z-index: 1050;">
+                        <div class="spei-search-wrapper" style="background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 10px; height: 55px; position: relative;">
+                            <input type="text" id="transf-ghost-input" class="spei-input-base" disabled style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; padding: 15px; border: none; background: transparent; font-size: 1.1rem; text-transform: uppercase; opacity: 0.3; pointer-events: none; color: var(--text-secondary);">
+                            <input type="text" id="transf-user-input" class="spei-input-base" placeholder="ESCRIBE TU BANCO AQUÍ (Ej. BBVA, Azteca, Nu)..." autocomplete="off" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; padding: 15px; border: none; background: transparent; font-size: 1.1rem; text-transform: uppercase; color: var(--text-primary);">
+                        </div>
+                        <ul id="transf-suggestions" class="suggestions-list shadow" style="display: none; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; list-style: none; padding: 0; margin-top: 5px; max-height: 200px; overflow-y: auto; position: absolute; width: 100%; z-index: 1060;"></ul>
+                    </div>
+
+                    <!-- Mensaje informativo general -->
+                    <div class="alert bg-teal-light border-teal mt-4 p-3 fs-7 mx-auto" style="max-width: 500px; border-radius: 10px; color: var(--text-primary);">
+                        <i class="bi bi-info-circle-fill me-2 text-teal"></i>
+                        Recuerda que debes realizar tu transferencia utilizando la CLABE o tarjeta que te proporcionará el sistema en el siguiente paso.
+                    </div>
+                </div>
+
+                <!-- Paso 2: Selección de Cuenta Destino -->
+                <div id="transf-step-2" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom border-secondary-subtle">
+                        <div>
+                            <span class="text-secondary fs-7">Banco Emisor:</span>
+                            <span class="fw-bold text-teal text-uppercase ms-1" id="lbl-transf-banco-emisor">...</span>
+                        </div>
+                        <button class="btn btn-sm btn-outline-light py-1 px-3" onclick="regresarAPaso1()">
+                            <i class="bi bi-arrow-left me-1"></i>Cambiar Banco
+                        </button>
+                    </div>
+
+                    <h5 class="fw-bold text-center mb-3">Elige la cuenta destino para tu transferencia</h5>
+
+                    <div id="transf-no-cards-warning" class="alert alert-danger text-center my-3" style="display: none;">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i> No tenemos cuentas disponibles para recibir transferencias desde este banco emisor. Por favor selecciona otro método o cambia de banco.
+                    </div>
+
+                    <div class="p-3 rounded-4 mb-2" style="background: var(--bg-main); border: 1px solid var(--border-color);">
+                        <div class="row g-3" id="transf-cards-container">
+                                                        <div class="col-md-6 transf-card-item" data-banco-codigo="40021">
+                                <div class="card h-100 premium-select-card">
+                                    <div class="card-body d-flex flex-column justify-content-between">
+                                        <div class="d-flex align-items-center gap-3 mb-3">
+                                            <div class="rounded p-1 d-flex align-items-center justify-content-center" style="width: 95px; height: 60px; border: 1px solid var(--border-color); background: #ffffff; flex-shrink: 0; overflow: hidden;">
+                                                <img src="https://payerlatam.com//storage/img/BLOM1acyTw2zzDYLKCNbLbwWkNSiGqWuD2sMmdQk.png" alt="Jesus Becerril" class="img-fluid object-fit-contain" style="max-height: 52px; max-width: 100%;">
+                                            </div>
+                                            <div>
+                                                <h6 class="fw-bold mb-0" style="color: var(--text-primary);">Jesus Becerril</h6>
+                                                <p class="text-teal fs-7 mb-0">021260064377971724</p>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="d-flex justify-content-between fs-8 text-secondary mb-2">
+                                                <span>Mínimo: $50</span>
+                                                <span>Máximo: $10000</span>
+                                            </div>
+                                            <button class="btn btn-select-method w-100" onclick="seleccionarTarjetaDestino(15, 'Jesus Becerril', '021260064377971724', 50, 10000, '40021')">
+                                                <span>Seleccionar esta cuenta</span>
+                                                <i class="bi bi-chevron-right"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                                                    </div>
+                    </div>
+                </div>
+
+                <!-- Paso 3: Detalles y Verificación del Pago -->
+                <div id="transf-step-3" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom border-secondary-subtle">
+                        <div>
+                            <span class="text-secondary fs-7">Enviando desde:</span>
+                            <span class="fw-bold text-teal text-uppercase ms-1" id="lbl-transf-final-emisor">...</span>
+                        </div>
+                        <button class="btn btn-sm btn-outline-light py-1 px-3" onclick="regresarAPaso2()">
+                            <i class="bi bi-arrow-left me-1"></i>Regresar
+                        </button>
+                    </div>
+
+                    <!-- Tarjeta Informativa de la Cuenta Destino Elegida -->
+                    <div class="card p-3 mb-3" style="background: var(--bg-input); border: 1px solid var(--accent-glow); border-radius: 12px;">
+                        <h6 class="fw-bold text-teal mb-2"><i class="bi bi-wallet2 me-2"></i>Cuenta Destino de Depósito</h6>
+                        <div class="row g-2 fs-7">
+                            <div class="col-4 text-secondary">Banco Destino:</div>
+                            <div class="col-8 fw-semibold" id="lbl-dest-banco" style="color: var(--text-primary);">...</div>
+
+                            <div class="col-4 text-secondary">Nombre Titular:</div>
+                            <div class="col-8 fw-semibold" id="lbl-dest-titular" style="color: var(--text-primary);">...</div>
+                            
+                            <div class="col-4 text-secondary">CLABE / Tarjeta:</div>
+                            <div class="col-8 fw-semibold d-flex align-items-center gap-2" style="color: var(--text-primary);">
+                                <span id="lbl-dest-clabe" class="text-teal font-monospace">...</span>
+                                <button class="btn btn-link p-0 text-teal fs-8" onclick="copiarClabeDestino()" title="Copiar CLABE">
+                                    <i class="bi bi-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Avisos Dinámicos Contextuales -->
+                    <div id="transf-context-warning" class="alert alert-warning py-2 px-3 mb-3 fs-7" style="display: none; border-radius: 10px;">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <span id="transf-warning-text">...</span>
+                    </div>
+
+                    <!-- Formulario de Validación de Pago -->
+                    <form id="transf-verification-form">
+                        <div class="row g-3">
+                            <input type="hidden" id="transf-tarjeta-id">
+                            <input type="hidden" id="transf-emisor-codigo">
+
+                            <!-- Campo Correo -->
+                            <div class="col-md-6">
+                                <label class="form-label">Tu Correo Electrónico</label>
+                                <input type="email" class="form-control" id="transf-correo" placeholder="tu@correo.com" value="" required>
+                            </div>
+
+                            <!-- Campo Monto -->
+                            <div class="col-md-6">
+                                <label class="form-label">Monto Transferido (MXN)</label>
+                                <div class="amount-input-group">
+                                    <span>$</span>
+                                    <input type="number" class="form-control" id="transf-monto" placeholder="0.00" step="0.01" required>
+                                </div>
+                                <div class="form-text text-secondary fs-8 mt-1 text-center">
+                                    Límites permitidos: $<span id="lbl-transf-min">0</span> - $<span id="lbl-transf-max">0</span> MXN
+                                </div>
+                            </div>
+
+                            <!-- Campo Clave de Rastreo (Con pestañas) -->
+                            <div class="col-12 mt-4">
+                                <label class="form-label d-block fw-bold mb-2">Clave de Rastreo</label>
+                                
+                                
+                                <div class="tab-content" id="rastreoTabContent">
+                                    
+                                    <!-- Manual pane -->
+                                    <div class="tab-pane fade show active" id="manual-pane" role="tabpanel" aria-labelledby="manual-tab">
+                                        <div class="mb-2">
+                                            <label for="transf-criterio-manual" class="form-label fs-8 text-secondary">Escribe manualmente los dígitos de tu clave de rastreo (SPEI)</label>
+                                            <input type="text" class="form-control" id="transf-criterio-manual" placeholder="Ej. 127623910...">
+                                            <div class="form-text text-secondary fs-8">Ingresa los 20 o 30 dígitos de tu clave de rastreo (SPEI).</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Campo de validación real -->
+                                <input type="hidden" id="transf-criterio" required>
+                                <input type="hidden" id="transf-rastreo-mode" value="manual">
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="button" class="btn btn-primary btn-lg" onclick="verificarPagoTransferencia()">
+                                <i class="bi bi-shield-check me-2"></i>Comprobar Pago
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Estilos específicos para el Buscador de Bancos -->
+<style>
+    .spei-input-base {
+        border: none !important;
+        outline: none !important;
+    }
+    .suggestions-list li {
+        padding: 10px 15px;
+        cursor: pointer;
+        border-bottom: 1px solid var(--border-color);
+        font-size: 0.9rem;
+    }
+    .suggestions-list li:hover, .suggestions-list li.autocomplete-active {
+        background: var(--bg-input) !important;
+        color: var(--accent) !important;
+    }
+    .suggestions-list .highlight {
+        color: var(--accent) !important;
+        font-weight: 700;
+    }
+    .transf-card-item {
+        transition: transform 0.2s;
+    }
+    .transf-card-item:hover {
+        transform: scale(1.02);
+    }
+
+    /* Pestañas de Clave de Rastreo con Brillo Premium */
+    .spei-rastreo-tabs .nav-link {
+        background: transparent !important;
+        border: 1px solid transparent !important;
+        color: var(--text-secondary) !important;
+        border-radius: 8px 8px 0 0 !important;
+        transition: all 0.3s ease !important;
+        position: relative;
+    }
+    .spei-rastreo-tabs .nav-link.active {
+        color: var(--text-primary) !important;
+        border: 1px solid rgba(66, 184, 131, 0.4) !important;
+        border-bottom: 2px solid transparent !important;
+        box-shadow: 0 0 15px 3px rgba(52, 152, 219, 0.25) !important;
+        background: var(--bg-card) !important;
+        z-index: 2;
+    }
+    .spei-rastreo-tabs .nav-link.active::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background: linear-gradient(90deg, var(--accent) 0%, var(--secondary) 100%);
+    }
+    .spei-rastreo-tabs .nav-link:hover:not(.active) {
+        color: var(--accent) !important;
+        background: rgba(52, 152, 219, 0.05) !important;
+    }
+</style>
+
+<script>
+    // LISTA DE BANCOS EMISORES
+    const transfBancosData = [
+        {code: "40133", name: "ACTINVER"},
+        {code: "40062", name: "AFIRME"},
+        {code: "90721", name: "ALBO"},
+        {code: "90660", name: "ALTOR"},
+        {code: "90706", name: "ARCUS FI"},
+        {code: "90659", name: "ASP INTEGRA OPC"},
+        {code: "40127", name: "AZTECA"},
+        {code: "37166", name: "BABIEN"},
+        {code: "40030", name: "BAJIO"},
+        {code: "40002", name: "BANAMEX"},
+        {code: "40154", name: "BANCO COVALTO"},
+        {code: "37006", name: "BANCOMEXT"},
+        {code: "40137", name: "BANCOPPEL"},
+        {code: "40160", name: "BANCO S3"},
+        {code: "40152", name: "BANCREA"},
+        {code: "37019", name: "BANJERCITO"},
+        {code: "40147", name: "BANKAOOL"},
+        {code: "40106", name: "BANK OF AMERICA"},
+        {code: "40159", name: "BANK OF CHINA"},
+        {code: "37009", name: "BANOBRAS"},
+        {code: "40072", name: "BANORTE"},
+        {code: "40058", name: "BANREGIO"},
+        {code: "40060", name: "BANSI"},
+        {code: "2001", name: "BANXICO"},
+        {code: "40129", name: "BARCLAYS"},
+        {code: "40145", name: "BBASE"},
+        {code: "40012", name: "BBVA MEXICO"},
+        {code: "40112", name: "BMONEX"},
+        {code: "90677", name: "CAJA POP MEXICA"},
+        {code: "90683", name: "CAJA TELEFONIST"},
+        {code: "90715", name: "CASHI CUENTA"},
+        {code: "40124", name: "CITI MEXICO"},
+        {code: "90730", name: "CLIP"},
+        {code: "90901", name: "CLS"},
+        {code: "90903", name: "CODI VALIDA"},
+        {code: "40130", name: "COMPARTAMOS"},
+        {code: "40140", name: "CONSUBANCO"},
+        {code: "90725", name: "COOPDESARROLLO"},
+        {code: "90652", name: "CREDICAPITAL"},
+        {code: "90688", name: "CREDICLUB"},
+        {code: "90680", name: "CRISTOBAL COLON"},
+        {code: "90723", name: "CUENCA"},
+        {code: "90729", name: "DEP Y PAG DIG"},
+        {code: "40151", name: "DONDE"},
+        {code: "90616", name: "FINAMEX"},
+        {code: "90634", name: "FINCOMUN"},
+        {code: "90734", name: "FINCO PAY"},
+        {code: "90738", name: "FINTOC"},
+        {code: "90699", name: "FONDEADORA"},
+        {code: "90685", name: "FONDO (FIRA)"},
+        {code: "90601", name: "GBM"},
+        {code: "40167", name: "HEY BANCO"},
+        {code: "37168", name: "HIPOTECARIA FED"},
+        {code: "40021", name: "HSBC"},
+        {code: "40155", name: "ICBC"},
+        {code: "40036", name: "INBURSA"},
+        {code: "90902", name: "INDEVAL"},
+        {code: "40150", name: "INMOBILIARIO"},
+        {code: "40136", name: "INTERCAM BANCO"},
+        {code: "40059", name: "INVEX"},
+        {code: "40110", name: "JP MORGAN"},
+        {code: "40128", name: "KAPITAL"},
+        {code: "90661", name: "KLAR"},
+        {code: "90653", name: "KUSPIT"},
+        {code: "90670", name: "LIBERTAD"},
+        {code: "90602", name: "MASARI"},
+        {code: "90722", name: "MERCADO PAGO W"},
+        {code: "90720", name: "MEXPAGO"},
+        {code: "40042", name: "MIFEL"},
+        {code: "40158", name: "MIZUHO BANK"},
+        {code: "90600", name: "MONEXCB"},
+        {code: "40108", name: "MUFG"},
+        {code: "40132", name: "MULTIVA BANCO"},
+        {code: "37135", name: "NAFIN"},
+        {code: "40638", name: "NUBANK"},
+        {code: "90710", name: "NVIO"},
+        {code: "40148", name: "PAGATODO"},
+        {code: "90732", name: "PEIBO"},
+        {code: "90714", name: "PPBALANCEMX"},
+        {code: "90620", name: "PROFUTURO"},
+        {code: "40170", name: "REVOLUT BANK"},
+        {code: "40156", name: "SABADELL"},
+        {code: "40014", name: "SANTANDER"},
+        {code: "40044", name: "SCOTIABANK"},
+        {code: "40157", name: "SHINHAN"},
+        {code: "90728", name: "SPIN BY OXXO"},
+        {code: "90646", name: "STP"},
+        {code: "90703", name: "TESORED"},
+        {code: "90684", name: "TRANSFER"},
+        {code: "90727", name: "TRANSFER DIRECT"},
+        {code: "90631", name: "TRF"},
+        {code: "40138", name: "UALA"},
+        {code: "90656", name: "UNAGRA"},
+        {code: "90617", name: "VALMEX"},
+        {code: "90605", name: "VALUE"},
+        {code: "40113", name: "VE POR MAS"},
+        {code: "40141", name: "VOLKSWAGEN"}
+    ];
+
+    let transfCurrentFocus = -1;
+    let selectedEmisorCode = "";
+    let selectedEmisorName = "";
+    let selectedTarjetaId = null;
+    let selectedTarjetaName = "";
+    let selectedTarjetaCLABE = "";
+    let selectedTarjetaMin = 0;
+    let selectedTarjetaMax = 999999;
+    let lastDetectedKey = "";
+    const ocrRastreoActivo = false;
+    let rastreoMode = ocrRastreoActivo ? "auto" : "manual";
+
+    function abrirModalTransferencias() {
+        $('#transferenciasModal').modal('show');
+        resetearModalTransferencias();
+    }
+
+    function resetearModalTransferencias() {
+        $('#transf-step-1').show();
+        $('#transf-step-2').hide();
+        $('#transf-step-3').hide();
+        $('#transf-step-indicator').text('Paso 1 de 3');
+        $('#transf-user-input').val('');
+        $('#transf-ghost-input').val('');
+        $('#transf-suggestions').hide();
+        $('#transf-criterio').val('');
+        $('#transf-criterio-manual').val('');
+        $('#transf-monto').val('');
+        $('#transf-ocr-file').val('');
+        $('#transf-ocr-status').hide();
+        $('#ocr-detected-key-box').addClass('d-none');
+        $('#ocr-verify-warning').addClass('d-none');
+        $('#lbl-ocr-detected-key').text('...');
+        $('#lbl-dest-banco').text('...');
+        $('#lbl-dest-titular').text('...');
+        $('#lbl-dest-clabe').text('...');
+        
+        selectedEmisorCode = "";
+        selectedEmisorName = "";
+        selectedTarjetaId = null;
+        selectedTarjetaName = "";
+        selectedTarjetaCLABE = "";
+        lastDetectedKey = "";
+        
+        if (ocrRastreoActivo) {
+            rastreoMode = "auto";
+            $('#auto-tab').tab('show');
+            $('#transf-rastreo-mode').val('auto');
+        } else {
+            rastreoMode = "manual";
+            $('#transf-rastreo-mode').val('manual');
+        }
+    }
+
+    function setRastreoMode(mode) {
+        rastreoMode = mode;
+        $('#transf-rastreo-mode').val(mode);
+        if (mode === 'auto') {
+            $('#transf-criterio').val(lastDetectedKey);
+        } else {
+            $('#transf-criterio').val($('#transf-criterio-manual').val());
+        }
+    }
+
+    // Lógica del buscador predictivo
+    $(document).ready(function() {
+        const userInput = document.getElementById('transf-user-input');
+        const ghostInput = document.getElementById('transf-ghost-input');
+        const suggestionsList = document.getElementById('transf-suggestions');
+
+        if (userInput) {
+            userInput.addEventListener('input', function() {
+                const rawVal = this.value;
+                const searchVal = rawVal.toUpperCase();
+                ghostInput.value = "";
+                transfCurrentFocus = -1;
+
+                if (!searchVal) {
+                    suggestionsList.innerHTML = '';
+                    $(suggestionsList).hide();
+                    return;
+                }
+
+                // Búsqueda por coincidencia parcial (substring/includes)
+                const matches = transfBancosData.filter(b => b.name.includes(searchVal));
+                if (matches.length > 0) {
+                    const bestMatch = matches[0].name;
+                    // Autocompletado fantasma sólo si la primera opción empieza con lo digitado
+                    if (bestMatch.startsWith(searchVal)) {
+                        const suffix = bestMatch.substring(searchVal.length);
+                        ghostInput.value = rawVal + suffix;
+                    }
+                }
+
+                renderBancosSuggestions(matches, searchVal);
+            });
+
+            userInput.addEventListener('focus', function() {
+                if (this.value === "") {
+                    transfCurrentFocus = -1;
+                    renderBancosSuggestions(transfBancosData, "");
+                }
+            });
+
+            userInput.addEventListener('keydown', function(e) {
+                let x = suggestionsList.getElementsByTagName("li");
+                if (e.key === "ArrowDown") {
+                    transfCurrentFocus++;
+                    addActiveTransf(x);
+                } else if (e.key === "ArrowUp") {
+                    transfCurrentFocus--;
+                    addActiveTransf(x);
+                } else if (e.key === "Enter" || e.key === "Tab") {
+                    if ($(suggestionsList).is(':visible') && x && x.length > 0) {
+                        e.preventDefault();
+                        // Si no se usaron las flechas (focus = -1), seleccionar el primero
+                        const indexToClick = transfCurrentFocus > -1 ? transfCurrentFocus : 0;
+                        x[indexToClick].click();
+                    } else if (ghostInput.value) {
+                        e.preventDefault();
+                        const ghostValUpper = ghostInput.value.toUpperCase();
+                        const banco = transfBancosData.find(b => b.name === ghostValUpper);
+                        if (banco) seleccionarBancoEmisor(banco);
+                    }
+                } else if (e.key === "Escape") {
+                    $(suggestionsList).hide();
+                }
+            });
+
+            document.addEventListener('click', function(e) {
+                if (e.target !== userInput && !e.target.closest('#transf-suggestions')) {
+                    $(suggestionsList).hide();
+                }
+            });
+        }
+
+        // Configuración de OCR con previsualización / Tesseract
+        const fileInput = document.getElementById('transf-ocr-file');
+        if (fileInput) {
+            fileInput.addEventListener('change', function() {
+                if (!this.files || !this.files.length) return;
+                
+                $('#transf-ocr-status').text('Analizando comprobante con OCR...').show();
+                
+                const file = this.files[0];
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = function() {
+                    // Instanciamos el worker de Tesseract.js (cargado de unpkg en la cabecera)
+                    const worker = new Tesseract.TesseractWorker();
+                    worker.recognize(file, 'spa')
+                        .progress(p => {
+                            let pct = Math.round(p.progress * 100);
+                            $('#transf-ocr-status').text(`Escaneando comprobante: ${pct}%...`);
+                        })
+                        .then(result => {
+                            let text = result.text;
+                            let detectedKey = parseClaveRastreo(text);
+                            $('#transf-ocr-status').text('Escaneo finalizado.');
+                            if (detectedKey) {
+                                lastDetectedKey = detectedKey;
+                                if (rastreoMode === 'auto') {
+                                    $('#transf-criterio').val(detectedKey);
+                                }
+                                $('#lbl-ocr-detected-key').text(detectedKey);
+                                $('#ocr-detected-key-box').removeClass('d-none');
+                                $('#ocr-verify-warning').removeClass('d-none');
+                                $('#transf-criterio-manual').val(detectedKey);
+                                SwalDark.fire({
+                                    icon: 'success',
+                                    title: 'Clave Detectada',
+                                    text: `Hemos detectado la clave: ${detectedKey}`,
+                                    timer: 3000
+                                });
+                            } else {
+                                lastDetectedKey = "";
+                                if (rastreoMode === 'auto') {
+                                    $('#transf-criterio').val('');
+                                }
+                                $('#ocr-detected-key-box').addClass('d-none');
+                                $('#ocr-verify-warning').addClass('d-none');
+                                $('#transf-criterio-manual').val('');
+                                SwalDark.fire({
+                                    icon: 'warning',
+                                    title: 'No detectado',
+                                    text: 'No logramos ubicar la clave de rastreo automáticamente. Por favor ingrésala a mano en la pestaña Manual.',
+                                });
+                            }
+                        })
+                        .catch(err => {
+                            console.error(err);
+                            $('#transf-ocr-status').text('Error al escanear archivo.');
+                        });
+                };
+            });
+        }
+
+        // Sincronizar el input manual
+        $('#transf-criterio-manual').on('input', function() {
+            if (rastreoMode === 'manual') {
+                $('#transf-criterio').val($(this).val());
+            }
+        });
+    });
+
+    function parseClaveRastreo(text) {
+        let cleanText = text.split("\n").join(" ");
+        cleanText = cleanText.replace("banxico.org.mx", "");
+        let words = cleanText.split(" ");
+        let longestWord = "";
+        words.forEach(function(word) {
+            let cleanWord = word.trim().replace(/[^A-Za-z0-9]/g, "");
+            if (cleanWord.length > longestWord.length) {
+                longestWord = cleanWord;
+            }
+        });
+        // Generalmente las claves de rastreo son largas (mayores a 8-10 caracteres)
+        return longestWord.length >= 8 ? longestWord : null;
+    }
+
+    function renderBancosSuggestions(matches, searchVal) {
+        const suggestionsList = document.getElementById('transf-suggestions');
+        suggestionsList.innerHTML = '';
+        if (matches.length === 0) {
+            $(suggestionsList).hide();
+            return;
+        }
+
+        matches.forEach(banco => {
+            const li = document.createElement('li');
+            if (searchVal === "") {
+                li.textContent = banco.name;
+            } else {
+                const index = banco.name.indexOf(searchVal);
+                if (index !== -1) {
+                    const before = banco.name.substring(0, index);
+                    const matchText = banco.name.substring(index, index + searchVal.length);
+                    const after = banco.name.substring(index + searchVal.length);
+                    li.innerHTML = `${before}<span class="highlight">${matchText}</span>${after}`;
+                } else {
+                    li.textContent = banco.name;
+                }
+            }
+
+            li.onclick = (e) => {
+                e.stopPropagation();
+                seleccionarBancoEmisor(banco);
+            };
+
+            suggestionsList.appendChild(li);
+        });
+
+        $(suggestionsList).show();
+    }
+
+    function addActiveTransf(x) {
+        if (!x) return false;
+        removeActiveTransf(x);
+        if (transfCurrentFocus >= x.length) transfCurrentFocus = 0;
+        if (transfCurrentFocus < 0) transfCurrentFocus = (x.length - 1);
+        x[transfCurrentFocus].classList.add("autocomplete-active");
+        x[transfCurrentFocus].scrollIntoView({ block: "nearest" });
+    }
+
+    function removeActiveTransf(x) {
+        for (let i = 0; i < x.length; i++) {
+            x[i].classList.remove("autocomplete-active");
+        }
+    }
+
+    // Avance de Paso 1 a Paso 2
+    function seleccionarBancoEmisor(banco) {
+        selectedEmisorCode = banco.code;
+        selectedEmisorName = banco.name;
+
+        $('#lbl-transf-banco-emisor').text(banco.name);
+        
+        // Filtrar tarjetas disponibles: Ocultar la que pertenezca al MISMO banco seleccionado para evitar que no genere clave
+        const cards = document.querySelectorAll('.transf-card-item');
+        let visibles = 0;
+        const codigoUsuario = String(banco.code).trim();
+
+        cards.forEach(card => {
+            let codigoTarjeta = card.getAttribute('data-banco-codigo');
+            codigoTarjeta = String(codigoTarjeta).trim();
+
+            if (codigoTarjeta === codigoUsuario) {
+                card.style.display = 'none';
+            } else {
+                card.style.display = 'block';
+                visibles++;
+            }
+        });
+
+        if (visibles === 0) {
+            $('#transf-no-cards-warning').show();
+            $('#transf-cards-container').hide();
+        } else {
+            $('#transf-no-cards-warning').hide();
+            $('#transf-cards-container').show();
+        }
+
+        $('#transf-step-1').fadeOut(150, function() {
+            $('#transf-step-2').fadeIn(150);
+            $('#transf-step-indicator').text('Paso 2 de 3');
+        });
+    }
+
+    function regresarAPaso1() {
+        $('#transf-step-2').fadeOut(150, function() {
+            $('#transf-step-1').fadeIn(150);
+            $('#transf-step-indicator').text('Paso 1 de 3');
+            setTimeout(() => document.getElementById('transf-user-input').focus(), 100);
+        });
+    }
+
+    // Avance de Paso 2 a Paso 3
+    function seleccionarTarjetaDestino(id, name, clabe, minimo, maximo, noBanco) {
+        selectedTarjetaId = id;
+        selectedTarjetaName = name;
+        selectedTarjetaCLABE = clabe;
+        selectedTarjetaMin = parseFloat(minimo);
+        selectedTarjetaMax = parseFloat(maximo);
+
+        $('#lbl-transf-final-emisor').text(selectedEmisorName);
+
+        // Buscar nombre del banco destino a partir de noBanco
+        const bancoDestinoObj = transfBancosData.find(b => b.code === String(noBanco));
+        const bancoDestinoName = bancoDestinoObj ? bancoDestinoObj.name : 'Desconocido';
+
+        $('#lbl-dest-banco').text(bancoDestinoName);
+        $('#lbl-dest-titular').text(name);
+        $('#lbl-dest-clabe').text(clabe);
+        
+        $('#transf-tarjeta-id').val(id);
+        $('#transf-emisor-codigo').val(selectedEmisorCode);
+
+        // Mostrar límites dinámicamente en el formulario
+        $('#lbl-transf-min').text(minimo);
+        $('#lbl-transf-max').text(maximo);
+        $('#transf-monto').attr('placeholder', `Rango: $${minimo} - $${maximo} MXN`);
+
+        // Validaciones dinámicas basadas en Banco Emisor (ej. warnings de CPO en MercadoPago o Azteca)
+        const warningContainer = document.getElementById('transf-context-warning');
+        const warningText = document.getElementById('transf-warning-text');
+        
+        if (selectedEmisorName.includes('MERCADO PAGO') || selectedEmisorName.includes('MEXPAGO')) {
+            warningText.innerHTML = '<strong>IMPORTANTE MERCADOPAGO:</strong> Recuerda poner el prefijo <strong>CPO</strong> antes de la referencia en el campo Concepto/Concepto de Pago.';
+            $(warningContainer).show();
+        } else if (selectedEmisorName.includes('AZTECA')) {
+            warningText.innerHTML = '<strong>IMPORTANTE BANCO AZTECA:</strong> Recuerda que al final de la Clave de Rastreo se utiliza la letra <strong>I mayúscula (I)</strong>, no el número 1.';
+            $(warningContainer).show();
+        } else {
+            $(warningContainer).hide();
+        }
+
+        // Si es Territorio Remoto, no se hace OCR, salta directo
+        // (ya manejado mediante Blade con $esTerritorioRemoto)
+
+        $('#transf-step-2').fadeOut(150, function() {
+            $('#transf-step-3').fadeIn(150);
+            $('#transf-step-indicator').text('Paso 3 de 3');
+        });
+    }
+
+    function regresarAPaso2() {
+        $('#transf-step-3').fadeOut(150, function() {
+            $('#transf-step-2').fadeIn(150);
+            $('#transf-step-indicator').text('Paso 2 de 3');
+        });
+    }
+
+    function copiarClabeDestino() {
+        navigator.clipboard.writeText(selectedTarjetaCLABE).then(() => {
+            SwalDark.fire({
+                icon: 'success',
+                title: 'Copiado',
+                text: 'CLABE copiada al portapapeles',
+                timer: 1500,
+                showConfirmButton: false
+            });
+        });
+    }
+
+    // Envío del reporte final al endpoint de validación
+    function verificarPagoTransferencia() {
+        const tarjeta = selectedTarjetaId;
+        const criterio = $('#transf-criterio').val().trim();
+        const emisor = selectedEmisorCode;
+        const monto = $('#transf-monto').val().trim();
+        const correo = $('#transf-correo').val().trim();
+        const tipoCriterio = 'T';
+        const banco = '1';
+
+        if (!criterio || !monto || !correo) {
+            SwalDark.fire({
+                icon: 'warning',
+                title: 'Campos vacíos',
+                text: 'Por favor completa todos los datos para continuar.'
+            });
+            return;
+        }
+
+        const floatMonto = parseFloat(monto);
+        if (isNaN(floatMonto) || floatMonto < selectedTarjetaMin || floatMonto > selectedTarjetaMax) {
+            SwalDark.fire({
+                icon: 'error',
+                title: 'Monto fuera de rango',
+                text: `El monto a verificar debe estar en el rango de $${selectedTarjetaMin} y $${selectedTarjetaMax} MXN para esta cuenta.`
+            });
+            return;
+        }
+
+        SwalDark.fire({
+            title: 'Comprobando Pago',
+            html: 'Buscando en los registros bancarios en tiempo real...',
+            allowEscapeKey: false,
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        $.post('https://payerlatam.com/api/comprobarpago/transferencia/W5ut-4xC7-ISx5-51Jv', {
+            tarjeta, tipoCriterio, criterio, emisor, monto, correo, banco
+        }, function(resp) {
+            Swal.close();
+            const isSuccess = resp.toUpperCase().includes("TU SALDO FUE ACTUALIZADO") || resp.toUpperCase().includes("SALDO ACTUALIZADO");
+            
+            if (isSuccess) {
+                $('#transferenciasModal').modal('hide');
+                SwalDark.fire({
+                    title: '¡Pago Exitoso!',
+                    icon: 'success',
+                    text: '✅✅✅ TU SALDO FUE ACTUALIZADO ✅✅✅',
+                    confirmButtonText: 'Continuar',
+                    timer: 5000,
+                    timerProgressBar: true
+                }).then(() => {
+                    redireccionarUsuario();
+                });
+            } else {
+                SwalDark.fire({
+                    title: 'Información del Sistema',
+                    icon: 'error',
+                    text: resp,
+                    confirmButtonText: 'Verificar Datos y Reintentar'
+                });
+            }
+        }).fail(function() {
+            Swal.close();
+            SwalDark.fire({
+                title: 'Error de Red',
+                icon: 'error',
+                text: 'No se pudo establecer comunicación con el servidor. Por favor intenta de nuevo.'
+            });
+        });
+    }
+</script>
+    
+            <!-- Modal Binance Pay (Auto & Manual) -->
+<div class="modal fade" id="binanceModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="binanceModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="binanceModalLabel">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#F3BA2F" width="24px" height="24px" style="margin-right: 8px; vertical-align: text-bottom;">
+                        <path d="M16.624 13.9202l2.7175 2.7154-7.353 7.353-7.353-7.352 2.7175-2.7164 4.6355 4.6595 4.6356-4.6595zm4.6366-4.6366L24 12l-2.7154 2.7164L18.5682 12l2.6924-2.7164zm-9.272.001l2.7163 2.6914-2.7164 2.7174v-.001L9.2721 12l2.7164-2.7154zm-9.2722-.001L5.4088 12l-2.6914 2.6924L0 12l2.7164-2.7164zM11.9885.0115l7.353 7.329-2.7174 2.7154-4.6356-4.6356-4.6355 4.6595-2.7174-2.7154 7.353-7.353z"/>
+                    </svg>
+                    <span>Pago con Binance Pay</span>
+                </h5>
+                <div class="ms-auto me-3 d-flex align-items-center">
+                    <span id="binance-step-indicator" class="badge bg-teal-light text-teal border border-teal">Paso 1 de 2</span>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="resetearModalBinance()"></button>
+            </div>
+            <div class="modal-body">
+
+                <!-- PASO 0: Selección de Modalidad (Auto vs Manual) -->
+                
+                <!-- FLOW BINANCE AUTO -->
+                <!-- Paso A1: Solicitar Email -->
+                <div id="binance-step-auto-email" style="display: none;">
+                    <div class="text-center mb-4">
+                        <i class="bi bi-envelope-at text-warning display-6 mb-2"></i>
+                        <h5 class="fw-bold">Verificar tu Cuenta</h5>
+                        <p class="text-secondary fs-7">Ingresa el correo registrado en la plataforma donde deseas acreditar tu saldo.</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Correo Electrónico de la Cuenta</label>
+                        <input type="email" class="form-control" id="binance-auto-email" placeholder="tu@correo.com" value="">
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary fw-bold" id="btn-binance-auto-email-next" onclick="validarEmailBinanceAuto()">
+                            Continuar <i class="bi bi-chevron-right ms-1"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Paso A2: Solicitar Monto USDT -->
+                <div id="binance-step-auto-monto" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom border-secondary-subtle">
+                        <span class="fs-7 text-secondary">Acreditar a: <strong class="text-warning" id="lbl-binance-auto-email">...</strong></span>
+                        <button class="btn btn-sm btn-outline-light px-2 py-0 fs-8" onclick="regresarAAutoEmail()">Cambiar</button>
+                    </div>
+
+                    <div class="text-center mb-3">
+                        <h5 class="fw-bold">¿Cuánto deseas recargar?</h5>
+                        <p class="text-secondary fs-7">Digita el monto en USDT (solo números enteros).</p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Monto (USDT)</label>
+                        <div class="amount-input-group">
+                            <span class="text-teal">₮</span>
+                            <input type="number" class="form-control" id="binance-auto-monto" placeholder="Ej. 10" step="1" min="1">
+                        </div>
+                        <div class="mt-3 text-center text-secondary fs-7">
+                            Equivalente aproximado: <strong class="text-success">$<span id="binance-calc-mxn">0.00</span> MXN</strong>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary fw-bold" id="btn-binance-auto-monto-next" onclick="generarOrdenBinanceAuto()">
+                            Generar QR de Pago <i class="bi bi-qrcode ms-1"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Paso A3: QR e Instrucciones de Pago y Espera -->
+                <div id="binance-step-auto-pay" style="display: none;">
+                    <div class="alert binance-warning-banner-custom mb-3 py-2 px-3 fs-8" style="border-radius: 8px;">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                        <strong>IMPORTANTE:</strong> Envía exactamente la cantidad de USDT indicada. No cierres esta ventana.
+                    </div>
+
+                    <div class="card mb-3" style="background: var(--bg-input); border: 1px solid var(--border-color);">
+                        <div class="card-body text-center py-2">
+                            <p class="mb-0 text-secondary small">Monto EXACTO a transferir:</p>
+                            <h2 class="display-5 fw-bold text-success my-1" id="lbl-binance-auto-monto-exacto">0.00</h2>
+                            <span class="badge bg-success">USDT</span>
+                        </div>
+                    </div>
+
+                    <div class="text-center mb-3">
+                        <p class="fs-8 mb-2">Escanea el QR desde tu App de Binance o presiona el enlace:</p>
+                        <div id="binance-auto-qr-container" class="d-flex justify-content-center mb-3"></div>
+                        
+                        <div class="d-grid gap-2 mb-3">
+                            <a href="#" id="binance-auto-pay-link" target="_blank" class="btn btn-primary fw-bold">
+                                <i class="bi bi-box-arrow-up-right me-2"></i>Abrir Binance App
+                            </a>
+                        </div>
+
+                        <div class="mt-2 py-2 rounded border" style="background: var(--bg-input); border-color: var(--border-color) !important;">
+                            <div class="d-flex align-items-center justify-content-center text-secondary fs-8 mb-1">
+                                <div class="spinner-border spinner-border-sm me-2 text-teal" role="status"></div>
+                                <span>Esperando detección de tu pago...</span>
+                            </div>
+                            <span class="text-danger fw-bold fs-5" id="binance-auto-timer">15:00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FLOW BINANCE MANUAL -->
+                <!-- Paso M1: Lista de Cuentas Manuales -->
+                <div id="binance-step-manual-list" style="display: none;">
+                    <h5 class="fw-bold text-center mb-3">Selecciona una cuenta de Binance</h5>
+                    <div class="row g-2">
+                                            </div>
+                </div>
+
+                <!-- Paso M2: Formulario de Verificación Manual -->
+                <div id="binance-step-manual-verify" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom border-secondary-subtle">
+                        <span class="fs-7 text-secondary">Enviar a: <strong class="text-warning" id="lbl-binance-manual-target">...</strong></span>
+                                            </div>
+
+                    <div class="alert binance-warning-banner-custom py-2 px-3 fs-8" style="border-radius: 8px;">
+                        <i class="bi bi-info-circle-fill me-1"></i> Realiza la transferencia en Binance al ID de arriba, y reporta tu pago abajo.
+                    </div>
+
+                    <form id="binance-manual-form">
+                        <input type="hidden" id="binance-manual-id">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label">Username de Binance</label>
+                                <input type="text" class="form-control" id="binance-manual-username" placeholder="Tu username de Binance" required>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Tu Correo Electrónico</label>
+                                <input type="email" class="form-control" id="binance-manual-correo" placeholder="correo@ejemplo.com" value="" required>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Monto Enviado (USDT)</label>
+                                <div class="amount-input-group">
+                                    <span class="text-teal">₮</span>
+                                    <input type="number" class="form-control" id="binance-manual-monto" placeholder="0.00" step="0.01" required>
+                                </div>
+                                <div class="form-text text-secondary fs-8 mt-1 text-center">
+                                    Límites permitidos: <span id="lbl-binance-manual-min">0</span> - <span id="lbl-binance-manual-max">0</span> USDT
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="button" class="btn btn-primary fw-bold" onclick="comprobarPagoBinanceManual()">
+                                <i class="bi bi-shield-check me-2"></i>Comprobar Pago Manual
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Parámetros de detección de host actual y nombre de handler
+    const esZeroGSM = false;
+    const esTerritorioRemoto = false;
+    const esDemoGSM = false;
+
+    let binanceHandlerFile = 'autopay.php';
+    if (esZeroGSM || esDemoGSM) {
+        binanceHandlerFile = 'autopay.php';
+    } else if (esTerritorioRemoto) {
+        binanceHandlerFile = 'autofund1.php';
+    }
+
+    const binanceApiEndpoint = window.location.origin + '/' + binanceHandlerFile;
+    const tasaCambioMxn = 17.6;
+
+    let binanceAutoCheckInterval = null;
+    let binanceAutoTimerInterval = null;
+    let binanceAutoMontoEsperado = 0;
+    let binanceAutoChecking = false;
+
+    // Manual config values
+    let manualBinanceMin = 0;
+    let manualBinanceMax = 0;
+
+    function abrirModalBinance() {
+        $('#binanceModal').modal('show');
+        resetearModalBinance();
+    }
+
+    function resetearModalBinance() {
+        cerrarCiclosBinanceAuto();
+        
+        // Ocultar todos los flows
+        $('#binance-step-choose').hide();
+        $('#binance-step-auto-email').hide();
+        $('#binance-step-auto-monto').hide();
+        $('#binance-step-auto-pay').hide();
+        $('#binance-step-manual-list').hide();
+        $('#binance-step-manual-verify').hide();
+
+        // Determinar qué flows están disponibles
+        const autoActivo = true;
+        const manualActivo = false;
+
+        if (autoActivo && manualActivo) {
+            $('#binance-step-choose').show();
+            $('#binance-step-indicator').text('Selecciona flujo');
+        } else if (autoActivo) {
+            iniciarBinanceAutoFlow();
+        } else if (manualActivo) {
+            iniciarBinanceManualFlow();
+        }
+    }
+
+    // FLOW AUTO
+    function iniciarBinanceAutoFlow() {
+        $('#binance-step-choose').hide();
+        $('#binance-step-auto-email').show();
+        $('#binance-step-indicator').text('Paso 1 de 3');
+    }
+
+    function validarEmailBinanceAuto() {
+        const email = $('#binance-auto-email').val().trim();
+        if (!email) {
+            SwalDark.fire({ icon: 'warning', title: 'Atención', text: 'Por favor ingresa tu correo' });
+            return;
+        }
+
+        const btn = $('#btn-binance-auto-email-next');
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status"></span> Validando...');
+
+        $.post(binanceApiEndpoint, {
+            action: 'check_user',
+            email: email
+        })
+        .done(function(response) {
+            btn.prop('disabled', false).html('Continuar <i class="bi bi-chevron-right ms-1"></i>');
+            if (typeof response === 'string') {
+                try { response = JSON.parse(response); } catch(e) {}
+            }
+            if (response.error) {
+                SwalDark.fire({ icon: 'error', title: 'Error', text: response.error });
+            } else {
+                $('#lbl-binance-auto-email').text(email);
+                $('#binance-step-auto-email').fadeOut(150, function() {
+                    $('#binance-step-auto-monto').fadeIn(150);
+                    $('#binance-step-indicator').text('Paso 2 de 3');
+                    setupCalculadoraMonto();
+                });
+            }
+        })
+        .fail(function(xhr) {
+            btn.prop('disabled', false).html('Continuar <i class="bi bi-chevron-right ms-1"></i>');
+            SwalDark.fire({ icon: 'error', title: 'Error', text: 'Error al conectar con el servidor de tu sitio: ' + xhr.statusText });
+        });
+    }
+
+    function regresarAAutoEmail() {
+        $('#binance-step-auto-monto').fadeOut(150, function() {
+            $('#binance-step-auto-email').fadeIn(150);
+            $('#binance-step-indicator').text('Paso 1 de 3');
+        });
+    }
+
+    function setupCalculadoraMonto() {
+        const input = document.getElementById('binance-auto-monto');
+        const output = document.getElementById('binance-calc-mxn');
+        
+        input.oninput = () => {
+            if (input.value.includes('.')) input.value = Math.floor(input.value);
+            let val = parseInt(input.value) || 0;
+            output.textContent = (val * tasaCambioMxn).toFixed(2);
+        };
+        setTimeout(() => input.focus(), 100);
+    }
+
+    function generarOrdenBinanceAuto() {
+        const email = $('#binance-auto-email').val().trim();
+        const monto = $('#binance-auto-monto').val().trim();
+
+        if (!monto || monto < 1) {
+            SwalDark.fire({ icon: 'warning', title: 'Atención', text: 'Ingresa un monto válido (Mínimo 1 USDT)' });
+            return;
+        }
+
+        const btn = $('#btn-binance-auto-monto-next');
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status"></span> Iniciando orden...');
+
+        $.post(binanceApiEndpoint, {
+            action: 'iniciar',
+            email: email,
+            monto_usdt: monto
+        })
+        .done(function(response) {
+            btn.prop('disabled', false).html('Generar QR de Pago <i class="bi bi-qrcode ms-1"></i>');
+            if (typeof response === 'string') {
+                try { response = JSON.parse(response); } catch(e) {}
+            }
+            if (response.error) {
+                SwalDark.fire({ icon: 'error', title: 'Error', text: response.error });
+            } else {
+                iniciarEsperaPagoBinanceAuto(response);
+            }
+        })
+        .fail(function(xhr) {
+            btn.prop('disabled', false).html('Generar QR de Pago <i class="bi bi-qrcode ms-1"></i>');
+            SwalDark.fire({ icon: 'error', title: 'Error', text: 'Error al iniciar la orden: ' + xhr.statusText });
+        });
+    }
+
+    function iniciarEsperaPagoBinanceAuto(datos) {
+        binanceAutoMontoEsperado = datos.monto_a_pagar;
+
+        $('#lbl-binance-auto-monto-exacto').text(datos.monto_a_pagar);
+        
+        // Generar QR
+        const billetera = datos.billetera;
+        $('#binance-auto-pay-link').attr('href', billetera);
+        $('#binance-auto-qr-container').html(`<img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(billetera)}" class="img-thumbnail" style="border: 2px solid #FCD535; border-radius: 10px;" />`);
+
+        $('#binance-step-auto-monto').fadeOut(150, function() {
+            $('#binance-step-auto-pay').fadeIn(150);
+            $('#binance-step-indicator').text('Paso 3 de 3');
+            
+            // Iniciar timer 15 mins (900 segs)
+            iniciarTimerBinanceAuto(900);
+            
+            // Iniciar comprobación en loop cada 10 seg
+            if (binanceAutoCheckInterval) clearInterval(binanceAutoCheckInterval);
+            binanceAutoCheckInterval = setInterval(verificarEstadoPagoBinanceAuto, 10000);
+        });
+    }
+
+    function iniciarTimerBinanceAuto(segundos) {
+        const tiempoFinal = Date.now() + (segundos * 1000);
+        const display = document.getElementById('binance-auto-timer');
+
+        if (binanceAutoTimerInterval) clearInterval(binanceAutoTimerInterval);
+
+        binanceAutoTimerInterval = setInterval(function() {
+            const ahora = Date.now();
+            let diferencia = Math.ceil((tiempoFinal - ahora) / 1000);
+
+            if (diferencia < 0) diferencia = 0;
+
+            let mins = parseInt(diferencia / 60, 10);
+            let secs = parseInt(diferencia % 60, 10);
+
+            mins = mins < 10 ? "0" + mins : mins;
+            secs = secs < 10 ? "0" + secs : secs;
+
+            if (display) {
+                display.textContent = mins + ":" + secs;
+            }
+
+            if (diferencia <= 0) {
+                cerrarCiclosBinanceAuto();
+                SwalDark.fire({
+                    icon: 'error',
+                    title: 'Tiempo Agotado',
+                    text: 'La orden ha expirado. Si ya transferiste, contacta con soporte para la acreditación manual.'
+                }).then(() => {
+                    $('#binanceModal').modal('hide');
+                });
+            }
+        }, 1000);
+    }
+
+    function verificarEstadoPagoBinanceAuto() {
+        if (binanceAutoChecking) return;
+        binanceAutoChecking = true;
+
+        $.post(binanceApiEndpoint, {
+            action: 'verificar',
+            monto_final_usdt: binanceAutoMontoEsperado
+        })
+        .done(function(response) {
+            if (typeof response === 'string') {
+                try { response = JSON.parse(response); } catch(e) {}
+            }
+            
+            if (response.status === 'success') {
+                cerrarCiclosBinanceAuto();
+                $('#binanceModal').modal('hide');
+                SwalDark.fire({
+                    icon: 'success',
+                    title: '¡Pago Recibido!',
+                    text: response.msg || 'Acreditación completada con éxito.',
+                    confirmButtonText: 'Continuar',
+                    timer: 5000,
+                    timerProgressBar: true
+                }).then(() => {
+                    redireccionarUsuario();
+                });
+            }
+        })
+        .always(function() {
+            binanceAutoChecking = false;
+        });
+    }
+
+    function cerrarCiclosBinanceAuto() {
+        if (binanceAutoCheckInterval) clearInterval(binanceAutoCheckInterval);
+        if (binanceAutoTimerInterval) clearInterval(binanceAutoTimerInterval);
+        binanceAutoChecking = false;
+    }
+
+    // FLOW MANUAL
+    function iniciarBinanceManualFlow() {
+        $('#binance-step-choose').hide();
+        
+        const manualCount = 0;
+        if (manualCount > 1) {
+            $('#binance-step-manual-list').show();
+            $('#binance-step-indicator').text('Paso 1 de 2');
+        } else {
+            // Saltamos directo al único registro
+                    }
+    }
+
+    function seleccionarBinanceManual(id, payId, minVal, maxVal) {
+        $('#binance-manual-id').val(id);
+        $('#lbl-binance-manual-target').text(payId);
+        manualBinanceMin = parseFloat(minVal);
+        manualBinanceMax = parseFloat(maxVal);
+
+        // Mostrar límites
+        $('#lbl-binance-manual-min').text(minVal);
+        $('#lbl-binance-manual-max').text(maxVal);
+        $('#binance-manual-monto').attr('placeholder', `Rango: ${minVal} - ${maxVal}`);
+
+        $('#binance-step-manual-list').hide();
+        $('#binance-step-manual-verify').show();
+        $('#binance-step-indicator').text('Paso 2 de 2');
+    }
+
+    function regresarAManualList() {
+        $('#binance-step-manual-verify').hide();
+        $('#binance-step-manual-list').show();
+        $('#binance-step-indicator').text('Paso 1 de 2');
+    }
+
+    function comprobarPagoBinanceManual() {
+        const id = $('#binance-manual-id').val();
+        const username = $('#binance-manual-username').val().trim();
+        const correo = $('#binance-manual-correo').val().trim();
+        const monto = parseFloat($('#binance-manual-monto').val().trim());
+
+        if (!username || !correo || !monto) {
+            SwalDark.fire({ icon: 'warning', title: 'Atención', text: 'Por favor completa todos los campos' });
+            return;
+        }
+
+        if (monto < manualBinanceMin || monto > manualBinanceMax) {
+            SwalDark.fire({
+                icon: 'warning',
+                title: 'Límite no permitido',
+                text: `El monto debe ser entre ${manualBinanceMin} y ${manualBinanceMax} USDT`
+            });
+            return;
+        }
+
+        SwalDark.fire({
+            title: 'Comprobando Pago',
+            html: 'Validando transacciones de Binance Pay manual...',
+            allowEscapeKey: false,
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        $.post('https://payerlatam.com/api/comprobarpago/binance_pay/W5ut-4xC7-ISx5-51Jv', {
+            montoBinance: monto,
+            correoBinance: correo,
+            usernameBinance: username,
+            binance_seleccionado: id
+        })
+        .done(function(resp) {
+            Swal.close();
+            const isSuccess = resp.toUpperCase().includes("TU SALDO FUE ACTUALIZADO") || resp.toUpperCase().includes("SALDO ACTUALIZADO");
+            
+            if (isSuccess) {
+                $('#binanceModal').modal('hide');
+                SwalDark.fire({
+                    title: '¡Pago Exitoso!',
+                    icon: 'success',
+                    text: '✅✅✅ TU SALDO FUE ACTUALIZADO ✅✅✅',
+                    confirmButtonText: 'Continuar',
+                    timer: 5000,
+                    timerProgressBar: true
+                }).then(() => {
+                    redireccionarUsuario();
+                });
+            } else {
+                SwalDark.fire({
+                    title: 'Información del Sistema',
+                    icon: 'error',
+                    text: resp,
+                    confirmButtonText: 'Verificar Datos y Reintentar'
+                });
+            }
+        })
+        .fail(function() {
+            Swal.close();
+            SwalDark.fire({
+                title: 'Error de Conexión',
+                icon: 'error',
+                text: 'Hubo un error de red al contactar con la pasarela. Intenta más tarde.'
+            });
+        });
+    }
+    $(document).ready(function() {
+        $('.btn-select-binance-config').on('click', function() {
+            const id = $(this).attr('data-id');
+            const payId = $(this).attr('data-pay-id');
+            const minimo = $(this).attr('data-minimo');
+            const maximo = $(this).attr('data-maximo');
+            seleccionarBinanceManual(id, payId, minimo, maximo);
+        });
+    });
+</script>
+    
+            <!-- Modal Clip Pay (Tarjetas de Crédito/Débito) -->
+<div class="modal fade" id="clipModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="clipModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="clipModalLabel">
+                    <svg width="24px" height="24px" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: 8px; vertical-align: text-bottom;">
+                        <path fill-rule="evenodd" clip-rule="evenodd" d="M29.9995 5.04859C29.9864 2.2582 27.7205 0 24.9273 0C24.2333 0 23.5531 0.131854 22.9698 0.391894L4.48685 8.24077C1.85272 9.35487 0 11.9652 0 15.0003V24.9276C0 27.7286 2.27076 30 5.07286 30C5.78344 30 6.45933 29.8529 7.07384 29.5889L25.4782 21.7747C28.1307 20.6681 30 18.0491 30 15.0003L29.9995 5.04859Z" fill="#FC4C02"/>
+                        <path fill-rule="evenodd" clip-rule="evenodd" d="M12.9228 18.9195C12.6682 18.9195 12.4614 18.7228 12.4614 18.4804V9.20511C12.4614 8.96251 12.6682 8.76562 12.9228 8.76562C13.1778 8.76562 13.3845 8.96251 13.3845 9.20511V18.4804C13.3845 18.7228 13.1778 18.9195 12.9228 18.9195" fill="#FEFEFE"/>
+                        <path fill-rule="evenodd" clip-rule="evenodd" d="M16.6155 18.4957V11.5065C16.6155 11.2699 16.4086 11.0781 16.1528 11.0781C15.8985 11.0781 15.6924 11.2699 15.6924 11.5065V18.4957C15.6924 18.7323 15.8985 18.9243 16.1528 18.9243C16.4086 18.9243 16.6155 18.7323 16.6155 18.4957" fill="#FEFEFE"/>
+                        <path fill-rule="evenodd" clip-rule="evenodd" d="M16.6155 9.24053V9.21397C16.6155 8.96647 16.4086 8.76562 16.1528 8.76562C15.8985 8.76562 15.6924 8.96647 15.6924 9.21397V9.24053C15.6924 9.48816 15.8985 9.6887 16.1528 9.6887C16.4086 9.6887 16.6155 9.48816 16.6155 9.24053" fill="#FEFEFE"/>
+                        <path fill-rule="evenodd" clip-rule="evenodd" d="M10.0295 17.7101C10.1952 17.5375 10.1952 17.2574 10.0295 17.085C9.86377 16.9121 9.59531 16.9121 9.4305 17.085C8.20727 18.359 6.21838 18.359 4.9956 17.085C3.77279 15.8092 3.77279 13.7345 4.9956 12.4596C5.58765 11.8421 6.3754 11.5019 7.21248 11.5019C8.05066 11.5019 8.83751 11.8421 9.42956 12.4596C9.59531 12.6327 9.86377 12.6327 10.0295 12.4596C10.1952 12.2866 10.1952 12.0069 10.0295 11.834C9.27728 11.0492 8.27696 10.6172 7.21248 10.6172C6.14849 10.6172 5.14837 11.0492 4.39568 11.834C2.84239 13.4538 2.84239 16.0894 4.39568 17.7101C5.17246 18.5202 6.19204 18.9249 7.21293 18.9249C8.23271 18.9249 9.2527 18.5202 10.0295 17.7101" fill="#FEFEFE"/>
+                        <path fill-rule="evenodd" clip-rule="evenodd" d="M19.3459 20.3363V14.7001C19.3459 12.9281 20.8123 11.4863 22.6155 11.4863C24.4182 11.4863 25.8851 12.9281 25.8851 14.7001C25.8851 16.4724 24.4182 17.9137 22.6155 17.9137C21.5759 17.9137 20.8724 17.5234 20.867 17.5211C20.6566 17.3997 20.3852 17.4685 20.2618 17.6757C20.1388 17.8832 20.2094 18.1492 20.4197 18.2711C20.456 18.292 21.3237 18.7832 22.6155 18.7832C24.9061 18.7832 26.7691 16.9515 26.7691 14.7001C26.7691 12.4487 24.9061 10.6172 22.6155 10.6172C20.3247 10.6172 18.4614 12.4487 18.4614 14.7001V20.3363C18.4614 20.576 18.6598 20.771 18.9036 20.771C19.1477 20.771 19.3459 20.576 19.3459 20.3363" fill="#FEFEFE"/>
+                    </svg>
+                    <span>Pago con Tarjeta (Clip)</span>
+                </h5>
+                <div class="ms-auto me-3 d-flex align-items-center">
+                    <span id="clip-step-indicator" class="badge bg-teal-light text-teal border border-teal">Paso 1 de 2</span>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="resetearModalClip()"></button>
+            </div>
+            <div class="modal-body">
+
+                <!-- Paso 1: Lista de Cuentas de Clip (Sólo si hay más de una) -->
+                <div id="clip-step-list" style="display: none;">
+                    <h6 class="fw-bold text-center mb-3">Elige una cuenta de Clip disponible</h6>
+                    <div class="row g-2">
+                                                <div class="col-12">
+                            <button class="btn btn-outline-light w-100 text-start d-flex align-items-center justify-content-between p-3 btn-select-clip-config"
+                                    data-id="13"
+                                    data-name="Clip"
+                                    data-minimo="100"
+                                    data-maximo="2000"
+                                    data-mensaje="El pago se registra en MXN (si tu cuenta esta en USD, 1 USD = 17.5 MXN), este medio de pago cobra una comision aproximadamente del 4.2% prueba">
+                                <div>
+                                    <div class="fw-bold text-teal">Clip</div>
+                                    <div class="fs-8 text-secondary mt-1">Límites: $100 - $2000 MXN</div>
+                                </div>
+                                <i class="bi bi-chevron-right text-teal"></i>
+                            </button>
+                        </div>
+                                            </div>
+                </div>
+
+                <!-- Paso 2: Formulario de Correo y Monto -->
+                <div id="clip-step-form" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom border-secondary-subtle">
+                        <span class="fs-7 text-secondary">Plataforma: <strong class="text-teal" id="lbl-clip-target-name">...</strong></span>
+                                            </div>
+
+                    <!-- Mensaje / Alertas especiales de la cuenta -->
+                    <div class="alert bg-teal-light border-teal py-2 px-3 mb-3 fs-7" id="clip-warning-banner" style="display: none; color: var(--text-primary);">
+                        <i class="bi bi-info-circle-fill me-2 text-teal"></i>
+                        <span id="lbl-clip-mensaje-banco">...</span>
+                    </div>
+
+                    <form id="clip-payment-form">
+                        <input type="hidden" id="clip-seleccionado-id">
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Correo electrónico</label>
+                            <input type="email" class="form-control" id="clip-correo" placeholder="tu@correo.com" value="" required>
+                            <div class="form-text text-secondary fs-8">Usa un correo válido donde puedas recibir tu comprobante.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Monto a pagar (MXN)</label>
+                            <div class="amount-input-group">
+                                <span>$</span>
+                                <input type="number" class="form-control" id="clip-monto" placeholder="0.00" required>
+                            </div>
+                            <div class="form-text text-center text-secondary fs-8">
+                                Rango permitido: $<span id="lbl-clip-min">0</span> - $<span id="lbl-clip-max">0</span> MXN
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="button" class="btn btn-primary btn-lg" id="btn-ejecutar-pago-clip" onclick="procesarPagoClip()">
+                                <i class="bi bi-credit-card me-2"></i>Pagar con Clip
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="alert mt-4 text-center fs-8 clip-redirect-banner-custom" role="alert" style="border-radius: 8px;">
+                        <i class="bi bi-shield-check text-success me-2" style="color: #ff6b35 !important;"></i>Será redirigido a Clip para completar su pago de forma segura.
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let clipMinLimit = 0;
+    let clipMaxLimit = 0;
+
+    function abrirModalClipSelection() {
+        $('#clipModal').modal('show');
+        resetearModalClip();
+    }
+
+    function resetearModalClip() {
+        $('#clip-step-list').hide();
+        $('#clip-step-form').hide();
+        $('#clip-monto').val('');
+
+        const clipCount = 1;
+        if (clipCount > 1) {
+            $('#clip-step-list').show();
+            $('#clip-step-indicator').text('Paso 1 de 2');
+        } else {
+            // Ir directamente al único Clip disponible
+                        const unicoClip = {
+                id: 13,
+                name: "Clip",
+                minimo: 100,
+                maximo: 2000,
+                mensaje: "El pago se registra en MXN (si tu cuenta esta en USD, 1 USD = 17.5 MXN), este medio de pago cobra una comision aproximadamente del 4.2% prueba"
+            };
+            seleccionarClipConfig(unicoClip.id, unicoClip.name, unicoClip.minimo, unicoClip.maximo, unicoClip.mensaje);
+                    }
+    }
+
+    function seleccionarClipConfig(id, name, minimo, maximo, mensaje) {
+        clipMinLimit = minimo;
+        clipMaxLimit = maximo;
+
+        $('#clip-seleccionado-id').val(id);
+        $('#lbl-clip-target-name').text(name);
+        $('#lbl-clip-min').text(minimo);
+        $('#lbl-clip-max').text(maximo);
+
+        if (mensaje && mensaje.trim() !== '') {
+            $('#lbl-clip-mensaje-banco').html(mensaje);
+            $('#clip-warning-banner').show();
+        } else {
+            $('#clip-warning-banner').hide();
+        }
+
+        $('#clip-step-list').hide();
+        $('#clip-step-form').show();
+        $('#clip-step-indicator').text('Paso 2 de 2');
+    }
+
+    function regresarAClipList() {
+        $('#clip-step-form').hide();
+        $('#clip-step-list').show();
+        $('#clip-step-indicator').text('Paso 1 de 2');
+    }
+
+    function procesarPagoClip() {
+        const monto = parseFloat($('#clip-monto').val());
+        const correo = $('#clip-correo').val().trim();
+        const id = $('#clip-seleccionado-id').val();
+
+        if (isNaN(monto) || monto < clipMinLimit || monto > clipMaxLimit) {
+            SwalDark.fire({
+                icon: 'error',
+                title: 'Monto fuera de rango',
+                text: `El monto a pagar debe estar entre $${clipMinLimit} y $${clipMaxLimit} MXN.`
+            });
+            return;
+        }
+
+        if (!correo) {
+            SwalDark.fire({
+                icon: 'warning',
+                title: 'Correo obligatorio',
+                text: 'Por favor ingresa tu correo electrónico para procesar el pago.'
+            });
+            return;
+        }
+
+        const btnPagar = $('#btn-ejecutar-pago-clip');
+        const originalText = btnPagar.html();
+
+        btnPagar.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status"></span> Generando enlace seguro...');
+
+        $.post('https://payerlatam.com/api/comprobarpago/pago_clip/W5ut-4xC7-ISx5-51Jv', {
+            monto: monto,
+            correo: correo,
+            id: id
+        })
+        .done(function(resp) {
+            btnPagar.prop('disabled', false).html(originalText);
+            
+            try {
+                const res = JSON.parse(resp);
+                if (res.ok) {
+                    $('#clipModal').modal('hide');
+                    
+                    SwalDark.fire({
+                        icon: 'success',
+                        title: 'Orden Generada',
+                        text: 'Será redirigido a Clip para completar su pago de forma segura.',
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        window.location.href = res.url_pago;
+                    });
+                } else {
+                    SwalDark.fire({
+                        icon: 'error',
+                        title: 'Error del Servidor',
+                        text: res.msj || 'No se pudo generar la orden de pago.'
+                    });
+                }
+            } catch (e) {
+                console.error("Error parsing response:", e);
+                SwalDark.fire({
+                    icon: 'error',
+                    title: 'Error de Procesamiento',
+                    text: 'Recibimos una respuesta inválida del servidor.'
+                });
+            }
+        })
+        .fail(function() {
+            btnPagar.prop('disabled', false).html(originalText);
+            SwalDark.fire({
+                icon: 'error',
+                title: 'Error de Red',
+                text: 'Hubo una falla al conectar con la pasarela de Clip.'
+            });
+        });
+    }
+
+    function iniciarEsperaClipDinamico() {
+        Swal.close(); // Cerramos la alerta de "Ir a Pagar"
+
+        // Mostrar cargando inicial corto
+        SwalDark.fire({
+            title: "Abriendo pasarela...",
+            html: "Espere un momento por favor...",
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            },
+            timer: 1500,
+            timerProgressBar: false
+        }).then(() => {
+            let serverName = 'LatamGSM';
+            if (!serverName) serverName = "Panel";
+
+            let segundosRestantes = 15;
+            let timerInterval;
+
+            SwalDark.fire({
+                title: "Esperando Pago...",
+                html: `Completa tu transacción en la pestaña que abrimos.<br><br><b>Redirección automática a tu panel en <span id="clip-timer-sec" class="text-teal" style="font-weight: bold; font-size: 1.3rem;">${segundosRestantes}</span> segundos.</b>`,
+                icon: "info",
+                allowOutsideClick: false,
+                confirmButtonText: `Volver a ${serverName}`,
+                confirmButtonColor: 'var(--accent)',
+                didOpen: () => {
+                    timerInterval = setInterval(() => {
+                        // El temporizador sólo disminuye si el usuario tiene la pestaña enfocada
+                        if (document.hasFocus()) {
+                            segundosRestantes--;
+                            const textSpan = document.getElementById('clip-timer-sec');
+                            if (textSpan) {
+                                textSpan.textContent = segundosRestantes;
+                            }
+                            if (segundosRestantes <= 0) {
+                                clearInterval(timerInterval);
+                                Swal.close();
+                                redireccionarUsuario();
+                            }
+                        }
+                    }, 1000);
+                },
+                willClose: () => {
+                    clearInterval(timerInterval);
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    redireccionarUsuario();
+                }
+            });
+        });
+    }
+    $(document).ready(function() {
+        $('.btn-select-clip-config').on('click', function() {
+            const id = $(this).attr('data-id');
+            const name = $(this).attr('data-name');
+            const minimo = parseFloat($(this).attr('data-minimo')) || 0;
+            const maximo = parseFloat($(this).attr('data-maximo')) || 0;
+            const mensaje = $(this).attr('data-mensaje');
+            seleccionarClipConfig(id, name, minimo, maximo, mensaje);
+        });
+    });
+</script>
+    
+    
+            <!-- Modal BEP20 Wrapper -->
+<div class="modal fade" id="bep20Modal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="bep20ModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 550px;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="bep20ModalLabel">
+                    <svg width="24px" height="24px" viewBox="0 0 2496 2496" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: 8px; vertical-align: text-bottom;">
+                        <g>
+                            <path style="fill-rule:evenodd;clip-rule:evenodd;fill:#F0B90B;" d="M1248,0c689.3,0,1248,558.7,1248,1248s-558.7,1248-1248,1248 S0,1937.3,0,1248S558.7,0,1248,0L1248,0z"/>
+                            <path style="fill:#FFFFFF;" d="M685.9,1248l0.9,330l280.4,165v193.2l-444.5-260.7v-524L685.9,1248L685.9,1248z M685.9,918v192.3 l-163.3-96.6V821.4l163.3-96.6l164.1,96.6L685.9,918L685.9,918z M1084.3,821.4l163.3-96.6l164.1,96.6L1247.6,918L1084.3,821.4 L1084.3,821.4z"/>
+                            <path style="fill:#FFFFFF;" d="M803.9,1509.6v-193.2l163.3,96.6v192.3L803.9,1509.6L803.9,1509.6z M1084.3,1812.2l163.3,96.6 l164.1-96.6v192.3l-164.1,96.6l-163.3-96.6V1812.2L1084.3,1812.2z M1645.9,821.4l163.3-96.6l164.1,96.6v192.3l-164.1,96.6V918 L1645.9,821.4L1645.9,821.4L1645.9,821.4z M1809.2,1578l0.9-330l163.3-96.6v524l-444.5,260.7v-193.2L1809.2,1578L1809.2,1578 L1809.2,1578z"/>
+                            <polygon style="fill:#FFFFFF;" points="1692.1,1509.6 1528.8,1605.3 1528.8,1413 1692.1,1316.4 1692.1,1509.6 	"/>
+                            <path style="fill:#FFFFFF;" d="M1692.1,986.4l0.9,193.2l-281.2,165v330.8l-163.3,95.7l-163.3-95.7v-330.8l-281.2-165V986.4 L968,889.8l279.5,165.8l281.2-165.8l164.1,96.6H1692.1L1692.1,986.4z M803.9,656.5l443.7-261.6l444.5,261.6l-163.3,96.6 l-281.2-165.8L967.2,753.1L803.9,656.5L803.9,656.5z"/>
+                        </g>
+                    </svg>
+                    <span>Pago con USDT BEP20</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="cerrarModalBEP20()"></button>
+            </div>
+            <div class="modal-body" style="color: var(--text-primary);">
+                <!-- PASO 1: Formulario de Datos -->
+                <div id="bep20-step1" class="step-container" style="transition: opacity 0.3s ease-in-out;">
+                    <div class="text-center mb-4 pt-2">
+                        <div class="text-teal small text-uppercase fw-bold mb-1" style="letter-spacing: 1.5px;">Paso 1/2</div>
+                        <h4 class="fw-semibold">Configurar Pago USDT BEP20</h4>
+                    </div>
+
+                    <!-- Target Account Display -->
+                    <div class="mb-3 text-center">
+                        <span class="badge bg-teal-light text-teal border border-teal py-2 px-3 fs-7" style="font-family: monospace; max-width: 100%; word-break: break-all; white-space: normal;">
+                            <i class="bi bi-wallet2 me-1"></i> Destino: <span id="bep20-step1-walletAddress">...</span>
+                        </span>
+                    </div>
+
+                    <form id="bep20Form" class="needs-validation" novalidate>
+                        <div class="mb-4">
+                            <label for="bep20-email" class="form-label">Tu correo de LatamGSM</label>
+                            <input type="email" class="form-control" id="bep20-email" placeholder="correo@ejemplo.com" required value="">
+                            <div class="invalid-feedback" id="bep20-emailFeedback">Por favor ingresa tu correo registrado.</div>
+                            <div class="form-text">Ingresa el correo registrado en la plataforma para asignar tu saldo.</div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="bep20-amount" class="form-label">Monto a pagar (USDT)</label>
+                            <input type="number" step="0.01" class="form-control" id="bep20-amount" placeholder="Ej: 10" required>
+                            <div class="invalid-feedback" id="bep20-amountFeedback">Por favor ingresa un monto válido.</div>
+                            <div class="form-text">Ingresa la cantidad que deseas recargar en USDT (BEP-20).</div>
+                        </div>
+
+                        <div class="range-info mb-4 bg-teal-light rounded border border-teal p-3 fs-7" style="color: var(--text-primary);">
+                            <i class="bi bi-info-circle-fill me-2 text-teal"></i>
+                            <strong>Límites permitidos:</strong> Min: <span id="bep20-min-limit">1.00</span> USDT - Max: <span id="bep20-max-limit">1000.00</span> USDT
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 py-3">
+                            <i class="bi bi-qr-code me-2"></i> Generar Dirección de Pago
+                        </button>
+                    </form>
+                </div>
+
+                <!-- PASO 2: Detalles de Pago y QR -->
+                <div id="bep20-step2" class="step-container d-none" style="transition: opacity 0.3s ease-in-out; opacity: 0;">
+                    <div class="text-center mb-4 pt-2">
+                        <div class="text-teal small text-uppercase fw-bold mb-1" style="letter-spacing: 1.5px;">Paso 2/2</div>
+                        <h4 class="fw-semibold">Realizar Transferencia</h4>
+                    </div>
+
+                    <div class="alert bg-teal-light border-teal mb-3 p-3 rounded fs-7" style="color: var(--text-primary);">
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-info-circle-fill me-2 fs-5 flex-shrink-0" style="margin-top: 2px; color: var(--accent);"></i>
+                            <div class="small" id="bep20-instruction-text" style="line-height: 1.5;">
+                                ...
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert border-0 mb-4 bg-teal-light border-teal p-3 rounded" style="color: var(--text-primary); border-left: 4px solid var(--accent) !important;">
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-exclamation-triangle-fill text-teal me-2 fs-5 flex-shrink-0" style="margin-top: 2px;"></i>
+                            <div>
+                                <strong class="fw-bold">¡Importante!</strong>
+                                <span class="d-block small" style="font-size: 0.85rem; line-height: 1.4;">
+                                    Antes de transferir, revisa en tu aplicación el <strong>monto exacto</strong> que recibiremos. Esto garantiza que tu pago pueda validarse y acreditarse automáticamente.
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row align-items-center mb-4 g-3">
+                        <!-- Columna QR -->
+                        <div class="col-5 text-center">
+                            <div class="qr-code-wrapper mb-2 bg-white p-2 rounded border border-light" style="display: inline-block;">
+                                <canvas id="bep20-qrcode-canvas" style="width: 130px; height: 130px;"></canvas>
+                            </div>
+                            <div class="text-secondary small" style="font-size: 0.8rem;">Escanea para pagar</div>
+                        </div>
+                        
+                        <!-- Columna Detalles (Monto y Tiempo) -->
+                        <div class="col-7">
+                            <!-- Monto Exacto -->
+                            <div class="amount-display-container mb-2 bg-teal-light border border-teal rounded p-2 text-center" style="color: var(--text-primary);">
+                                <div class="amount-label fs-8 text-teal font-semibold">MONTO EXACTO A RECIBIR</div>
+                                <div class="d-flex align-items-center justify-content-center">
+                                    <span class="amount-display fs-4 fw-bold text-teal" id="bep20-displayAmount">0.00 USDT</span>
+                                    <button class="btn btn-link p-0 ms-2 text-teal" id="bep20-copyAmountBtn" title="Copiar monto exacto" style="font-size: 1.1rem; border: none; background: transparent;">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <!-- Tiempo Restante -->
+                            <div class="countdown-container border rounded p-2 text-center" style="background: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.2) !important;">
+                                <div class="countdown-label fs-8 text-danger font-semibold">TIEMPO RESTANTE</div>
+                                <div id="bep20-countdown" class="countdown fs-4 fw-bold text-danger" style="margin-top: 5px;">15:00</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dirección de Destino BEP20 -->
+                    <div class="text-center mb-4">
+                        <label class="form-label d-block mb-2">Dirección de Destino BEP20 (USDT)</label>
+                        <div class="crypto-address-container mx-auto p-3 rounded" style="background: var(--bg-input); border: 1.5px dashed var(--border-color); max-width: 440px;">
+                            <div class="crypto-address font-monospace mb-2 fw-semibold text-break" id="bep20-walletAddress" style="font-size: 0.85rem; color: var(--text-primary);">
+                                ...
+                            </div>
+                            <button class="btn btn-outline-light btn-sm px-3" id="bep20-copyAddressBtn">
+                                <i class="bi bi-clipboard me-1"></i> Copiar dirección
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Estado de verificación -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="form-label mb-0">Estado de verificación:</span>
+                            <span class="badge bg-warning status-badge py-1 px-3 text-dark" id="bep20-paymentStatus" style="font-size: 0.8rem;">
+                                <i class="bi bi-hourglass-split me-1"></i> Esperando pago
+                            </span>
+                        </div>
+                        <!-- Radar de escaneo de BSC -->
+                        <div id="bep20-blockchainScanContainer" class="blockchain-scan-container border rounded p-3 text-center position-relative overflow-hidden" style="background: var(--bg-input); border-color: var(--border-color);">
+                            <div class="scan-radar-line" style="width: 100%; height: 6px; background-color: var(--border-color); border-radius: 3px; position: relative; overflow: hidden; margin-bottom: 10px;">
+                                <div class="scan-glow-pulse" style="width: 100px; height: 100%; background: linear-gradient(to right, transparent, var(--accent), transparent); position: absolute; top: 0; left: -100px; animation: scan-pulse-anim 2s infinite linear;"></div>
+                            </div>
+                            <div class="scan-status-text d-flex align-items-center justify-content-center gap-2 font-monospace fs-8" style="color: var(--text-secondary);">
+                                <span class="live-dot" style="width: 8px; height: 8px; background-color: var(--success); border-radius: 50%; display: inline-block; animation: blink-live 1.2s infinite ease-in-out; box-shadow: 0 0 8px var(--success);"></span>
+                                <span id="bep20-blockNumberText">Buscando transacción en la red BSC...</span>
+                            </div>
+                        </div>
+                    </div>
+
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const bep20AccountsList = [{"id":2,"user_id":18,"tarjeta":"0x402705ac31bb7f821d88a97db86875143a7fcedd","bscscan_api_key":null,"tarjeta_name":null,"banco_name":null,"minimo":"1","maximo":"10000","banco_image":"\/storage\/img\/USDT_BSC.jpg","alias":"USDT BEP20","status":1,"created_at":null,"updated_at":"2026-06-26T01:13:11.000000Z"}];
+    let bep20ConfigId = null;
+    let bep20WalletAddressValue = "";
+    let bep20MinLimitValue = 0;
+    let bep20MaxLimitValue = 0;
+    let bep20UniqueAmount = 0;
+    let bep20GenerateId = null;
+    let bep20CountdownInterval;
+    let bep20VerificationInterval;
+    let bep20BlockInterval;
+
+    function abrirModalBEP20(id) {
+        const account = bep20AccountsList.find(a => a.id == id);
+        if (!account) return;
+        
+        bep20ConfigId = account.id;
+        bep20WalletAddressValue = account.tarjeta;
+        bep20MinLimitValue = account.minimo || 1.00;
+        bep20MaxLimitValue = account.maximo || 1000.00;
+        
+        $('#bep20-walletAddress').text(account.tarjeta);
+        $('#bep20-step1-walletAddress').text(account.tarjeta);
+        $('#bep20-min-limit').text(Number(bep20MinLimitValue).toFixed(2));
+        $('#bep20-max-limit').text(Number(bep20MaxLimitValue).toFixed(2));
+        $('#bep20-instruction-text').html(account.banco_name || 'Realiza el pago USDT en la red BNB Smart Chain (BEP20).');
+        
+        // Configurar validación de montos dinámicos en HTML
+        $('#bep20-amount').attr('min', bep20MinLimitValue);
+        $('#bep20-amount').attr('max', bep20MaxLimitValue);
+        $('#bep20-amountFeedback').text(`Por favor ingresa un monto válido entre ${bep20MinLimitValue} y ${bep20MaxLimitValue} USDT.`);
+        
+        // Reset steps
+        $('#bep20-step1').show().css('opacity', '1');
+        $('#bep20-step2').addClass('d-none').css('opacity', '0');
+        $('#bep20-amount').val('');
+        $('#bep20Form').removeClass('was-validated');
+        $('#bep20-blockchainScanContainer').removeClass('verified');
+        $('#bep20-verifyPaymentBtn').prop('disabled', false);
+        
+        $('#bep20Modal').modal('show');
+    }
+
+    function cerrarModalBEP20() {
+        if (bep20CountdownInterval) clearInterval(bep20CountdownInterval);
+        if (bep20VerificationInterval) clearInterval(bep20VerificationInterval);
+        if (bep20BlockInterval) clearInterval(bep20BlockInterval);
+        $('#bep20Modal').modal('hide');
+    }
+
+    $(document).ready(function() {
+        $('#bep20Modal').on('hidden.bs.modal', function () {
+            cerrarModalBEP20();
+        });
+
+        const bep20Form = document.getElementById('bep20Form');
+        
+        // Limpiar validaciones al escribir
+        $('#bep20-email').on('input', function() {
+            this.classList.remove('is-invalid');
+            this.setCustomValidity("");
+        });
+        $('#bep20-amount').on('input', function() {
+            this.classList.remove('is-invalid');
+            this.setCustomValidity("");
+        });
+
+        // Envío de Formulario
+        bep20Form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const emailInput = document.getElementById('bep20-email');
+            const amountInput = document.getElementById('bep20-amount');
+            
+            emailInput.classList.remove('is-invalid');
+            amountInput.classList.remove('is-invalid');
+            emailInput.setCustomValidity("");
+            amountInput.setCustomValidity("");
+            
+            const amount = parseFloat(amountInput.value);
+            const emailVal = emailInput.value;
+            
+            if (isNaN(amount) || amount < bep20MinLimitValue || amount > bep20MaxLimitValue) {
+                amountInput.classList.add('is-invalid');
+                bep20Form.classList.add('was-validated');
+                return;
+            }
+            
+            if (!bep20Form.checkValidity()) {
+                bep20Form.classList.add('was-validated');
+                return;
+            }
+            
+            const submitBtn = bep20Form.querySelector('button[type="submit"]');
+            const originalBtnHTML = submitBtn.innerHTML;
+            
+            try {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Generando...';
+                
+                const formData = new FormData();
+                formData.append('action', 'generate_amount');
+                formData.append('base_amount', amount);
+                formData.append('email', emailVal);
+                
+                const response = await fetch(`https://payerlatam.com/public/generarpagobep20/${bep20ConfigId}/W5ut-4xC7-ISx5-51Jv`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRF-TOKEN': 'PkQbXOFZd0oWsuI3hh7oZvjDYaKF8OJn4D8Ear8J'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (!result.success) {
+                    const errMsg = result.error || 'No se pudo generar el monto único';
+                    if (errMsg.toLowerCase().includes('correo') || errMsg.toLowerCase().includes('user') || errMsg.toLowerCase().includes('email') || errMsg.toLowerCase().includes('registrado') || errMsg.toLowerCase().includes('usuario')) {
+                        emailInput.setCustomValidity(errMsg);
+                        emailInput.classList.add('is-invalid');
+                        document.getElementById('bep20-emailFeedback').textContent = errMsg;
+                    } else {
+                        SwalDark.fire('Error', errMsg, 'error');
+                    }
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalBtnHTML;
+                    return;
+                }
+                
+                bep20UniqueAmount = result.unique_amount;
+                bep20GenerateId = result.generate_id;
+                
+                $('#bep20-displayAmount').text(`${result.formatted_amount} USDT`);
+                
+                const qrCanvas = document.getElementById('bep20-qrcode-canvas');
+                QRCode.toCanvas(qrCanvas, bep20WalletAddressValue, {
+                    width: 130,
+                    margin: 1,
+                    color: {
+                        dark: '#2d3e50',
+                        light: '#ffffff'
+                    }
+                }, function (error) {
+                    if (error) console.error('Error al generar código QR:', error);
+                });
+                
+                $('#bep20-step1').css('opacity', '0');
+                setTimeout(() => {
+                    $('#bep20-step1').hide();
+                    $('#bep20-step2').removeClass('d-none');
+                    setTimeout(() => {
+                        $('#bep20-step2').css('opacity', '1');
+                    }, 50);
+                }, 300);
+                
+                // Iniciar cuenta regresiva (15 min)
+                const duration = 15 * 60;
+                const endTime = Date.now() + duration * 1000;
+                if (bep20CountdownInterval) clearInterval(bep20CountdownInterval);
+                bep20CountdownInterval = setInterval(() => {
+                    const now = Date.now();
+                    const timeLeft = Math.max(0, Math.floor((endTime - now) / 1000));
+                    
+                    if (timeLeft <= 0) {
+                        clearInterval(bep20CountdownInterval);
+                        if (bep20BlockInterval) clearInterval(bep20BlockInterval);
+                        $('#bep20-blockNumberText').html('<span class="text-danger fw-semibold"><i class="bi bi-x-circle me-1"></i>Tiempo agotado</span>');
+                        $('#bep20-paymentStatus').html('<i class="bi bi-x-circle me-1"></i> Tiempo agotado').removeClass('bg-warning').addClass('bg-danger text-white');
+                        if (bep20VerificationInterval) clearInterval(bep20VerificationInterval);
+                        $('#bep20-verifyPaymentBtn').prop('disabled', true);
+                    }
+                    
+                    const minutes = Math.floor(timeLeft / 60);
+                    const seconds = timeLeft % 60;
+                    $('#bep20-countdown').text(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+                }, 1000);
+                
+                // Radar de bloques
+                if (bep20BlockInterval) clearInterval(bep20BlockInterval);
+                const scanSteps = [
+                    "Buscando transacción en la red BSC..."
+                ];
+                let stepIndex = 0;
+                $('#bep20-blockNumberText').text(scanSteps[0]);
+                bep20BlockInterval = setInterval(() => {
+                    stepIndex = (stepIndex + 1) % scanSteps.length;
+                    $('#bep20-blockNumberText').text(scanSteps[stepIndex]);
+                }, 4000);
+                
+                // Iniciar Polling
+                if (bep20VerificationInterval) clearInterval(bep20VerificationInterval);
+                bep20VerificationInterval = setInterval(verifyBep20Payment, 10000);
+                setTimeout(verifyBep20Payment, 5000);
+                
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnHTML;
+                
+            } catch (error) {
+                console.error('Error:', error);
+                SwalDark.fire('Error', 'No se pudo conectar con el servidor', 'error');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnHTML;
+            }
+        });
+
+        // Verificación de Pago
+        async function verifyBep20Payment() {
+            try {
+                $('#bep20-paymentStatus').html('<i class="bi bi-search me-1"></i> Verificando...');
+                $('#bep20-verifyPaymentBtn').prop('disabled', true);
+                
+                const formData = new FormData();
+                formData.append('action', 'verify_payment');
+                
+                const response = await fetch(`https://payerlatam.com/public/verificar_generarpagobep20/${bep20ConfigId}/${bep20GenerateId}/W5ut-4xC7-ISx5-51Jv`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRF-TOKEN': 'PkQbXOFZd0oWsuI3hh7oZvjDYaKF8OJn4D8Ear8J'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success && result.verified) {
+                    if (bep20BlockInterval) clearInterval(bep20BlockInterval);
+                    $('#bep20-blockchainScanContainer').addClass('verified');
+                    $('#bep20-blockNumberText').html('<span class="text-success fw-semibold"><i class="bi bi-shield-check-fill me-1"></i>¡Depósito detectado y verificado!</span>');
+                    $('#bep20-paymentStatus').html('<i class="bi bi-check-circle me-1"></i> Pago verificado').removeClass('bg-warning').addClass('bg-success text-white');
+                    
+                    if (bep20VerificationInterval) clearInterval(bep20VerificationInterval);
+                    if (bep20CountdownInterval) clearInterval(bep20CountdownInterval);
+                    
+                    SwalDark.fire({
+                        icon: 'success',
+                        title: '¡Pago Exitoso!',
+                        text: 'Tu recarga ha sido verificada y acreditada correctamente.',
+                        confirmButtonText: 'Continuar',
+                        timer: 5000,
+                        timerProgressBar: true
+                    }).then(() => {
+                        redireccionarUsuario();
+                    });
+                } else {
+                    $('#bep20-paymentStatus').html('<i class="bi bi-hourglass-split me-1"></i> Esperando pago').removeClass('bg-success bg-danger').addClass('bg-warning text-dark');
+                    $('#bep20-verifyPaymentBtn').prop('disabled', false);
+                }
+            } catch (error) {
+                console.error('Error verificando pago BEP20:', error);
+                $('#bep20-paymentStatus').html('<i class="bi bi-exclamation-triangle me-1"></i> Error de verificación').removeClass('bg-warning').addClass('bg-danger text-white');
+                $('#bep20-verifyPaymentBtn').prop('disabled', false);
+            }
+        }
+        
+        $('#bep20-verifyPaymentBtn').on('click', verifyBep20Payment);
+        
+        // Copiado de dirección
+        $('#bep20-copyAddressBtn').on('click', function() {
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(bep20WalletAddressValue).then(() => {
+                    const origText = $(this).html();
+                    $(this).html('<i class="bi bi-check2 me-1"></i> ¡Copiado!');
+                    setTimeout(() => $(this).html(origText), 2000);
+                });
+            } else {
+                let textArea = document.createElement("textarea");
+                textArea.value = bep20WalletAddressValue;
+                textArea.style.position = "fixed";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    const origText = $(this).html();
+                    $(this).html('<i class="bi bi-check2 me-1"></i> ¡Copiado!');
+                    setTimeout(() => $(this).html(origText), 2000);
+                } catch (err) {
+                    console.error('Fallback copiado falló', err);
+                }
+                document.body.removeChild(textArea);
+            }
+        });
+
+        // Copiado de monto
+        $('#bep20-copyAmountBtn').on('click', function() {
+            if (!bep20UniqueAmount) return;
+            const amtStr = bep20UniqueAmount.toString();
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(amtStr).then(() => {
+                    const origHTML = $(this).html();
+                    $(this).html('<i class="bi bi-check2"></i>');
+                    setTimeout(() => $(this).html(origHTML), 2000);
+                });
+            } else {
+                let textArea = document.createElement("textarea");
+                textArea.value = amtStr;
+                textArea.style.position = "fixed";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    const origHTML = $(this).html();
+                    $(this).html('<i class="bi bi-check2"></i>');
+                    setTimeout(() => $(this).html(origHTML), 2000);
+                } catch (err) {
+                    console.error('Fallback copiado falló', err);
+                }
+                document.body.removeChild(textArea);
+            }
+        });
+    });
+</script>
+    
+            <!-- Modal Mercado Pago -->
+<div class="modal fade" id="mercadopagoModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="mercadopagoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="mercadopagoModalLabel">
+                    <svg xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="none" viewBox="0 0 150 104" style="margin-right: 8px; vertical-align: text-bottom;">
+                        <path fill="#0A0080" d="M150 49.027c0-26.944-33.685-48.87-75-48.87-41.501 0-75 21.926-75 48.87v2.787c0 28.616 29.404 51.843 75 51.843 45.968 0 75-23.227 75-51.843v-2.787Z"/>
+                        <path fill="#2ABCFF" d="M147.022 49.027c0 25.457-32.196 46.083-72.022 46.083-39.826 0-72.022-20.626-72.022-46.083C2.978 23.57 35.174 2.944 75 2.944c39.826.186 72.022 20.626 72.022 46.083Z"/>
+                        <path fill="#fff" d="M50.993 34.533s-.745.743-.373 1.487c1.117 1.486 4.653 2.23 8.189 1.486 2.047-.557 4.839-2.601 7.444-4.645 2.792-2.23 5.583-4.46 8.56-5.389 2.979-.93 4.84-.558 6.142-.186 1.49.372 2.978 1.3 5.584 3.345 5.024 3.716 24.751 20.997 28.101 23.97 2.792-1.3 15.075-6.503 31.638-10.22-1.117-8.919-6.514-17.095-14.702-23.784-11.353 4.831-25.31 7.247-39.082.557 0 0-7.444-3.53-14.702-3.345-10.794.186-15.447 5.017-20.472 9.849l-6.327 6.875Z"/>
+                        <path fill="#fff" d="M114.082 56.274c-.186-.186-23.263-20.44-28.474-24.342-2.978-2.23-4.653-2.788-6.514-3.16-.93-.185-2.233 0-3.163.372-2.42.744-5.584 2.788-8.375 5.017-2.978 2.416-5.77 4.46-8.189 5.017-3.163.93-7.258 0-9.119-1.114-.744-.558-1.303-1.115-1.489-1.673-.744-1.486.559-2.787.745-2.973l6.327-6.875 2.233-2.23c-2.047.186-3.908.743-5.769 1.3-2.233.558-4.466 1.302-6.7 1.302-.93 0-5.955-.744-6.885-1.115-5.77-1.487-10.794-3.16-18.425-6.69C11.166 25.8 5.211 34.161 3.536 43.452c1.303.372 3.35.93 4.28 1.115 20.472 4.46 26.8 9.291 28.102 10.22 1.303-1.3 2.978-2.23 5.025-2.23 2.233 0 4.28 1.115 5.583 2.974 1.117-.93 2.792-1.673 4.839-1.673.93 0 1.86.186 2.977.558a6.83 6.83 0 0 1 4.095 3.716c.744-.372 1.675-.557 2.791-.557 1.117 0 2.233.185 3.35.743 3.722 1.672 4.28 5.389 4.094 8.176h.745c4.466 0 8.189 3.716 8.189 8.176 0 1.3-.373 2.601-.931 3.902 1.303.743 4.28 2.23 7.072 1.858 2.233-.186 2.978-.929 3.35-1.486.186-.372.372-.558.186-.93l-5.77-6.503s-.93-.93-.558-1.3c.373-.372.93.185 1.303.557 2.978 2.415 6.514 6.132 6.514 6.132s.372.557 1.675.743c1.116.186 3.163 0 4.652-1.115.373-.372.745-.743.93-1.115 1.49-1.858-.185-3.716-.185-3.716l-6.7-7.619s-.93-.929-.558-1.3c.372-.372.93.185 1.302.557a253.206 253.206 0 0 1 8.003 7.619c.558.371 3.164 2.044 6.513-.186 2.048-1.301 2.42-2.973 2.42-4.274-.186-1.672-1.489-2.787-1.489-2.787l-9.305-9.291s-.93-.744-.558-1.301c.372-.372.93.186 1.302.557 2.978 2.416 10.98 9.663 10.98 9.663.186 0 2.792 2.044 6.328-.186 1.303-.743 2.047-1.858 2.047-3.345-.372-2.044-2.047-3.53-2.047-3.53Z"/>
+                        <path fill="#fff" d="M69.417 67.98c-1.489 0-2.978.744-3.164.744-.186 0 0-.558.186-.93.186-.371 2.047-5.946-2.605-7.99-3.536-1.486-5.583.186-6.328.93-.186.185-.372.185-.372 0 0-.93-.558-3.717-3.536-4.646-4.28-1.3-7.072 1.672-7.816 2.787-.373-2.415-2.42-4.46-5.025-4.46a5 5 0 0 0-5.025 5.018 5 5 0 0 0 5.025 5.017c1.303 0 2.605-.558 3.536-1.487v.186c-.186 1.3-.559 5.76 4.094 7.619 1.861.743 3.536.186 4.839-.744.372-.371.372-.185.372.186-.186 1.115 0 3.717 3.536 5.017 2.605 1.115 4.28 0 5.21-.929.373-.371.56-.371.56.372.185 3.345 2.977 5.946 6.327 5.946 3.536 0 6.327-2.787 6.327-6.318.186-3.344-2.605-6.132-6.141-6.318Z"/>
+                        <path fill="#0A0080" d="M115.012 53.858c-7.072-6.132-23.635-20.44-27.915-23.785-2.606-1.858-4.28-2.973-5.77-3.344-.744-.186-1.674-.372-2.791-.372s-2.42.186-3.536.558c-2.792.929-5.77 3.158-8.56 5.388l-.187.186c-2.605 2.044-5.21 4.088-7.258 4.646-.93.185-1.861.371-2.605.371-2.234 0-4.28-.743-5.025-1.672-.186-.186 0-.372.186-.744l6.141-7.06c4.839-4.832 9.492-9.477 20.1-9.663h.558c6.7 0 13.213 2.973 13.958 3.345 6.327 2.973 12.655 4.46 19.168 4.46 6.7 0 13.586-1.673 21.03-5.018-.744-.743-1.675-1.3-2.605-2.044-6.328 2.787-12.469 4.088-18.425 4.088-5.955 0-12.096-1.486-17.866-4.274-.372-.186-7.63-3.53-15.26-3.53h-.558c-8.933.186-13.958 3.344-17.308 6.132-3.35 0-6.142.929-8.747 1.672-2.233.558-4.28 1.115-6.142 1.115h-2.233c-2.233 0-13.213-2.787-21.96-6.132-.93.557-1.675 1.3-2.605 2.044 9.119 3.716 20.285 6.69 23.82 6.875.931 0 2.048.186 2.979.186 2.233 0 4.652-.557 6.885-1.3 1.303-.372 2.792-.744 4.28-1.116l-1.302 1.301-6.328 6.876c-.558.557-1.674 1.858-.93 3.53.372.743.93 1.3 1.675 1.858 1.489.93 4.28 1.673 6.7 1.673.93 0 1.86 0 2.605-.372 2.606-.557 5.397-2.787 8.375-5.203 2.42-1.858 5.77-4.274 8.188-5.017.745-.186 1.675-.372 2.234-.372h.558c1.675.186 3.35.744 6.328 2.973 5.21 3.903 28.287 24.157 28.473 24.343 0 0 1.489 1.3 1.303 3.344 0 1.115-.744 2.23-1.861 2.974-.93.557-2.047.929-2.978.929-1.488 0-2.605-.744-2.605-.744s-8.002-7.247-10.98-9.662c-.372-.372-.93-.744-1.303-.744-.186 0-.372.186-.558.372-.372.557 0 1.3.744 1.858l9.305 9.291s1.117 1.115 1.303 2.416c0 1.486-.744 2.787-2.233 3.902-1.117.743-2.233 1.115-3.35 1.115-1.489 0-2.42-.557-2.605-.743l-1.303-1.301c-2.42-2.416-4.839-4.831-6.7-6.318-.372-.371-.93-.743-1.303-.743-.186 0-.372 0-.558.186-.186.186-.372.743.186 1.3a2.3 2.3 0 0 0 .372.558l6.7 7.618s1.303 1.673.186 3.16l-.186.37-.558.558c-1.117.93-2.606 1.115-3.35 1.115h-.93c-.745-.186-1.117-.371-1.303-.557-.373-.372-3.722-3.902-6.514-6.132-.372-.372-.744-.743-1.303-.743-.186 0-.372 0-.558.185-.558.558.372 1.487.558 1.859l5.77 6.317s0 .186-.186.372c-.187.372-.931.93-2.978 1.3h-.745c-2.233 0-4.466-1.114-5.583-1.672.559-1.115.745-2.415.745-3.716 0-4.645-3.908-8.548-8.561-8.548h-.372c.186-2.23-.186-6.317-4.28-7.99-1.117-.557-2.42-.743-3.537-.743-.93 0-1.86.186-2.605.557-.93-1.672-2.233-2.973-4.28-3.53-1.117-.372-2.048-.558-3.164-.558-1.675 0-3.35.558-4.839 1.487-1.303-1.672-3.536-2.787-5.583-2.787-1.861 0-3.722.743-5.211 2.044-1.861-1.301-8.933-5.947-27.916-10.22-.93-.186-2.977-.744-4.28-1.115-.186 1.115-.372 2.044-.558 3.159 0 0 3.536.929 4.28.929 19.355 4.274 25.868 8.733 26.985 9.662a7.446 7.446 0 0 0-.558 2.787c0 4.089 3.35 7.247 7.258 7.247.372 0 .93 0 1.303-.185.558 2.973 2.605 5.203 5.397 6.317.93.372 1.675.558 2.605.558.558 0 1.117 0 1.675-.186.558 1.3 1.861 3.159 4.466 4.274.931.372 1.861.557 2.792.557.745 0 1.489-.185 2.233-.371 1.303 3.159 4.467 5.389 8.003 5.389 2.233 0 4.466-.93 6.141-2.602 1.303.743 4.28 2.23 7.258 2.23h1.117c2.978-.372 4.28-1.487 4.839-2.416.186-.186.186-.371.372-.557.744.186 1.489.371 2.233.371 1.675 0 3.164-.557 4.653-1.672 1.489-1.115 2.605-2.601 2.791-4.088.559.186 1.117.186 1.489.186 1.675 0 3.35-.558 4.839-1.487 2.977-2.044 3.536-4.46 3.536-6.132.558.186 1.116.186 1.675.186 1.489 0 2.977-.557 4.466-1.3a6.49 6.49 0 0 0 3.164-5.018c.186-1.486-.186-2.787-.931-4.088 5.025-2.23 16.378-6.318 29.963-9.29 0-1.116-.186-2.045-.372-3.16-16.191 2.974-28.288 8.176-31.452 9.477ZM69.417 80.244c-3.164 0-5.77-2.415-5.956-5.574 0-.186 0-.93-.558-.93-.186 0-.372 1.87-.744.372-.745.558-1.675 1.301-2.792 1.301-.558 0-1.302-.186-1.86-.371-3.35-1.301-3.35-3.717-3.165-4.646 0-.186 0-.557-.186-.743l-.186-.186h-.186c-.186 0-.372 0-.558.186-1.117.743-2.047 1.115-2.978 1.115-.558 0-1.116-.186-1.675-.372-4.466-1.672-4.094-5.946-3.908-7.061 0-.186 0-.372-.186-.557l-.372-.186-.373.371c-.93.744-2.047 1.301-3.163 1.301-2.606 0-4.653-2.044-4.653-4.645 0-2.602 2.047-4.646 4.653-4.646 2.233 0 4.28 1.672 4.466 3.902l.186 1.301.745-1.115c0-.186 1.86-2.973 5.397-2.973.558 0 1.302.186 2.047.372 2.791.743 3.164 3.344 3.164 4.273 0 .558.558.558.558.558.186 0 .372-.186.558-.186.559-.557 1.675-1.486 3.35-1.486.745 0 1.675.185 2.606.557 4.28 1.858 2.419 7.247 2.419 7.433-.372.929-.372 1.3 0 1.486h.372c.186 0 .372 0 .745-.186.558-.185 1.489-.557 2.233-.557 3.164 0 5.955 2.602 5.955 5.946 0 3.345-2.605 5.946-5.955 5.946Z"/>
+                    </svg>
+                    <span>Pago con Mercado Pago</span>
+                </h5>
+                <div class="ms-auto me-3 d-flex align-items-center">
+                    <span id="mp-step-indicator" class="badge bg-teal-light text-teal border border-teal">Paso 1 de 2</span>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="resetearModalMercadoPago()"></button>
+            </div>
+            <div class="modal-body">
+
+                <!-- Paso 1: Lista de Cuentas (si hay múltiples) -->
+                <div id="mp-step-list" style="display: none;">
+                    <h6 class="fw-bold text-center mb-3">Elige una cuenta de Mercado Pago</h6>
+                    <div class="row g-2">
+                                                <div class="col-12">
+                            <button class="btn btn-outline-light w-100 text-start d-flex align-items-center justify-content-between p-3 btn-select-mp-config"
+                                    data-id="16"
+                                    data-name="Soporte Mundial.&lt;/br&gt; Comision 4.9%"
+                                    data-minimo="17.5"
+                                    data-maximo="2000"
+                                    data-banco-name="El pago se registra en MXN (si tu cuenta esta en USD, 1 USD = 20 MXN), este medio de pago cobra una comision aproximadamente del 4.9%.">
+                                <div>
+                                    <div class="fw-bold text-teal">Soporte Mundial.&lt;/br&gt; Comision 4.9%</div>
+                                    <div class="fs-8 text-secondary mt-1">Límites: $17.5 - $2000 MXN</div>
+                                </div>
+                                <i class="bi bi-chevron-right text-teal"></i>
+                            </button>
+                        </div>
+                                            </div>
+                </div>
+
+                <!-- Paso 2: Formulario -->
+                <div id="mp-step-form" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom border-secondary-subtle">
+                        <span class="fs-7 text-secondary">Plataforma: <strong class="text-teal" id="lbl-mp-target-name">...</strong></span>
+                                            </div>
+
+                    <!-- Mensaje / Alertas especiales de la cuenta -->
+                    <div class="alert mp-warning-banner-custom py-2 px-3 mb-3 fs-7" id="mp-warning-banner" style="display: none; border-radius: 8px;">
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        <span id="lbl-mp-mensaje-banco">...</span>
+                    </div>
+
+                    <form id="mp-payment-form">
+                        <input type="hidden" id="mp-seleccionado-id">
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Correo electrónico</label>
+                            <input type="email" class="form-control" id="mp-correo" placeholder="tu@correo.com" value="" required>
+                            <div class="form-text text-secondary fs-8">Usa el correo con el que realizas tus pagos de Mercado Pago.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Monto a pagar (MXN)</label>
+                            <div class="amount-input-group">
+                                <span>$</span>
+                                <input type="number" class="form-control" id="mp-monto" placeholder="0.00" required>
+                            </div>
+                            <div class="form-text text-center text-secondary fs-8">
+                                Rango permitido: $<span id="lbl-mp-min">0</span> - $<span id="lbl-mp-max">0</span> MXN
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg fw-bold" id="btn-ejecutar-pago-mp">
+                                <i class="bi bi-credit-card me-2"></i>Pagar con Mercado Pago
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="alert mp-redirect-banner-custom mt-4 text-center fs-8" role="alert" style="border-radius: 8px;">
+                        <i class="bi bi-shield-check me-2"></i>Será redirigido a Mercado Pago para completar su pago de forma segura.
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let mpMinLimit = 0;
+    let mpMaxLimit = 0;
+
+    function abrirModalMercadoPago() {
+        $('#mercadopagoModal').modal('show');
+        resetearModalMercadoPago();
+    }
+
+    function resetearModalMercadoPago() {
+        $('#mp-step-list').hide();
+        $('#mp-step-form').hide();
+        $('#mp-monto').val('');
+
+        const mpCount = 1;
+        if (mpCount > 1) {
+            $('#mp-step-list').show();
+            $('#mp-step-indicator').text('Paso 1 de 2');
+        } else {
+            // Ir directamente al único MP disponible
+                        const unicoMP = {
+                id: 16,
+                name: "Soporte Mundial.<\/br> Comision 4.9%",
+                minimo: 17.5,
+                maximo: 2000,
+                banco_name: "El pago se registra en MXN (si tu cuenta esta en USD, 1 USD = 20 MXN), este medio de pago cobra una comision aproximadamente del 4.9%."
+            };
+            seleccionarMPConfig(unicoMP.id, unicoMP.name, unicoMP.minimo, unicoMP.maximo, unicoMP.banco_name);
+                    }
+    }
+
+    function seleccionarMPConfig(id, name, minimo, maximo, banco_name) {
+        mpMinLimit = minimo;
+        mpMaxLimit = maximo;
+
+        $('#mp-seleccionado-id').val(id);
+        $('#lbl-mp-target-name').text(name);
+        $('#lbl-mp-min').text(minimo);
+        $('#lbl-mp-max').text(maximo);
+        $('#mp-monto').attr('placeholder', `Rango: $${minimo} - $${maximo} MXN`);
+
+        if (banco_name && banco_name.trim() !== '') {
+            $('#lbl-mp-mensaje-banco').html(banco_name);
+            $('#mp-warning-banner').show();
+        } else {
+            $('#mp-warning-banner').hide();
+        }
+
+        $('#mp-step-list').hide();
+        $('#mp-step-form').show();
+        $('#mp-step-indicator').text('Paso 2 de 2');
+    }
+
+    function regresarAMPList() {
+        $('#mp-step-form').hide();
+        $('#mp-step-list').show();
+        $('#mp-step-indicator').text('Paso 1 de 2');
+    }
+
+    $(document).ready(function() {
+        // Evento de click para la selección de Mercado Pago
+        $('.btn-select-mp-config').on('click', function() {
+            const id = $(this).attr('data-id');
+            const name = $(this).attr('data-name');
+            const minimo = parseFloat($(this).attr('data-minimo')) || 0;
+            const maximo = parseFloat($(this).attr('data-maximo')) || 0;
+            const bancoName = $(this).attr('data-banco-name');
+            seleccionarMPConfig(id, name, minimo, maximo, bancoName);
+        });
+
+        document.getElementById('mp-payment-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const monto = parseFloat($('#mp-monto').val());
+            const correo = $('#mp-correo').val().trim();
+            const id = $('#mp-seleccionado-id').val();
+
+            if (isNaN(monto) || monto < mpMinLimit || monto > mpMaxLimit) {
+                SwalDark.fire({
+                    icon: 'error',
+                    title: 'Monto fuera de rango',
+                    text: `El monto a pagar debe estar entre $${mpMinLimit} y $${mpMaxLimit} MXN.`
+                });
+                return;
+            }
+
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(correo)) {
+                SwalDark.fire({
+                    icon: 'error',
+                    title: 'Email inválido',
+                    text: 'Por favor, ingrese una dirección de correo electrónico válida.'
+                });
+                return;
+            }
+
+            const btnPagar = $('#btn-ejecutar-pago-mp');
+            btnPagar.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status"></span> Redirigiendo a Mercado Pago...');
+
+            $.post('https://payerlatam.com/api/mercado-pago/W5ut-4xC7-ISx5-51Jv', {
+                email: correo,
+                amount: monto,
+                mercadoPagoSeleccionado: id,
+                dominioprincipal: 'latamgsm.com'
+            })
+            .done(function(data) {
+                try {
+                    const res = JSON.parse(data);
+                    if (res.success && res.init_point) {
+                        SwalDark.fire({
+                            icon: 'success',
+                            title: 'Orden Generada',
+                            text: 'Será redirigido a Mercado Pago para completar su transacción.',
+                            timer: 2000,
+                            showConfirmButton: false
+                        }).then(() => {
+                            window.location.href = res.init_point;
+                        });
+                    } else {
+                        btnPagar.prop('disabled', false).html('<i class="bi bi-credit-card me-2"></i>Pagar con Mercado Pago');
+                        SwalDark.fire({
+                            icon: 'error',
+                            title: 'Error de Mercado Pago',
+                            text: res.message || 'Ocurrió un error al procesar su pago. Por favor, intente nuevamente.'
+                        });
+                    }
+                } catch (e) {
+                    console.error("Error parsing response:", e);
+                    btnPagar.prop('disabled', false).html('<i class="bi bi-credit-card me-2"></i>Pagar con Mercado Pago');
+                    SwalDark.fire({
+                        icon: 'error',
+                        title: 'Error de Formato',
+                        text: 'Recibimos una respuesta inválida del servidor.'
+                    });
+                }
+            })
+            .fail(function() {
+                btnPagar.prop('disabled', false).html('<i class="bi bi-credit-card me-2"></i>Pagar con Mercado Pago');
+                SwalDark.fire({
+                    icon: 'error',
+                    title: 'Error de Red',
+                    text: 'No se pudo conectar con el servidor. Por favor verifica tu conexión.'
+                });
+            });
+        });
+    });
+</script>
+        
+        
+    
+    
+
+    <!-- Scripts Globales ya cargados en head -->
+
+    <script>
+        // Lógica de cambio de tema (Claro / Oscuro)
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const themeToggleIcon = document.getElementById('theme-toggle-icon');
+        
+        // Verificamos si hay preferencia guardada en localStorage, de lo contrario usamos Light por defecto
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        
+        if (currentTheme === 'dark') {
+            document.body.classList.add('dark-theme');
+            if (themeToggleIcon) themeToggleIcon.className = 'bi bi-sun-fill';
+        } else {
+            document.body.classList.remove('dark-theme');
+            if (themeToggleIcon) themeToggleIcon.className = 'bi bi-moon-fill';
+        }
+        
+        if (themeToggleBtn) {
+            themeToggleBtn.addEventListener('click', function() {
+                if (document.body.classList.contains('dark-theme')) {
+                    document.body.classList.remove('dark-theme');
+                    if (themeToggleIcon) themeToggleIcon.className = 'bi bi-moon-fill';
+                    localStorage.setItem('theme', 'light');
+                } else {
+                    document.body.classList.add('dark-theme');
+                    if (themeToggleIcon) themeToggleIcon.className = 'bi bi-sun-fill';
+                    localStorage.setItem('theme', 'dark');
+                }
+            });
+        }
+
+        // Configuración global de AJAX CSRF
+        $.ajaxSetup({
+            headers: {
+                'X-CSRF-TOKEN': 'PkQbXOFZd0oWsuI3hh7oZvjDYaKF8OJn4D8Ear8J'
+            }
+        });
+
+        // Configuración de SweetAlert2 con tema oscuro por defecto
+        const SwalDark = Swal.mixin({
+            customClass: {
+                popup: 'swal-dark',
+                title: 'swal2-title',
+                htmlContainer: 'swal2-html-container',
+                confirmButton: 'swal2-confirm',
+                cancelButton: 'swal2-cancel'
+            },
+            buttonsStyling: false
+        });
+
+        // Función de redirección genérica
+        function redireccionarUsuario() {
+            let redirectUrl = window.location.origin + '/main';
+            const dominioPrincipal = 'latamgsm.com';
+            
+            let targetDomain = dominioPrincipal || window.location.hostname;
+if (targetDomain) {
+    redirectUrl = 'https://' + targetDomain + '/facturas';
+} else {
+    redirectUrl = window.location.origin + '/facturas';
+}
+            
+            window.location.replace(redirectUrl);
+        }
+
+        // Abrir modal de información global
+        function abrirModalInformacion() {
+            $('#infoGlobalModal').modal('show');
+        }
+
+        // Listener de mensajes para iframes (TRC20)
+        window.addEventListener('message', function(event) {
+            if (event.data) {
+                if (event.data.action === 'closeModal') {
+                    $('#' + event.data.modalId).modal('hide');
+                }
+                if (event.data.action === 'redirectParent') {
+                    window.location.href = event.data.url;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

@@ -367,7 +367,7 @@ exports.processOrder = async (req, res) => {
       const adminMsg = `🛒 NUEVO PEDIDO RECIBIDO\n━━━━━━━━━━━━━━━━━━━━━━\n#️⃣ Orden: #${orderId}\n👨🏽💻 Usuario: ${userNameDisplay}\n🔧 Servicio: ${serviceName || 'N/A'}\n🔍 Detalles: ${imeiDataString}\n💲 Precio: $${parseFloat(resellerCost).toFixed(2)} MXN\n🖥️ Servidor: ${getServerDisplayName(serverId)}\n━━━━━━━━━━━━━━━━━━━━━━\n🛡️ MegaUnlockPhone`;
       enqueueWhatsAppAdmin(adminMsg);
       
-      const groupMsg = `🛒 NUEVO PEDIDO RECIBIDO\n━━━━━━━━━━━━━━━━━━━━━━\n#️⃣ Orden: #${orderId}\n👨🏽💻 Usuario: ${userNameDisplay}\n🔧 Servicio: ${serviceName || 'N/A'}\n🖥️ Servidor: ${getServerDisplayName(serverId)}\n━━━━━━━━━━━━━━━━━━━━━━\n🌐 MegaUnlockPhone`;
+      const groupMsg = `🛒 NUEVO PEDIDO RECIBIDO\n━━━━━━━━━━━━━━━━━━━━━━\n#️⃣ Orden: #${orderId}\n👨🏽💻 Usuario: ID ${user.id}\n🔧 Servicio: ${serviceName || 'N/A'}\n🖥️ Servidor: ${getServerDisplayName(serverId)}\n━━━━━━━━━━━━━━━━━━━━━━\n🌐 MegaUnlockPhone`;
       enqueueWhatsApp('group', groupMsg);
 
       const clientMsg = `📨 ORDEN EN PROCESO\n\n🆔 Orden: #${orderId}\n📱 IMEI: ${imeiDataString || 'N/A'}\n🔧 Servicio: ${serviceName || 'Servicio'}\n💲 Costo: $${parseFloat(resellerCost).toFixed(2)} MXN\n🔑 Código / Respuesta: Procesando...\n🎉 Estado: En proceso\n\n━━━━━━━━━━━━━━\n🌐 MegaUnlockPhone`;

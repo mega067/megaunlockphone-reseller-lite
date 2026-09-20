@@ -330,7 +330,11 @@ async function connectToWhatsApp() {
         const handled = await commands.handleCommand(context);
 
         if (!handled && firstWord.startsWith('/') && firstWord.length < 30) {
-            await sock.sendMessage(remoteJid, { text: '🤖 ¡Hola! No reconocí ese comando.\n\nPor favor, escribe */ayuda* o */comandos* para ver todo lo que puedo hacer por ti.' });
+            if (!wusers[remoteJid]) {
+                await sock.sendMessage(remoteJid, { text: '🤖 ¡Hola! Para usar este bot necesitas vincular tu cuenta.\n\nPor favor, escribe */vincular* para empezar.' });
+            } else {
+                await sock.sendMessage(remoteJid, { text: '🤖 ¡Hola! No reconocí ese comando.\n\nPor favor, escribe */ayuda* o */comandos* para ver todo lo que puedo hacer por ti.' });
+            }
         }
 
         } catch (err) {

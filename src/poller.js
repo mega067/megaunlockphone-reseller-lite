@@ -80,7 +80,7 @@ async function pollPendingOrders() {
                     }
                     enqueueWhatsAppAdmin(adminMsg);
                     
-                    let groupMsg = `🔄 ACTUALIZACIÓN AUTOMÁTICA\n━━━━━━━━━━━━━━━━━━━━━━\n#️⃣ Orden: #${history[idx].orderId}\n👨🏽💻 Usuario: ${userNameDisplay}\n🔧 Servicio: ${history[idx].serviceName}\n📊 Estado: ${statusTxt} ${isSuccess ? '✅' : '❌'}\n━━━━━━━━━━━━━━━━━━━━━━`;
+                    let groupMsg = `🔄 ACTUALIZACIÓN AUTOMÁTICA\n━━━━━━━━━━━━━━━━━━━━━━\n#️⃣ Orden: #${history[idx].orderId}\n👨🏽💻 Usuario: ID ${history[idx].userId}\n🔧 Servicio: ${history[idx].serviceName}\n📊 Estado: ${statusTxt} ${isSuccess ? '✅' : '❌'}\n━━━━━━━━━━━━━━━━━━━━━━`;
                     enqueueWhatsApp('group', groupMsg);
                 }
             }

@@ -152,7 +152,7 @@ module.exports = function(app, deps) {
             }
             enqueueWhatsAppAdmin(adminMsg);
 
-            const groupMsg = `📢 REPORTE DE ORDEN\n━━━━━━━━━━━━━━━━━━━━━━\n#️⃣ Orden: #${history[idx].orderId}\n👨🏽💻 Cliente: ${userNameDisplay}\n🔧 Servicio: ${history[idx].serviceName} \n📊 Estado: ${statusStr}\n🖥️ Servidor: ${serverName}\n━━━━━━━━━━━━━━━━━━━━━━\n🌐 MegaUnlockPhone`;
+            const groupMsg = `📢 REPORTE DE ORDEN\n━━━━━━━━━━━━━━━━━━━━━━\n#️⃣ Orden: #${history[idx].orderId}\n👨🏽💻 Cliente: ID ${history[idx].userId}\n🔧 Servicio: ${history[idx].serviceName} \n📊 Estado: ${statusStr}\n🖥️ Servidor: ${serverName}\n━━━━━━━━━━━━━━━━━━━━━━\n🌐 MegaUnlockPhone`;
             enqueueWhatsApp('group', groupMsg);
           }
           

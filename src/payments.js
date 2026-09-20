@@ -6,6 +6,66 @@ const axios = require('axios');
 module.exports = function(app, deps) {
   const { requireAuth, readDB, writeDB, enqueueWhatsApp, enqueueWhatsAppAdmin } = deps;
 
+  let banksCache = {};
+
+  app.get('/api/fund/banks/:serverId', requireAuth, async (req, res) => {
+    const { serverId } = req.params;
+    const cacheKey = `server_${serverId}`;
+    
+    if (banksCache[cacheKey] && banksCache[cacheKey].timestamp > Date.now() - 3600000) {
+      return res.json({ success: true, banks: banksCache[cacheKey].banks });
+    }
+    
+    if (String(serverId) === '3') {
+      try {
+        const { data } = await axios.get('https://www.unlockerfast.com.mx/autopayv2.php');
+        const bankMatch = data.match(/<select[^>]*name=["']?emisor["']?[^>]*>([\s\S]*?)<\/select>/i);
+        if (bankMatch) {
+          const options = [...bankMatch[1].matchAll(/<option[^>]*value=["']([^"']+)["'][^>]*>([^<]+)<\/option>/ig)];
+          const banks = options.map(o => ({ code: o[1], name: o[2].trim() }));
+          
+          banksCache[cacheKey] = {
+            timestamp: Date.now(),
+            banks
+          };
+          return res.json({ success: true, banks });
+        }
+      } catch (e) {
+        console.error('Error fetching banks for server 3', e.message);
+      }
+    } else if (String(serverId) === '1') {
+      try {
+        const { data } = await axios.get('https://latamgsm.com/autopay.php');
+        const match = data.match(/const\s+transfBancosData\s*=\s*\[([\s\S]*?)\];/);
+        if (match) {
+          const options = [...match[1].matchAll(/\{code:\s*["']([^"']+)["'],\s*name:\s*["']([^"']+)["']/ig)];
+          const banks = options.map(o => ({ code: o[1], name: o[2].trim() }));
+          
+          banksCache[cacheKey] = {
+            timestamp: Date.now(),
+            banks
+          };
+          return res.json({ success: true, banks });
+        }
+      } catch (e) {
+        console.error('Error fetching banks for server 1', e.message);
+      }
+    }
+    
+    // Fallback
+    const defaultBanks = [
+      {code: "40012", name: "BBVA MEXICO"},
+      {code: "40072", name: "BANORTE"},
+      {code: "40014", name: "SANTANDER"},
+      {code: "40127", name: "AZTECA"},
+      {code: "40002", name: "BANAMEX"},
+      {code: "40021", name: "HSBC"},
+      {code: "90722", name: "Mercado Pago W"},
+      {code: "40036", name: "INBURSA"}
+    ];
+    return res.json({ success: true, banks: defaultBanks });
+  });
+
   app.post('/api/fund/route', requireAuth, async (req, res) => {
     const { amount, bankCode, serverId } = req.body;
     if (!amount || !bankCode || !serverId) return res.status(400).json({ error: 'Faltan datos (monto, banco o servidor)' });
@@ -197,7 +257,7 @@ module.exports = function(app, deps) {
           const userPhone = users[userIndex].phone || userId;
           enqueueWhatsApp('private', `✅ Tu recarga de *$${requestedAmount}* mediante SPEI (Rastreo: ${trackingNumber}) ha sido confirmada. Ya tienes el saldo en tu cuenta.`, userPhone);
           
-          const adminMsg = `💸 *Recarga SPEI Confirmada*\n\nEl usuario *${users[userIndex].username}* ha recargado saldo vía SPEI.\n\n💰 Monto: $${requestedAmount} MXN\n🧾 Rastreo: ${trackingNumber}\n📈 Nuevo saldo: $${parseFloat(newCredits).toFixed(2)}`;
+          const adminMsg = `💸 *Recarga SPEI Confirmada*\n\nEl usuario ID *${users[userIndex].id}* ha recargado saldo vía SPEI.\n\n💰 Monto: $${requestedAmount} MXN\n🧾 Rastreo: ${trackingNumber}\n📈 Nuevo saldo: $${parseFloat(newCredits).toFixed(2)}`;
           enqueueWhatsAppAdmin(adminMsg);
           enqueueWhatsApp('group', adminMsg);
         }
