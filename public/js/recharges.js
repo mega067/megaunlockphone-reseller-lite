@@ -7,6 +7,11 @@ const btnSyncRecharges = document.getElementById('btnSyncRecharges');
 
 let rechargesHistory = [];
 
+function escapeHtml(unsafe) {
+  if (!unsafe) return '';
+  return String(unsafe).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 function formatType(type) {
   if (type === 'SPEI') return '<span style="color:#10b981;">SPEI / Banco</span>';
   if (type === 'MANUAL_ADMIN') return '<span style="color:#8b5cf6;">Manual (Admin)</span>';

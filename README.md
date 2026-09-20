@@ -9,7 +9,8 @@ El panel soporta múltiples servidores Dhru configurables desde `settings.json`:
 - **Servidor 3:** UnlockerFast.
 
 ## 🚀 Nuevas Funcionalidades
-- **Historial de Recargas**: Registro inmutable de cada ingreso de saldo (vía SPEI, Bot o Panel Admin).
+- **Rediseño UI Premium Dark Mode**: Interfaz completamente renovada utilizando Glassmorphism, degradados modernos, banderas de servidores (México) integradas orgánicamente y alertas flotantes para Notificaciones.
+- **Historial de Recargas Unificado**: Fusión de botones de recarga en una única pestaña. Registro inmutable de cada ingreso de saldo (vía SPEI, Bot o Panel Admin) con visualización de nombre de usuario en vista Admin.
 - **Sistema Inteligente de Reembolsos**: Automáticos (cuando Dhru rechaza) y Manuales (desde el panel Admin).
 - **Soporte Directo Bot WhatsApp**: Integración con un bot para procesar comandos de búsqueda, cotización y gestión de saldo.
 - **Sistema SPEI Inteligente con Colchón**: Triangulación automatizada de pagos SPEI (Banxico CEP) donde el sistema elige a qué cuenta depositar dependiendo de un "Colchón de Retención" definido por el administrador.

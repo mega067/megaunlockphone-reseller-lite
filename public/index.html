@@ -59,6 +59,7 @@
             <span style="font-size: 1rem;">🛡</span> ALPHA
           </button>
           <button type="button" id="btnServer3" class="btn-server-switch" data-server="3" style="flex: 1; position: relative; padding: 6px 4px; font-size: 0.8rem; font-weight: 700; color: rgba(255,255,255,0.6); background: transparent; border: none; cursor: pointer; z-index: 2; transition: color 0.3s; font-family: 'Inter', sans-serif; white-space: nowrap; display: flex; align-items: center; justify-content: center; gap: 4px;">
+            <div style="position: absolute; top: -15px; right: -10px; z-index: 10; pointer-events: none; background: #ef4444; color: white; font-size: 0.7rem; font-weight: bold; padding: 3px 8px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.5);">🔥 HOT</div>
             <span style="font-size: 1rem;">🔱</span> OMEGA
           </button>
         </div>
@@ -92,10 +93,7 @@
           <span>Saldo</span>
         </button>
 
-        <button type="button" class="btn btn-secondary btn-small hidden" id="btnRechargesHistory" style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); color: #fbbf24;">
-          <i data-lucide="banknote"></i>
-          <span>Recargas</span>
-        </button>
+        
 
         <button type="button" class="btn btn-secondary btn-small hidden" id="btnUserProfile" style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); color: #4ade80;">
           <i data-lucide="user"></i>
@@ -299,38 +297,7 @@
       </section>
 
       <!-- Historial de Recargas -->
-      <section class="card history-card hidden" id="rechargesSection">
-        <div class="card-header history-header">
-          <div class="header-left">
-            <i data-lucide="banknote"></i>
-            <h2>Historial de Recargas</h2>
-            <span class="badge" id="rechargesCount">0</span>
-          </div>
-          <div class="header-actions">
-            <button type="button" class="btn btn-primary btn-small" id="btnSyncRecharges">
-              <i data-lucide="refresh-cw"></i>
-              <span>Actualizar</span>
-            </button>
-          </div>
-        </div>
-        <div class="products-list-wrapper">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>FECHA</th>
-                <th class="admin-col-recharge hidden">USUARIO</th>
-                <th>MONTO</th>
-                <th>TIPO</th>
-                <th>AUTORIZÓ</th>
-                <th>SERVIDOR</th>
-              </tr>
-            </thead>
-            <tbody id="rechargesBody">
-              <!-- Dynamically populated rows -->
-            </tbody>
-          </table>
-        </div>
-      </section>
+      
 
       <!-- Historial de Pedidos (Estilo Reseller Panel) -->
       <section class="card history-card hidden" id="historySection">
@@ -677,7 +644,152 @@
         </div>
       </section>
 
+  <!-- Recarga Section (Converted from Modal) -->
+<section class="card history-card hidden" id="rechargeSection" style="margin-top: 20px;">
+  <div class="card-header history-header">
+    <div class="header-left">
+      <i data-lucide="zap"></i>
+      <h2>Recarga Automática SPEI</h2>
     </div>
+    <button type="button" class="btn btn-secondary btn-small" id="closeRechargeModal" style="display: flex; gap: 5px; align-items: center;">
+      <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i> Volver al Catálogo
+    </button>
+  </div>
+  <div class="card-body">
+        <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 20px;">Añade saldo a tu cuenta las 24/7 de forma instantánea. Se asignará una cuenta automáticamente para tu transferencia.</p>
+        
+        <div id="rechargeStep1">
+          <div class="form-group" style="margin-bottom: 15px;">
+            <label for="rechargeServer">Servidor (¿Dónde quieres el saldo?)</label>
+            <input type="hidden" id="rechargeServer" value="1">
+            <div id="rechargeServerCards" style="display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px; scroll-snap-type: x mandatory;">
+              
+              <div class="server-card active" data-id="1" style="display: flex; flex-direction: column; min-width: 250px; flex: 1; padding: 15px;  border-radius: 12px; cursor: pointer; scroll-snap-align: center; position: relative;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+                  <span style="font-size: 1.8rem;">⚡</span>
+                  <strong style="color: #60a5fa; font-size: 1.1rem;">MEGA-SERVER</strong>
+                </div>
+                <p style="color: #94a3b8; font-size: 0.8rem; margin: 0;">Servicios de desbloqueo IMEI internacionales</p>
+                <div style="margin-top: 10px; font-size: 0.8rem; color: #10b981;">Min: $50 MXN</div>
+              </div>
+
+              <div class="server-card" data-id="3" style="display: flex; flex-direction: column; min-width: 250px; flex: 1; padding: 15px;  border-radius: 12px; cursor: pointer; scroll-snap-align: center; position: relative;">
+                <div style="position: absolute; top: 0px; right: 0px; z-index: 10; pointer-events: none; background: #ef4444; color: white; font-size: 0.7rem; font-weight: bold; padding: 3px 8px; border-radius: 0 12px 0 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.5);">🔥 HOT</div>
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+                  <span style="font-size: 1.8rem;">🔱</span>
+                  <strong style="color: #a78bfa; font-size: 1.1rem;">OMEGA-SERVER</strong>
+                </div>
+                <p style="color: #94a3b8; font-size: 0.8rem; margin: 0;">Servicios exclusivos y especiales</p>
+                <div style="margin-top: 10px; font-size: 0.8rem; color: #10b981;">Min: $100 MXN</div>
+              </div>
+              
+            </div>
+            <div style="margin-top: 10px; padding: 10px; border-radius: 8px; background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.25);">
+              <p style="color: #fbbf24; font-size: 0.8rem; margin: 0; display: flex; align-items: center; gap: 6px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <strong>⚠️ IMPORTANTE:</strong> Asegúrate de seleccionar el servidor correcto. El saldo NO es transferible entre servidores.
+              </p>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="rechargeAmount">Monto a recargar (MXN)</label>
+            <input type="number" id="rechargeAmount" step="1" placeholder="Ej. 100" class="search-input" style="width: 100%; box-sizing: border-box;">
+            <small style="color:#64748b; margin-top:4px; display:block;">Puedes intentar montos menores, el sistema verificará si hay liquidez para cederte saldo.</small>
+          </div>
+          <div class="form-group" style="margin-top: 15px;">
+            <label for="rechargeBank">Selecciona tu Banco (Desde donde transferirás)</label>
+            <select id="rechargeBank" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px;">
+              <option value="40012">BBVA</option>
+              <option value="40002">Banamex</option>
+              <option value="40072">Banorte</option>
+              <option value="40014">Santander</option>
+              <option value="40127">Banco Azteca</option>
+              <option value="40638">NU MEXICO</option>
+              <option value="90728">Spin by OXXO</option>
+              <option value="40021">HSBC</option>
+              <option value="40044">Scotiabank</option>
+              <option value="40036">Inbursa</option>
+              <option value="40030">Banco del Bajío</option>
+              <option value="40058">Banregio</option>
+              <option value="40137">BanCoppel</option>
+              <option value="90722">Mercado Pago</option>
+              <option value="90661">Klar</option>
+              <option value="40138">Ualá</option>
+            </select>
+          </div>
+          
+          <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 10px; border-radius: 8px; margin-top: 15px;">
+            <p style="color: #fca5a5; font-size: 0.85rem; margin: 0; font-weight: bold;">
+              ⚠️ IMPORTANTE: SIEMPRE pide una nueva cuenta aquí antes de hacer tu transferencia. LAS CUENTAS CAMBIAN CONTINUAMENTE, si transfieres a una cuenta anterior el saldo se puede perder.
+            </p>
+          </div>
+
+          <div class="modal-actions" style="margin-top: 20px;">
+            <button id="btnGenerarCuenta" class="btn btn-primary" style="width: 100%; justify-content: center;">Obtener Cuenta para Depositar</button>
+          </div>
+        </div>
+
+        <div id="rechargeStep2" class="hidden">
+          <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="color: #4ade80; margin-top: 0; margin-bottom: 10px;">¡Bóvedas Disponibles!</h3>
+            <p>Selecciona una cuenta y realiza una transferencia SPEI por exactamente <strong id="lblRechargeAmount" style="color:white; font-size: 1.1rem;">$0.00</strong>:</p>
+            
+            <div id="rechargeAccountsContainer" style="display: flex; flex-wrap: wrap; gap: 10px; margin: 15px 0;">
+              <!-- Tarjetas dinámicas generadas desde JS -->
+            </div>
+            <p style="font-size: 0.85rem; color: #cbd5e1; margin-bottom: 5px;">⚠️ Una vez hecha la transferencia, ingresa la clave de rastreo de Banxico abajo.</p>
+            <p style="font-size: 0.75rem; color: #fca5a5; margin-bottom: 0;">⏱️ *NOTA:* Las transferencias SPEI pueden demorar unos minutos en ser reportadas por Banxico. Si da error, intenta verificar de nuevo en 3 minutos.</p>
+          </div>
+          
+          <div class="form-group">
+            <label for="rechargeTracking">Clave de Rastreo (Banxico) / Folio SPEI</label>
+            <input type="text" id="rechargeTracking" placeholder="Ej. 1234567890" class="search-input" style="width: 100%; box-sizing: border-box;">
+          </div>
+          <div class="modal-actions" style="margin-top: 15px; flex-direction: column; gap: 10px;">
+            <button id="btnVerificarPago" class="btn btn-primary" style="width: 100%; justify-content: center; background: linear-gradient(90deg, #10b981, #059669);">Verificar y Añadir Saldo</button>
+            <button id="btnRechargeBack" class="btn btn-secondary" style="width: 100%; justify-content: center;">Cancelar</button>
+          </div>
+        </div>
+        </div>
+
+<hr style="border-color: rgba(255,255,255,0.1); margin: 30px 0;">
+
+        <div class="card-header history-header">
+          <div class="header-left">
+            <i data-lucide="banknote"></i>
+            <h2>Historial de Recargas</h2>
+            <span class="badge" id="rechargesCount">0</span>
+          </div>
+          <div class="header-actions">
+            <button type="button" class="btn btn-primary btn-small" id="btnSyncRecharges">
+              <i data-lucide="refresh-cw"></i>
+              <span>Actualizar</span>
+            </button>
+          </div>
+        </div>
+        <div class="products-list-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>FECHA</th>
+                <th class="admin-col-recharge hidden">USUARIO</th>
+                <th>MONTO</th>
+                <th>TIPO</th>
+                <th>AUTORIZÓ</th>
+                <th>SERVIDOR</th>
+              </tr>
+            </thead>
+            <tbody id="rechargesBody">
+              <!-- Dynamically populated rows -->
+            </tbody>
+          </table>
+        </div>
+      
+</section>
+
+    </div>
+  <!-- Modal Recarga Saldo -->
   </main>
 
   <!-- Purchase Modal -->
@@ -1159,109 +1271,6 @@
     </div>
   </div>
 
-  <!-- Modal Recarga Saldo -->
-  <div id="modalRecharge" class="modal-overlay hidden" style="z-index: 10000;">
-    <div class="modal-card" style="max-width: 500px; width: 95%;">
-      <div class="modal-header">
-        <div class="modal-title-area">
-          <i data-lucide="zap"></i>
-          <h2>Recarga Automática SPEI</h2>
-        </div>
-        <button type="button" class="btn-icon" id="closeRechargeModal">
-          <i data-lucide="x"></i>
-        </button>
-      </div>
-      
-      <div class="modal-body">
-        <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 20px;">Añade saldo a tu cuenta las 24/7 de forma instantánea. Se asignará una cuenta automáticamente para tu transferencia.</p>
-        
-        <div id="rechargeStep1">
-          <div class="form-group" style="margin-bottom: 15px;">
-            <label for="rechargeServer">Servidor (¿Dónde quieres el saldo?)</label>
-            <select id="rechargeServer" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px;">
-              <option value="1">⚡ MEGA-SERVER (Mínimo recomendado: $50 MXN)</option>
-              <option value="3">🔱 OMEGA-SERVER (Mínimo recomendado: $100 MXN)</option>
-            </select>
-            <div id="rechargeServerInfo" style="margin-top: 12px; padding: 12px; border-radius: 10px; background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3);">
-              <div style="display: flex; align-items: center; gap: 10px;">
-                <span style="font-size: 2rem;">⚡</span>
-                <div>
-                  <strong style="color: #60a5fa; font-size: 1.1rem;">MEGA-SERVER</strong>
-                  <p style="color: #94a3b8; font-size: 0.8rem; margin: 2px 0 0;">Servicios de desbloqueo IMEI internacionales</p>
-                </div>
-              </div>
-            </div>
-            <div style="margin-top: 10px; padding: 10px; border-radius: 8px; background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.25);">
-              <p style="color: #fbbf24; font-size: 0.8rem; margin: 0; display: flex; align-items: center; gap: 6px;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                <strong>⚠️ IMPORTANTE:</strong> Asegúrate de seleccionar el servidor correcto. El saldo NO es transferible entre servidores.
-              </p>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="rechargeAmount">Monto a recargar (MXN)</label>
-            <input type="number" id="rechargeAmount" step="1" placeholder="Ej. 100" class="search-input" style="width: 100%; box-sizing: border-box;">
-            <small style="color:#64748b; margin-top:4px; display:block;">Puedes intentar montos menores, el sistema verificará si hay liquidez para cederte saldo.</small>
-          </div>
-          <div class="form-group" style="margin-top: 15px;">
-            <label for="rechargeBank">Selecciona tu Banco (Desde donde transferirás)</label>
-            <select id="rechargeBank" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px;">
-              <option value="40012">BBVA</option>
-              <option value="40002">Banamex</option>
-              <option value="40072">Banorte</option>
-              <option value="40014">Santander</option>
-              <option value="40127">Banco Azteca</option>
-              <option value="40638">NU MEXICO</option>
-              <option value="90728">Spin by OXXO</option>
-              <option value="40021">HSBC</option>
-              <option value="40044">Scotiabank</option>
-              <option value="40036">Inbursa</option>
-              <option value="40030">Banco del Bajío</option>
-              <option value="40058">Banregio</option>
-              <option value="40137">BanCoppel</option>
-              <option value="90722">Mercado Pago</option>
-              <option value="90661">Klar</option>
-              <option value="40138">Ualá</option>
-            </select>
-          </div>
-          
-          <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 10px; border-radius: 8px; margin-top: 15px;">
-            <p style="color: #fca5a5; font-size: 0.85rem; margin: 0; font-weight: bold;">
-              ⚠️ IMPORTANTE: SIEMPRE pide una nueva cuenta aquí antes de hacer tu transferencia. LAS CUENTAS CAMBIAN CONTINUAMENTE, si transfieres a una cuenta anterior el saldo se puede perder.
-            </p>
-          </div>
-
-          <div class="modal-actions" style="margin-top: 20px;">
-            <button id="btnGenerarCuenta" class="btn btn-primary" style="width: 100%; justify-content: center;">Obtener Cuenta para Depositar</button>
-          </div>
-        </div>
-
-        <div id="rechargeStep2" class="hidden">
-          <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-            <h3 style="color: #4ade80; margin-top: 0; margin-bottom: 10px;">¡Bóvedas Disponibles!</h3>
-            <p>Selecciona una cuenta y realiza una transferencia SPEI por exactamente <strong id="lblRechargeAmount" style="color:white; font-size: 1.1rem;">$0.00</strong>:</p>
-            
-            <div id="rechargeAccountsContainer" style="display: flex; flex-wrap: wrap; gap: 10px; margin: 15px 0;">
-              <!-- Tarjetas dinámicas generadas desde JS -->
-            </div>
-            <p style="font-size: 0.85rem; color: #cbd5e1; margin-bottom: 5px;">⚠️ Una vez hecha la transferencia, ingresa la clave de rastreo de Banxico abajo.</p>
-            <p style="font-size: 0.75rem; color: #fca5a5; margin-bottom: 0;">⏱️ *NOTA:* Las transferencias SPEI pueden demorar unos minutos en ser reportadas por Banxico. Si da error, intenta verificar de nuevo en 3 minutos.</p>
-          </div>
-          
-          <div class="form-group">
-            <label for="rechargeTracking">Clave de Rastreo (Banxico) / Folio SPEI</label>
-            <input type="text" id="rechargeTracking" placeholder="Ej. 1234567890" class="search-input" style="width: 100%; box-sizing: border-box;">
-          </div>
-          <div class="modal-actions" style="margin-top: 15px; flex-direction: column; gap: 10px;">
-            <button id="btnVerificarPago" class="btn btn-primary" style="width: 100%; justify-content: center; background: linear-gradient(90deg, #10b981, #059669);">Verificar y Añadir Saldo</button>
-            <button id="btnRechargeBack" class="btn btn-secondary" style="width: 100%; justify-content: center;">Cancelar</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- HIDDEN COUPON TICKET TEMPLATE FOR HTML2CANVAS -->
   <div id="couponTemplateContainer" style="position: fixed; top: 0; left: 0; opacity: 0; pointer-events: none; z-index: -9999;">
     <div id="couponTemplate" class="coupon-card" style="box-shadow: none; background: linear-gradient(145deg, #16161e, #1a1a2e);">
@@ -1452,7 +1461,8 @@
   <script src="/js/ticket.js"></script>
   <script src="/js/searchEngine.js?v=1"></script>
   <script src="js/recharges.js"></script>
-  <script src="index.js?v=14"></script>
+  <script src="js/recharge.js?v=15"></script>
+  <script src="index.js?v=29"></script>
     <div class="modal-overlay hidden" id="globalLoadingOverlay" style="z-index: 100000; flex-direction: column; text-align: center;">
       <div class="icon-spin" style="color: #3b82f6; margin-bottom: 1rem;">
         <i data-lucide="refresh-cw" style="width: 64px; height: 64px;"></i>
