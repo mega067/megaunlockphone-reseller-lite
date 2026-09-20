@@ -488,6 +488,12 @@ h1, h2, h3, h4 { color: var(--text-primary); font-weight: 600; letter-spacing: -
     max-width: 100vw;
   }
   
+  .bulk-btn-text {
+    display: none;
+  }
+  
+
+  
   /* Header adjustments */
   .app-header {
     flex-direction: column;
@@ -583,9 +589,12 @@ h1, h2, h3, h4 { color: var(--text-primary); font-weight: 600; letter-spacing: -
   }
 
   #btnBulkSavePrices {
-    width: calc(100% - 40px) !important;
-    left: 20px !important;
-    transform: none !important;
+    width: 56px !important;
+    height: 56px !important;
+    border-radius: 50% !important;
+    padding: 0 !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
     justify-content: center !important;
     bottom: 80px !important; /* Above WhatsApp button */
   }

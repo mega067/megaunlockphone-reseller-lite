@@ -24,11 +24,18 @@ El servidor se está refactorizando en la carpeta `src/` para separar la lógica
 - `paymentRouter.js`: Enrutador avanzado SPEI basado en la liquidez y reglas de los proveedores.
 
 ### Modularización del Frontend (Vanilla JS)
-Para evitar mantener un archivo gigante monolítico y al mismo tiempo no romper los _closures_ y variables globales en el sistema de eventos actual en `index.js`, se implementó una estrategia de extracción segura de dependencias puras:
-- **`public/js/utils.js`**: Funciones puras extraídas para el formateo de precios (MXN), sanitización XSS (`escapeHtml`) y coloreado inteligente de strings del servidor (`colorizeServerResponse`) con soporte Regex para enlaces y Key-Values.
-- **`public/js/api.js`**: Envoltorio asíncrono para las llamadas `fetch` de red (ej. Login) aislando el manejo de errores HTTP y la inyección de Headers `X-Server-Id` de la lógica de interfaz de usuario.
-- **`public/js/notifications.js`**: Sistema híbrido (Dual) para sobrescribir `window.alert`. Detecta el contexto del mensaje: si es una alerta manual o error usa un Modal Oscuro bloqueante, pero si es un aviso recurrente ("Sincronización completada"), inyecta dinámicamente notificaciones tipo *Toast/Slider* apilables en la esquina inferior derecha con autocierre de 5 segundos.
+Para evitar mantener un archivo gigante monolítico y al mismo tiempo no romper los _closures_ y variables globales en el sistema de eventos actual en `index.js`, se implementó una estrategia de extracción progresiva usando Inyección de Dependencias (Namespace Pattern `window.MegaApp`):
+- **`public/js/state.js`**: Nuevo gestor de estado global (`window.MegaApp.State`) encargado de centralizar variables críticas como Tokens, Sesión y Configuraciones compartidas, evitando la colisión de variables globales.
+- **`public/js/utils.js`**: Funciones puras extraídas para el formateo de precios (MXN), sanitización XSS (`escapeHtml`) y coloreado inteligente de strings del servidor (`colorizeServerResponse`).
+- **`public/js/api.js`**: Envoltorio asíncrono para llamadas `fetch`.
+- **`public/js/notifications.js`**: Sistema híbrido (Dual) para sobrescribir `window.alert` con modales bloqueantes o notificaciones *Toast*.
+- **`public/js/recharges.js`**: Lógica extraída de las interfaces y procesos de recargas manuales.
+- **`public/js/ticket.js`**: Controlador inyectado para la gestión de logotipos y configuración del ticket de WhatsApp, completamente aislado del monolito.
 
+### Optimizaciones de Rendimiento UI
+- **Reducción de Lag/Tirones**: Se ajustó la frecuencia del `setInterval` de sincronización en segundo plano de 15 a 60 segundos para evitar bloqueos del DOM mientras el administrador navega.
+- **Yielding (Sincronización Asíncrona)**: Los procesos pesados de renderizado masivo (cientos de componentes en catálogo y grupos) ahora ceden tiempo al *Event Loop* (usando `setTimeout` o Promesas), permitiendo que el navegador pinte los `spinners` de *"Sincronizando..."* o *"Cargando grupos..."* en lugar de congelar la pestaña.
+- **Búsqueda Avanzada**: El motor de búsqueda (`public/js/searchEngine.js`) ahora soporta búsqueda multi-palabras (lógica AND en lugar de coincidencia exacta) y ordena los resultados priorizando siempre las coincidencias exactas en la parte superior.
 
 ## 🤖 Sistema de Bot de WhatsApp como Demonio
 El bot de WhatsApp (`whatsappBot.js`) ahora funciona como un demonio continuo (User Service) en AlwaysData, a través del script corregido `start_bot.sh`.

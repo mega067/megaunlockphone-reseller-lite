@@ -36,6 +36,9 @@ exports.setProductPrice = (req, res) => {
       if (item.serviceId && item.resellerPrice !== undefined && item.clientPrice !== undefined) {
         const rp = parseFloat(item.resellerPrice);
         const cp = parseFloat(item.clientPrice);
+        
+        if (isNaN(rp) || isNaN(cp)) continue; // Skip empty/invalid prices in bulk mode
+        
         const realCost = prices[item.serviceId] || 0;
         if (rp < realCost || cp < realCost) {
           return res.status(400).json({ error: `El precio para ${item.serviceId} no puede ser menor al costo API ($${realCost}).` });
@@ -57,6 +60,11 @@ exports.setProductPrice = (req, res) => {
 
   const rp = parseFloat(resellerPrice);
   const cp = parseFloat(clientPrice);
+  
+  if (isNaN(rp) || isNaN(cp)) {
+     return res.status(400).json({ error: 'Precio inválido. Usa el botón de restablecer (auto) si deseas borrar el precio.' });
+  }
+
   const realCost = prices[serviceid] || 0;
   if (rp < realCost || cp < realCost) {
     return res.status(400).json({ error: `El precio no puede ser menor al costo API ($${realCost}).` });

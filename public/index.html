@@ -141,13 +141,66 @@
             <i data-lucide="log-in"></i>
             <span>Iniciar Sesión</span>
           </button>
-          <div style="text-align: center; margin-top: 1.5rem;">
+          <div style="text-align: center; margin-top: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem;">
+            <a href="#" id="btnShowForgotPassword" style="color: #ec4899; font-size: 0.95rem; text-decoration: none; font-weight: 500;">
+              ¿Olvidaste tu contraseña?
+            </a>
             <a href="#" id="btnShowRegister" style="color: #0ea5e9; font-size: 0.95rem; text-decoration: none; font-weight: 500;">
               ¿No tienes cuenta? Regístrate gratis
             </a>
           </div>
         </form>
       </section>
+    </div>
+
+    <!-- Modal de Recuperación de Contraseña -->
+    <div id="forgotPasswordModal" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
+      <div style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 12px; width: 90%; max-width: 400px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+        <div style="padding: 16px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+          <h3 style="margin: 0; color: #ec4899; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+            <i data-lucide="shield-alert" style="width: 18px; height: 18px;"></i> Recuperar Cuenta
+          </h3>
+          <button id="btnCloseForgotPasswordModal" style="background: none; border: none; color: var(--text-muted); cursor: pointer;"><i data-lucide="x"></i></button>
+        </div>
+        <div style="padding: 20px;">
+          <!-- Step 1: Request Code -->
+          <div id="fpStep1">
+            <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 15px;">Ingresa tu nombre de usuario. Te enviaremos un código de recuperación a tu WhatsApp vinculado.</p>
+            <div class="input-group">
+              <label>Usuario</label>
+              <div class="input-wrapper">
+                <i data-lucide="user"></i>
+                <input type="text" id="fpUsername" placeholder="Tu usuario">
+              </div>
+            </div>
+            <button id="btnRequestRecoveryCode" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 10px;">
+              <i data-lucide="send"></i> Enviar Código por WhatsApp
+            </button>
+          </div>
+          
+          <!-- Step 2: Reset Password -->
+          <div id="fpStep2" class="hidden">
+            <p style="font-size: 0.9rem; color: #10b981; margin-bottom: 15px;">Hemos enviado un código a tu WhatsApp. Ingrésalo abajo con tu nueva contraseña.</p>
+            <div class="input-group">
+              <label>Código de Recuperación</label>
+              <div class="input-wrapper">
+                <i data-lucide="key"></i>
+                <input type="text" id="fpCode" placeholder="Ej. 123456">
+              </div>
+            </div>
+            <div class="input-group">
+              <label>Nueva Contraseña</label>
+              <div class="input-wrapper">
+                <i data-lucide="lock"></i>
+                <input type="password" id="fpNewPassword" placeholder="Nueva contraseña">
+              </div>
+            </div>
+            <button id="btnResetPassword" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 10px; background: #10b981;">
+              <i data-lucide="check-circle"></i> Restablecer Contraseña
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Vista de Dashboard (Oculta al inicio) -->
@@ -657,6 +710,13 @@
             <div id="modalServiceTime" style="margin-bottom: 0.5rem; color: #34d399; font-weight: bold;"></div>
             <div id="modalServiceInfoText" style="white-space: pre-wrap; word-break: break-word;"></div>
           </div>
+          
+          <div id="modalServiceWarningBlock" style="margin-top: 1rem; padding: 1rem; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; font-size: 0.85rem; color: #fca5a5; display: none; max-height: 200px; overflow-y: auto;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 0.5rem; color: #ef4444; font-weight: bold;">
+              <i data-lucide="alert-triangle" style="width: 16px; height: 16px;"></i> Importante
+            </div>
+            <div id="modalServiceWarningText" style="white-space: pre-wrap; word-break: break-word;"></div>
+          </div>
         </div>
 
         <form id="orderForm" class="order-form">
@@ -903,7 +963,7 @@
 
   <!-- Admin Floating Bulk Save Button -->
   <button id="btnBulkSavePrices" class="btn btn-primary hidden" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 100; box-shadow: 0 4px 15px rgba(236,72,153,0.4); border-radius: 50px; padding: 12px 24px; font-weight: bold; display: flex; align-items: center; gap: 8px;">
-    <i data-lucide="save"></i> Guardar Todos los Precios
+    <i data-lucide="save"></i> <span class="bulk-btn-text">Guardar Todos los Precios</span>
   </button>
   <!-- User Custom Price Modal -->
   <div id="userCustomPriceModal" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
@@ -925,7 +985,51 @@
       </div>
     </div>
   </div>
+  <!-- Admin Warning Modal -->
+  <div class="modal-overlay hidden" id="warningModal">
+    <div class="modal-card" style="max-width: 600px; width: 95%;">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div class="icon-wrapper" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">
+            <i data-lucide="alert-triangle"></i>
+          </div>
+          <h2>Advertencia de Servicio</h2>
+        </div>
+        <button class="btn-close" id="btnWarningClose"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body" style="padding-top: 0;">
+        <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">
+          Configura una advertencia personalizada para este servicio. Puedes usar código HTML (p. ej. &lt;br&gt; para saltos de línea, o &lt;b&gt; para negritas).
+        </p>
 
+        <div class="input-group" style="margin-bottom: 1rem;">
+          <label>Plantillas Guardadas (Opcional)</label>
+          <div style="display: flex; gap: 8px;">
+            <select id="warningTemplateSelect" class="form-input" style="flex: 1;">
+              <option value="">-- Seleccionar Plantilla --</option>
+            </select>
+            <button id="btnDeleteWarningTemplate" class="btn btn-secondary" style="color: #ef4444; border-color: rgba(239,68,68,0.3);" title="Eliminar Plantilla">
+              <i data-lucide="trash-2"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label>Contenido de la Advertencia</label>
+          <textarea id="warningContent" class="form-input" rows="8" placeholder="Escribe aquí la advertencia..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+        <button id="btnSaveAsWarningTemplate" class="btn btn-secondary" style="color: #3b82f6; border-color: rgba(59,130,246,0.3);">
+          <i data-lucide="save"></i> Guardar como Plantilla
+        </button>
+        <div style="display: flex; gap: 10px;">
+          <button id="btnWarningClear" class="btn btn-secondary" style="color: #ef4444; border-color: rgba(239,68,68,0.3);">Quitar Advertencia</button>
+          <button id="btnWarningSave" class="btn btn-primary">Aplicar a Servicio</button>
+        </div>
+      </div>
+    </div>
+  </div>
   <!-- Admin Coupons Modal -->
   <div class="modal-overlay hidden" id="adminCouponsModal">
     <div class="modal-card" style="max-width: 900px; width: 95%;">
@@ -1341,11 +1445,14 @@
   <div id="toastContainer" style="position: fixed; bottom: 20px; right: 20px; z-index: 999999; display: flex; flex-direction: column; gap: 10px; pointer-events: none;"></div>
 
   <!-- Scripts Modulares -->
-  <script src="js/api.js?v=1"></script>
-  <script src="js/utils.js?v=1"></script>
-  <script src="js/notifications.js?v=2"></script>
-  <!-- Script Principal -->
-  <script src="index.js?v=42"></script>
+  <script src="/js/api.js?v=1"></script>
+  <script src="/js/utils.js?v=1"></script>
+  <script src="/js/notifications.js?v=2"></script>
+  <script src="/js/state.js"></script>
+  <script src="/js/ticket.js"></script>
+  <script src="/js/searchEngine.js?v=1"></script>
+  <script src="js/recharges.js"></script>
+  <script src="index.js?v=14"></script>
     <div class="modal-overlay hidden" id="globalLoadingOverlay" style="z-index: 100000; flex-direction: column; text-align: center;">
       <div class="icon-spin" style="color: #3b82f6; margin-bottom: 1rem;">
         <i data-lucide="refresh-cw" style="width: 64px; height: 64px;"></i>

@@ -33,4 +33,11 @@ router.post('/admin/coupons', requireAuth, requireAdmin, adminController.createC
 router.post('/admin/coupons/redeem', requireAuth, requireAdmin, adminController.redeemCoupon);
 router.delete('/admin/coupons/:code', requireAuth, requireAdmin, adminController.deleteCoupon);
 
+router.get('/admin/warning-templates', requireAuth, requireAdmin, adminController.getWarningTemplates);
+router.post('/admin/warning-templates', requireAuth, requireAdmin, adminController.saveWarningTemplate);
+router.delete('/admin/warning-templates/:id', requireAuth, requireAdmin, adminController.deleteWarningTemplate);
+
+router.get('/admin/service-warnings', requireAuth, requireAdmin, adminController.getServiceWarnings);
+router.post('/admin/service-warnings', requireAuth, requireAdmin, adminController.saveServiceWarning);
+
 module.exports = router;

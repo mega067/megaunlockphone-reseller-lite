@@ -13,6 +13,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const usernameInput = document.getElementById('usernameInput');
   const passwordInput = document.getElementById('passwordInput');
   const btnTogglePass = document.getElementById('btnTogglePass');
+
+  // Forgot Password Elements
+  const btnShowForgotPassword = document.getElementById('btnShowForgotPassword');
+  const forgotPasswordModal = document.getElementById('forgotPasswordModal');
+  const btnCloseForgotPasswordModal = document.getElementById('btnCloseForgotPasswordModal');
+  const fpStep1 = document.getElementById('fpStep1');
+  const fpStep2 = document.getElementById('fpStep2');
+  const fpUsername = document.getElementById('fpUsername');
+  const fpCode = document.getElementById('fpCode');
+  const fpNewPassword = document.getElementById('fpNewPassword');
+  const btnRequestRecoveryCode = document.getElementById('btnRequestRecoveryCode');
+  const btnResetPassword = document.getElementById('btnResetPassword');
   const connectionStatus = document.getElementById('connectionStatus');
   const btnUserProfile = document.getElementById('btnUserProfile');
   const btnLogout = document.getElementById('btnLogout');
@@ -62,7 +74,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const purchaseModal = document.getElementById('purchaseModal');
   const btnCloseModal = document.getElementById('btnCloseModal');
   const btnCancelOrder = document.getElementById('btnCancelOrder');
+  const orderFormBtnGroup = document.getElementById('orderFormBtnGroup');
+  const btnProcessOrder = document.getElementById('btnProcessOrder');
   const orderForm = document.getElementById('orderForm');
+
+  // Warning Modal Elements
+  const warningModal = document.getElementById('warningModal');
+  const btnWarningClose = document.getElementById('btnWarningClose');
+  const warningTemplateSelect = document.getElementById('warningTemplateSelect');
+  const btnDeleteWarningTemplate = document.getElementById('btnDeleteWarningTemplate');
+  const warningContent = document.getElementById('warningContent');
+  const btnSaveAsWarningTemplate = document.getElementById('btnSaveAsWarningTemplate');
+  const btnWarningClear = document.getElementById('btnWarningClear');
+  const btnWarningSave = document.getElementById('btnWarningSave');
+  
+  let currentWarningServiceId = null;
   const imeiInput = document.getElementById('imeiInput');
 
   // Recharge Modal Elements
@@ -330,7 +356,7 @@ document.addEventListener('DOMContentLoaded', () => {
       syncProducts(true);
       updateAccountCredits();
       fetchOrderHistory();
-      fetchTicketConfig();
+      if (window.MegaApp && window.MegaApp.Ticket) window.MegaApp.Ticket.fetchTicketConfig();
       
       document.getElementById('creditsBadgeContainer').classList.remove('hidden');
       const ssc = document.getElementById('serverSwitchContainer');
@@ -385,6 +411,84 @@ document.addEventListener('DOMContentLoaded', () => {
       registerModalOverlay.classList.remove('hidden');
     });
   }
+
+  // --- FORGOT PASSWORD FLOW ---
+  if (btnShowForgotPassword) {
+    btnShowForgotPassword.addEventListener('click', (e) => {
+      e.preventDefault();
+      fpUsername.value = '';
+      fpCode.value = '';
+      fpNewPassword.value = '';
+      fpStep1.classList.remove('hidden');
+      fpStep2.classList.add('hidden');
+      forgotPasswordModal.classList.remove('hidden');
+    });
+  }
+
+  if (btnCloseForgotPasswordModal) {
+    btnCloseForgotPasswordModal.addEventListener('click', () => {
+      forgotPasswordModal.classList.add('hidden');
+    });
+  }
+
+  if (btnRequestRecoveryCode) {
+    btnRequestRecoveryCode.addEventListener('click', async () => {
+      const username = fpUsername.value.trim();
+      if (!username) return showToast('Ingresa tu usuario', 'error');
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/auth/request-recovery`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          showToast(data.message, 'success');
+          fpStep1.classList.add('hidden');
+          fpStep2.classList.remove('hidden');
+        } else {
+          showToast(data.error || 'Error al solicitar código', 'error');
+        }
+      } catch (err) {
+        showToast('Error de red', 'error');
+      }
+    });
+  }
+
+  if (btnResetPassword) {
+    btnResetPassword.addEventListener('click', async () => {
+      const username = fpUsername.value.trim();
+      const code = fpCode.value.trim();
+      const newPassword = fpNewPassword.value.trim();
+
+      if (!code || !newPassword) return showToast('Llena todos los campos', 'error');
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, code, newPassword })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          showToast(data.message, 'success');
+          forgotPasswordModal.classList.add('hidden');
+          // Auto fill login form
+          usernameInput.value = username;
+          passwordInput.value = '';
+          passwordInput.focus();
+        } else {
+          showToast(data.error || 'Error al restablecer contraseña', 'error');
+        }
+      } catch (err) {
+        showToast('Error de red', 'error');
+      }
+    });
+  }
+
   if (btnRegisterClose) {
     btnRegisterClose.addEventListener('click', () => {
       registerModalOverlay.classList.add('hidden');
@@ -514,7 +618,7 @@ document.addEventListener('DOMContentLoaded', () => {
       syncProducts(true);
       updateAccountCredits();
       fetchOrderHistory();
-      fetchTicketConfig();
+      if (window.MegaApp && window.MegaApp.Ticket) window.MegaApp.Ticket.fetchTicketConfig();
       
     } catch (err) {
       // El módulo ApiHelpers ya lanza un error limpio o el de la red
@@ -523,105 +627,20 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // --- TICKET CONFIG LOGIC ---
-  async function fetchTicketConfig() {
-    if (!authToken) return;
-    try {
-      const res = await fetch(`/api/ticket_config?t=${Date.now()}`, {
-        headers: { 
-          'Authorization': `Bearer ${authToken}`,
-          'Cache-Control': 'no-cache'
-        }
-      });
-      if (res.ok) {
-        customTicketSettings = await res.json();
-        if (configNameInput) configNameInput.value = customTicketSettings.nombre || '';
-        if (configWaInput) configWaInput.value = customTicketSettings.whatsapp || '';
-        if (configFbInput) configFbInput.value = customTicketSettings.facebook || '';
-        if (configLogoPreview) {
-          if (customTicketSettings.logoExt) {
-            configLogoPreview.src = `/logos/${authUserId}${customTicketSettings.logoExt}?t=${Date.now()}`;
-          } else {
-            configLogoPreview.src = 'logo.png';
-          }
-        }
-      }
-    } catch (e) {
-      console.error('Error fetching ticket config:', e);
-    }
-  }
-
-  async function saveTicketConfig() {
-    if (!configWaInput || !configFbInput || !configNameInput) return;
-    const nombre = configNameInput.value.trim();
-    const wa = configWaInput.value.trim();
-    const fb = configFbInput.value.trim();
-    
-    // Only save if something changed
-    if (nombre === (customTicketSettings.nombre || '') && 
-        wa === (customTicketSettings.whatsapp || '') && 
-        fb === (customTicketSettings.facebook || '') && 
-        (!configLogoInput || !configLogoInput.files[0])) {
-      return;
-    }
-
-    let base64 = null;
-    const file = configLogoInput.files[0];
-    if (file) {
-      base64 = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-          const img = new Image();
-          img.onload = () => {
-            const canvas = document.createElement('canvas');
-            let width = img.width;
-            let height = img.height;
-            const maxDim = 300;
-            if (width > height) {
-              if (width > maxDim) { height *= maxDim / width; width = maxDim; }
-            } else {
-              if (height > maxDim) { width *= maxDim / height; height = maxDim; }
-            }
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-            resolve(canvas.toDataURL('image/jpeg', 0.85));
-          };
-          img.src = evt.target.result;
-        };
-        reader.readAsDataURL(file);
-      });
-    }
-    
-    try {
-      const payload = { nombre, whatsapp: wa, facebook: fb };
-      if (base64) payload.logoBase64 = base64;
-      
-      const res = await fetch('/api/ticket_config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-        body: JSON.stringify(payload)
-      });
-      if (res.ok) {
-        // Optimistically update local state
-        customTicketSettings.nombre = nombre;
-        customTicketSettings.whatsapp = wa;
-        customTicketSettings.facebook = fb;
-        await fetchTicketConfig(); // update local state fully
-      }
-    } catch (err) {
-      console.error('Error auto-saving ticket config:', err);
-    }
-  }
-
-  // Handle immediate logo preview on file selection
-  if (configLogoInput) {
-    configLogoInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (evt) => { configLogoPreview.src = evt.target.result; };
-        reader.readAsDataURL(file);
+  if (window.MegaApp && window.MegaApp.Ticket) {
+    window.MegaApp.Ticket.init({
+      elements: {
+        configNameInput: document.getElementById('configNameInput'),
+        configWaInput: document.getElementById('configWaInput'),
+        configFbInput: document.getElementById('configFbInput'),
+        configLogoPreview: document.getElementById('configLogoPreview'),
+        configLogoInput: document.getElementById('configLogoInput')
+      },
+      state: {
+        getAuthToken: () => authToken,
+        getAuthUserId: () => authUserId,
+        getSettings: () => customTicketSettings,
+        setSettings: (s) => customTicketSettings = s
       }
     });
   }
@@ -637,7 +656,12 @@ document.addEventListener('DOMContentLoaded', () => {
        filterServiceSelect.innerHTML = '<option value="">Selecciona una opción</option>';
        filterServiceSelect.value = '';
     }
-    renderProducts(productsList);
+    const loadingOverlay = document.getElementById('globalLoadingOverlay');
+    if (loadingOverlay) loadingOverlay.classList.remove('hidden');
+    setTimeout(() => {
+      renderProducts(productsList);
+      if (loadingOverlay) loadingOverlay.classList.add('hidden');
+    }, 50);
   });
 
   // Setup Tabs
@@ -650,7 +674,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (adminSection) adminSection.classList.add('hidden');
     if (typeof rechargesSection !== 'undefined' && rechargesSection) rechargesSection.classList.add('hidden');
     if (!categoriesGrid.classList.contains('hidden')) {
-      renderProducts(productsList);
+      const loadingOverlay = document.getElementById('globalLoadingOverlay');
+      if (loadingOverlay) loadingOverlay.classList.remove('hidden');
+      setTimeout(() => {
+        renderProducts(productsList);
+        if (loadingOverlay) loadingOverlay.classList.add('hidden');
+      }, 50);
     }
   });
 
@@ -1250,6 +1279,8 @@ document.addEventListener('DOMContentLoaded', () => {
         tsInstances[filterServiceSelect.id].clear(true); window.lastSelectedServiceId = '';
       }
 
+      // Yield to the event loop so the browser can render the loading overlay
+      await new Promise(resolve => setTimeout(resolve, 50));
       renderProducts(productsList);
 
       // Restore view if user was inside a category or search
@@ -1400,185 +1431,31 @@ document.addEventListener('DOMContentLoaded', () => {
     syncTomSelect(filterServiceSelect);
   }
 
-  // Handle Search Button Click
-  if (btnAdvancedSearch) {
-    // UX FIX: Intercept mousedown to forcefully select the active TomSelect option before blur clears it
-    // UX FIX: Capture phase mousedown to forcefully select the option they typed BEFORE blur clears it
-    btnAdvancedSearch.addEventListener('click', () => {
-      let typeFilter = window.lastSelectedType || filterTypeSelect.value || 'all';
-      let groupFilter = window.lastSelectedGroup || filterGroupSelect.value || 'all';
-      let serviceIdFilter = window.lastSelectedServiceId || filterServiceSelect.value || '';
-      
-      const globalSearchQuery = (typeof globalProductSearch !== 'undefined' && globalProductSearch) ? globalProductSearch.value.toLowerCase().trim() : '';
-      
-      console.log('SEARCH TRIGGERED', {typeFilter, groupFilter, serviceIdFilter, globalSearchQuery});
-      
-      let filtered = productsList;
-
-      
-      // If user typed in the top global search box but clicked "Buscar" down here, apply it!
-      if (globalSearchQuery) {
-         filtered = filtered.filter(p => 
-           String(p.service).toLowerCase().includes(globalSearchQuery) || 
-           String(p.serviceid).toLowerCase().includes(globalSearchQuery) ||
-           (p.group && p.group.toLowerCase().includes(globalSearchQuery))
-         );
-      }
-      
-      if (serviceIdFilter) {
-         // Direct service selected
-         filtered = filtered.filter(p => String(p.serviceid) === String(serviceIdFilter));
-      } else {
-         // Filter by type and group
-         if (typeFilter && typeFilter !== 'all') filtered = filtered.filter(p => p.type === typeFilter);
-         if (groupFilter && groupFilter !== 'all') filtered = filtered.filter(p => p.group === groupFilter);
-      }
-      
-      if (filtered.length === 0) {
-        productsBody.innerHTML = `
-          <div class="empty-state" style="grid-column: 1 / -1;">
-            <i data-lucide="search-code"></i>
-            <h3>No se encontraron productos</h3>
-          </div>
-        `;
-        lucide.createIcons();
-      } else {
-        window.currentSearchResults = filtered;
-        let truncated = false;
-        let combined = filtered;
-        if (combined.length > 50) {
-          combined = combined.slice(0, 50);
-          truncated = true;
-        }
-        
-        renderProductCards(combined);
-        
-        if (truncated) {
-          const warningHtml = `
-            <div id="search-truncated-warning" style="grid-column: 1 / -1; text-align: center; margin-top: 1rem; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px;">
-              <p style="color: var(--text-secondary); margin-bottom: 0.75rem; font-size: 0.95rem;">Mostrando los primeros 50 resultados de ${window.currentSearchResults.length} encontrados.</p>
-              <button type="button" class="btn btn-primary" onclick="window.showAllSearchResults()" style="font-size: 0.85rem; padding: 8px 16px;">
-                <i data-lucide="list"></i> Mostrar todos los resultados
-              </button>
-            </div>
-          `;
-          productsBody.insertAdjacentHTML('beforeend', warningHtml);
-          lucide.createIcons();
-        }
-      }
-      
-      if (typeof productCount !== 'undefined' && productCount) {
-        productCount.textContent = filtered.length;
-      }
-
-      categoriesGrid.classList.add('hidden');
-      productsBody.classList.remove('hidden');
-      btnBackToCategories.classList.remove('hidden');
-      catalogTitle.textContent = `Resultados (T:${typeFilter} G:${groupFilter})`;
+  // Search logic extracted to searchEngine.js
+  if (window.SearchEngine) {
+    window.SearchEngine.init({
+      elements: {
+        btnAdvancedSearch,
+        globalProductSearch,
+        filterServiceSelect,
+        filterTypeSelect,
+        filterGroupSelect,
+        productsBody,
+        categoriesGrid,
+        btnBackToCategories,
+        catalogTitle,
+        productCount,
+        tsInstances
+      },
+      callbacks: {
+        renderProductCards,
+        renderProducts,
+        populateGroupsFilter,
+        syncTomSelect
+      },
+      getProducts: () => productsList
     });
   }
-
-  // Handle direct Service selection trigger
-  if (filterServiceSelect) {
-    filterServiceSelect.addEventListener('change', (e) => { window.lastSelectedServiceId = e.target ? e.target.value : filterServiceSelect.value; console.log('SERVICE CHANGED TO:', window.lastSelectedServiceId);
-       if (filterServiceSelect.value !== '') {
-         // Optionally auto-search when a specific service is picked
-         btnAdvancedSearch.click();
-       }
-    });
-  }
-  
-  // Handle Global Text Search
-  // Elemento globalProductSearch ya declarado arriba
-  if (globalProductSearch) {
-    let searchTimeout;
-    globalProductSearch.addEventListener('input', (e) => {
-      clearTimeout(searchTimeout);
-      searchTimeout = setTimeout(() => {
-        const q = e.target.value.toLowerCase().trim();
-        if (q === '') {
-           // Si se borra la búsqueda, volver al estado inicial del catálogo
-           if (filterTypeSelect) {
-             filterTypeSelect.value = 'all';
-             if (tsInstances[filterTypeSelect.id]) tsInstances[filterTypeSelect.id].setValue('all', true);
-           }
-           if (filterGroupSelect) {
-             filterGroupSelect.innerHTML = '<option value="all">Todos los grupos</option>';
-             if (tsInstances[filterGroupSelect.id]) {
-                tsInstances[filterGroupSelect.id].destroy();
-                tsInstances[filterGroupSelect.id] = null;
-             }
-             populateGroupsFilter('all');
-           }
-           if (filterServiceSelect) {
-             filterServiceSelect.innerHTML = '<option value="">Seleccione un grupo primero...</option>';
-             if (tsInstances[filterServiceSelect.id]) {
-                tsInstances[filterServiceSelect.id].destroy();
-                tsInstances[filterServiceSelect.id] = null;
-             }
-             syncTomSelect(filterServiceSelect);
-           }
-           renderProducts(productsList); // Re-render the categories view
-           return;
-        }
-        
-        let filtered = productsList.filter(p => 
-          String(p.service).toLowerCase().includes(q) || 
-          String(p.serviceid).toLowerCase().includes(q)
-        );
-        
-        window.currentSearchResults = filtered;
-        let truncated = false;
-        let combined = filtered;
-        if (combined.length > 50) {
-          combined = combined.slice(0, 50);
-          truncated = true;
-        }
-        
-        if (combined.length === 0) {
-          productsBody.innerHTML = `
-            <div class="empty-state" style="grid-column: 1 / -1;">
-              <i data-lucide="search-code"></i>
-              <h3>No se encontraron productos</h3>
-            </div>
-          `;
-          lucide.createIcons();
-        } else {
-          renderProductCards(combined);
-          if (truncated) {
-            const warningHtml = `
-              <div id="search-truncated-warning" style="grid-column: 1 / -1; text-align: center; margin-top: 1rem; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px;">
-                <p style="color: var(--text-secondary); margin-bottom: 0.75rem; font-size: 0.95rem;">Mostrando los primeros 50 resultados de ${window.currentSearchResults.length} encontrados.</p>
-                <button type="button" class="btn btn-primary" onclick="window.showAllSearchResults()" style="font-size: 0.85rem; padding: 8px 16px;">
-                  <i data-lucide="list"></i> Mostrar todos los resultados
-                </button>
-              </div>
-            `;
-            productsBody.insertAdjacentHTML('beforeend', warningHtml);
-            lucide.createIcons();
-          }
-        }
-        
-        if (typeof productCount !== 'undefined' && productCount) {
-          productCount.textContent = combined.length;
-        }
-        
-        categoriesGrid.classList.add('hidden');
-        productsBody.classList.remove('hidden');
-        btnBackToCategories.classList.remove('hidden');
-        catalogTitle.textContent = `Resultados para "${q}"`;
-      }, 300); // 300ms debounce
-    });
-  }
-
-  // Render products into the table
-  window.showAllSearchResults = function() {
-      if (window.currentSearchResults && window.currentSearchResults.length > 0) {
-          renderProductCards(window.currentSearchResults);
-          const warning = document.getElementById('search-truncated-warning');
-          if (warning) warning.remove();
-      }
-  };
 
   function renderProducts(products) {
     productsBody.innerHTML = '';
@@ -1744,14 +1621,14 @@ document.addEventListener('DOMContentLoaded', () => {
             <h4 style="margin-top: 0; margin-bottom: 10px; color: #f472b6; font-size: 0.9rem; display: flex; align-items: center; gap: 5px;">
               <i data-lucide="edit-3" style="width: 14px; height: 14px;"></i> Asignar Precio Manual
             </h4>
-            <form class="custom-price-form" data-id="${escapeHtml(p.serviceid)}" style="display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap;">
-              <div class="input-group" style="flex: 1; min-width: 100px; margin-bottom: 0;">
-                <label style="font-size: 0.75rem; margin-bottom: 3px;">Precio Reseller (MXN)</label>
-                <input type="number" step="0.01" class="custom-reseller-input admin-price-input" data-id="${escapeHtml(p.serviceid)}" data-type="reseller" value="${p.rawItem._CUSTOM_RESELLER !== undefined ? escapeHtml(p.rawItem._CUSTOM_RESELLER) : ''}" placeholder="${escapeHtml(p.credit)}" style="padding: 6px; font-size: 0.85rem;" required>
+            <form class="custom-price-form" data-id="${escapeHtml(p.serviceid)}" style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: end; width: 100%;">
+              <div class="input-group" style="margin-bottom: 0; min-width: 0;">
+                <label style="font-size: 0.75rem; margin-bottom: 3px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Precio Reseller</label>
+                <input type="number" step="0.01" class="custom-reseller-input admin-price-input" data-id="${escapeHtml(p.serviceid)}" data-type="reseller" value="${p.rawItem._CUSTOM_RESELLER !== undefined ? escapeHtml(p.rawItem._CUSTOM_RESELLER) : ''}" placeholder="${escapeHtml(p.credit)}" style="padding: 6px; font-size: 0.85rem; width: 100%; box-sizing: border-box;" required>
               </div>
-              <div class="input-group" style="flex: 1; min-width: 100px; margin-bottom: 0;">
-                <label style="font-size: 0.75rem; margin-bottom: 3px;">Precio Cliente (MXN)</label>
-                <input type="number" step="0.01" class="custom-client-input admin-price-input" data-id="${escapeHtml(p.serviceid)}" data-type="client" value="${p.rawItem._CUSTOM_CLIENT !== undefined ? escapeHtml(p.rawItem._CUSTOM_CLIENT) : ''}" placeholder="${escapeHtml(p.rawItem._CLIENT_PRICE || '0')}" style="padding: 6px; font-size: 0.85rem;" required>
+              <div class="input-group" style="margin-bottom: 0; min-width: 0;">
+                <label style="font-size: 0.75rem; margin-bottom: 3px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Precio Cliente</label>
+                <input type="number" step="0.01" class="custom-client-input admin-price-input" data-id="${escapeHtml(p.serviceid)}" data-type="client" value="${p.rawItem._CUSTOM_CLIENT !== undefined ? escapeHtml(p.rawItem._CUSTOM_CLIENT) : ''}" placeholder="${escapeHtml(p.rawItem._CLIENT_PRICE || '0')}" style="padding: 6px; font-size: 0.85rem; width: 100%; box-sizing: border-box;" required>
               </div>
               <div style="display: flex; gap: 5px;">
                 <button type="submit" class="btn btn-primary" style="padding: 6px 10px; font-size: 0.8rem;" title="Guardar Precio Fijo">
@@ -1768,6 +1645,13 @@ document.addEventListener('DOMContentLoaded', () => {
             </h4>
             <button type="button" class="btn btn-secondary btn-user-prices" data-id="${escapeHtml(p.serviceid)}" data-title="${escapeHtml(p.service)}" style="width: 100%; display: flex; justify-content: center; align-items: center; gap: 6px; font-size: 0.85rem; padding: 8px;">
               <i data-lucide="user-cog" style="width: 16px; height: 16px;"></i> Configurar Precios por Usuario
+            </button>
+            
+            <h4 style="margin-top: 15px; margin-bottom: 10px; color: #ef4444; font-size: 0.9rem; display: flex; align-items: center; gap: 5px;">
+              <i data-lucide="alert-triangle" style="width: 14px; height: 14px;"></i> Advertencia de Servicio
+            </h4>
+            <button type="button" class="btn btn-secondary btn-admin-warning" data-id="${escapeHtml(p.serviceid)}" data-title="${escapeHtml(p.service)}" data-warning="${escapeHtml(p.rawItem._WARNING || '')}" style="width: 100%; display: flex; justify-content: center; align-items: center; gap: 6px; font-size: 0.85rem; padding: 8px; border-color: rgba(239,68,68,0.3); color: #fca5a5;">
+              <i data-lucide="edit-2" style="width: 16px; height: 16px;"></i> Gestionar Advertencia
             </button>
           </div>
         `;
@@ -1919,6 +1803,14 @@ document.addEventListener('DOMContentLoaded', () => {
           openUserPricesModal(serviceId, serviceTitle);
         });
       });
+
+      document.querySelectorAll('.btn-admin-warning').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const serviceId = btn.getAttribute('data-id');
+          const warningContentText = btn.getAttribute('data-warning');
+          openWarningModal(serviceId, warningContentText);
+        });
+      });
     }
 
     document.querySelectorAll('.btn-toggle-service').forEach(btn => {
@@ -1989,6 +1881,128 @@ document.addEventListener('DOMContentLoaded', () => {
         alert('Error de conexión.');
       }
     });
+  }
+
+  // --- WARNING MODAL LOGIC ---
+  async function loadWarningTemplates() {
+    try {
+      const res = await fetch('/api/admin/warning-templates', {
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      const templates = await res.json();
+      warningTemplateSelect.innerHTML = '<option value="">-- Seleccionar Plantilla --</option>';
+      templates.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.id;
+        opt.textContent = t.title;
+        opt.dataset.content = t.content;
+        warningTemplateSelect.appendChild(opt);
+      });
+    } catch (e) {
+      console.error('Error loading warning templates', e);
+    }
+  }
+
+  async function openWarningModal(serviceId, warningContentText) {
+    currentWarningServiceId = serviceId;
+    warningContent.value = warningContentText || '';
+    await loadWarningTemplates();
+    warningModal.classList.remove('hidden');
+  }
+
+  if (btnWarningClose) btnWarningClose.addEventListener('click', () => warningModal.classList.add('hidden'));
+
+  if (warningTemplateSelect) {
+    warningTemplateSelect.addEventListener('change', () => {
+      const selected = warningTemplateSelect.options[warningTemplateSelect.selectedIndex];
+      if (selected && selected.value) {
+        warningContent.value = selected.dataset.content;
+      }
+    });
+  }
+
+  if (btnDeleteWarningTemplate) {
+    btnDeleteWarningTemplate.addEventListener('click', async () => {
+      const templateId = warningTemplateSelect.value;
+      if (!templateId) return alert('Selecciona una plantilla primero');
+      if (!confirm('¿Seguro que deseas eliminar esta plantilla?')) return;
+
+      try {
+        const res = await fetch(`/api/admin/warning-templates/${templateId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        if (res.ok) {
+          alert('Plantilla eliminada');
+          warningContent.value = '';
+          await loadWarningTemplates();
+        } else {
+          alert('Error al eliminar');
+        }
+      } catch (err) {
+        alert('Error de red');
+      }
+    });
+  }
+
+  if (btnSaveAsWarningTemplate) {
+    btnSaveAsWarningTemplate.addEventListener('click', async () => {
+      const content = warningContent.value.trim();
+      if (!content) return alert('El contenido no puede estar vacío');
+      
+      const title = prompt('Ingresa un título para identificar esta plantilla:');
+      if (!title) return;
+
+      try {
+        const res = await fetch('/api/admin/warning-templates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+          body: JSON.stringify({ title, content })
+        });
+        if (res.ok) {
+          alert('Plantilla guardada');
+          await loadWarningTemplates();
+        } else {
+          alert('Error al guardar plantilla');
+        }
+      } catch (err) {
+        alert('Error de red');
+      }
+    });
+  }
+
+  if (btnWarningClear) {
+    btnWarningClear.addEventListener('click', async () => {
+      if (!currentWarningServiceId) return;
+      await saveServiceWarning(currentWarningServiceId, '');
+    });
+  }
+
+  if (btnWarningSave) {
+    btnWarningSave.addEventListener('click', async () => {
+      if (!currentWarningServiceId) return;
+      const content = warningContent.value.trim();
+      await saveServiceWarning(currentWarningServiceId, content);
+    });
+  }
+
+  async function saveServiceWarning(serviceId, content) {
+    try {
+      const res = await fetch('/api/admin/service-warnings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Server-Id': currentServerId, 'Authorization': `Bearer ${authToken}` },
+        body: JSON.stringify({ serviceId, warningHtml: content })
+      });
+      if (res.ok) {
+        alert('Advertencia actualizada en el servicio');
+        warningModal.classList.add('hidden');
+        syncProducts(true);
+      } else {
+        alert('Error al actualizar');
+      }
+    } catch (err) {
+      alert('Error de conexión');
+    }
   }
 
   async function openUserPricesModal(serviceId, serviceTitle) {
@@ -2077,11 +2091,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const bulkArray = [];
     for (const serviceId in bulkData) {
       if (bulkData[serviceId].resellerPrice !== undefined && bulkData[serviceId].clientPrice !== undefined) {
-        bulkArray.push({
-          serviceId: serviceId,
-          resellerPrice: bulkData[serviceId].resellerPrice,
-          clientPrice: bulkData[serviceId].clientPrice
-        });
+        if (bulkData[serviceId].resellerPrice !== '' && bulkData[serviceId].clientPrice !== '') {
+          bulkArray.push({
+            serviceId: serviceId,
+            resellerPrice: bulkData[serviceId].resellerPrice,
+            clientPrice: bulkData[serviceId].clientPrice
+          });
+        }
       }
     }
 
@@ -2704,6 +2720,17 @@ document.addEventListener('DOMContentLoaded', () => {
       modalServiceInfoBlock.style.display = 'none';
     }
 
+    // Service Warning
+    const modalServiceWarningBlock = document.getElementById('modalServiceWarningBlock');
+    const modalServiceWarningText = document.getElementById('modalServiceWarningText');
+    if (product.rawItem && product.rawItem._WARNING) {
+      modalServiceWarningBlock.style.display = 'block';
+      modalServiceWarningText.innerHTML = product.rawItem._WARNING;
+    } else {
+      modalServiceWarningBlock.style.display = 'none';
+      modalServiceWarningText.innerHTML = '';
+    }
+
     imeiInput.value = '';
     customFieldsContainer.innerHTML = '';
     
@@ -3187,7 +3214,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnGenerateTicketFinal.setAttribute('disabled', 'true');
 
     try {
-      await saveTicketConfig();
+      if (window.MegaApp && window.MegaApp.Ticket) await window.MegaApp.Ticket.saveTicketConfig();
       // Populate Template
       const title = String(currentTicketData.serviceName || 'UNLOCK TOOL').split('[')[0].trim();
       ticketTitle.textContent = title;
@@ -3460,7 +3487,7 @@ document.addEventListener('DOMContentLoaded', () => {
       btnGenerateCustomTicket.setAttribute('disabled', 'true');
 
       try {
-        await saveTicketConfig();
+        if (window.MegaApp && window.MegaApp.Ticket) await window.MegaApp.Ticket.saveTicketConfig();
         const title = customTicketTitle.value.trim() || 'UNLOCK TOOL';
         ticketTitle.textContent = title;
 
@@ -3918,6 +3945,9 @@ document.addEventListener('DOMContentLoaded', () => {
       // Load Group Markups
       const groupMarkupsContainer = document.getElementById('groupMarkupsContainer');
       if (groupMarkupsContainer) {
+        // Show spinner immediately
+        groupMarkupsContainer.innerHTML = '<div class="spinner-container" style="padding: 40px 0; grid-column: 1 / -1;"><div class="spinner"></div><p style="text-align:center; margin-top:10px;">Cargando grupos...</p></div>';
+        
         try {
           const gmRes = await fetch('/api/admin/group-markups', { headers: { 'X-Server-Id': currentServerId, 'Authorization': `Bearer ${authToken}` }});
           if (gmRes.ok) {
@@ -3930,6 +3960,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (uniqueGroups.length === 0) {
               groupMarkupsContainer.innerHTML = '<div style="text-align: center; color: #6b7280; padding: 20px; grid-column: 1 / -1;">No hay grupos cargados. Asegúrate de sincronizar los productos primero.</div>';
             } else {
+              // Yield to event loop to ensure spinner is painted
+              await new Promise(r => setTimeout(r, 10));
+              
               groupMarkupsContainer.innerHTML = '';
               uniqueGroups.forEach(groupName => {
                 const gm = serverGmData[groupName] || { type: 'tier1', value: '', clientType: 'tier1', clientValue: '' };
@@ -4875,6 +4908,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function loadAdminCoupons() {
     try {
+      if (couponsTableBody) couponsTableBody.innerHTML = '<tr><td colspan="6"><div class="spinner-container" style="padding: 40px 0;"><div class="spinner"></div><p style="text-align:center; margin-top:10px;">Cargando cupones...</p></div></td></tr>';
       const res = await fetch('/api/admin/coupons', {
         headers: { 'Authorization': `Bearer ${authToken}` }
       });
@@ -5119,84 +5153,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }).catch(e => {});
     }
-  }, 15000);
+  }, 60000); // Increased from 15s to 60s to reduce UI lag
 
 });
-
-// Recharges Logic
-const btnRechargesHistory = document.getElementById('btnRechargesHistory');
-const rechargesSection = document.getElementById('rechargesSection');
-const rechargesBody = document.getElementById('rechargesBody');
-const rechargesCount = document.getElementById('rechargesCount');
-const btnSyncRecharges = document.getElementById('btnSyncRecharges');
-
-let rechargesHistory = [];
-
-function formatType(type) {
-  if (type === 'SPEI') return '<span style="color:#10b981;">SPEI / Banco</span>';
-  if (type === 'MANUAL_ADMIN') return '<span style="color:#8b5cf6;">Manual (Admin)</span>';
-  if (type === 'MANUAL_BOT') return '<span style="color:#3b82f6;">Bot WhatsApp</span>';
-  return escapeHtml(type);
-}
-
-async function fetchRecharges() {
-  try {
-    const url = authRole === 'admin' ? '/api/admin/recharges' : '/api/recharges';
-    const res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + authToken }});
-    const data = await res.json();
-    if (res.ok) {
-      rechargesHistory = data;
-      renderRecharges();
-    }
-  } catch (e) {
-    console.error('Error fetching recharges', e);
-  }
-}
-
-function renderRecharges() {
-  if (!rechargesBody) return;
-  rechargesBody.innerHTML = '';
-  rechargesCount.textContent = rechargesHistory.length;
-  
-  if (authRole === 'admin') {
-    document.querySelectorAll('.admin-col-recharge').forEach(e => e.classList.remove('hidden'));
-  }
-
-  if (rechargesHistory.length === 0) {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem;">No hay recargas registradas.</td>`;
-    rechargesBody.appendChild(tr);
-    return;
-  }
-
-  rechargesHistory.forEach(item => {
-    const tr = document.createElement('tr');
-    const displayServer = item.serverId === '3' ? 'OMEGA' : (item.serverId === '2' ? 'ALPHA' : 'MEGA');
-    const colorServer = item.serverId === '3' ? '#f59e0b' : (item.serverId === '2' ? '#3b82f6' : '#ec4899');
-    
-    tr.innerHTML = `
-      <td>${new Date(item.date).toLocaleString()}</td>
-      ${authRole === 'admin' ? `<td style="color:#a78bfa; font-weight:bold;">${escapeHtml(item.username)}</td>` : ''}
-      <td style="color:#10b981; font-weight:bold;">$${parseFloat(item.amount).toFixed(2)} MXN</td>
-      <td>${formatType(item.type)}</td>
-      <td>${escapeHtml(item.adminUsername || 'Sistema')}</td>
-      <td><span style="color:${colorServer}; font-weight:bold;">${displayServer}</span></td>
-    `;
-    rechargesBody.appendChild(tr);
-  });
-}
-
-if (btnRechargesHistory) {
-  btnRechargesHistory.addEventListener('click', () => {
-    productsSection.classList.add('hidden');
-    historySection.classList.add('hidden');
-    if (typeof adminSection !== 'undefined' && adminSection) adminSection.classList.add('hidden');
-    rechargesSection.classList.remove('hidden');
-    fetchRecharges();
-  });
-}
-if (btnSyncRecharges) {
-  btnSyncRecharges.addEventListener('click', () => {
-    fetchRecharges();
-  });
-}

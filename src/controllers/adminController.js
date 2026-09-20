@@ -399,16 +399,65 @@ exports.redeemCoupon = (req, res) => {
 };
 
 exports.deleteCoupon = (req, res) => {
-  const code = req.params.code;
-  let coupons = readDB('coupons.json') || [];
-  
-  const filtered = coupons.filter(c => c.code !== code);
-  if (filtered.length === coupons.length) {
-    return res.status(404).json({ error: 'Cupón no encontrado' });
+  const { code } = req.params;
+  const coupons = readDB('coupons.json') || [];
+  const index = coupons.findIndex(c => c.code === code);
+  if (index !== -1) {
+    coupons.splice(index, 1);
+    writeDB('coupons.json', coupons);
   }
+  res.json({ success: true });
+};
+
+// --- WARNING TEMPLATES & SERVICE WARNINGS ---
+exports.getWarningTemplates = (req, res) => {
+  const templates = readDB('warning_templates.json') || [];
+  res.json(templates);
+};
+
+exports.saveWarningTemplate = (req, res) => {
+  const { title, content } = req.body;
+  if (!title || !content) return res.status(400).json({ error: 'Título y contenido son requeridos' });
   
-  writeDB('coupons.json', filtered);
-  createAutoBackup('Eliminar_Cupon');
+  const templates = readDB('warning_templates.json') || [];
+  const newTemplate = { id: Date.now().toString(), title, content };
+  templates.push(newTemplate);
+  writeDB('warning_templates.json', templates);
+  res.json({ success: true, template: newTemplate });
+};
+
+exports.deleteWarningTemplate = (req, res) => {
+  const { id } = req.params;
+  let templates = readDB('warning_templates.json') || [];
+  templates = templates.filter(t => t.id !== id);
+  writeDB('warning_templates.json', templates);
+  res.json({ success: true });
+};
+
+exports.getServiceWarnings = (req, res) => {
+  const serverId = require('../helpers').getServerId(req);
+  const allWarnings = readDB('service_warnings.json') || {};
+  const serverWarnings = allWarnings['server' + serverId] || {};
+  res.json(serverWarnings);
+};
+
+exports.saveServiceWarning = (req, res) => {
+  const { serviceId, warningHtml } = req.body;
+  const serverId = require('../helpers').getServerId(req);
+  if (!serviceId) return res.status(400).json({ error: 'Service ID es requerido' });
+
+  const allWarnings = readDB('service_warnings.json') || {};
+  if (!allWarnings['server' + serverId]) {
+    allWarnings['server' + serverId] = {};
+  }
+
+  if (warningHtml === null || warningHtml === undefined || warningHtml.trim() === '') {
+    delete allWarnings['server' + serverId][serviceId];
+  } else {
+    allWarnings['server' + serverId][serviceId] = warningHtml;
+  }
+
+  writeDB('service_warnings.json', allWarnings);
   res.json({ success: true });
 };
 

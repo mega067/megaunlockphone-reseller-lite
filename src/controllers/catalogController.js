@@ -132,9 +132,14 @@ exports.getProducts = async (req, res) => {
       const serverUserCustomPrices = allUserCustomPrices['server' + serverId] || {};
       const allGroupMarkups = readDB('group_markups.json') || {};
       const serverGroupMarkups = allGroupMarkups['server' + serverId] || {};
+      const allWarnings = readDB('service_warnings.json') || {};
+      const serverWarnings = allWarnings['server' + serverId] || {};
 
       for (const groupKey in mergedList) {
-        const groupMarkupObj = serverGroupMarkups[groupKey];
+        const groupObj = mergedList[groupKey];
+        const groupName = groupObj.GROUPNAME || groupKey;
+        const groupMarkupObj = serverGroupMarkups[groupName] || serverGroupMarkups[groupKey];
+        
         for (const serviceKey in mergedList[groupKey].SERVICES || {}) {
           const service = mergedList[groupKey].SERVICES[serviceKey];
           const realServiceId = service.SERVICEID || service.serviceid || serviceKey;
@@ -144,6 +149,13 @@ exports.getProducts = async (req, res) => {
           if (disabledServicesForServer.includes(realServiceId)) {
              service._DISABLED = true;
           }
+          
+          if (serverWarnings[realServiceId]) {
+            service._WARNING = serverWarnings[realServiceId];
+          } else if (service.desc || service.features || service.info || service.descripcion || service.description || service.Descripción || service.Descripcion) {
+            service._WARNING = service.desc || service.features || service.info || service.descripcion || service.description || service.Descripción || service.Descripcion;
+          }
+
           const exchangeRate = parseFloat(settingsDb.exchangeRate || 17.60);
           const rate = serverId === '3' ? 1 : exchangeRate;
           const realCredit = parseFloat(service.CREDIT || '0') * rate;

@@ -9,7 +9,7 @@ function generateToken(user) {
   return jwt.sign(
     { id: user.id, username: user.username, role: user.role },
     JWT_SECRET,
-    { expiresIn: '7d' } // Session expires in 7 days
+    { expiresIn: '24h' } // Session expires in 24 hours
   );
 }
 

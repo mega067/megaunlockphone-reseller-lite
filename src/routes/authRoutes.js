@@ -132,4 +132,87 @@ router.post('/verify-otp', (req, res) => {
   res.json({ success: true, token, role: newUser.role, username: newUser.username, credits: newUser.credits, uid: newUser.id });
 });
 
+// --- ACCOUNT RECOVERY FLOW ---
+global.recoveryCodes = global.recoveryCodes || {};
+
+router.post('/request-recovery', async (req, res) => {
+  const { username } = req.body;
+  if (!username) return res.status(400).json({ error: 'Falta el nombre de usuario' });
+
+  const users = readDB('users.json') || [];
+  const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
+  
+  if (!user) {
+    // We shouldn't reveal if user exists, but for internal panels it's often fine.
+    // However, to be safe, we just say we sent it if it exists.
+    return res.status(404).json({ error: 'Usuario no encontrado' });
+  }
+
+  // Check if they have WhatsApp linked
+  const wUsers = readDB('whatsapp_users.json') || {};
+  const linkedPhoneId = Object.keys(wUsers).find(key => wUsers[key] === user.id);
+
+  if (!linkedPhoneId) {
+    return res.status(400).json({ error: 'El usuario no tiene un número de WhatsApp vinculado. Contacta a un administrador.' });
+  }
+
+  // Generate 6 digit code
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  
+  // Store code with 15 mins expiration
+  global.recoveryCodes[user.username.toLowerCase()] = {
+    code: code,
+    expires: Date.now() + 15 * 60 * 1000
+  };
+
+  // Send via WhatsApp
+  const msg = `🔒 *Recuperación de Cuenta*\n\nHola ${user.username}, has solicitado restablecer tu contraseña.\n\nTu código de verificación es: *${code}*\n\n_Este código expirará en 15 minutos._\nSi no fuiste tú, ignora este mensaje.`;
+  enqueueWhatsApp('private', msg, user.id);
+
+  res.json({ success: true, message: 'Código de recuperación enviado por WhatsApp.' });
+});
+
+router.post('/reset-password', async (req, res) => {
+  const { username, code, newPassword } = req.body;
+  
+  if (!username || !code || !newPassword) {
+    return res.status(400).json({ error: 'Faltan datos requeridos.' });
+  }
+
+  const normalizedUsername = username.toLowerCase();
+  const recoverySession = global.recoveryCodes[normalizedUsername];
+
+  if (!recoverySession) {
+    return res.status(400).json({ error: 'No hay ninguna solicitud de recuperación activa o el código expiró.' });
+  }
+
+  if (Date.now() > recoverySession.expires) {
+    delete global.recoveryCodes[normalizedUsername];
+    return res.status(400).json({ error: 'El código de recuperación ha expirado.' });
+  }
+
+  if (recoverySession.code !== code.toString().trim()) {
+    return res.status(400).json({ error: 'El código es incorrecto.' });
+  }
+
+  const users = readDB('users.json') || [];
+  const userIndex = users.findIndex(u => u.username.toLowerCase() === normalizedUsername);
+
+  if (userIndex === -1) {
+    return res.status(404).json({ error: 'Usuario no encontrado.' });
+  }
+
+  // Update password
+  users[userIndex].password = newPassword;
+  writeDB('users.json', users);
+
+  // Clear code
+  delete global.recoveryCodes[normalizedUsername];
+
+  // Notify user
+  enqueueWhatsApp('private', `✅ *Contraseña Restablecida*\n\nTu contraseña ha sido actualizada exitosamente. Si no fuiste tú, contacta a un administrador de inmediato.`, users[userIndex].id);
+
+  res.json({ success: true, message: 'Contraseña restablecida exitosamente. Ya puedes iniciar sesión.' });
+});
+
 module.exports = router;

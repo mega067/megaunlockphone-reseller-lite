@@ -127,6 +127,17 @@ exports.processOrder = async (req, res) => {
     if (user.markup !== null && user.markup !== undefined && !isNaN(user.markup)) {
       activeMarkup = parseFloat(user.markup);
     } else {
+      const servicesData = catalogCache[serverKey] ? catalogCache[serverKey].data : null;
+      const groupObj = servicesData && Array.isArray(servicesData.SUCCESS) ? servicesData.SUCCESS.find(i => i.serviceid == serviceid || i.SERVICEID == serviceid) : null;
+      const groupName = groupObj ? (groupObj.GROUPNAME || groupObj.group || groupObj.GROUP) : null;
+      
+      let groupMarkupObj = null;
+      if (groupName) {
+        groupMarkupObj = serverGroupMarkups[groupName] || serverGroupMarkups[serviceGroupKey];
+      } else {
+        groupMarkupObj = serverGroupMarkups[serviceGroupKey];
+      }
+
       let rMarkup = calculateGroupMarkup(realCost, groupMarkupObj, false, settings);
       if (rMarkup === null) rMarkup = calculateMarkup(realCost, settings.resellerTier1, settings.resellerTier2, settings.resellerTier3);
       activeMarkup = rMarkup;
