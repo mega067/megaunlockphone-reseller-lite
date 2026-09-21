@@ -2078,6 +2078,9 @@ btnCancelCreateUser.addEventListener('click', () => {
   createUserForm.reset();
 });
 
+// Real-time polling for account balance and background sync
+setInterval(() => {
+  if (authToken) {
     updateAccountCredits();
     if (adminSection && !adminSection.classList.contains('hidden') && authRole === 'admin') {
        const settingsTab = document.getElementById('adminTabSettingsContent');

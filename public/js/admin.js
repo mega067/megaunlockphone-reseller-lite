@@ -1215,7 +1215,3 @@ async function generateCouponImage(coupon) {
     alert('Error al generar la imagen: ' + errMsg);
   }
 }
-
-// Real-time polling for account balance and background sync
-setInterval(() => {
-  if (authToken) {
