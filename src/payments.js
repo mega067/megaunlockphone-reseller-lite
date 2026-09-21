@@ -257,7 +257,7 @@ module.exports = function(app, deps) {
           const userPhone = users[userIndex].phone || userId;
           enqueueWhatsApp('private', `✅ Tu recarga de *$${requestedAmount}* mediante SPEI (Rastreo: ${trackingNumber}) ha sido confirmada. Ya tienes el saldo en tu cuenta.`, userPhone);
           
-          const adminMsg = `💸 *Recarga SPEI Confirmada*\n\nEl usuario ID *${users[userIndex].id}* ha recargado saldo vía SPEI.\n\n💰 Monto: $${requestedAmount} MXN\n🧾 Rastreo: ${trackingNumber}\n📈 Nuevo saldo: $${parseFloat(newCredits).toFixed(2)}`;
+          const adminMsg = `💸 *Recarga SPEI Confirmada*\n\nEl usuario *${users[userIndex].username || users[userIndex].id}* ha recargado saldo vía SPEI.\n\n💰 Monto: $${requestedAmount} MXN\n🧾 Rastreo: ${trackingNumber}\n📈 Nuevo saldo de usuario: $${parseFloat(newCredits).toFixed(2)}`;
           enqueueWhatsAppAdmin(adminMsg);
           enqueueWhatsApp('group', adminMsg);
         }
