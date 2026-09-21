@@ -24,7 +24,7 @@ async function syncProducts(shouldPersist = false) {
     if (!shouldPersist && isCacheValid) {
       data = cachedEntry.data;
     } else {
-      const url = shouldPersist ? '/api/products?forceSync=true' : '/api/products';
+      const url = shouldPersist ? `/api/products?forceSync=true&serverId=${targetServerId}` : `/api/products?serverId=${targetServerId}`;
       const response = await fetch(url, {
         method: 'GET',
         headers: { 'X-Server-Id': targetServerId,

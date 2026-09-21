@@ -7,7 +7,7 @@ function getServerDisplayName(id) {
 }
 
 function getServerId(req) {
-  const id = req.headers['x-server-id'] || req.body?.serverId || '1';
+  const id = req.headers['x-server-id'] || req.query?.serverId || req.body?.serverId || '1';
   return ['1', '2', '3'].includes(id) ? id : '1';
 }
 
