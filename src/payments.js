@@ -158,7 +158,15 @@ module.exports = function(app, deps) {
 
     try {
       const requestedAmount = parseFloat(amount);
-      
+      let receiverBankName = '';
+      let senderBankName = bankCode;
+      try {
+        const banksMod = require('cep-banxico/src/banks');
+        if (banksMod && banksMod.BANKS && banksMod.BANKS[bankCode]) {
+          senderBankName = banksMod.BANKS[bankCode];
+        }
+      } catch(e) {}
+
       if (providerKey) {
         const config = require('../bankConfig');
         const provider = config.PROVIDER_ACCOUNTS[providerKey];
@@ -166,6 +174,8 @@ module.exports = function(app, deps) {
         
         const providerAccount = provider.accounts.find(a => a.id === accountId);
         if (!providerAccount) return res.status(400).json({ error: 'Cuenta de proveedor no encontrada' });
+        
+        receiverBankName = providerAccount.bankName || 'Cuenta de Proveedor';
 
         providerAccount.providerKey = providerKey;
         providerAccount.providerApiKey = provider.apiKey;
@@ -188,6 +198,8 @@ module.exports = function(app, deps) {
         const config = require('../bankConfig');
         const adminAccount = config.ADMIN_ACCOUNTS.find(a => a.id === accountId);
         if (!adminAccount) return res.status(400).json({ error: 'Cuenta de admin no encontrada' });
+        
+        receiverBankName = adminAccount.bankName || 'NU/STP';
 
         const banxicoResult = await validarPagoInteligente(trackingNumber, bankCode, adminAccount.bankCode, adminAccount.clabe, requestedAmount);
         
@@ -245,8 +257,11 @@ module.exports = function(app, deps) {
         username: users[userIndex].username,
         amount: requestedAmount,
         serverId: serverIdToCredit,
-        method: 'SPEI / Banxico',
+        type: 'SPEI',
         trackingNumber: trackingNumber,
+        senderBankCode: bankCode,
+        senderBankName: senderBankName,
+        receiverBankName: receiverBankName,
         processedBy: 'system'
       });
       writeDB('recharges.json', recharges);

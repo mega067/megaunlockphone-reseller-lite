@@ -13,7 +13,7 @@ function escapeHtml(unsafe) {
 }
 
 function formatType(type) {
-  if (type === 'SPEI') return '<span style="color:#10b981;">SPEI / Banco</span>';
+  if (type === 'SPEI' || type === 'SPEI / Banxico') return '<span style="color:#10b981;">SPEI / Banco</span>';
   if (type === 'MANUAL_ADMIN') return '<span style="color:#8b5cf6;">Manual (Admin)</span>';
   if (type === 'MANUAL_BOT') return '<span style="color:#3b82f6;">Bot WhatsApp</span>';
   return escapeHtml(type);
@@ -61,7 +61,7 @@ function renderRecharges() {
       <td>${new Date(item.date).toLocaleString()}</td>
       ${authRole === 'admin' ? `<td style="color:#a78bfa; font-weight:bold;">${escapeHtml(item.username)}</td>` : ''}
       <td style="color:#10b981; font-weight:bold;">$${parseFloat(item.amount).toFixed(2)} MXN</td>
-      <td>${formatType(item.type)}${item.trackingNumber ? `<br><small style="color:var(--text-muted);font-size:0.75rem;">Rastreo: ${escapeHtml(item.trackingNumber)}</small>` : ''}</td>
+      <td>${formatType(item.type || item.method)}${item.trackingNumber ? `<br><small style="color:var(--text-muted);font-size:0.75rem;">Rastreo: ${escapeHtml(item.trackingNumber)}</small>` : ''}${item.senderBankName && item.receiverBankName ? `<br><small style="color:var(--text-muted);font-size:0.70rem; white-space:nowrap;">${escapeHtml(item.senderBankName)} ➔ ${escapeHtml(item.receiverBankName)}</small>` : ''}</td>
       <td>${escapeHtml(item.adminUsername || 'Sistema')}</td>
       <td><span style="color:${colorServer}; font-weight:bold;">${displayServer}</span></td>
     `;
