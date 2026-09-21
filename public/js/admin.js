@@ -22,6 +22,10 @@ async function loadAdminData() {
       if (inputExchangeRate) {
         inputExchangeRate.value = parseFloat(set.exchangeRate || 17.60).toFixed(2);
       }
+      const inputCreditCushion = document.getElementById('inputCreditCushion');
+      if (inputCreditCushion) {
+        inputCreditCushion.value = parseFloat(set.creditCushion || 0).toFixed(0);
+      }
     }
     
     const lbl = document.getElementById('settingsCurrentServerLabel');

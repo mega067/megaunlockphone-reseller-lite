@@ -145,7 +145,10 @@ exports.getStats = (req, res) => {
 exports.getSettings = (req, res) => {
   const settings = readDB('settings.json') || {};
   
-  const safeSettings = { exchangeRate: settings.exchangeRate || 17.60 };
+  const safeSettings = { 
+    exchangeRate: settings.exchangeRate || 17.60,
+    creditCushion: settings.creditCushion || 0
+  };
   if (settings.server1) safeSettings.server1 = { ...settings.server1 };
   if (settings.server2) safeSettings.server2 = { ...settings.server2 };
   if (settings.server3) safeSettings.server3 = { ...settings.server3 };
@@ -154,7 +157,7 @@ exports.getSettings = (req, res) => {
 };
 
 exports.updateSettings = (req, res) => {
-  const { server1, server2, server3, exchangeRate } = req.body;
+  const { server1, server2, server3, exchangeRate, creditCushion } = req.body;
   const settings = readDB('settings.json') || {};
   
   const applyTiers = (target, source) => {
@@ -183,6 +186,9 @@ exports.updateSettings = (req, res) => {
   }
   if (exchangeRate !== undefined) {
     settings.exchangeRate = parseFloat(exchangeRate) || 17.60;
+  }
+  if (creditCushion !== undefined) {
+    settings.creditCushion = parseFloat(creditCushion) || 0;
   }
   writeDB('settings.json', settings);
   incrementCatalogVersion();
