@@ -2106,6 +2106,8 @@ setInterval(() => {
 }, 60000); // Increased from 15s to 60s to reduce UI lag
 
 // Run initial session check after all event listeners and initializers are attached
-if (window.initRechargeModule) window.initRechargeModule({ fetchUserData: updateAccountCredits });
-checkPersistedSession();
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.initRechargeModule) window.initRechargeModule({ fetchUserData: updateAccountCredits });
+  checkPersistedSession();
+});
 // End Wrapper Removed
