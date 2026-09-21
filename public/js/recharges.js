@@ -61,7 +61,7 @@ function renderRecharges() {
       <td>${new Date(item.date).toLocaleString()}</td>
       ${authRole === 'admin' ? `<td style="color:#a78bfa; font-weight:bold;">${escapeHtml(item.username)}</td>` : ''}
       <td style="color:#10b981; font-weight:bold;">$${parseFloat(item.amount).toFixed(2)} MXN</td>
-      <td>${formatType(item.type)}</td>
+      <td>${formatType(item.type)}${item.trackingNumber ? `<br><small style="color:var(--text-muted);font-size:0.75rem;">Rastreo: ${escapeHtml(item.trackingNumber)}</small>` : ''}</td>
       <td>${escapeHtml(item.adminUsername || 'Sistema')}</td>
       <td><span style="color:${colorServer}; font-weight:bold;">${displayServer}</span></td>
     `;
