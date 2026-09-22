@@ -13,7 +13,8 @@ El panel soporta múltiples servidores Dhru configurables desde `settings.json`:
 - **Historial de Recargas Unificado**: Fusión de botones de recarga en una única pestaña. Registro inmutable de cada ingreso de saldo (vía SPEI, Bot o Panel Admin) con visualización de nombre de usuario en vista Admin.
 - **Sistema Inteligente de Reembolsos**: Automáticos (cuando Dhru rechaza) y Manuales (desde el panel Admin).
 - **Soporte Directo Bot WhatsApp**: Integración con un bot para procesar comandos de búsqueda, cotización y gestión de saldo.
-- **Sistema SPEI Inteligente con Colchón**: Triangulación automatizada de pagos SPEI (Banxico CEP) donde el sistema elige a qué cuenta depositar dependiendo de un "Colchón de Retención" definido por el administrador.
+- **Sistema SPEI Inteligente con Colchón**: Triangulación automatizada de pagos SPEI (Banxico CEP) donde el sistema elige a qué cuenta depositar (NU o STP) dependiendo de un "Colchón de Retención" (configurable por el admin).
+- **Rastreo Completo en Historial de Recargas**: El panel de recargas ahora guarda y muestra en tiempo real la Clave de Rastreo de la transferencia SPEI, el nombre del Banco de Origen y el Banco de Destino (NU/STP/Proveedor). Notificaciones enriquecidas por WhatsApp con nombre del usuario y rastreo.
 - **Precios Personalizados (Globales y Especiales)**: Gestión independiente del margen de ganancia a nivel Servidor, Servicio (Personalizado) o Usuario Específico.
 
 ## 🏗️ Nueva Arquitectura Modular
