@@ -480,3 +480,25 @@ exports.clearCustomPrices = (req, res) => {
       res.json({ success: true, message: 'No había precios personalizados.' });
   }
 };
+
+exports.toggleDisableImei = (req, res) => {
+  const { serviceId, disabled } = req.body;
+  const serverId = require('../helpers').getServerId(req);
+  if (!serviceId) return res.status(400).json({ error: 'Falta serviceId' });
+  
+  const disabledDb = readDB('disabled_imei.json') || {};
+  const serverKey = 'server' + serverId;
+  disabledDb[serverKey] = disabledDb[serverKey] || [];
+  
+  if (disabled) {
+    if (!disabledDb[serverKey].includes(serviceId)) {
+      disabledDb[serverKey].push(serviceId);
+    }
+  } else {
+    disabledDb[serverKey] = disabledDb[serverKey].filter(id => id !== serviceId);
+  }
+  
+  writeDB('disabled_imei.json', disabledDb);
+  require('../cacheManager').incrementCatalogVersion();
+  res.json({ success: true, disabledImei: disabled });
+};

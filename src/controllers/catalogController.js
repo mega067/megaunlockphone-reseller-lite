@@ -134,6 +134,8 @@ exports.getProducts = async (req, res) => {
       const serverGroupMarkups = allGroupMarkups['server' + serverId] || {};
       const allWarnings = readDB('service_warnings.json') || {};
       const serverWarnings = allWarnings['server' + serverId] || {};
+      const allDisabledImei = readDB('disabled_imei.json') || {};
+      const serverDisabledImei = allDisabledImei['server' + serverId] || [];
 
       for (const groupKey in mergedList) {
         const groupObj = mergedList[groupKey];
@@ -150,6 +152,10 @@ exports.getProducts = async (req, res) => {
              service._DISABLED = true;
           }
           
+          if (serverDisabledImei.includes(realServiceId)) {
+             service._NO_IMEI = true;
+          }
+
           if (serverWarnings[realServiceId]) {
             service._WARNING = serverWarnings[realServiceId];
           } else if (service.desc || service.features || service.info || service.descripcion || service.description || service.Descripción || service.Descripcion) {

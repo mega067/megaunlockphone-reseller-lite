@@ -40,4 +40,6 @@ router.delete('/admin/warning-templates/:id', requireAuth, requireAdmin, adminCo
 router.get('/admin/service-warnings', requireAuth, requireAdmin, adminController.getServiceWarnings);
 router.post('/admin/service-warnings', requireAuth, requireAdmin, adminController.saveServiceWarning);
 
+router.post('/admin/disable-imei', requireAuth, requireAdmin, adminController.toggleDisableImei);
+
 module.exports = router;

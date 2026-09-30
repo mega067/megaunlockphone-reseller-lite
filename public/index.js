@@ -1243,7 +1243,18 @@ function openPurchaseModal(serviceId) {
   // OVERRIDE: If the API explicitly names the IMEI field (e.g. "NUMERO"), we MUST show it.
   const hasCustomImeiName = raw && (raw.IMEINAME || raw.CUSTOM_IMEI);
 
-  if (!hasCustomImeiName && (!needsImei || (raw && (raw.requires_imei === false || raw.requires_imei === '0' || raw['Requires.Imei'] === false || raw['Requires.Imei'] === '0' || raw['Requires.IMEI'] === '0')))) {
+  let adminDisableHtml = '';
+  if (authRole === 'admin') {
+    adminDisableHtml = `<div style="margin-top: 10px; background: rgba(139,92,246,0.1); padding: 8px; border-radius: 6px; border: 1px dashed rgba(139,92,246,0.3); display: flex; align-items: center; justify-content: space-between;"><span style="color:#c4b5fd; font-size: 0.8rem;">[Admin] Ocultar IMEI</span><input type="checkbox" id="adminToggleImei" ${raw && raw._NO_IMEI ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer;"></div>`;
+  }
+
+  if (raw && raw._NO_IMEI) {
+    imeiInputGroup.classList.add('hidden');
+    imeiInput.removeAttribute('required');
+    imeiInput.removeAttribute('minlength');
+    imeiInput.removeAttribute('maxlength');
+    imeiAutoGenerate.checked = true;
+  } else if (!hasCustomImeiName && (!needsImei || (raw && (raw.requires_imei === false || raw.requires_imei === '0' || raw['Requires.Imei'] === false || raw['Requires.Imei'] === '0' || raw['Requires.IMEI'] === '0')))) {
     if (hasCustomFields) {
       // If it doesn't need an IMEI AND we already have custom fields, hide the IMEI input entirely
       imeiInputGroup.classList.add('hidden');
@@ -1334,6 +1345,36 @@ function openPurchaseModal(serviceId) {
   }
   
   imeiAutoGenerate.dispatchEvent(new Event('change'));
+
+  if (authRole === 'admin') {
+    const headerDiv = document.querySelector('#purchaseModal .modal-header');
+    let existingAdminToggle = document.getElementById('adminToggleImeiContainer');
+    if (existingAdminToggle) existingAdminToggle.remove();
+    
+    if (adminDisableHtml) {
+      const container = document.createElement('div');
+      container.id = 'adminToggleImeiContainer';
+      container.style.width = '100%';
+      container.innerHTML = adminDisableHtml;
+      headerDiv.appendChild(container);
+      
+      document.getElementById('adminToggleImei').addEventListener('change', async (e) => {
+        try {
+          await fetch('/api/admin/disable-imei', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Server-Id': currentServerId,
+              'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ serviceId: raw ? (raw.SERVICEID || raw.serviceid) : '', disabled: e.target.checked })
+          });
+          syncProducts(false);
+          alert('Configuración guardada para este servicio. Abre de nuevo el servicio para ver los cambios.');
+        } catch (err) {}
+      });
+    }
+  }
 
   purchaseModal.classList.remove('hidden');
   lucide.createIcons();
