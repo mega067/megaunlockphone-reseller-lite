@@ -76,3 +76,9 @@ Para aplicar cambios al panel en producción:
 1. Subir los cambios a la rama `main`.
 2. Ejecutar el script `deploy_server.py` para transferir los cambios vía SSH.
 3. El panel se reiniciará automáticamente.
+
+### Sistema Anti-Ban y Prevención de "Esperando el mensaje" (Baileys)
+Se implementó un parche en el núcleo del bot (`whatsappBot.js`) para evitar que la aplicación sature a los destinatarios con ráfagas de mensajes:
+- **Cola de Mensajes (Queueing)**: Los mensajes salientes se colocan en una cola secuencial en lugar de enviarse en paralelo.
+- **Retraso Dinámico**: El bot inyecta un retraso aleatorio de **1.5 a 2.5 segundos** entre cada mensaje, simulando un comportamiento humano.
+- **Sincronización de Presencia**: Antes de disparar el mensaje, el bot envía el estado `composing` (Escribiendo...), lo que obliga al cliente de WhatsApp destino a sincronizar las llaves de cifrado E2E de Baileys, erradicando el bug visual de "Esperando el mensaje".
