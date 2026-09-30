@@ -1360,6 +1360,19 @@ function openPurchaseModal(serviceId) {
       
       document.getElementById('adminToggleImei').addEventListener('change', async (e) => {
         try {
+          if (e.target.checked) {
+            imeiInputGroup.classList.add('hidden');
+            imeiInput.removeAttribute('required');
+            imeiInput.removeAttribute('minlength');
+            imeiInput.removeAttribute('maxlength');
+            imeiAutoGenerate.checked = true;
+          } else {
+            imeiInputGroup.classList.remove('hidden');
+            imeiInput.setAttribute('required', 'true');
+            imeiAutoGenerate.checked = false;
+          }
+          imeiAutoGenerate.dispatchEvent(new Event('change'));
+
           await fetch('/api/admin/disable-imei', {
             method: 'POST',
             headers: {
@@ -1367,10 +1380,9 @@ function openPurchaseModal(serviceId) {
               'X-Server-Id': currentServerId,
               'Authorization': `Bearer ${authToken}`
             },
-            body: JSON.stringify({ serviceId: raw ? (raw.SERVICEID || raw.serviceid) : '', disabled: e.target.checked })
+            body: JSON.stringify({ serviceId: product.serviceid.toString(), disabled: e.target.checked })
           });
           syncProducts(false);
-          alert('Configuración guardada para este servicio. Abre de nuevo el servicio para ver los cambios.');
         } catch (err) {}
       });
     }
