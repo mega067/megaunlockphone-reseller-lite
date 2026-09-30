@@ -57,13 +57,46 @@ async function connectToWhatsApp() {
     });
 
     const originalSendMessage = sock.sendMessage;
-    sock.sendMessage = async function(jid, content, options) {
-        if (content && typeof content.text === 'string' && content.text.includes('❌')) {
-            if (!content.text.includes('Soporte: https://wa.me/')) {
-                content.text += '\n\n🎧 Soporte: https://wa.me/522216936720';
+    
+    // Message Queue System to prevent "Esperando mensaje" due to rate limiting
+    let isSending = false;
+    const messageQueue = [];
+    
+    const processQueue = async () => {
+        if (isSending || messageQueue.length === 0) return;
+        isSending = true;
+        
+        while (messageQueue.length > 0) {
+            const { jid, content, options, resolve, reject } = messageQueue.shift();
+            try {
+                // Presence update helps sync encryption keys and prevents the "waiting for message" bug
+                try {
+                    await sock.sendPresenceUpdate('composing', jid);
+                } catch (e) {}
+
+                // Throttle: wait 1.5 - 2.5 seconds between messages
+                await new Promise(r => setTimeout(r, 1500 + Math.random() * 1000)); 
+                
+                if (content && typeof content.text === 'string' && content.text.includes('❌')) {
+                    if (!content.text.includes('Soporte: https://wa.me/')) {
+                        content.text += '\n\n🎧 Soporte: https://wa.me/522216936720';
+                    }
+                }
+                const result = await originalSendMessage.call(sock, jid, content, options);
+                resolve(result);
+            } catch (err) {
+                console.error('Error enviando mensaje encolado:', err);
+                reject(err);
             }
         }
-        return await originalSendMessage.apply(this, arguments);
+        isSending = false;
+    };
+
+    sock.sendMessage = function(jid, content, options) {
+        return new Promise((resolve, reject) => {
+            messageQueue.push({ jid, content, options, resolve, reject });
+            processQueue();
+        });
     };
 
     sock.ev.on('creds.update', saveCreds);
