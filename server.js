@@ -46,7 +46,7 @@ app.use('/logos', express.static(path.join(__dirname, 'data/logos')));
 
 // Helpers and Utilities for Legacy Routes
 const { readDB, writeDB } = require('./src/db');
-const { requireAuth } = require('./src/auth');
+const { requireAuth, requireAdmin } = require('./src/auth');
 const { getServerId } = require('./src/helpers');
 const { enqueueWhatsApp, enqueueWhatsAppAdmin } = require('./src/whatsappQueue');
 
@@ -83,52 +83,9 @@ app.get('/api/public_settings', (req, res) => {
   res.json({ marqueeImages });
 });
 
-app.get('/api/kill', (req, res) => {
+app.get('/api/kill', requireAuth, requireAdmin, (req, res) => {
   res.send('Killing process to force restart...');
   setTimeout(() => process.exit(0), 100);
-});
-
-app.get('/api/brute_dhru', async (req, res) => {
-  try {
-    const settings = readDB('settings.json');
-    const { username, apiaccesskey, endpoint } = settings.server1;
-    let targetUrl = endpoint.endsWith('/') ? endpoint + 'api/index.php' : endpoint + '/api/index.php';
-    const results = {};
-    
-    async function test(action, xml) {
-      const params = new URLSearchParams();
-      params.append('username', username);
-      params.append('apiaccesskey', apiaccesskey);
-      params.append('action', action);
-      params.append('requestformat', 'JSON');
-      if (xml) params.append('parameters', xml);
-      
-      const response = await axios.post(targetUrl, params.toString(), {
-        headers: { 
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'User-Agent': 'Dhru-Fusion-Web-Client/1.0'
-        }
-      });
-      return response.data;
-    }
-    
-    const srv = await test('imeiservicelist', null);
-    results.srv = srv;
-    if (srv && srv.SUCCESS) {
-        const list = srv.SUCCESS[0].LIST;
-        for (const g in list) {
-            const srvs = list[g].SERVICES;
-            for (const k in srvs) {
-                if (srvs[k].SERVICEID == '154') {
-                    results.service_info = srvs[k];
-                }
-            }
-        }
-    }
-    res.json({ status: 'ok', service_info: results.service_info, message: 'CUSTOMFIELD now uses base64 JSON format' });
-  } catch(e) {
-    res.status(500).json({ error: e.message });
-  }
 });
 
 app.get('/api/proxy-image', async (req, res) => {

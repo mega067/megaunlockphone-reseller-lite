@@ -952,7 +952,38 @@
         </button>
       </div>
       <div class="modal-body">
-        <p class="modal-subtitle">Genera una imagen profesional para enviarla a tu cliente.</p>
+        <div class="input-group" style="background: rgba(14, 165, 233, 0.05); padding: 1rem; border-radius: 8px; border: 1px solid rgba(14, 165, 233, 0.2); margin-bottom: 1rem;">
+          <button type="button" id="btnToggleTicketConfig" style="width: 100%; display: flex; justify-content: space-between; align-items: center; background: none; border: none; color: #0ea5e9; font-weight: 600; cursor: pointer; padding: 0;">
+            <span><i data-lucide="settings-2" style="width: 16px; height: 16px; display: inline-block; vertical-align: text-bottom; margin-right: 0.3rem;"></i> Personalizar Ticket</span>
+            <i data-lucide="chevron-down" id="ticketConfigChevron" style="width: 16px; height: 16px; transition: transform 0.2s;"></i>
+          </button>
+          
+          <div id="ticketConfigGrid" style="display: none; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+            <div>
+              <label style="font-size: 0.75rem;">Nombre / Marca</label>
+              <input type="text" id="configNameInput" class="custom-field-input" placeholder="Ej. Unlock Store" value="MegaUnlockPhone" style="padding: 0.4rem 0.75rem; font-size: 0.85rem; width: 100%;">
+            </div>
+            <div>
+              <label style="font-size: 0.75rem;">Logo (PNG/JPG)</label>
+              <input type="file" id="configLogoInput" accept="image/*" class="custom-field-input" style="padding: 0.3rem; font-size: 0.8rem; width: 100%;">
+            </div>
+            <div>
+              <label style="font-size: 0.75rem;">WhatsApp</label>
+              <input type="text" id="configWaInput" class="custom-field-input" placeholder="Ej. +52 1234567890" value="+52 2216936720" style="padding: 0.4rem 0.75rem; font-size: 0.85rem; width: 100%;">
+            </div>
+            <div>
+              <label style="font-size: 0.75rem;">Facebook</label>
+              <input type="text" id="configFbInput" class="custom-field-input" placeholder="Ej. Mi Pagina FB" value="MegaUnlockPhone" style="padding: 0.4rem 0.75rem; font-size: 0.85rem; width: 100%;">
+            </div>
+            <div style="grid-column: 1 / -1; display: flex; justify-content: flex-end;">
+              <button type="button" id="btnResetTicketConfig" class="btn btn-secondary" style="padding: 0.3rem 0.75rem; font-size: 0.75rem; background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: rgba(239, 68, 68, 0.2);">
+                <i data-lucide="trash-2" style="width: 14px; height: 14px; margin-right: 0.2rem; display: inline-block; vertical-align: text-bottom;"></i> Restablecer Valores
+              </button>
+            </div>
+          </div>
+          <img id="configLogoPreview" src="logo.png" style="display: none;">
+        </div>
+        
         <div class="input-group">
           <label>Formato del Ticket</label>
           <div class="input-wrapper">
@@ -992,7 +1023,7 @@
   <!-- HIDDEN TICKET TEMPLATE FOR HTML2CANVAS -->
   <div id="ticketTemplateContainer" style="position: fixed; top: 0; left: 0; opacity: 0; pointer-events: none; z-index: -9999;">
     <div id="ticketTemplate" class="ticket-card" style="box-shadow: none;">
-      <img src="logo.png" alt="Logo" class="ticket-logo" style="width: 80px; height: auto; margin: 0 auto 1rem auto; display: block; border-radius: 50%;" onerror="this.style.display='none'">
+      <img src="logo.png" id="ticketDynamicLogo" alt="Logo" class="ticket-logo" style="width: 80px; height: 80px; object-fit: cover; margin: 0 auto 1rem auto; display: block; border-radius: 50%;" onerror="this.style.display='none'">
       <h1 class="ticket-title" id="ticketTitle">UNLOCK TOOL</h1>
       <p class="ticket-subtitle">Acceso Oficial</p>
       <p class="ticket-id" id="ticketOrderId" style="font-family: 'Fira Code', monospace; color: #00f0ff; font-size: 0.95rem; font-weight: 600; margin-top: -0.5rem; margin-bottom: 0.2rem; letter-spacing: 1px;">ID: ---</p>
@@ -1027,14 +1058,21 @@
       
       <div class="ticket-footer">
         <p class="ticket-footer-text">CONTACTO Y SOPORTE:</p>
-        <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; font-size: 1.2rem; font-weight: 700; margin-top: 0.5rem; color: #fff;">
+        <div id="ticketFbWrapper" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; font-size: 1.2rem; font-weight: 700; margin-top: 0.5rem; color: #fff;">
           <i style="color: #3b5998; fill: #3b5998; width: 24px; height: 24px;">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-facebook"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
           </i>
-          <span>Mega Unlock Phone</span>
+          <span id="ticketFbText">Mega Unlock Phone</span>
         </div>
-        <div style="margin-top: 1rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.75rem; color: var(--text-muted); display: flex; justify-content: space-between;">
+        <div id="ticketWaWrapper" style="display: none; align-items: center; justify-content: center; gap: 0.5rem; font-size: 1.2rem; font-weight: 700; margin-top: 0.5rem; color: #fff;">
+          <i style="color: #25D366; fill: #25D366; width: 24px; height: 24px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21"/><path d="M9 10a.5.5 0 0 0 1 0V9a.5.5 0 0 0-1 0v1a5 5 0 0 0 5 5h1a.5.5 0 0 0 0-1h-1a.5.5 0 0 0 0 1"/></svg>
+          </i>
+          <span id="ticketWaText">+52 2216936720</span>
+        </div>
+        <div style="margin-top: 1rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.75rem; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;">
           <span id="ticketResellerId" style="font-family: monospace;">---</span>
+          <span style="font-size: 0.65rem; color: rgba(255,255,255,0.3);">Powered by MegaUnlockPhone</span>
         </div>
       </div>
     </div>

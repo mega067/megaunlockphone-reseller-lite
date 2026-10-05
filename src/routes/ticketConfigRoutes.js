@@ -23,7 +23,15 @@ module.exports = (context) => {
     const userConfig = configDb[req.user.id] || {};
     
     let logoExt = userConfig.logoExt || '';
-    if (logoBase64 && logoBase64.startsWith('data:image')) {
+    if (req.body.clearLogo) {
+      if (logoExt) {
+        const logoPath = path.join(__dirname, '../../data/logos', `${req.user.id}${logoExt}`);
+        if (fs.existsSync(logoPath)) {
+          fs.unlinkSync(logoPath);
+        }
+      }
+      logoExt = '';
+    } else if (logoBase64 && logoBase64.startsWith('data:image')) {
       try {
         const match = logoBase64.match(/^data:image\/([A-Za-z-+\/]+);base64,(.+)$/);
         if (match && match.length === 3) {

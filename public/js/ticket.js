@@ -15,6 +15,11 @@ window.MegaApp.Ticket = {
       this.elements.configLogoInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
+          if (file.size > 2 * 1024 * 1024) {
+            alert('El archivo es demasiado grande. El límite es de 2 MB.');
+            this.elements.configLogoInput.value = '';
+            return;
+          }
           const reader = new FileReader();
           reader.onload = (evt) => { this.elements.configLogoPreview.src = evt.target.result; };
           reader.readAsDataURL(file);
@@ -36,9 +41,9 @@ window.MegaApp.Ticket = {
       if (res.ok) {
         const settings = await res.json();
         this.state.setSettings(settings);
-        if (this.elements.configNameInput) this.elements.configNameInput.value = settings.nombre || '';
-        if (this.elements.configWaInput) this.elements.configWaInput.value = settings.whatsapp || '';
-        if (this.elements.configFbInput) this.elements.configFbInput.value = settings.facebook || '';
+        if (this.elements.configNameInput && settings.nombre) this.elements.configNameInput.value = settings.nombre;
+        if (this.elements.configWaInput && settings.whatsapp) this.elements.configWaInput.value = settings.whatsapp;
+        if (this.elements.configFbInput && settings.facebook) this.elements.configFbInput.value = settings.facebook;
         if (this.elements.configLogoPreview) {
           if (settings.logoExt) {
             this.elements.configLogoPreview.src = `/logos/${this.state.getAuthUserId()}${settings.logoExt}?t=${Date.now()}`;

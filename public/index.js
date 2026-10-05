@@ -333,6 +333,7 @@ function checkPersistedSession() {
       if (typeof btnAdminCoupons !== 'undefined' && btnAdminCoupons) btnAdminCoupons.classList.remove('hidden');
       if (btnImportOrder) btnImportOrder.classList.remove('hidden');
       if (btnBulkSavePrices) btnBulkSavePrices.classList.remove('hidden');
+      if (btnCustomTicket) btnCustomTicket.classList.remove('hidden');
       // Inject admin headers to history table
       const historyHead = document.querySelector('#historySection thead tr');
       if (historyHead && !historyHead.dataset.adminInjected) {
@@ -346,6 +347,7 @@ function checkPersistedSession() {
       }
     } else {
       btnUserProfile.classList.remove('hidden');
+      if (btnCustomTicket) btnCustomTicket.classList.add('hidden');
       if (btnRechargesHistory) btnRechargesHistory.classList.remove('hidden');
     }
     
@@ -1663,8 +1665,12 @@ orderForm.addEventListener('submit', async (e) => {
 function applyTicketSettings() {
   if (typeof customTicketSettings !== 'undefined' && customTicketSettings) {
     const dynamicLogo = document.getElementById('ticketDynamicLogo');
+    const previewLogo = document.getElementById('configLogoPreview');
     if (dynamicLogo) {
-      if (customTicketSettings.logoExt) {
+      if (previewLogo && previewLogo.src && previewLogo.src.startsWith('data:image')) {
+        // Use local base64 preview immediately for perfect sync
+        dynamicLogo.src = previewLogo.src;
+      } else if (customTicketSettings.logoExt) {
         dynamicLogo.src = `/logos/${authUserId}${customTicketSettings.logoExt}?t=${Date.now()}`;
       } else {
         dynamicLogo.src = 'logo.png';
@@ -1711,6 +1717,69 @@ const closeTicketModal = () => {
 
 btnTicketClose.addEventListener('click', closeTicketModal);
 btnCancelTicket.addEventListener('click', closeTicketModal);
+
+const btnToggleTicketConfig = document.getElementById('btnToggleTicketConfig');
+const ticketConfigGrid = document.getElementById('ticketConfigGrid');
+const ticketConfigChevron = document.getElementById('ticketConfigChevron');
+const btnResetTicketConfig = document.getElementById('btnResetTicketConfig');
+
+if (btnToggleTicketConfig && ticketConfigGrid) {
+  btnToggleTicketConfig.addEventListener('click', () => {
+    if (ticketConfigGrid.style.display === 'none') {
+      ticketConfigGrid.style.display = 'grid';
+      if (ticketConfigChevron) ticketConfigChevron.style.transform = 'rotate(180deg)';
+    } else {
+      ticketConfigGrid.style.display = 'none';
+      if (ticketConfigChevron) ticketConfigChevron.style.transform = 'rotate(0deg)';
+    }
+  });
+}
+
+if (btnResetTicketConfig) {
+  btnResetTicketConfig.addEventListener('click', async () => {
+    if (!confirm('¿Estás seguro de que quieres restablecer tus datos y eliminar tu logo?')) return;
+    
+    // Reset visual inputs to defaults
+    const nameInput = document.getElementById('configNameInput');
+    const waInput = document.getElementById('configWaInput');
+    const fbInput = document.getElementById('configFbInput');
+    const logoInput = document.getElementById('configLogoInput');
+    const logoPreview = document.getElementById('configLogoPreview');
+    const dynamicLogo = document.getElementById('ticketDynamicLogo');
+    
+    if (nameInput) nameInput.value = 'MegaUnlockPhone';
+    if (waInput) waInput.value = '+52 2216936720';
+    if (fbInput) fbInput.value = 'MegaUnlockPhone';
+    if (logoInput) logoInput.value = '';
+    if (logoPreview) {
+      logoPreview.src = 'logo.png';
+      logoPreview.style.display = 'none';
+    }
+    if (dynamicLogo) dynamicLogo.src = 'logo.png';
+    
+    // Send API request to clear everything
+    try {
+      if (window.MegaApp && window.MegaApp.Ticket && window.MegaApp.Ticket.state) {
+        const token = window.MegaApp.Ticket.state.getAuthToken();
+        await fetch('/api/ticket_config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({
+            nombre: 'MegaUnlockPhone',
+            whatsapp: '+52 2216936720',
+            facebook: 'MegaUnlockPhone',
+            clearLogo: true
+          })
+        });
+        await window.MegaApp.Ticket.fetchTicketConfig();
+        alert('Configuración restablecida por defecto.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error al restablecer la configuración.');
+    }
+  });
+}
 
 btnGenerateTicketFinal.addEventListener('click', async () => {
   if (!currentTicketData) return;
