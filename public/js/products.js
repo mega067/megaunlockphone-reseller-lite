@@ -165,10 +165,11 @@ async function syncProducts(shouldPersist = false) {
     renderProducts(productsList);
 
     // Restore view if user was inside a category or search
-    if (wasViewingProducts) {
-      if (q) {
-        globalProductSearch.dispatchEvent(new Event('input'));
-      } else if (prevTitle === 'Resultados de Búsqueda') {
+    if (q) {
+      // Re-trigger the global search to update results for the new server
+      globalProductSearch.dispatchEvent(new Event('input'));
+    } else if (wasViewingProducts) {
+      if (prevTitle === 'Resultados de Búsqueda') {
         btnAdvancedSearch.click();
       } else {
         const groupItems = productsList.filter(p => {

@@ -103,7 +103,7 @@ exports.updateUser = (req, res) => {
       enqueueWhatsApp('private', resMsg, user.id);
       
       const adminMsg = `🤑 *Notificación de Saldo (Admin)*\n\nSe ha ${isAdd ? 'agregado' : 'descontado'} $${amount.toFixed(2)} al usuario ID *${user.id}* en *${getServerDisplayName(serverId)}*.\nNuevo saldo: $${parseFloat(credits).toFixed(2)}`;
-      enqueueWhatsApp('group', adminMsg);
+      enqueueWhatsAppAdmin(adminMsg);
     }
   }
   if (password) user.password = password;

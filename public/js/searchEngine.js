@@ -27,6 +27,22 @@ window.SearchEngine = {
       tsInstances
     } = this.config.elements;
 
+    // Advanced search toggle
+    const toggleAdvancedSearch = document.getElementById('toggleAdvancedSearch');
+    const advancedSearchPanel = document.getElementById('advancedSearchPanel');
+    if (toggleAdvancedSearch && advancedSearchPanel) {
+      toggleAdvancedSearch.addEventListener('click', () => {
+        advancedSearchPanel.classList.toggle('hidden');
+        if (!advancedSearchPanel.classList.contains('hidden')) {
+          toggleAdvancedSearch.style.background = '#3b82f6';
+          toggleAdvancedSearch.style.color = 'white';
+        } else {
+          toggleAdvancedSearch.style.background = '#1e293b';
+          toggleAdvancedSearch.style.color = '#94a3b8';
+        }
+      });
+    }
+
     // Handle Search Button Click
     if (btnAdvancedSearch) {
       btnAdvancedSearch.addEventListener('click', () => {

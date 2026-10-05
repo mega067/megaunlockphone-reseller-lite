@@ -2164,6 +2164,8 @@ if (btnWhatsappBot) {
 if (btnAdminManage) {
   btnAdminManage.addEventListener('click', () => {
     if (tabAdmin) tabAdmin.click();
+    const adminSection = document.getElementById('adminSection');
+    if (adminSection) setTimeout(() => adminSection.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   });
 }
 
@@ -2231,13 +2233,13 @@ async function fetchPublicSettings() {
               img.alt = 'Logo ' + (i+1);
               
               if (url === 'logo.png') {
-                 img.style.height = '42px';
-                 img.style.width = '42px';
+                 img.style.height = '54px';
+                 img.style.width = '54px';
                  img.style.objectFit = 'cover';
                  img.style.borderRadius = '50%';
                  img.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.8))';
               } else {
-                 img.style.height = '32px';
+                 img.style.height = '44px';
                  img.style.width = 'auto';
                  img.style.objectFit = 'contain';
               }

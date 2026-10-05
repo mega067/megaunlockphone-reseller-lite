@@ -247,36 +247,42 @@
             <h2 class="advanced-filters-title">Todos los servicios</h2>
             
             <!-- Global Text Search -->
-            <div class="search-box" style="margin-bottom: 1.5rem;">
-              <i data-lucide="search"></i>
-              <input type="text" id="globalProductSearch" placeholder="Busca un producto por nombre o ID..." style="width: 100%; padding: 0.85rem 1rem 0.85rem 2.5rem; border-radius: 12px; background: #0f172a; border: 1px solid #1e293b; color: #f8fafc; font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#1e293b'">
-            </div>
-
-            <div class="advanced-filters-row">
-              <div class="filter-group select-wrapper">
-                <select id="filterTypeSelect" class="dhru-select">
-                  <option value="all">Todos los tipos</option>
-                </select>
-                <i data-lucide="chevron-down" class="select-icon"></i>
-              </div>
-              <div class="filter-group select-wrapper">
-                <select id="filterGroupSelect" class="dhru-select">
-                  <option value="all">Todos los grupos</option>
-                </select>
-                <i data-lucide="chevron-down" class="select-icon"></i>
-              </div>
-              <div class="filter-group action-group">
-                <button type="button" class="btn btn-primary btn-search-dhru" id="btnAdvancedSearch">Buscar</button>
-              </div>
+            <div class="search-box" style="margin-bottom: 1.5rem; position: relative;">
+              <i data-lucide="search" style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #64748b; width: 18px; height: 18px;"></i>
+              <input type="text" id="globalProductSearch" placeholder="Busca un producto por nombre o ID..." style="width: 100%; padding: 0.85rem 100px 0.85rem 2.5rem; border-radius: 12px; background: #0f172a; border: 1px solid #1e293b; color: #f8fafc; font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#1e293b'">
+              <button type="button" id="toggleAdvancedSearch" style="position: absolute; right: 5px; top: 5px; bottom: 5px; background: #1e293b; color: #94a3b8; border: none; border-radius: 8px; padding: 0 12px; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: background 0.2s;" onmouseover="this.style.background='#334155'; this.style.color='white';" onmouseout="this.style.background='#1e293b'; this.style.color='#94a3b8';">
+                <i data-lucide="sliders" style="width: 14px; height: 14px;"></i>
+                Filtros
+              </button>
             </div>
             
-            <div class="advanced-service-selector">
-              <h3 class="advanced-selector-title">Selecciona un servicio...</h3>
-              <div class="filter-group select-wrapper full-width">
-                <select id="filterServiceSelect" class="dhru-select">
-                  <option value="">Selecciona una opción</option>
-                </select>
-                <i data-lucide="chevron-down" class="select-icon"></i>
+            <div id="advancedSearchPanel" class="hidden" style="margin-top: 1rem; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 1.5rem;">
+              <div class="advanced-filters-row">
+                <div class="filter-group select-wrapper">
+                  <select id="filterTypeSelect" class="dhru-select">
+                    <option value="all">Todos los tipos</option>
+                  </select>
+                  <i data-lucide="chevron-down" class="select-icon"></i>
+                </div>
+                <div class="filter-group select-wrapper">
+                  <select id="filterGroupSelect" class="dhru-select">
+                    <option value="all">Todos los grupos</option>
+                  </select>
+                  <i data-lucide="chevron-down" class="select-icon"></i>
+                </div>
+                <div class="filter-group action-group">
+                  <button type="button" class="btn btn-primary btn-search-dhru" id="btnAdvancedSearch">Buscar</button>
+                </div>
+              </div>
+              
+              <div class="advanced-service-selector">
+                <h3 class="advanced-selector-title">Selecciona un servicio...</h3>
+                <div class="filter-group select-wrapper full-width">
+                  <select id="filterServiceSelect" class="dhru-select">
+                    <option value="">Selecciona una opción</option>
+                  </select>
+                  <i data-lucide="chevron-down" class="select-icon"></i>
+                </div>
               </div>
             </div>
           </div>
@@ -711,74 +717,82 @@
         <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 20px;">Añade saldo a tu cuenta las 24/7 de forma instantánea. Se asignará una cuenta automáticamente para tu transferencia.</p>
         
         <div id="rechargeStep1">
-          <div class="form-group" style="margin-bottom: 15px;">
-            <label for="rechargeServer">Servidor (¿Dónde quieres el saldo?)</label>
+          <div class="form-group" style="margin-bottom: 20px;">
+            <label for="rechargeServer" style="font-size: 0.95rem; font-weight: 600; color: #e2e8f0;">Servidor (¿Dónde quieres el saldo?)</label>
             <input type="hidden" id="rechargeServer" value="1">
             <div id="rechargeServerCards" style="display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px; scroll-snap-type: x mandatory;">
               
-              <div class="server-card active" data-id="1" style="display: flex; flex-direction: column; min-width: 250px; flex: 1; padding: 15px;  border-radius: 12px; cursor: pointer; scroll-snap-align: center; position: relative;">
+              <div class="server-card active" data-id="1" style="display: flex; flex-direction: column; min-width: 250px; flex: 1; padding: 15px; border-radius: 12px; cursor: pointer; scroll-snap-align: center; position: relative; transition: all 0.2s ease;">
                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
                   <span style="font-size: 1.8rem;">⚡</span>
-                  <strong style="color: #60a5fa; font-size: 1.1rem;">MEGA-SERVER</strong>
+                  <strong style="color: #60a5fa; font-size: 1.1rem; text-shadow: 0 0 10px rgba(96,165,250,0.4);">MEGA-SERVER</strong>
                 </div>
                 <p style="color: #94a3b8; font-size: 0.8rem; margin: 0;">Servicios de desbloqueo IMEI internacionales</p>
-                <div style="margin-top: 10px; font-size: 0.8rem; color: #10b981;">Min: $50 MXN</div>
+                <div style="margin-top: 10px; font-size: 0.85rem; color: #10b981; font-weight: 600;">Min: $50 MXN</div>
               </div>
 
-              <div class="server-card" data-id="3" style="display: flex; flex-direction: column; min-width: 250px; flex: 1; padding: 15px;  border-radius: 12px; cursor: pointer; scroll-snap-align: center; position: relative;">
-                <div style="position: absolute; top: 0px; right: 0px; z-index: 10; pointer-events: none; background: #ef4444; color: white; font-size: 0.7rem; font-weight: bold; padding: 3px 8px; border-radius: 0 12px 0 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.5);">🔥 HOT</div>
+              <div class="server-card" data-id="3" style="display: flex; flex-direction: column; min-width: 250px; flex: 1; padding: 15px; border-radius: 12px; cursor: pointer; scroll-snap-align: center; position: relative; transition: all 0.2s ease;">
+                <div style="position: absolute; top: 0px; right: 0px; z-index: 10; pointer-events: none; background: linear-gradient(90deg, #ef4444, #f97316); color: white; font-size: 0.7rem; font-weight: bold; padding: 4px 10px; border-radius: 0 12px 0 12px; box-shadow: 0 2px 8px rgba(239,68,68,0.5);">🔥 HOT</div>
                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
                   <span style="font-size: 1.8rem;">🔱</span>
-                  <strong style="color: #a78bfa; font-size: 1.1rem;">OMEGA-SERVER</strong>
+                  <strong style="color: #a78bfa; font-size: 1.1rem; text-shadow: 0 0 10px rgba(167,139,250,0.4);">OMEGA-SERVER</strong>
                 </div>
                 <p style="color: #94a3b8; font-size: 0.8rem; margin: 0;">Servicios exclusivos y especiales</p>
-                <div style="margin-top: 10px; font-size: 0.8rem; color: #10b981;">Min: $100 MXN</div>
+                <div style="margin-top: 10px; font-size: 0.85rem; color: #10b981; font-weight: 600;">Min: $100 MXN</div>
               </div>
               
             </div>
-            <div style="margin-top: 10px; padding: 10px; border-radius: 8px; background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.25);">
-              <p style="color: #fbbf24; font-size: 0.8rem; margin: 0; display: flex; align-items: center; gap: 6px;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                <strong>⚠️ IMPORTANTE:</strong> Asegúrate de seleccionar el servidor correcto. El saldo NO es transferible entre servidores.
+            
+            <div style="margin-top: 15px; padding: 12px 15px; border-radius: 10px; background: linear-gradient(90deg, rgba(245,158,11,0.1), rgba(245,158,11,0.05)); border-left: 4px solid #f59e0b; box-shadow: inset 0 0 20px rgba(245,158,11,0.05);">
+              <p style="color: #fcd34d; font-size: 0.85rem; margin: 0; display: flex; align-items: flex-start; gap: 8px; line-height: 1.4;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top: 2px;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <span><strong>IMPORTANTE:</strong> Asegúrate de seleccionar el servidor correcto. El saldo <strong>NO</strong> es transferible entre servidores.</span>
               </p>
             </div>
           </div>
 
-          <div class="form-group">
-            <label for="rechargeAmount">Monto a recargar (MXN)</label>
-            <input type="number" id="rechargeAmount" step="1" placeholder="Ej. 100" class="search-input" style="width: 100%; box-sizing: border-box;">
-            <small style="color:#64748b; margin-top:4px; display:block;">Puedes intentar montos menores, el sistema verificará si hay liquidez para cederte saldo.</small>
-          </div>
-          <div class="form-group" style="margin-top: 15px;">
-            <label for="rechargeBank">Selecciona tu Banco (Desde donde transferirás)</label>
-            <select id="rechargeBank" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px;">
-              <option value="40012">BBVA</option>
-              <option value="40002">Banamex</option>
-              <option value="40072">Banorte</option>
-              <option value="40014">Santander</option>
-              <option value="40127">Banco Azteca</option>
-              <option value="40638">NU MEXICO</option>
-              <option value="90728">Spin by OXXO</option>
-              <option value="40021">HSBC</option>
-              <option value="40044">Scotiabank</option>
-              <option value="40036">Inbursa</option>
-              <option value="40030">Banco del Bajío</option>
-              <option value="40058">Banregio</option>
-              <option value="40137">BanCoppel</option>
-              <option value="90722">Mercado Pago</option>
-              <option value="90661">Klar</option>
-              <option value="40138">Ualá</option>
-            </select>
+          <div class="form-group" style="margin-bottom: 20px;">
+            <label for="rechargeAmount" style="font-size: 0.95rem; font-weight: 600; color: #e2e8f0;">Monto a recargar (MXN)</label>
+            <div style="position: relative; display: flex; align-items: center;">
+              <span style="position: absolute; left: 15px; color: #94a3b8; font-weight: bold; font-size: 1.1rem;">$</span>
+              <input type="number" id="rechargeAmount" step="1" placeholder="Ej. 100" class="search-input" style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 14px 15px 14px 35px; border-radius: 10px; font-size: 1.05rem; outline: none; transition: border-color 0.2s;">
+            </div>
+            <small style="color:#64748b; margin-top:6px; display:block; font-size: 0.8rem;">Puedes intentar montos menores, el sistema verificará si hay liquidez para cederte saldo.</small>
           </div>
           
-          <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 10px; border-radius: 8px; margin-top: 15px;">
-            <p style="color: #fca5a5; font-size: 0.85rem; margin: 0; font-weight: bold;">
-              ⚠️ IMPORTANTE: SIEMPRE pide una nueva cuenta aquí antes de hacer tu transferencia. LAS CUENTAS CAMBIAN CONTINUAMENTE, si transfieres a una cuenta anterior el saldo se puede perder.
+          <div class="form-group" style="margin-bottom: 20px;">
+            <label for="rechargeBank" style="font-size: 0.95rem; font-weight: 600; color: #e2e8f0;">Selecciona tu Banco <small style="color: #94a3b8; font-weight: normal;">(Desde donde transferirás)</small></label>
+            <div style="position: relative;">
+               <select id="rechargeBank" style="appearance: none; width: 100%; padding: 14px 15px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 10px; font-size: 1rem; outline: none; cursor: pointer; transition: border-color 0.2s;">
+                 <option value="40012">BBVA</option>
+                 <option value="40002">Banamex</option>
+                 <option value="40072">Banorte</option>
+                 <option value="40014">Santander</option>
+                 <option value="40127">Banco Azteca</option>
+                 <option value="40638">NU MEXICO</option>
+                 <option value="90728">Spin by OXXO</option>
+                 <option value="40021">HSBC</option>
+                 <option value="40044">Scotiabank</option>
+                 <option value="40036">Inbursa</option>
+                 <option value="40030">Banco del Bajío</option>
+                 <option value="40058">Banregio</option>
+                 <option value="40137">BanCoppel</option>
+                 <option value="90722">Mercado Pago</option>
+                 <option value="90661">Klar</option>
+                 <option value="40138">Ualá</option>
+               </select>
+               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); pointer-events: none;"><path d="m6 9 6 6 6-6"/></svg>
+            </div>
+          </div>
+          
+          <div style="padding: 12px 15px; border-radius: 10px; background: linear-gradient(90deg, rgba(239,68,68,0.1), rgba(239,68,68,0.05)); border-left: 4px solid #ef4444; box-shadow: inset 0 0 20px rgba(239,68,68,0.05); margin-bottom: 25px;">
+            <p style="color: #fca5a5; font-size: 0.85rem; margin: 0; line-height: 1.5;">
+              <strong style="color: #ef4444;">⚠️ ATENCIÓN:</strong> SIEMPRE pide una nueva cuenta aquí antes de hacer tu transferencia. LAS CUENTAS CAMBIAN CONTINUAMENTE, si transfieres a una cuenta anterior el saldo se puede perder.
             </p>
           </div>
 
-          <div class="modal-actions" style="margin-top: 20px;">
-            <button id="btnGenerarCuenta" class="btn btn-primary" style="width: 100%; justify-content: center;">Obtener Cuenta para Depositar</button>
+          <div class="modal-actions" style="margin-top: 10px;">
+            <button id="btnGenerarCuenta" class="btn btn-primary" style="width: 100%; justify-content: center; background: linear-gradient(135deg, #ec4899, #be185d); border: none; padding: 14px; font-size: 1.05rem; font-weight: 700; border-radius: 10px; box-shadow: 0 4px 20px rgba(236,72,153,0.3); transition: all 0.3s; text-transform: uppercase; letter-spacing: 0.5px;">Obtener Cuenta para Depositar</button>
           </div>
         </div>
 

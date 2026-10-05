@@ -71,6 +71,7 @@ window.initRechargeModule = function({
     currentRechargeData = null;
     
     rechargeSection.classList.remove('hidden');
+    setTimeout(() => rechargeSection.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
     // Hide other tabs
     const productsSection = document.getElementById('productsSection');
     const historySection = document.getElementById('historySection');

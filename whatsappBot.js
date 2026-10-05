@@ -169,11 +169,11 @@ async function connectToWhatsApp() {
 
         const handled = await commands.handleCommand(context);
 
-        if (!handled && firstWord.startsWith('/') && firstWord.length < 30) {
+        if (!handled && !isGroup && firstWord.length < 30) {
             if (!wusers[remoteJid]) {
-                await sock.sendMessage(remoteJid, { text: '🤖 ¡Hola! Para usar este bot necesitas vincular tu cuenta.\n\nPor favor, escribe */vincular* para empezar.' });
+                await sock.sendMessage(remoteJid, { text: '🤖 ¡Hola! Soy el bot automático de Mega Unlock Phone.\nPara interactuar por este medio, necesitas vincular tu cuenta.\n\nPor favor, usa el comando */login [usuario] [contraseña]* para empezar.' });
             } else {
-                await sock.sendMessage(remoteJid, { text: '🤖 ¡Hola! No reconocí ese comando.\n\nPor favor, escribe */ayuda* o */comandos* para ver todo lo que puedo hacer por ti.' });
+                await sock.sendMessage(remoteJid, { text: '🤖 ¡Hola! Soy un bot automatizado y no entendí tu mensaje.\n\nPor favor, escribe */comandos* para ver la lista de acciones disponibles o contacta a un humano para soporte.' });
             }
         }
 

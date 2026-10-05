@@ -1,5 +1,5 @@
 async function fetchOrderHistory() {
-  if (!window.authToken) {
+  if (!authToken) {
     const historyBody = document.getElementById('historyBody');
     if (historyBody) historyBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem;">Debes iniciar sesión para ver tu historial.</td></tr>';
     const historyCount = document.getElementById('historyCount');
@@ -336,6 +336,7 @@ tabHistory.addEventListener('click', () => {
   if (adminSection) adminSection.classList.add('hidden');
   if (typeof rechargesSection !== 'undefined' && rechargesSection) rechargesSection.classList.add('hidden');
   fetchOrderHistory(); // Refresh history every time the tab is opened
+  setTimeout(() => historySection.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
 });
 
 if (tabAdmin) {
