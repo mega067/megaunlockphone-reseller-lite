@@ -26,6 +26,10 @@ async function loadAdminData() {
       if (inputCreditCushion) {
         inputCreditCushion.value = parseFloat(set.creditCushion || 0).toFixed(0);
       }
+      const inputMarqueeImages = document.getElementById('inputMarqueeImages');
+      if (inputMarqueeImages) {
+        inputMarqueeImages.value = set.global?.marqueeImages || 'https://i.postimg.cc/pLMkLymR/fullbrand.png, https://i.postimg.cc/Hnnx2JKY/brand2.png';
+      }
     }
     
     const lbl = document.getElementById('settingsCurrentServerLabel');
@@ -811,6 +815,30 @@ if (adminSettingsForm) {
       }
     } catch (err) {
       alert('Error de conexión');
+    }
+  });
+}
+
+const btnSaveAppearance = document.getElementById('btnSaveAppearance');
+if (btnSaveAppearance) {
+  btnSaveAppearance.addEventListener('click', async () => {
+    try {
+      const marqueeImages = document.getElementById('inputMarqueeImages') ? document.getElementById('inputMarqueeImages').value : '';
+      
+      const res = await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+        body: JSON.stringify({ global: { marqueeImages } })
+      });
+      
+      if (res.ok) {
+        alert('Apariencia guardada con éxito.');
+        if (typeof fetchPublicSettings === 'function') fetchPublicSettings();
+      } else {
+        alert('Error al guardar apariencia.');
+      }
+    } catch (err) {
+      alert('Error de conexión.');
     }
   });
 }

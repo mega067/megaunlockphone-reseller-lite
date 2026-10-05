@@ -74,6 +74,15 @@ require('./src/history')(app, { requireAuth, readDB, writeDB, getServerId, enque
 require('./src/payments')(app, { requireAuth, readDB, writeDB, enqueueWhatsApp, enqueueWhatsAppAdmin });
 
 // Utility Endpoints
+app.get('/api/public_settings', (req, res) => {
+  const settings = readDB('settings.json') || {};
+  let marqueeImages = settings.global?.marqueeImages;
+  if (!marqueeImages) {
+    marqueeImages = 'https://i.postimg.cc/pLMkLymR/fullbrand.png, https://i.postimg.cc/Hnnx2JKY/brand2.png';
+  }
+  res.json({ marqueeImages });
+});
+
 app.get('/api/kill', (req, res) => {
   res.send('Killing process to force restart...');
   setTimeout(() => process.exit(0), 100);

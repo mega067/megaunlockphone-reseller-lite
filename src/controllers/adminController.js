@@ -152,6 +152,7 @@ exports.getSettings = (req, res) => {
   if (settings.server1) safeSettings.server1 = { ...settings.server1 };
   if (settings.server2) safeSettings.server2 = { ...settings.server2 };
   if (settings.server3) safeSettings.server3 = { ...settings.server3 };
+  if (settings.global) safeSettings.global = { ...settings.global };
 
   res.json(safeSettings);
 };
@@ -183,6 +184,10 @@ exports.updateSettings = (req, res) => {
   if (server3) {
     settings.server3 = settings.server3 || {};
     applyTiers(settings.server3, server3);
+  }
+  if (req.body.global) {
+    settings.global = settings.global || {};
+    settings.global.marqueeImages = req.body.global.marqueeImages;
   }
   if (exchangeRate !== undefined) {
     settings.exchangeRate = parseFloat(exchangeRate) || 17.60;

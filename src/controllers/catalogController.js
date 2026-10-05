@@ -192,7 +192,7 @@ exports.getProducts = async (req, res) => {
             clientPrice = parseFloat(customPrices[realServiceId].clientPrice);
           } else {
             let activeMarkup = 0;
-            if (dbUser.markup !== null && dbUser.markup !== undefined && !isNaN(dbUser.markup)) {
+            if (dbUser.markup !== null && dbUser.markup !== undefined && String(dbUser.markup).trim() !== '' && !isNaN(dbUser.markup)) {
               activeMarkup = parseFloat(dbUser.markup);
             } else {
               let rMarkup = calculateGroupMarkup(realCredit, groupMarkupObj, false, settings);

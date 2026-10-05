@@ -6,6 +6,11 @@ async function pedir(context) {
 
     // Handle ongoing session
     if (sessionManager.orderSessions[remoteJid]) {
+        if (!linkedUserId) {
+            delete sessionManager.orderSessions[remoteJid];
+            await sock.sendMessage(remoteJid, { text: '❌ Tu cuenta de WhatsApp no está vinculada. Por favor, inicia sesión usando /login [email] [contraseña]' });
+            return true;
+        }
         const session = sessionManager.orderSessions[remoteJid];
         
         if (text.toLowerCase() === 'cancelar') {
@@ -131,6 +136,11 @@ async function pedir(context) {
 
     // Trigger command parsing
     if (firstWord.match(/^[\/!]?pedir?([123megaomega]+)?$/i)) {
+        if (!linkedUserId) {
+            await sock.sendMessage(remoteJid, { text: '❌ Tu cuenta de WhatsApp no está vinculada. Por favor, inicia sesión usando /login [usuario] [contraseña]' });
+            return true;
+        }
+
         let sIdRaw = firstWord.match(/^[\/!]?pedir(mega|omega|1|2|3)?$/i);
         let sId = null;
         let serviceId = null;
@@ -190,7 +200,7 @@ async function processPedirStep1(session, serviceId, remoteJid, linkedUserId, te
         const sInfo = res.data;
         session.serviceId = sInfo.id;
         session.serviceName = sInfo.name;
-        session.price = sInfo.price;
+        session.price = parseFloat(sInfo.price) || 0;
         session.type = sInfo.type;
         session.customField = sInfo.customField;
         
@@ -205,7 +215,7 @@ async function processPedirStep1(session, serviceId, remoteJid, linkedUserId, te
                 let qty = parseInt(textValue.trim());
                 if (isNaN(qty) || qty < session.minQnt || qty > session.maxQnt) {
                     session.step = 'QUANTITY';
-                    await sock.sendMessage(remoteJid, { text: `✅ Servicio seleccionado:\n*${sInfo.name}*\n💰 Precio base: $${sInfo.price.toFixed(2)} MXN\n\n❌ Cantidad inválida (recibido: ${textValue}). Debe ser un número entre ${session.minQnt} y ${session.maxQnt}.\nPor favor ingresa la cantidad:` });
+                    await sock.sendMessage(remoteJid, { text: `✅ Servicio seleccionado:\n*${sInfo.name}*\n💰 Precio base: $${session.price.toFixed(2)} MXN\n\n❌ Cantidad inválida (recibido: ${textValue}). Debe ser un número entre ${session.minQnt} y ${session.maxQnt}.\nPor favor ingresa la cantidad:` });
                     return;
                 }
                 session.qnt = qty;
@@ -215,7 +225,7 @@ async function processPedirStep1(session, serviceId, remoteJid, linkedUserId, te
                 await sock.sendMessage(remoteJid, { text: `✅ Cantidad registrada: ${qty} (Total: $${(session.price * qty).toFixed(2)} MXN)\n\nPor favor, ingresa el *${fieldName}* requerido para este servicio:` });
             } else {
                 session.step = 'QUANTITY';
-                await sock.sendMessage(remoteJid, { text: `✅ Servicio seleccionado:\n*${sInfo.name}*\n💰 Precio base: $${sInfo.price.toFixed(2)} MXN\n\nEste servicio requiere **CANTIDAD**.\nPor favor ingresa la cantidad (Mínimo: ${session.minQnt}, Máximo: ${session.maxQnt}):` });
+                await sock.sendMessage(remoteJid, { text: `✅ Servicio seleccionado:\n*${sInfo.name}*\n💰 Precio base: $${session.price.toFixed(2)} MXN\n\nEste servicio requiere **CANTIDAD**.\nPor favor ingresa la cantidad (Mínimo: ${session.minQnt}, Máximo: ${session.maxQnt}):` });
             }
         } else {
             session.qnt = 1;
@@ -227,12 +237,12 @@ async function processPedirStep1(session, serviceId, remoteJid, linkedUserId, te
                 if (session.custom) {
                     if (session.custom.customlen && inputVal.length < parseInt(session.custom.customlen)) {
                         session.step = 'INPUT';
-                        await sock.sendMessage(remoteJid, { text: `✅ Servicio seleccionado:\n*${sInfo.name}*\n💰 Precio: $${sInfo.price.toFixed(2)} MXN\n\n❌ Error: El texto debe tener al menos ${session.custom.customlen} caracteres.\nPor favor, ingresa el *${fieldName}* nuevamente:` });
+                        await sock.sendMessage(remoteJid, { text: `✅ Servicio seleccionado:\n*${sInfo.name}*\n💰 Precio: $${session.price.toFixed(2)} MXN\n\n❌ Error: El texto debe tener al menos ${session.custom.customlen} caracteres.\nPor favor, ingresa el *${fieldName}* nuevamente:` });
                         return;
                     }
                     if (session.custom.maxlength && inputVal.length > parseInt(session.custom.maxlength)) {
                         session.step = 'INPUT';
-                        await sock.sendMessage(remoteJid, { text: `✅ Servicio seleccionado:\n*${sInfo.name}*\n💰 Precio: $${sInfo.price.toFixed(2)} MXN\n\n❌ Error: El texto no puede superar ${session.custom.maxlength} caracteres.\nPor favor, ingresa el *${fieldName}* nuevamente:` });
+                        await sock.sendMessage(remoteJid, { text: `✅ Servicio seleccionado:\n*${sInfo.name}*\n💰 Precio: $${session.price.toFixed(2)} MXN\n\n❌ Error: El texto no puede superar ${session.custom.maxlength} caracteres.\nPor favor, ingresa el *${fieldName}* nuevamente:` });
                         return;
                     }
                     if (session.custom.regex) {
@@ -240,7 +250,7 @@ async function processPedirStep1(session, serviceId, remoteJid, linkedUserId, te
                             const rx = new RegExp(session.custom.regex);
                             if (!rx.test(inputVal)) {
                                 session.step = 'INPUT';
-                                await sock.sendMessage(remoteJid, { text: `✅ Servicio seleccionado:\n*${sInfo.name}*\n💰 Precio: $${sInfo.price.toFixed(2)} MXN\n\n❌ Error: El formato es inválido (debe cumplir: ${session.custom.regex}).\nPor favor, ingresa el *${fieldName}* nuevamente:` });
+                                await sock.sendMessage(remoteJid, { text: `✅ Servicio seleccionado:\n*${sInfo.name}*\n💰 Precio: $${session.price.toFixed(2)} MXN\n\n❌ Error: El formato es inválido (debe cumplir: ${session.custom.regex}).\nPor favor, ingresa el *${fieldName}* nuevamente:` });
                                 return;
                             }
                         } catch (e) {}
@@ -253,7 +263,7 @@ async function processPedirStep1(session, serviceId, remoteJid, linkedUserId, te
                 await sock.sendMessage(remoteJid, { text: confMsg });
             } else {
                 session.step = 'INPUT';
-                await sock.sendMessage(remoteJid, { text: `✅ Servicio seleccionado:\n*${sInfo.name}*\n💰 Precio: $${sInfo.price.toFixed(2)} MXN\n\nPor favor, ingresa el *${fieldName}* requerido para este servicio:` });
+                await sock.sendMessage(remoteJid, { text: `✅ Servicio seleccionado:\n*${sInfo.name}*\n💰 Precio: $${session.price.toFixed(2)} MXN\n\nPor favor, ingresa el *${fieldName}* requerido para este servicio:` });
             }
         }
     } catch (e) {

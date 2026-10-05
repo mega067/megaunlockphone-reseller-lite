@@ -49,8 +49,7 @@ async function connectToWhatsApp() {
         auth: state,
         printQRInTerminal: false,
         browser: ["Mega Unlock Panel", "Chrome", "10.0.0"],
-        syncFullHistory: false,
-        markOnlineOnConnect: false,
+        markOnlineOnConnect: true,
         connectTimeoutMs: 300000,
         defaultQueryTimeoutMs: 300000,
         keepAliveIntervalMs: 10000
@@ -82,7 +81,10 @@ async function connectToWhatsApp() {
                         content.text += '\n\n🎧 Soporte: https://wa.me/522216936720';
                     }
                 }
-                const result = await originalSendMessage.call(sock, jid, content, options);
+                const result = await Promise.race([
+                    originalSendMessage.call(sock, jid, content, options),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout de WhatsApp')), 15000))
+                ]);
                 resolve(result);
             } catch (err) {
                 console.error('Error enviando mensaje encolado:', err);
@@ -126,202 +128,7 @@ async function connectToWhatsApp() {
         }
     });
 
-    async function executeSearch(sId, query, msg, remoteJid, isGroup) {
-        const senderJid = isGroup ? (msg.key.participant || remoteJid) : remoteJid;
-        const linkedUser = wusers[senderJid] || 1;
-        try {
-            const axios = require('axios');
-            const res = await axios.post('https://megaunlockphone-panel.alwaysdata.net/api/bot/search', {
-                botSecret: 'MEGA_BOT_SECRET_2026',
-                userId: linkedUser,
-                serverId: sId,
-                query: query
-            });
-            const results = res.data.results;
-            if (!results || results.length === 0) {
-                await sock.sendMessage(remoteJid, { text: `🔎 No se encontraron servicios para "${query}" en el Servidor ${sId}.` });
-            } else {
-                let msgTxt = `⚠️ _Tip: Escribe palabras clave claras (ej. "iPhone Claro") para que la búsqueda sea más rápida y precisa._\n\n🔎 *Resultados en Servidor ${sId} para "${query}":*\n\n`;
-                results.forEach((r, i) => {
-                    const emoji = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'][i];
-                    const prefix = emoji ? emoji : `*${i + 1}.*`;
-                    const parsedPrice = parseFloat(r.price); const validPrice = !isNaN(parsedPrice) ? parsedPrice : 0;
-                    msgTxt += `${prefix} ID: ${r.id} | ${r.name} | 💰 $${validPrice.toFixed(2)} MXN\n\n`;
-                });
-                msgTxt += `Para pedir escribe: /pedir${sId}`;
-                await sock.sendMessage(remoteJid, { text: msgTxt });
-            }
-        } catch (e) {
-            await sock.sendMessage(remoteJid, { text: '❌ Error al buscar servicios. Intenta más tarde.' });
-        }
-    }
 
-    async function processAddMoneyShortcut(remoteJid, isRemove, resellerIndexOrId, serverId, amount, users) {
-        const resellers = users.filter(u => u.role !== 'admin');
-        let targetReseller = null;
-        
-        // Tratar de buscar por index (1-based) primero, y si no, por ID real
-        const index = parseInt(resellerIndexOrId);
-        if (!isNaN(index) && index >= 1 && index <= resellers.length) {
-            targetReseller = resellers[index - 1];
-        } else {
-            targetReseller = resellers.find(r => r.id == resellerIndexOrId);
-        }
-        
-        if (!targetReseller) {
-            await sock.sendMessage(remoteJid, { text: '❌ Revendedor no encontrado. Por favor verifica el ID o número de la lista.' });
-            return;
-        }
-        if (!['1', '2', '3'].includes(serverId.toString())) {
-            await sock.sendMessage(remoteJid, { text: '❌ Servidor inválido. Debe ser 1, 2 o 3.' });
-            return;
-        }
-        
-        const parsedAmount = parseFloat(amount);
-        if (isNaN(parsedAmount) || parsedAmount <= 0) {
-            await sock.sendMessage(remoteJid, { text: '❌ Monto inválido. Debe ser mayor a 0.' });
-            return;
-        }
-        
-        addMoneySessions[remoteJid] = {
-            step: 4,
-            resellers: resellers,
-            type: isRemove ? 'remove' : 'add',
-            resellerId: targetReseller.id,
-            resellerName: targetReseller.username,
-            serverId: serverId.toString(),
-            amount: parsedAmount
-        };
-        
-        if (isRemove) {
-            await sock.sendMessage(remoteJid, { text: `⚠️ *CONFIRMACIÓN DE DESCUENTO* ⚠️\n\n👤 Revendedor: ${targetReseller.username}\n🏢 Servidor: ${serverId}\n📉 Monto a descontar: $${parsedAmount.toFixed(2)} MXN\n\n¿Confirmas esta reducción de saldo? Responde *SI* para proceder.` });
-        } else {
-            await sock.sendMessage(remoteJid, { text: `⚠️ *CONFIRMACIÓN DE RECARGA* ⚠️\n\n👤 Revendedor: ${targetReseller.username}\n🏢 Servidor: ${serverId}\n💲 Monto a agregar: $${parsedAmount.toFixed(2)} MXN\n\n¿Confirmas esta recarga? Responde *SI* para proceder.` });
-        }
-    }
-
-    async function processMsgUserShortcut(remoteJid, targetId, messageText, users, hasMedia, msg) {
-        if (!targetId || (!messageText && !hasMedia)) {
-            await sock.sendMessage(remoteJid, { text: '❌ Faltan argumentos. Uso: /msgUser <ALL|ID> <mensaje>' });
-            return;
-        }
-
-        let targetUsers = [];
-        if (targetId.toUpperCase() === 'ALL') {
-            targetUsers = users.filter(u => u.role !== 'admin');
-        } else {
-            const user = users.find(u => u.id == targetId);
-            if (user) {
-                targetUsers.push(user);
-            }
-        }
-
-        if (targetUsers.length === 0) {
-            await sock.sendMessage(remoteJid, { text: '❌ No se encontró ningún usuario con ese ID.' });
-            return;
-        }
-
-        msgUserSessions[remoteJid] = {
-            step: 'CONFIRM',
-            targetUsers: targetUsers,
-            targetName: targetId.toUpperCase() === 'ALL' ? 'TODOS LOS USUARIOS' : targetUsers[0].username,
-            messageText: messageText,
-            forwardMsg: hasMedia ? msg : null
-        };
-
-        if (hasMedia) {
-            await sock.sendMessage(remoteJid, { text: `⚠️ *CONFIRMACIÓN DE ENVÍO* ⚠️\n\n👤 Destinatario(s): ${msgUserSessions[remoteJid].targetName}\n💬 Mensaje: [Archivo Multimedia]\n\n¿Estás seguro de enviar este archivo multimedia? Responde *SI* para confirmar o *NO* para cancelar.` });
-        } else {
-            await sock.sendMessage(remoteJid, { text: `⚠️ *CONFIRMACIÓN DE ENVÍO* ⚠️\n\n👤 Destinatario(s): ${msgUserSessions[remoteJid].targetName}\n💬 Mensaje:\n${messageText}\n\n¿Estás seguro de enviar este mensaje? Responde *SI* para confirmar o *NO* para cancelar.` });
-        }
-    }
-
-    async function processPedirStep1(session, serviceId, remoteJid, linkedUserId, textValue) {
-        try {
-            const axios = require('axios');
-            const res = await axios.post('https://megaunlockphone-panel.alwaysdata.net/api/bot/service_info', {
-                botSecret: 'MEGA_BOT_SECRET_2026',
-                userId: linkedUserId,
-                serverId: session.serverId,
-                serviceid: serviceId
-            });
-            const sInfo = res.data;
-            session.serviceId = sInfo.id;
-            session.serviceName = sInfo.name;
-            session.price = sInfo.price;
-            session.type = sInfo.type;
-            session.customField = sInfo.customField;
-            
-            session.qntRequired = sInfo.QNT === "1";
-            session.minQnt = parseInt(sInfo.MINQNT) || 1;
-            session.maxQnt = parseInt(sInfo.MAXQNT) || 9999;
-            session.custom = sInfo.CUSTOM || {};
-            session.imeiName = sInfo.IMEINAME;
-            
-            if (session.qntRequired) {
-                if (textValue) {
-                    let qty = parseInt(textValue.trim());
-                    if (isNaN(qty) || qty < session.minQnt || qty > session.maxQnt) {
-                        session.step = 'QUANTITY';
-                        await sock.sendMessage(remoteJid, { text: `✅ Servicio seleccionado:\n*${sInfo.name}*\n💰 Precio base: $${sInfo.price.toFixed(2)} MXN\n\n❌ Cantidad inválida (recibido: ${textValue}). Debe ser un número entre ${session.minQnt} y ${session.maxQnt}.\nPor favor ingresa la cantidad:` });
-                        return;
-                    }
-                    session.qnt = qty;
-                    session.step = 'INPUT';
-                    const fallbackType = session.type === 'DATA' ? 'INFO' : session.type;
-                    const fieldName = session.customField || session.imeiName || session.custom.customname || fallbackType;
-                    await sock.sendMessage(remoteJid, { text: `✅ Cantidad registrada: ${qty} (Total: $${(session.price * qty).toFixed(2)} MXN)\n\nPor favor, ingresa el *${fieldName}* requerido para este servicio:` });
-                } else {
-                    session.step = 'QUANTITY';
-                    await sock.sendMessage(remoteJid, { text: `✅ Servicio seleccionado:\n*${sInfo.name}*\n💰 Precio base: $${sInfo.price.toFixed(2)} MXN\n\nEste servicio requiere **CANTIDAD**.\nPor favor ingresa la cantidad (Mínimo: ${session.minQnt}, Máximo: ${session.maxQnt}):` });
-                }
-            } else {
-                session.qnt = 1;
-                const fallbackType = session.type === 'DATA' ? 'INFO' : session.type;
-                const fieldName = session.customField || session.imeiName || session.custom.customname || fallbackType;
-                
-                if (textValue) {
-                    const inputVal = textValue.trim();
-                    if (session.custom) {
-                        if (session.custom.customlen && inputVal.length < parseInt(session.custom.customlen)) {
-                            session.step = 'INPUT';
-                            await sock.sendMessage(remoteJid, { text: `✅ Servicio seleccionado:\n*${sInfo.name}*\n💰 Precio: $${sInfo.price.toFixed(2)} MXN\n\n❌ Error: El texto debe tener al menos ${session.custom.customlen} caracteres.\nPor favor, ingresa el *${fieldName}* nuevamente:` });
-                            return;
-                        }
-                        if (session.custom.maxlength && inputVal.length > parseInt(session.custom.maxlength)) {
-                            session.step = 'INPUT';
-                            await sock.sendMessage(remoteJid, { text: `✅ Servicio seleccionado:\n*${sInfo.name}*\n💰 Precio: $${sInfo.price.toFixed(2)} MXN\n\n❌ Error: El texto no puede superar ${session.custom.maxlength} caracteres.\nPor favor, ingresa el *${fieldName}* nuevamente:` });
-                            return;
-                        }
-                        if (session.custom.regex) {
-                            try {
-                                const rx = new RegExp(session.custom.regex);
-                                if (!rx.test(inputVal)) {
-                                    session.step = 'INPUT';
-                                    await sock.sendMessage(remoteJid, { text: `✅ Servicio seleccionado:\n*${sInfo.name}*\n💰 Precio: $${sInfo.price.toFixed(2)} MXN\n\n❌ Error: El formato es inválido (debe cumplir: ${session.custom.regex}).\nPor favor, ingresa el *${fieldName}* nuevamente:` });
-                                    return;
-                                }
-                            } catch (e) {}
-                        }
-                    }
-                    session.imei = inputVal;
-                    session.step = 'CONFIRM';
-                    const totalCost = session.price * session.qnt;
-                    let confMsg = `⚠️ *CONFIRMACIÓN DE PEDIDO* ⚠️\n\n🔧 Servicio: ${session.serviceName}\n📱 ${fieldName}: ${session.imei}\n💲 Costo Total a descontar: $${totalCost.toFixed(2)} MXN\n\n¿Estás seguro de continuar? Responde *SI* para confirmar o *NO* para cancelar.`;
-                    await sock.sendMessage(remoteJid, { text: confMsg });
-                } else {
-                    session.step = 'INPUT';
-                    await sock.sendMessage(remoteJid, { text: `✅ Servicio seleccionado:\n*${sInfo.name}*\n💰 Precio: $${sInfo.price.toFixed(2)} MXN\n\nPor favor, ingresa el *${fieldName}* requerido para este servicio:` });
-                }
-            }
-        } catch (e) {
-            if (e.response && e.response.status === 404) {
-                await sock.sendMessage(remoteJid, { text: '❌ El servicio no existe o no está disponible.' });
-            } else {
-                await sock.sendMessage(remoteJid, { text: '❌ Error al verificar el servicio.' });
-            }
-        }
-    }
 
     sock.ev.on('messages.upsert', async (m) => {
         if (m.type !== 'notify') return;

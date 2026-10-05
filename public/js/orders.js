@@ -1,4 +1,11 @@
 async function fetchOrderHistory() {
+  if (!window.authToken) {
+    const historyBody = document.getElementById('historyBody');
+    if (historyBody) historyBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem;">Debes iniciar sesión para ver tu historial.</td></tr>';
+    const historyCount = document.getElementById('historyCount');
+    if (historyCount) historyCount.textContent = '0';
+    return;
+  }
   if (!authToken) return;
   try {
     const res = await fetch('/api/history', {

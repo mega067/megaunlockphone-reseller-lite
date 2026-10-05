@@ -417,11 +417,11 @@ exports.getServiceInfo = async (req, res) => {
           resellerCost = parseFloat(customPrices[serviceid].resellerPrice);
         } else {
           let activeMarkup = 0;
-          if (req.user.markup !== null && req.user.markup !== undefined && !isNaN(req.user.markup)) {
+          if (req.user.markup !== null && req.user.markup !== undefined && String(req.user.markup).trim() !== '' && !isNaN(req.user.markup)) {
             activeMarkup = parseFloat(req.user.markup);
           } else {
-            let rMarkup = calculateGroupMarkup(realCost, groupMarkupObj, false, settingsDb);
-            if (rMarkup === null) rMarkup = calculateMarkup(realCost, settingsDb.resellerTier1, settingsDb.resellerTier2, settingsDb.resellerTier3);
+            let rMarkup = calculateGroupMarkup(realCost, groupMarkupObj, false, settings);
+            if (rMarkup === null) rMarkup = calculateMarkup(realCost, settings.resellerTier1, settings.resellerTier2, settings.resellerTier3);
             activeMarkup = rMarkup;
           }
           resellerCost = Math.ceil(realCost + activeMarkup);

@@ -41,6 +41,24 @@ function requireAuth(req, res, next) {
   }
 }
 
+function optionalAuth(req, res, next) {
+  const token = req.headers['authorization']?.split(' ')[1];
+  
+  if (!token) {
+    req.user = { id: 'guest', role: 'guest' };
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    return next();
+  } catch (err) {
+    req.user = { id: 'guest', role: 'guest' };
+    return next();
+  }
+}
+
 function requireAdmin(req, res, next) {
   if (req.user?.role !== 'admin') {
     return res.status(403).json({ error: 'Forbidden. Admin access required.' });
@@ -66,6 +84,7 @@ function requireBotSecretOnly(req, res, next) {
 module.exports = {
   generateToken,
   requireAuth,
+  optionalAuth,
   requireAdmin,
   requireAdminOrColaborador,
   requireBotSecretOnly

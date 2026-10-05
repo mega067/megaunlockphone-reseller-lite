@@ -48,6 +48,22 @@
         </div>
       </div>
       
+      <!-- Scrolling Marquee (Hidden on Mobile) -->
+      <div class="header-marquee-container hidden-mobile">
+        <div class="header-marquee">
+          <!-- First set -->
+          <div class="marquee-item">
+            <img src="https://i.postimg.cc/pLMkLymR/fullbrand.png" alt="Brands" style="height: 32px; width: auto; object-fit: contain;">
+            <img src="https://i.postimg.cc/Hnnx2JKY/brand2.png" alt="Brands 2" style="height: 32px; width: auto; object-fit: contain; margin-left: 2rem;">
+          </div>
+          <!-- Second set for continuous looping -->
+          <div class="marquee-item">
+            <img src="https://i.postimg.cc/pLMkLymR/fullbrand.png" alt="Brands" style="height: 32px; width: auto; object-fit: contain;">
+            <img src="https://i.postimg.cc/Hnnx2JKY/brand2.png" alt="Brands 2" style="height: 32px; width: auto; object-fit: contain; margin-left: 2rem;">
+          </div>
+        </div>
+      </div>
+      
       <div class="header-right-meta">
         <!-- Multi-Server Switch -->
         <div class="server-switch-container hidden" id="serverSwitchContainer" style="display: flex; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 4px; position: relative; width: 240px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);">
@@ -100,6 +116,11 @@
           <span>Perfil</span>
         </button>
 
+        <button type="button" class="btn btn-primary btn-small" id="btnLoginTop" title="Iniciar Sesión">
+          <i data-lucide="log-in"></i>
+          <span>Ingresar</span>
+        </button>
+
         <button type="button" class="btn btn-secondary btn-small hidden" id="btnLogout" title="Cerrar Sesión">
           <i data-lucide="log-out"></i>
         </button>
@@ -107,7 +128,7 @@
     </header>
 
     <!-- Vista de Login (Credenciales) -->
-    <div class="login-view-wrapper" id="loginView">
+    <div class="login-view-wrapper hidden" id="loginView">
       <section class="card login-card">
         <div class="card-header" style="flex-direction: column; align-items: center; gap: 15px;">
           <img src="logo.png" alt="Logo" style="width: 120px; height: 120px; object-fit: contain; border-radius: 50%; box-shadow: 0 0 20px rgba(219, 39, 119, 0.4), 0 0 20px rgba(34, 211, 238, 0.4); border: 2px solid #22d3ee;">
@@ -139,12 +160,28 @@
             <i data-lucide="log-in"></i>
             <span>Iniciar Sesión</span>
           </button>
-          <div style="text-align: center; margin-top: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem;">
-            <a href="#" id="btnShowForgotPassword" style="color: #ec4899; font-size: 0.95rem; text-decoration: none; font-weight: 500;">
+          <!-- Divider -->
+          <div style="display: flex; align-items: center; justify-content: center; margin: 1.5rem 0; color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px;">
+            <div style="flex: 1; height: 1px; background: var(--border-color);"></div>
+            <span style="padding: 0 1rem;">O también</span>
+            <div style="flex: 1; height: 1px; background: var(--border-color);"></div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <button type="button" class="btn btn-secondary" id="btnShowRegister" style="width: 100%; border: 1px solid #0ea5e9; color: #0ea5e9; background: rgba(14, 165, 233, 0.05); justify-content: center;">
+              <i data-lucide="user-plus"></i>
+              <span>Crear cuenta nueva</span>
+            </button>
+            
+            <button type="button" class="btn btn-secondary" id="btnBackToCatalog" style="width: 100%; border: 1px solid #10b981; color: #10b981; background: rgba(16, 185, 129, 0.05); justify-content: center;">
+              <i data-lucide="grid"></i>
+              <span>Ver Catálogo Público</span>
+            </button>
+          </div>
+
+          <div style="text-align: center; margin-top: 1.25rem;">
+            <a href="#" id="btnShowForgotPassword" style="color: #ec4899; font-size: 0.95rem; text-decoration: none; font-weight: 500; display: inline-block; padding: 0.25rem; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
               ¿Olvidaste tu contraseña?
-            </a>
-            <a href="#" id="btnShowRegister" style="color: #0ea5e9; font-size: 0.95rem; text-decoration: none; font-weight: 500;">
-              ¿No tienes cuenta? Regístrate gratis
             </a>
           </div>
         </form>
@@ -202,7 +239,7 @@
     </div>
 
     <!-- Vista de Dashboard (Oculta al inicio) -->
-    <div class="dashboard-view-wrapper hidden" id="dashboardView">
+    <div class="dashboard-view-wrapper" id="dashboardView">
       <!-- Controls & Summary bar -->
       <section class="card controls-card">
         <div class="controls-layout advanced-filters-layout">
@@ -584,6 +621,21 @@
                   <i data-lucide="trash-2"></i> Limpiar Precios Manuales
                 </button>
               </div>
+            </div>
+
+            <!-- UI Appearance Settings -->
+            <div style="background: rgba(139, 92, 246, 0.05); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: 8px; padding: 16px;">
+              <h3 style="margin-top: 0; margin-bottom: 12px; font-size: 1.1rem; color: #a78bfa; display: flex; align-items: center; gap: 8px;">
+                <i data-lucide="layout" style="width: 18px; height: 18px;"></i> Apariencia Pública
+              </h3>
+              <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 15px;">Configura las URLs de las imágenes del banner deslizante separadas por coma.</p>
+              <div class="input-group">
+                <label for="inputMarqueeImages" style="color: #a78bfa;">Imágenes del Marquee (URLs)</label>
+                <input type="text" id="inputMarqueeImages" placeholder="https://..., https://..." style="width: 100%; border-color: rgba(139, 92, 246, 0.3);">
+              </div>
+              <button type="button" class="btn btn-primary" id="btnSaveAppearance" style="width: 100%; justify-content: center; background-color: #8b5cf6;">
+                <i data-lucide="save"></i> Guardar Apariencia
+              </button>
             </div>
 
             <!-- Bot Settings -->

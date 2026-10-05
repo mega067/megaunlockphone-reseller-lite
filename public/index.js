@@ -6,6 +6,7 @@ lucide.createIcons();
 
 // DOM Elements - Views
 const loginView = document.getElementById('loginView');
+const btnLoginTop = document.getElementById('btnLoginTop');
 const dashboardView = document.getElementById('dashboardView');
 
 // DOM Elements - Auth & Header
@@ -294,15 +295,13 @@ if (switchContainer) {
         if (filterGroupSelect && tsInstances[filterGroupSelect.id]) { tsInstances[filterGroupSelect.id].clear(true); window.lastSelectedGroup = 'all'; }
         if (filterServiceSelect && tsInstances[filterServiceSelect.id]) { tsInstances[filterServiceSelect.id].clear(true); window.lastSelectedServiceId = ''; }
         
-        if (authToken) {
-          updateAccountCredits();
-          syncProducts(false); // DO NOT force sync when switching tabs
-          if (!document.getElementById('historySection').classList.contains('hidden')) {
-            fetchOrderHistory();
-          }
-          if (adminSection && !adminSection.classList.contains('hidden')) {
-            loadAdminData();
-          }
+        updateAccountCredits();
+        syncProducts(false); // DO NOT force sync when switching tabs
+        if (!document.getElementById('historySection').classList.contains('hidden')) {
+          fetchOrderHistory();
+        }
+        if (authToken && adminSection && !adminSection.classList.contains('hidden')) {
+          loadAdminData();
         }
       }
     });
@@ -361,8 +360,47 @@ function checkPersistedSession() {
     document.getElementById('creditsBadgeContainer').classList.remove('hidden');
     const ssc = document.getElementById('serverSwitchContainer');
     if (ssc) ssc.classList.remove('hidden');
+    
+    if (btnLoginTop) btnLoginTop.classList.add('hidden');
+  } else {
+    // Unauthenticated state
+    if (btnLoginTop) btnLoginTop.classList.remove('hidden');
+    btnLogout.classList.add('hidden');
+    btnAdminManage.classList.add('hidden');
+    btnRechargeBalance.classList.add('hidden');
+    btnWhatsappBot.classList.add('hidden');
+    btnUserProfile.classList.add('hidden');
+    creditsBadgeContainer.classList.add('hidden');
+    
+    const ssc = document.getElementById('serverSwitchContainer');
+    if (ssc) ssc.classList.remove('hidden');
+    
+    // Switch to catalog view by default
+    loginView.classList.add('hidden');
+    dashboardView.classList.remove('hidden');
+    
+    syncProducts(false); // Fetch products as guest
   }
 }
+
+// Add event listener for top login button
+if (btnLoginTop) {
+  btnLoginTop.addEventListener('click', () => {
+    dashboardView.classList.add('hidden');
+    loginView.classList.remove('hidden');
+  });
+}
+
+const btnBackToCatalog = document.getElementById('btnBackToCatalog');
+if (btnBackToCatalog) {
+  btnBackToCatalog.addEventListener('click', (e) => {
+    e.preventDefault();
+    loginView.classList.add('hidden');
+    dashboardView.classList.remove('hidden');
+    lucide.createIcons();
+  });
+}
+
 // checkPersistedSession moved to the bottom of the script
 
 async function updateAccountCredits() {
@@ -1045,6 +1083,13 @@ function renderConsoleLogs() {
 // ============================================
 
 function openPurchaseModal(serviceId) {
+  if (!authToken) {
+    alert("Debes iniciar sesión para hacer un pedido.");
+    dashboardView.classList.add('hidden');
+    loginView.classList.remove('hidden');
+    return;
+  }
+
   const product = productsList.find(p => p.serviceid.toString() === serviceId.toString());
   if (!product) return;
 
@@ -2158,9 +2203,61 @@ setInterval(() => {
   }
 }, 60000); // Increased from 15s to 60s to reduce UI lag
 
+async function fetchPublicSettings() {
+  try {
+    const res = await fetch('/api/public_settings');
+    if (res.ok) {
+      const data = await res.json();
+      const marqueeImages = data.marqueeImages;
+      if (marqueeImages) {
+        const urls = marqueeImages.split(',').map(u => u.trim()).filter(Boolean);
+        if (urls.length > 0) {
+          const marquees = document.querySelectorAll('.header-marquee .marquee-item');
+          marquees.forEach(item => {
+            item.innerHTML = '';
+            
+            // Re-build array injecting logo.png between each URL
+            let finalUrls = [];
+            for (let i = 0; i < urls.length; i++) {
+              finalUrls.push(urls[i]);
+              if (i < urls.length - 1) {
+                finalUrls.push('logo.png'); // Inject logo between images
+              }
+            }
+
+            finalUrls.forEach((url, i) => {
+              const img = document.createElement('img');
+              img.src = url;
+              img.alt = 'Logo ' + (i+1);
+              
+              if (url === 'logo.png') {
+                 img.style.height = '42px';
+                 img.style.width = '42px';
+                 img.style.objectFit = 'cover';
+                 img.style.borderRadius = '50%';
+                 img.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.8))';
+              } else {
+                 img.style.height = '32px';
+                 img.style.width = 'auto';
+                 img.style.objectFit = 'contain';
+              }
+              
+              if (i > 0) img.style.marginLeft = '1.5rem'; // Reduced separation
+              item.appendChild(img);
+            });
+          });
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error fetching public settings:', err);
+  }
+}
+
 // Run initial session check after all event listeners and initializers are attached
 document.addEventListener('DOMContentLoaded', () => {
   if (window.initRechargeModule) window.initRechargeModule({ fetchUserData: updateAccountCredits });
+  fetchPublicSettings();
   checkPersistedSession();
 });
 // End Wrapper Removed

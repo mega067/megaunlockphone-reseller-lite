@@ -1,7 +1,5 @@
 // Sychronize Products implementation
 async function syncProducts(shouldPersist = false) {
-  if (!authToken) return;
-
   // Capture the server ID we are syncing for!
   const targetServerId = currentServerId;
 
