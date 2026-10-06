@@ -5,6 +5,25 @@ const path = require('path');
 const axios = require('axios');
 const http = require('http');
 const https = require('https');
+
+// Single-Instance File Lock (Heartbeat based)
+const lockFile = path.join(__dirname, 'bot.lock');
+try {
+    if (fs.existsSync(lockFile)) {
+        const stats = fs.statSync(lockFile);
+        if (Date.now() - stats.mtimeMs < 60000) {
+            console.error('⚠️ Otra instancia del bot ya está corriendo (lock reciente). Saliendo para evitar corrupción de BD.');
+            process.exit(0);
+        }
+    }
+    fs.writeFileSync(lockFile, process.pid.toString());
+    setInterval(() => {
+        try { fs.utimesSync(lockFile, new Date(), new Date()); } catch (e) {}
+    }, 15000);
+} catch (e) {
+    console.error('Lock system error', e);
+}
+
 axios.defaults.httpAgent = new http.Agent({ family: 4 });
 axios.defaults.httpsAgent = new https.Agent({ family: 4 });
 
@@ -175,7 +194,7 @@ async function connectToWhatsApp() {
 
         if (!handled && !isGroup && firstWord.length < 30) {
             if (!wusers[remoteJid]) {
-                await sock.sendMessage(remoteJid, { text: '🤖 ¡Hola! Soy el bot automático de Mega Unlock Phone.\nPara interactuar por este medio, necesitas vincular tu cuenta.\n\nPor favor, usa el comando */login [usuario] [contraseña]* para empezar.' });
+                await sock.sendMessage(remoteJid, { text: '🤖 ¡Hola! Soy el bot automático de Mega Unlock Phone.\nPara interactuar por este medio, necesitas vincular tu cuenta.\n\nPor favor, responde escribiendo la palabra */vincular* para empezar paso a paso.' });
             } else {
                 await sock.sendMessage(remoteJid, { text: '🤖 ¡Hola! Soy un bot automatizado y no entendí tu mensaje.\n\nPor favor, escribe */comandos* para ver la lista de acciones disponibles o contacta a un humano para soporte.' });
             }
@@ -183,10 +202,11 @@ async function connectToWhatsApp() {
 
         } catch (err) {
             console.error('WhatsApp Bot Error:', err);
+            require('fs').appendFileSync('bot_error.log', new Date().toISOString() + '\\n' + err.stack + '\\n\\n');
             try {
                 const errMsg = err.message || '';
                 if (errMsg.toLowerCase().includes('network error') || errMsg.includes('502') || errMsg.includes('503') || errMsg.includes('econnrefused') || errMsg.includes('500') || errMsg.toLowerCase().includes('timeout')) {
-                    await sock.sendMessage(remoteJid, { text: '⚠️ *¡Atención!* El servidor principal está en mantenimiento o bajo revisión. 🛠️\n\nPor favor, *CÁMBIATE A OMEGA SERVER* (Servidor 2 o Servidor 3) para continuar enviando tus pedidos sin interrupciones.' });
+                    await sock.sendMessage(remoteJid, { text: '⚠️ *¡Atención!* El servidor principal está en mantenimiento o bajo revisión. 🛠️\\n\\nPor favor, *CÁMBIATE A OMEGA SERVER* (Servidor 2 o Servidor 3) para continuar enviando tus pedidos sin interrupciones.' });
                 } else {
                     await sock.sendMessage(remoteJid, { text: '❌ Ocurrió un error inesperado al procesar tu mensaje. El equipo de soporte ha sido notificado.' });
                 }
