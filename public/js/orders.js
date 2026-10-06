@@ -142,6 +142,7 @@ if (registerForm) {
     const p = regPassword.value.trim();
     const pConfirm = document.getElementById('regPasswordConfirm').value.trim();
     const ph = regPhone.value.trim();
+    const email = document.getElementById('regEmail').value.trim();
     
     if (p !== pConfirm) {
       alert('Las contraseñas no coinciden. Intenta de nuevo.');
@@ -154,7 +155,7 @@ if (registerForm) {
     if (window.lucide) window.lucide.createIcons();
 
     try {
-      const data = await window.ApiHelpers.register(u, p, ph);
+      const data = await window.ApiHelpers.register(u, p, ph, email);
       currentRegPhone = data.phone;
       otpDisplayPhone.textContent = data.phone;
       registerModalOverlay.classList.add('hidden');
@@ -192,10 +193,12 @@ if (otpForm) {
 
       currentServerId = '1';
       localStorage.setItem('currentServerId', '1');
-      
       otpModalOverlay.classList.add('hidden');
       loginView.classList.add('hidden');
       dashboardView.classList.remove('hidden');
+      
+      const btnLoginTop = document.getElementById('btnLoginTop');
+      if (btnLoginTop) btnLoginTop.classList.add('hidden');
       
       initDashboard();
       updateSliderUI();
@@ -237,7 +240,16 @@ credentialsForm.addEventListener('submit', async (e) => {
 
     loginView.classList.add('hidden');
     dashboardView.classList.remove('hidden');
+    
+    if (data.weakPassword) {
+      setTimeout(() => {
+        alert('⚠️ ATENCIÓN: Tu contraseña actual es muy débil o no cumple con los nuevos estándares de seguridad (mínimo 6 caracteres, una mayúscula y sin secuencias obvias). Por tu seguridad, te recomendamos cambiarla cuanto antes.');
+      }, 500);
+    }
     btnLogout.classList.remove('hidden');
+    
+    const btnLoginTop = document.getElementById('btnLoginTop');
+    if (btnLoginTop) btnLoginTop.classList.add('hidden');
 
     const ssc = document.getElementById('serverSwitchContainer');
     if (ssc) ssc.classList.remove('hidden');
@@ -406,19 +418,55 @@ if (btnCloseProfileModal) {
 
 if (btnSaveNewPassword) {
   btnSaveNewPassword.addEventListener('click', async () => {
+    const currentPwd = document.getElementById('inputCurrentPasswordPwd').value;
     const pwd = inputNewPassword.value;
-    if (!pwd || pwd.length < 4) return alert('La contraseña debe tener al menos 4 caracteres.');
+    const pwdConfirm = document.getElementById('inputConfirmNewPassword').value;
+    
+    if (!currentPwd) return alert('Debes ingresar tu contraseña actual.');
+    if (!pwd || pwd.length < 6 || !/[A-Z]/.test(pwd)) return alert('La contraseña debe tener al menos 6 caracteres y una mayúscula.');
+    if (pwd !== pwdConfirm) return alert('Las contraseñas nuevas no coinciden.');
     
     try {
-      const res = await fetch(`/api/users/${authUserId}/password`, {
-        method: 'PUT',
-        headers: { 'X-Server-Id': currentServerId, 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-        body: JSON.stringify({ password: pwd })
+      const res = await fetch(`/api/change-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+        body: JSON.stringify({ currentPassword: currentPwd, newPassword: pwd })
       });
       if (res.ok) {
         alert('¡Contraseña actualizada con éxito!');
+        document.getElementById('inputCurrentPasswordPwd').value = '';
         inputNewPassword.value = '';
-        userProfileModal.classList.add('hidden');
+        document.getElementById('inputConfirmNewPassword').value = '';
+      } else {
+        const err = await res.json();
+        alert('Error: ' + err.error);
+      }
+    } catch (err) {
+      alert('Error de conexión.');
+    }
+  });
+}
+
+const btnSaveNewPhone = document.getElementById('btnSaveNewPhone');
+const inputNewPhone = document.getElementById('inputNewPhone');
+if (btnSaveNewPhone) {
+  btnSaveNewPhone.addEventListener('click', async () => {
+    const currentPwd = document.getElementById('inputCurrentPasswordPhone').value;
+    const phone = inputNewPhone.value;
+    
+    if (!currentPwd) return alert('Debes ingresar tu contraseña actual.');
+    if (!phone) return alert('Por favor ingresa tu número.');
+    
+    try {
+      const res = await fetch(`/api/change-phone`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+        body: JSON.stringify({ currentPassword: currentPwd, newPhone: phone })
+      });
+      if (res.ok) {
+        alert('¡WhatsApp actualizado con éxito!');
+        document.getElementById('inputCurrentPasswordPhone').value = '';
+        inputNewPhone.value = '';
       } else {
         const err = await res.json();
         alert('Error: ' + err.error);
@@ -712,3 +760,66 @@ async function autoSyncHistory(silent = false) {
 }
 
 // Update Account Credits
+
+// Password Live Validation
+function bindPasswordValidation(pwdInputId, confirmInputId, prefix, btnSubmitId) {
+  const pwdInput = document.getElementById(pwdInputId);
+  const confirmInput = document.getElementById(confirmInputId);
+  const btnSubmit = document.getElementById(btnSubmitId);
+  if (!pwdInput || !confirmInput || !btnSubmit) return;
+
+  const chkLength = document.getElementById(`${prefix}ChkLength`);
+  const chkUpper = document.getElementById(`${prefix}ChkUpper`);
+  const chkSeq = document.getElementById(`${prefix}ChkSeq`);
+  const chkMatch = document.getElementById(`${prefix}ChkMatch`);
+
+  function updateCheck(el, isValid, text) {
+    if (!el) return;
+    if (isValid) {
+      el.style.color = '#10b981'; // green
+      el.innerHTML = `<i data-lucide="check-circle" style="width:12px; height:12px; color: #10b981; margin-right: 4px; display: inline-block; vertical-align: text-bottom;"></i> ` + text;
+    } else {
+      el.style.color = '#64748b'; // default
+      el.innerHTML = `<i data-lucide="x-circle" style="width:12px; height:12px; color: #ef4444; margin-right: 4px; display: inline-block; vertical-align: text-bottom;"></i> ` + text;
+    }
+    if (window.lucide) window.lucide.createIcons({ root: el });
+  }
+
+  function validate() {
+    const val = pwdInput.value;
+    const confirmVal = confirmInput.value;
+    
+    const validLength = val.length >= 6;
+    const validUpper = /[A-Z]/.test(val);
+    const validSeq = val.length > 0 && !/(.)\1{2,}/.test(val) && !/123|234|345|456|567|678|789|890|098|987|876|765|654|543|432|321/.test(val);
+    const validMatch = val.length > 0 && val === confirmVal;
+    
+    updateCheck(chkLength, validLength, 'Mínimo 6 caracteres');
+    updateCheck(chkUpper, validUpper, 'Al menos 1 mayúscula');
+    updateCheck(chkSeq, validSeq, 'Sin repeticiones obvias (111, 123)');
+    updateCheck(chkMatch, validMatch, 'Las contraseñas coinciden');
+
+    if (validLength && validUpper && validSeq && validMatch) {
+      btnSubmit.removeAttribute('disabled');
+    } else {
+      btnSubmit.setAttribute('disabled', 'true');
+    }
+  }
+
+  pwdInput.addEventListener('input', validate);
+  confirmInput.addEventListener('input', validate);
+  
+  // initial validation
+  validate();
+}
+
+function initPasswordValidation() {
+  bindPasswordValidation('regPassword', 'regPasswordConfirm', 'reg', 'btnRegisterSubmit');
+  bindPasswordValidation('inputNewPassword', 'inputConfirmNewPassword', 'prof', 'btnSaveNewPassword');
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => setTimeout(initPasswordValidation, 500));
+} else {
+  setTimeout(initPasswordValidation, 500);
+}

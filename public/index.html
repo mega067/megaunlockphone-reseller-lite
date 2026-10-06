@@ -1163,12 +1163,37 @@
           <p style="margin: 0; font-size: 1rem; color: #38bdf8;" id="profileRole">-</p>
         </div>
         
-        <h3 style="margin: 10px 0 0 0; font-size: 1rem; color: #facc15; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">Cambiar Contraseña</h3>
+        <h3 style="margin: 10px 0 0 0; font-size: 1rem; color: #facc15; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">Seguridad</h3>
         <div class="input-group">
-          <label>Nueva Contraseña (mínimo 4 caracteres)</label>
+          <label>Contraseña Actual (Requerida)</label>
+          <input type="password" id="inputCurrentPasswordPwd" placeholder="Tu contraseña actual" style="width: 100%; margin-bottom: 8px;">
+          
+          <label>Nueva Contraseña (min. 6 chars y 1 mayúscula)</label>
+          <input type="password" id="inputNewPassword" placeholder="Nueva contraseña segura" style="width: 100%; margin-bottom: 8px;">
+          
+          <label>Confirmar Nueva Contraseña</label>
+          <div style="display: flex; align-items: center; gap: 8px; width: 100%; margin-bottom: 8px;">
+            <input type="password" id="inputConfirmNewPassword" placeholder="Repite la nueva contraseña" style="flex: 1;">
+            <button type="button" class="btn btn-primary" id="btnSaveNewPassword" style="white-space: nowrap;" disabled>Guardar</button>
+          </div>
+          
+          <ul id="profPwdChecklist" style="list-style: none; padding: 0; margin: 0; font-size: 0.75rem; color: #64748b;">
+            <li id="profChkLength" style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;"><i data-lucide="x-circle" style="width:12px; height:12px; color: #ef4444;"></i> Mínimo 6 caracteres</li>
+            <li id="profChkUpper" style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;"><i data-lucide="x-circle" style="width:12px; height:12px; color: #ef4444;"></i> Al menos 1 mayúscula</li>
+            <li id="profChkSeq" style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;"><i data-lucide="x-circle" style="width:12px; height:12px; color: #ef4444;"></i> Sin repeticiones obvias (111, 123)</li>
+            <li id="profChkMatch" style="display: flex; align-items: center; gap: 4px;"><i data-lucide="x-circle" style="width:12px; height:12px; color: #ef4444;"></i> Las contraseñas coinciden</li>
+          </ul>
+        </div>
+        
+        <h3 style="margin: 10px 0 0 0; font-size: 1rem; color: #4ade80; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">Actualizar WhatsApp</h3>
+        <div class="input-group">
+          <label>Contraseña Actual (Requerida)</label>
+          <input type="password" id="inputCurrentPasswordPhone" placeholder="Tu contraseña actual" style="width: 100%; margin-bottom: 8px;">
+          
+          <label>Nuevo Número (Ej. 522221234567)</label>
           <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
-            <input type="password" id="inputNewPassword" placeholder="Escribe tu nueva contraseña" style="flex: 1;">
-            <button type="button" class="btn btn-primary" id="btnSaveNewPassword" style="white-space: nowrap;">Guardar</button>
+            <input type="text" id="inputNewPhone" placeholder="Escribe tu nuevo número" style="flex: 1;">
+            <button type="button" class="btn btn-primary" id="btnSaveNewPhone" style="white-space: nowrap;">Guardar</button>
           </div>
         </div>
       </div>
@@ -1497,6 +1522,13 @@
             </div>
           </div>
           <div class="input-group">
+            <label for="regEmail">Correo Electrónico (Gmail)</label>
+            <div class="input-wrapper">
+              <i data-lucide="mail"></i>
+              <input type="email" id="regEmail" required placeholder="tu-correo@gmail.com">
+            </div>
+          </div>
+          <div class="input-group">
             <label for="regPassword">Contraseña</label>
             <div class="input-wrapper">
               <i data-lucide="lock"></i>
@@ -1509,6 +1541,12 @@
               <i data-lucide="lock"></i>
               <input type="password" id="regPasswordConfirm" required placeholder="Escribe la contraseña nuevamente">
             </div>
+            <ul id="regPwdChecklist" style="list-style: none; padding: 0; margin: 8px 0 0 0; font-size: 0.75rem; color: #64748b;">
+              <li id="regChkLength" style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;"><i data-lucide="x-circle" style="width:12px; height:12px; color: #ef4444;"></i> Mínimo 6 caracteres</li>
+              <li id="regChkUpper" style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;"><i data-lucide="x-circle" style="width:12px; height:12px; color: #ef4444;"></i> Al menos 1 mayúscula</li>
+              <li id="regChkSeq" style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;"><i data-lucide="x-circle" style="width:12px; height:12px; color: #ef4444;"></i> Sin repeticiones obvias (111, 123)</li>
+              <li id="regChkMatch" style="display: flex; align-items: center; gap: 4px;"><i data-lucide="x-circle" style="width:12px; height:12px; color: #ef4444;"></i> Las contraseñas coinciden</li>
+            </ul>
           </div>
           <div class="input-group">
             <label for="regPhone">WhatsApp (Ej. 522221234567)</label>
@@ -1520,7 +1558,7 @@
               Nuestro servicio principal está en México. Si ingresas 10 dígitos, agregaremos el +52 automáticamente. De lo contrario, escribe el código de país.
             </small>
           </div>
-          <button type="submit" class="btn btn-primary" id="btnRegisterSubmit" style="width: 100%; justify-content: center; margin-top: 1rem;">
+          <button type="submit" class="btn btn-primary" id="btnRegisterSubmit" style="width: 100%; justify-content: center; margin-top: 1rem;" disabled>
             <i data-lucide="send"></i> Enviar Código por WhatsApp
           </button>
         </form>

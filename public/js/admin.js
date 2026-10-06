@@ -194,6 +194,11 @@ async function loadAdminData() {
           <td>
              <div style="display:flex; flex-direction:column; gap:4px;">
                <strong>${escapeHtml(u.username)}</strong>
+               <div style="font-size: 0.75rem; color: var(--text-muted);">
+                 <div>📞 ${escapeHtml(u.phone || '-')}</div>
+                 <div>✉️ ${escapeHtml(u.email || '-')}</div>
+                 <div style="color: ${u.linkedBot ? '#34d399' : '#f472b6'}">${u.linkedBot ? '🤖 Bot Vinculado' : '🤖 Sin Bot'}</div>
+               </div>
                ${u.role === 'admin' ? `<span class="status-badge badge-category-server" style="width:fit-content; font-size:0.7rem; padding: 2px 6px;">ADMIN</span>` : 
                  `<select class="role-select" data-id="${u.id}" style="width: fit-content; padding: 2px 6px; font-size: 0.7rem; background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.3); color: #c4b5fd; border-radius: 4px; outline: none; cursor: pointer;">
                     <option value="reseller" ${u.role === 'reseller' || !u.role ? 'selected' : ''}>RESELLER</option>

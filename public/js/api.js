@@ -42,13 +42,13 @@
     /**
      * Inicia el registro enviando el OTP por WhatsApp.
      */
-    register: async function(username, password, phone) {
+    register: async function(username, password, phone, email) {
       const res = await fetch('/api/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ username, password, phone })
+        body: JSON.stringify({ username, password, phone, email })
       });
       return handleResponse(res);
     },

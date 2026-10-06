@@ -12,6 +12,16 @@ const loginLimiter = rateLimit({
   message: { error: 'Demasiados intentos de inicio de sesión, por favor intenta más tarde.' }
 });
 
+function isWeakPassword(password) {
+  if (!password || password.length < 6) return true;
+  if (!/[A-Z]/.test(password)) return true;
+  // Check for repeated chars like 111, aaa
+  if (/(.)\1{2,}/.test(password)) return true;
+  // Check for simple sequences
+  if (/123|234|345|456|567|678|789|890|098|987|876|765|654|543|432|321/.test(password)) return true;
+  return false;
+}
+
 router.post('/login', loginLimiter, (req, res) => {
   const { username, password } = req.body;
   const users = readDB('users.json') || [];
@@ -22,14 +32,21 @@ router.post('/login', loginLimiter, (req, res) => {
   }
   
   const token = generateToken(user);
-  res.json({ token, role: user.role, username: user.username, credits: user.credits, uid: user.id });
+  res.json({ 
+    token, 
+    role: user.role, 
+    username: user.username, 
+    credits: user.credits, 
+    uid: user.id,
+    weakPassword: isWeakPassword(user.password)
+  });
 });
 
 router.get('/me', requireAuth, (req, res) => {
   const users = readDB('users.json') || [];
   const user = users.find(u => u.id === req.user.id);
   if (!user) return res.status(404).json({ error: 'User not found' });
-  res.json({ username: user.username, role: user.role, credits: user.credits, uid: user.id });
+  res.json({ username: user.username, role: user.role, credits: user.credits, uid: user.id, weakPassword: isWeakPassword(user.password) });
 });
 
 const fs = require('fs');
@@ -37,8 +54,12 @@ const path = require('path');
 
 // Register (Generates OTP)
 router.post('/register', loginLimiter, (req, res) => {
-  const { username, password, phone } = req.body;
-  if (!username || !password || !phone) return res.status(400).json({ error: 'Faltan datos requeridos.' });
+  const { username, password, phone, email } = req.body;
+  if (!username || !password || !phone || !email) return res.status(400).json({ error: 'Faltan datos requeridos.' });
+  
+  if (isWeakPassword(password)) {
+    return res.status(400).json({ error: 'La contraseña es demasiado débil. Debe tener al menos 6 caracteres, una mayúscula y no ser secuencias simples como 123 o 111.' });
+  }
 
   const users = readDB('users.json') || [];
   if (users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
@@ -57,12 +78,10 @@ router.post('/register', loginLimiter, (req, res) => {
 
   // Save to pendingUsers
   const pendingUsers = readDB('pendingUsers.json') || {};
+  
   pendingUsers[cleanPhone] = {
-    username,
-    password, 
-    phone: cleanPhone,
-    otp,
-    expires: Date.now() + 10 * 60 * 1000 // 10 minutes
+    username, password, phone: cleanPhone, email: email.trim(),
+    otp, expires: Date.now() + 10 * 60 * 1000 // 10 minutes
   };
   writeDB('pendingUsers.json', pendingUsers);
 
@@ -109,8 +128,18 @@ router.post('/verify-otp', (req, res) => {
     role: 'reseller', // Reseller by default as requested
     credits: 0,
     phone: pending.phone,
+    email: pending.email,
     createdAt: new Date().toISOString()
   };
+  
+  if (pending.username.toLowerCase().startsWith('test_')) {
+    // MODO PRUEBA: No guardar en DB, solo simular
+    const token = generateToken(newUser);
+    delete pendingUsers[phone];
+    writeDB('pendingUsers.json', pendingUsers);
+    return res.json({ success: true, token, role: newUser.role, username: newUser.username, credits: newUser.credits, uid: newUser.id, testMode: true });
+  }
+  
   users.push(newUser);
   writeDB('users.json', users);
 
@@ -213,6 +242,60 @@ router.post('/reset-password', async (req, res) => {
   enqueueWhatsApp('private', `✅ *Contraseña Restablecida*\n\nTu contraseña ha sido actualizada exitosamente. Si no fuiste tú, contacta a un administrador de inmediato.`, users[userIndex].id);
 
   res.json({ success: true, message: 'Contraseña restablecida exitosamente. Ya puedes iniciar sesión.' });
+});
+
+router.post('/change-password', requireAuth, (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword) return res.status(400).json({ error: 'Falta la contraseña actual' });
+  if (!newPassword) return res.status(400).json({ error: 'Falta la nueva contraseña' });
+  
+  if (isWeakPassword(newPassword)) {
+    return res.status(400).json({ error: 'La contraseña es demasiado débil. Debe tener al menos 6 caracteres, una mayúscula y no ser secuencias simples como 123 o 111.' });
+  }
+
+  const users = readDB('users.json') || [];
+  const user = users.find(u => u.id === req.user.id);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  
+  if (user.password !== currentPassword) {
+    return res.status(401).json({ error: 'La contraseña actual es incorrecta' });
+  }
+  
+  user.password = newPassword;
+  writeDB('users.json', users);
+  res.json({ success: true, message: 'Contraseña actualizada' });
+});
+
+router.post('/change-phone', requireAuth, (req, res) => {
+  const { currentPassword, newPhone } = req.body;
+  if (!currentPassword) return res.status(400).json({ error: 'Falta la contraseña actual' });
+  if (!newPhone) return res.status(400).json({ error: 'Falta el nuevo número' });
+  
+  const users = readDB('users.json') || [];
+  const user = users.find(u => u.id === req.user.id);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  
+  if (user.password !== currentPassword) {
+    return res.status(401).json({ error: 'La contraseña actual es incorrecta' });
+  }
+  
+  let cleanPhone = String(newPhone).replace(/\D/g, '');
+  if (cleanPhone.length === 10) cleanPhone = '52' + cleanPhone;
+  
+  // Update in whatsapp_users as well
+  const wUsers = readDB('whatsapp_users.json') || {};
+  // Find and remove old phone
+  for (const [key, val] of Object.entries(wUsers)) {
+    if (val === user.id) delete wUsers[key];
+  }
+  
+  user.phone = cleanPhone;
+  wUsers[`${cleanPhone}@s.whatsapp.net`] = user.id;
+  
+  writeDB('users.json', users);
+  writeDB('whatsapp_users.json', wUsers);
+  
+  res.json({ success: true, message: 'Número de WhatsApp actualizado' });
 });
 
 module.exports = router;

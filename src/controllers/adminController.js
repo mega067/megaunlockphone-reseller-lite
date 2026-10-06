@@ -12,11 +12,17 @@ const BACKUP_DIR = path.join(DATA_DIR, 'backups');
 exports.getUsers = (req, res) => {
   const serverId = getServerId(req);
   const users = readDB('users.json') || [];
+  const wUsers = readDB('whatsapp_users.json') || {};
+  
   res.json(users.map(u => {
      const currentCredits = getUserCredit(u, serverId);
      const credits1 = getUserCredit(u, '1');
      const credits2 = getUserCredit(u, '2');
      const credits3 = getUserCredit(u, '3');
+     
+     // Check if bot is linked
+     const linkedBot = Object.keys(wUsers).some(key => wUsers[key] === u.id);
+     
      return { 
        id: u.id, 
        username: u.username, 
@@ -27,7 +33,10 @@ exports.getUsers = (req, res) => {
        credits3: credits3,
        createdAt: u.createdAt, 
        password: u.password, 
-       markup: u.markup 
+       markup: u.markup,
+       phone: u.phone || '-',
+       email: u.email || '-',
+       linkedBot: linkedBot
      };
   }));
 };
