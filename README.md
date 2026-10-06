@@ -1,4 +1,14 @@
+<p align="center">
+  <img src="public/logo.png" width="150" alt="MegaUnlockPhone Logo">
+</p>
+
 # MegaUnlockPhone - Panel Cliente Dhru
+**Sitio Web:** [megaunlockphone.com](https://megaunlockphone-panel.alwaysdata.net/) (Reemplazar con el dominio oficial si aplica)
+
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
+![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)
+![Express.js](https://img.shields.io/badge/Express.js-404D59?style=for-the-badge)
+![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)
 
 Panel web para la gestión de desbloqueos, recargas y servicios digitales integrado con múltiples proveedores a través de la API de Dhru Fusion.
 

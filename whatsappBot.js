@@ -148,6 +148,10 @@ async function connectToWhatsApp() {
         const textParts = text.trim().split(/\s+/);
         const firstWord = lowerText.split(/\s+/)[0];
         
+        // RELOAD DATABASES FOR FRESH DATA
+        wusers = readDB(WHATSAPP_USERS_FILE) || {};
+        wsettings = readDB(WHATSAPP_SETTINGS_FILE) || { adminGroupId: null };
+        
         const sessionManager = require('./src/sessionManager');
         const commands = require('./src/commands/index');
 
@@ -214,9 +218,13 @@ setInterval(async () => {
                 }
             } else if (item.type === 'private') {
                 let wusersLocal = readDB(WHATSAPP_USERS_FILE) || {};
-                const phoneId = Object.keys(wusersLocal).find(key => wusersLocal[key] === item.userId);
-                if (phoneId) {
-                    await sock.sendMessage(phoneId, { text: item.message });
+                const phoneIds = Object.keys(wusersLocal).filter(key => wusersLocal[key] === item.userId);
+                for (const phoneId of phoneIds) {
+                    try {
+                        await sock.sendMessage(phoneId, { text: item.message });
+                    } catch (e) {
+                        console.error(`[QUEUE] Error sending private message to ${phoneId}:`, e);
+                    }
                 }
             } else if (item.type === 'direct') {
                 console.log(`[QUEUE] Processing direct message to: ${item.phoneId}`);

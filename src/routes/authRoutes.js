@@ -146,6 +146,10 @@ router.post('/verify-otp', (req, res) => {
   // Link WhatsApp automatically
   const wUsers = readDB('whatsapp_users.json') || {};
   wUsers[`${pending.phone}@s.whatsapp.net`] = newId;
+  if (pending.phone.startsWith('52') && pending.phone.length === 12) {
+    const withOne = '521' + pending.phone.substring(2);
+    wUsers[`${withOne}@s.whatsapp.net`] = newId;
+  }
   writeDB('whatsapp_users.json', wUsers);
 
   // Cleanup pending
@@ -291,6 +295,10 @@ router.post('/change-phone', requireAuth, (req, res) => {
   
   user.phone = cleanPhone;
   wUsers[`${cleanPhone}@s.whatsapp.net`] = user.id;
+  if (cleanPhone.startsWith('52') && cleanPhone.length === 12) {
+    const withOne = '521' + cleanPhone.substring(2);
+    wUsers[`${withOne}@s.whatsapp.net`] = user.id;
+  }
   
   writeDB('users.json', users);
   writeDB('whatsapp_users.json', wUsers);
