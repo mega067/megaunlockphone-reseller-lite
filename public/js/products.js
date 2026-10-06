@@ -540,7 +540,7 @@ function renderProductCards(items) {
     }
     
     const card = document.createElement('div');
-    card.className = 'product-card';
+    card.className = 'product-card' + (p.rawItem._DISABLED ? ' disabled-card' : '');
     
     card.innerHTML = `
       <div class="product-card-header">

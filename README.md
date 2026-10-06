@@ -82,3 +82,8 @@ Se implementó un parche en el núcleo del bot (`whatsappBot.js`) para evitar qu
 - **Cola de Mensajes (Queueing)**: Los mensajes salientes se colocan en una cola secuencial en lugar de enviarse en paralelo.
 - **Retraso Dinámico**: El bot inyecta un retraso aleatorio de **1.5 a 2.5 segundos** entre cada mensaje, simulando un comportamiento humano.
 - **Sincronización de Presencia**: Antes de disparar el mensaje, el bot envía el estado `composing` (Escribiendo...), lo que obliga al cliente de WhatsApp destino a sincronizar las llaves de cifrado E2E de Baileys, erradicando el bug visual de "Esperando el mensaje".
+
+### Corrección de Bug de Toggles de Servicio (Modo OFF)
+Se corrigió un bug por el cual ciertos servicios no se mostraban visualmente como apagados (Modo OFF) en el panel del cliente, a pesar de que el administrador había pulsado el botón.
+**Causa:** La base de datos local guardaba el ID del servicio desactivado como cadena (`"114377"`), mientras que algunas respuestas de la API de Dhru devolvían el `SERVICEID` en formato numérico (`114377`). La comprobación `includes()` de JavaScript fallaba por usar comparación estricta.
+**Solución:** Se implementó una coerción explícita (`String(realServiceId)`) en `catalogController.js` y se optimizó el código extrayendo la lectura de archivos de disco (`fs.readFileSync`) fuera de los ciclos (loops) iterativos masivos, incrementando enormemente el rendimiento del endpoint del catálogo. Además, se añadió un estilo visual estricto de tipo "Cinta Policial de Clausurado" sobre la tarjeta del servicio usando CSS (`.disabled-card`) y se implementó validación de cache-busting en el index para forzar a los clientes web a descargar la última interfaz.

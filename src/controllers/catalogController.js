@@ -136,6 +136,8 @@ exports.getProducts = async (req, res) => {
       const serverWarnings = allWarnings['server' + serverId] || {};
       const allDisabledImei = readDB('disabled_imei.json') || {};
       const serverDisabledImei = allDisabledImei['server' + serverId] || [];
+      const disabledDb = readDB('disabled_services.json') || {};
+      const disabledServicesForServer = disabledDb['server' + serverId] || [];
 
       for (const groupKey in mergedList) {
         const groupObj = mergedList[groupKey];
@@ -146,13 +148,11 @@ exports.getProducts = async (req, res) => {
           const service = mergedList[groupKey].SERVICES[serviceKey];
           const realServiceId = service.SERVICEID || service.serviceid || serviceKey;
           
-          const disabledDb = readDB('disabled_services.json') || {};
-          const disabledServicesForServer = disabledDb['server' + serverId] || [];
-          if (disabledServicesForServer.includes(realServiceId)) {
+          if (disabledServicesForServer.includes(String(realServiceId))) {
              service._DISABLED = true;
           }
           
-          if (serverDisabledImei.includes(realServiceId)) {
+          if (serverDisabledImei.includes(String(realServiceId))) {
              service._NO_IMEI = true;
           }
 
@@ -164,7 +164,8 @@ exports.getProducts = async (req, res) => {
 
           const exchangeRate = parseFloat(settingsDb.exchangeRate || 17.60);
           const rate = serverId === '3' ? 1 : exchangeRate;
-          const realCredit = parseFloat(service.CREDIT || '0') * rate;
+          const rawCreditStr = service.CREDIT || service.credit || service.PRICE || service.price || service.AMOUNT || service.amount || '0';
+          const realCredit = parseFloat(rawCreditStr) * rate;
           priceCache[realServiceId] = realCredit;
           
           let resellerCost, clientPrice;
