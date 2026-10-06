@@ -220,13 +220,14 @@ connectToWhatsApp().catch(err => console.error("Error iniciando Baileys:", err))
 
 const QUEUE_FILE = path.join(__dirname, 'queue.json');
 
+let isProcessingQueue = false;
 setInterval(async () => {
-    if (!isReady || !sock) return;
+    if (!isReady || !sock || isProcessingQueue) return;
     if (!fs.existsSync(QUEUE_FILE)) return;
     
     try {
+        isProcessingQueue = true;
         let queue = JSON.parse(fs.readFileSync(QUEUE_FILE));
-        // console.log(`[QUEUE] Current queue length: ${queue.length}`); // Too noisy for every 5s, only log if > 0
         if (queue.length > 0) {
             console.log(`[QUEUE] Found item:`, queue[0]);
             const item = queue.shift();
@@ -235,6 +236,7 @@ setInterval(async () => {
             if (item.type === 'group') {
                 if (wsettings.adminGroupId) {
                     await sock.sendMessage(wsettings.adminGroupId, { text: item.message });
+                    await new Promise(r => setTimeout(r, 1500));
                 }
             } else if (item.type === 'private') {
                 let wusersLocal = readDB(WHATSAPP_USERS_FILE) || {};
@@ -242,6 +244,7 @@ setInterval(async () => {
                 for (const phoneId of phoneIds) {
                     try {
                         await sock.sendMessage(phoneId, { text: item.message });
+                        await new Promise(r => setTimeout(r, 1500));
                     } catch (e) {
                         console.error(`[QUEUE] Error sending private message to ${phoneId}:`, e);
                     }
@@ -254,14 +257,26 @@ setInterval(async () => {
                     try {
                         const [result] = await sock.onWhatsApp(targetJid) || [];
                         console.log(`[QUEUE] onWhatsApp(${targetJid}) result:`, result);
-                        await sock.sendMessage(targetJid, { text: item.message });
-                        console.log(`[QUEUE] Message sent to primary ${targetJid}`);
-
-                        if (targetJid.startsWith('52') && targetJid.length === 27) { 
-                            const fallbackJid = targetJid.replace(/^52/, '521');
-                            await sock.sendMessage(fallbackJid, { text: item.message });
-                            console.log(`[QUEUE] Message ALSO sent to fallback ${fallbackJid}`);
+                        
+                        let sent = false;
+                        if (result && result.exists) {
+                            await sock.sendMessage(targetJid, { text: item.message });
+                            console.log(`[QUEUE] Message sent to primary ${targetJid}`);
+                            sent = true;
                         }
+                        
+                        if (!sent && targetJid.startsWith('52') && targetJid.length === 27) { 
+                            const fallbackJid = targetJid.replace(/^52/, '521');
+                            const [fallbackResult] = await sock.onWhatsApp(fallbackJid) || [];
+                            if (fallbackResult && fallbackResult.exists) {
+                                await sock.sendMessage(fallbackJid, { text: item.message });
+                                console.log(`[QUEUE] Message sent to fallback ${fallbackJid}`);
+                            }
+                        } else if (!sent) {
+                            // If neither exists or we couldn't verify, just try sending to the original
+                            await sock.sendMessage(targetJid, { text: item.message });
+                        }
+                        await new Promise(r => setTimeout(r, 1500));
                     } catch (err) {
                         console.log(`[QUEUE] Send failed:`, err);
                     }
@@ -270,6 +285,8 @@ setInterval(async () => {
         }
     } catch (e) {
         console.error("Error procesando cola:", e);
+    } finally {
+        isProcessingQueue = false;
     }
 }, 3000);
 
