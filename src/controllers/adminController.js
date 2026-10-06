@@ -224,6 +224,25 @@ exports.updateGroupMarkups = (req, res) => {
   res.json({ success: true, markups: markups['server' + serverId] });
 };
 
+exports.setServiceCustomGroup = (req, res) => {
+  const serverId = req.headers['x-server-id'] || '1';
+  const { serviceid, customGroup } = req.body;
+  if (!serviceid) return res.status(400).send('Service ID es requerido');
+  
+  const customGroupsDb = readDB('custom_groups.json') || {};
+  if (!customGroupsDb['server' + serverId]) customGroupsDb['server' + serverId] = {};
+  
+  if (customGroup && customGroup.trim() !== '') {
+      customGroupsDb['server' + serverId][serviceid] = customGroup.trim();
+  } else {
+      delete customGroupsDb['server' + serverId][serviceid];
+  }
+  
+  writeDB('custom_groups.json', customGroupsDb);
+  incrementCatalogVersion();
+  res.json({ success: true });
+};
+
 exports.startBot = (req, res) => {
   const botPath = path.join(__dirname, '..', '..', 'whatsappBot.js');
   const botLogPath = path.join(__dirname, '..', '..', 'bot_logs.txt');

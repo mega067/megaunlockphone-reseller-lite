@@ -17,6 +17,8 @@ router.post('/admin/settings', requireAuth, requireAdmin, adminController.update
 router.get('/admin/group-markups', requireAuth, requireAdmin, adminController.getGroupMarkups);
 router.post('/admin/group-markups', requireAuth, requireAdmin, adminController.updateGroupMarkups);
 
+router.post('/admin/custom-group', requireAuth, requireAdmin, adminController.setServiceCustomGroup);
+
 router.post('/admin/bot/start', requireAuth, requireAdmin, adminController.startBot);
 router.post('/admin/bot/stop', requireAuth, requireAdmin, adminController.stopBot);
 router.get('/admin/bot/logs', requireAuth, requireAdmin, adminController.getBotLogs);

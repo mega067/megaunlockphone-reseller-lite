@@ -138,15 +138,33 @@ exports.getProducts = async (req, res) => {
       const serverDisabledImei = allDisabledImei['server' + serverId] || [];
       const disabledDb = readDB('disabled_services.json') || {};
       const disabledServicesForServer = disabledDb['server' + serverId] || [];
+      
+      const allCustomGroups = readDB('custom_groups.json') || {};
+      const serverCustomGroups = allCustomGroups['server' + serverId] || {};
 
       for (const groupKey in mergedList) {
         const groupObj = mergedList[groupKey];
         const groupName = groupObj.GROUPNAME || groupKey;
         const groupMarkupObj = serverGroupMarkups[groupName] || serverGroupMarkups[groupKey];
         
+        if (groupMarkupObj) {
+            if (groupMarkupObj.isHot) groupObj._IS_HOT = true;
+            if (groupMarkupObj.logo) groupObj._LOGO = groupMarkupObj.logo;
+        }
+        
         for (const serviceKey in mergedList[groupKey].SERVICES || {}) {
           const service = mergedList[groupKey].SERVICES[serviceKey];
           const realServiceId = service.SERVICEID || service.serviceid || serviceKey;
+          
+          if (serverCustomGroups[realServiceId]) {
+              service._CUSTOM_GROUP = serverCustomGroups[realServiceId];
+              // Also ensure we pass the custom group's markups/hot status if they exist
+              const customMarkup = serverGroupMarkups[service._CUSTOM_GROUP];
+              if (customMarkup) {
+                  if (customMarkup.isHot) service._IS_HOT_OVERRIDE = true;
+                  if (customMarkup.logo) service._LOGO_OVERRIDE = customMarkup.logo;
+              }
+          }
           
           if (disabledServicesForServer.includes(String(realServiceId))) {
              service._DISABLED = true;

@@ -93,6 +93,16 @@ async function loadAdminData() {
                     </select>
                     <input type="number" id="gm_val_c_${safeId}" step="0.01" min="0" value="${gm.clientValue || ''}" placeholder="Ej: 50" class="form-control" style="flex: 1; padding: 4px; font-size: 0.8rem; display: ${gm.clientType && gm.clientType.startsWith('tier') ? 'none' : 'block'};" data-group="${escapeHtml(groupName)}">
                   </div>
+                  
+                  <div style="display: flex; gap: 8px; align-items: center; margin-top: 5px;">
+                    <label style="width: 70px; font-size: 0.8rem; color: #9ca3af;">Logo URL:</label>
+                    <input type="text" id="gm_logo_${safeId}" value="${gm.logo || ''}" placeholder="Ej: https://.../logo.png" class="form-control" style="flex: 1; padding: 4px; font-size: 0.8rem;">
+                  </div>
+                  <div style="display: flex; gap: 8px; align-items: center;">
+                    <label style="font-size: 0.8rem; color: #9ca3af; display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                      <input type="checkbox" id="gm_hot_${safeId}" ${gm.isHot ? 'checked' : ''}> Destacar Grupo al inicio (HOT)
+                    </label>
+                  </div>
                 </div>
               `;
               groupMarkupsContainer.appendChild(card);
@@ -730,12 +740,17 @@ if (btnSaveGroupMarkups) {
       const typeC = document.getElementById('gm_type_c_' + safeId).value;
       const valC = document.getElementById('gm_val_c_' + safeId).value;
       
-      if (valR !== '' || valC !== '' || typeR.startsWith('tier') || typeC.startsWith('tier')) {
+      const logoVal = document.getElementById('gm_logo_' + safeId).value.trim();
+      const isHotVal = document.getElementById('gm_hot_' + safeId).checked;
+      
+      if (valR !== '' || valC !== '' || typeR.startsWith('tier') || typeC.startsWith('tier') || logoVal !== '' || isHotVal) {
         payload[groupName] = {
           type: typeR,
           value: parseFloat(valR) || 0,
           clientType: typeC,
-          clientValue: parseFloat(valC) || 0
+          clientValue: parseFloat(valC) || 0,
+          logo: logoVal,
+          isHot: isHotVal
         };
       }
     });

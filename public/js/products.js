@@ -101,7 +101,9 @@ async function syncProducts(shouldPersist = false) {
             productsList.push({
               serviceid: item.SERVICEID || serviceId,
               service: item.SERVICENAME || item.SERVICE || 'Sin nombre',
-              group: groupName,
+              group: item._CUSTOM_GROUP || groupName,
+              groupIsHot: item._IS_HOT_OVERRIDE || group._IS_HOT || false,
+              groupLogo: item._LOGO_OVERRIDE || group._LOGO || null,
               type: groupType || item.SERVICETYPE || item.TYPE || 'General',
               serviceType: item._SERVICE_TYPE || 'IMEI', // IMPORTANT: Store the backend type (IMEI or SERVER)
               credit: item.CREDIT || '0.00',
@@ -388,15 +390,43 @@ function renderProducts(products) {
 
   categoriesGrid.innerHTML = '';
 
-  // Sort categories: "Hot" first, then alphabetical
+  // Generate datalist of all existing groups
+  let datalist = document.getElementById('existingCustomGroups');
+  if (!datalist) {
+    datalist = document.createElement('datalist');
+    datalist.id = 'existingCustomGroups';
+    document.body.appendChild(datalist);
+  }
+  datalist.innerHTML = Object.keys(grouped).filter(g => g !== '⭐ Mis Favoritos').map(g => `<option value="${escapeHtml(g)}">`).join('');
+
+  // Sort categories: "Custom", "Hot", or "Logo" first, then alphabetical
   const entries = Object.entries(grouped);
   entries.sort((a, b) => {
     if (a[0] === '⭐ Mis Favoritos') return -1;
     if (b[0] === '⭐ Mis Favoritos') return 1;
-    const isHotA = isHotCategory(a[0]);
-    const isHotB = isHotCategory(b[0]);
-    if (isHotA && !isHotB) return -1;
-    if (!isHotA && isHotB) return 1;
+    
+    // Check if it's a custom group
+    const isCustomA = a[1].length > 0 && a[1].some(i => !!i.rawItem._CUSTOM_GROUP);
+    const isCustomB = b[1].length > 0 && b[1].some(i => !!i.rawItem._CUSTOM_GROUP);
+    
+    // Custom groups go above everything else and don't sort alphabetically between themselves
+    if (isCustomA && !isCustomB) return -1;
+    if (!isCustomA && isCustomB) return 1;
+    if (isCustomA && isCustomB) return 0;
+    
+    // Check dynamic isHot property and custom logo
+    const isHotA = a[1].length > 0 && a[1][0].groupIsHot ? true : isHotCategory(a[0]);
+    const isHotB = b[1].length > 0 && b[1][0].groupIsHot ? true : isHotCategory(b[0]);
+    
+    const hasLogoA = a[1].length > 0 && !!a[1][0].groupLogo;
+    const hasLogoB = b[1].length > 0 && !!b[1][0].groupLogo;
+    
+    const priorityA = isHotA || hasLogoA;
+    const priorityB = isHotB || hasLogoB;
+    
+    if (priorityA && !priorityB) return -1;
+    if (!priorityA && priorityB) return 1;
+    
     return a[0].localeCompare(b[0]);
   });
 
@@ -404,32 +434,42 @@ function renderProducts(products) {
     const tile = document.createElement('div');
     tile.className = 'category-tile';
     
-    const isHot = isHotCategory(groupName);
+    const isHot = items.length > 0 && items[0].groupIsHot ? true : isHotCategory(groupName);
+    const customLogo = items.length > 0 ? items[0].groupLogo : null;
+    
     if (isHot) tile.classList.add('hot-category');
     
-    let icon = 'layers';
-    // Normalize group name: remove emojis, convert to lowercase
-    const gn = groupName.toLowerCase().replace(/[\u1000-\uFFFF]+/g, '').trim();
+    let iconHtml = '';
     
-    if (groupName === '⭐ Mis Favoritos') icon = 'star';
-    else if (gn.includes('renta') || gn.includes('server') || gn.includes('remote') || gn.includes('usb')) icon = 'server';
-    else if (gn.includes('streaming') || gn.includes('tv') || gn.includes('netflix')) icon = 'monitor';
-    else if (gn.includes('vpn') || gn.includes('auth') || gn.includes('token') || gn.includes('mdm') || gn.includes('icloud')) icon = 'shield';
-    else if (gn.includes('samsung') || gn.includes('xiaomi') || gn.includes('apple') || gn.includes('iphone') || gn.includes('imei') || gn.includes('unlock') || gn.includes('frp')) icon = 'smartphone';
-    else if (gn.includes('tramite') || gn.includes('acta') || gn.includes('documento')) icon = 'file-text';
-    else if (gn.includes('check') || gn.includes('finder') || gn.includes('info')) icon = 'search';
-    else if (gn.includes('recarga') || gn.includes('saldo') || gn.includes('topup')) icon = 'zap';
-    else if (gn.includes('esim') || gn.includes('sim') || gn.includes('network') || gn.includes('carrier')) icon = 'wifi';
-    else if (gn.includes('redes sociales') || gn.includes('follower')) icon = 'users';
-    else if (gn.includes('limpieza') || gn.includes('blacklist') || gn.includes('clean')) icon = 'check-circle';
-    else if (gn.includes('tool') || gn.includes('schematic') || gn.includes('wuxinji') || gn.includes('refox')) icon = 'wrench';
-    else if (gn.includes('licencia') || gn.includes('activa') || gn.includes('key')) icon = 'key';
+    if (customLogo) {
+       iconHtml = `<img src="${escapeHtml(customLogo)}" alt="${escapeHtml(groupName)}" style="width: 48px; height: 48px; object-fit: contain; margin-bottom: 15px;">`;
+    } else {
+       let icon = 'layers';
+       // Normalize group name: remove emojis, convert to lowercase
+       const gn = groupName.toLowerCase().replace(/[\u1000-\uFFFF]+/g, '').trim();
+       
+       if (groupName === '⭐ Mis Favoritos') icon = 'star';
+       else if (gn.includes('renta') || gn.includes('server') || gn.includes('remote') || gn.includes('usb')) icon = 'server';
+       else if (gn.includes('streaming') || gn.includes('tv') || gn.includes('netflix')) icon = 'monitor';
+       else if (gn.includes('vpn') || gn.includes('auth') || gn.includes('token') || gn.includes('mdm') || gn.includes('icloud')) icon = 'shield';
+       else if (gn.includes('samsung') || gn.includes('xiaomi') || gn.includes('apple') || gn.includes('iphone') || gn.includes('imei') || gn.includes('unlock') || gn.includes('frp')) icon = 'smartphone';
+       else if (gn.includes('tramite') || gn.includes('acta') || gn.includes('documento')) icon = 'file-text';
+       else if (gn.includes('check') || gn.includes('finder') || gn.includes('info')) icon = 'search';
+       else if (gn.includes('recarga') || gn.includes('saldo') || gn.includes('topup')) icon = 'zap';
+       else if (gn.includes('esim') || gn.includes('sim') || gn.includes('network') || gn.includes('carrier')) icon = 'wifi';
+       else if (gn.includes('redes sociales') || gn.includes('follower')) icon = 'users';
+       else if (gn.includes('limpieza') || gn.includes('blacklist') || gn.includes('clean')) icon = 'check-circle';
+       else if (gn.includes('tool') || gn.includes('schematic') || gn.includes('wuxinji') || gn.includes('refox')) icon = 'wrench';
+       else if (gn.includes('licencia') || gn.includes('activa') || gn.includes('key')) icon = 'key';
+       
+       iconHtml = `<i data-lucide="${icon}"></i>`;
+    }
     
     let hotBadgeHtml = isHot ? '<span class="hot-badge">🔥 HOT</span>' : '';
     
     tile.innerHTML = `
       ${hotBadgeHtml}
-      <i data-lucide="${icon}"></i>
+      ${iconHtml}
       <h3>${escapeHtml(groupName)}</h3>
       <span class="category-count">${items.length} Servicios</span>
     `;
@@ -535,6 +575,16 @@ function renderProductCards(items) {
           <button type="button" class="btn btn-secondary btn-admin-warning" data-id="${escapeHtml(p.serviceid)}" data-title="${escapeHtml(p.service)}" data-warning="${escapeHtml(p.rawItem._WARNING || '')}" style="width: 100%; display: flex; justify-content: center; align-items: center; gap: 6px; font-size: 0.85rem; padding: 8px; border-color: rgba(239,68,68,0.3); color: #fca5a5;">
             <i data-lucide="edit-2" style="width: 16px; height: 16px;"></i> Gestionar Advertencia
           </button>
+          
+          <h4 style="margin-top: 15px; margin-bottom: 10px; color: #fbbf24; font-size: 0.9rem; display: flex; align-items: center; gap: 5px;">
+            <i data-lucide="folder-open" style="width: 14px; height: 14px;"></i> Grupo Personalizado
+          </h4>
+          <form class="custom-group-form" data-id="${escapeHtml(p.serviceid)}" style="display: flex; gap: 8px; align-items: center;">
+            <input type="text" class="custom-group-input form-control" list="existingCustomGroups" value="${p.rawItem._CUSTOM_GROUP !== undefined ? escapeHtml(p.rawItem._CUSTOM_GROUP) : ''}" placeholder="Ej: UnlockTool" style="flex: 1; padding: 6px; font-size: 0.85rem;">
+            <button type="submit" class="btn btn-primary" style="padding: 6px 10px; font-size: 0.8rem;" title="Guardar Grupo">
+               <i data-lucide="save" style="width: 14px; height: 14px; margin: 0;"></i>
+            </button>
+          </form>
         </div>
       `;
     }
@@ -674,6 +724,34 @@ function renderProductCards(items) {
           }
         } catch (err) {
           alert('Error de conexión.');
+        }
+      });
+    });
+
+    document.querySelectorAll('.custom-group-form').forEach(form => {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const serviceId = form.getAttribute('data-id');
+        const customGroup = form.querySelector('.custom-group-input').value;
+        const submitBtn = form.querySelector('button');
+        submitBtn.disabled = true;
+        
+        try {
+          const res = await fetch('/api/admin/custom-group', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Server-Id': currentServerId, 'Authorization': `Bearer ${authToken}` },
+            body: JSON.stringify({ serviceid: serviceId, customGroup })
+          });
+          if (res.ok) {
+            alert('Grupo personalizado asignado exitosamente.');
+            await syncProducts(true);
+          } else {
+            alert('Error al asignar el grupo.');
+          }
+        } catch (err) {
+          alert('Error de red.');
+        } finally {
+          submitBtn.disabled = false;
         }
       });
     });

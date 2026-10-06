@@ -11,7 +11,7 @@ const dbPath = path.join(dataDir, 'database.sqlite');
 const db = new Database(dbPath);
 
 // Activar WAL (Write-Ahead Logging) para mejor rendimiento concurrente
-db.pragma('journal_mode = WAL');
+// db.pragma('journal_mode = WAL'); // DISABED DUE TO NFS ISSUES
 
 // Inicializar tablas si no existen
 const initTables = () => {
