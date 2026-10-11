@@ -84,6 +84,7 @@ window.initRechargeModule = function({
     if (adminSection) adminSection.classList.add('hidden');
     if (rechargesSection) rechargesSection.classList.add('hidden');
     if (btnBulkSavePrices) btnBulkSavePrices.classList.add('hidden');
+    document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
 
     
     // Set default server and fetch banks

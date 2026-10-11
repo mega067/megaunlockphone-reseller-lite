@@ -237,6 +237,7 @@ credentialsForm.addEventListener('submit', async (e) => {
     currentServerId = '1';
     localStorage.setItem('currentServerId', '1');
     updateSliderUI();
+    if (window.clearFrontendCatalogCache) window.clearFrontendCatalogCache();
 
     loginView.classList.add('hidden');
     dashboardView.classList.remove('hidden');
@@ -327,13 +328,15 @@ tabCatalog.addEventListener('click', () => {
   historySection.classList.add('hidden');
   if (adminSection) adminSection.classList.add('hidden');
   if (typeof rechargesSection !== 'undefined' && rechargesSection) rechargesSection.classList.add('hidden');
-  if (!categoriesGrid.classList.contains('hidden')) {
-    const loadingOverlay = document.getElementById('globalLoadingOverlay');
-    if (loadingOverlay) loadingOverlay.classList.remove('hidden');
-    setTimeout(() => {
-      renderProducts(productsList);
-      if (loadingOverlay) loadingOverlay.classList.add('hidden');
-    }, 50);
+  
+  // Cleanly return to main categories view
+  if (typeof showCategoriesView === 'function') {
+    showCategoriesView();
+  } else if (categoriesGrid && productsBody) {
+    categoriesGrid.classList.remove('hidden');
+    productsBody.classList.add('hidden');
+    if (btnBackToCategories) btnBackToCategories.classList.add('hidden');
+    if (catalogTitle) catalogTitle.textContent = 'Catálogo de Productos';
   }
 });
 
@@ -385,6 +388,7 @@ imeiAutoGenerate.addEventListener('change', () => {
 
 // Logout Logic
 btnLogout.addEventListener('click', () => {
+  if (window.clearFrontendCatalogCache) window.clearFrontendCatalogCache();
   localStorage.removeItem('dhru_token');
   localStorage.removeItem('dhru_role');
   localStorage.removeItem('dhru_username');

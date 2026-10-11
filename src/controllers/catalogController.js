@@ -123,6 +123,7 @@ exports.getProducts = async (req, res) => {
 
     if (hasSuccess) {
       const priceCache = {};
+      const fallbackPrices = readDB('prices_' + serverId + '.json') || {};
       const allCustomPrices = readDB('custom_prices.json') || {};
       const customPrices = allCustomPrices['server' + serverId] || {};
       const users = readDB('users.json') || [];
@@ -182,12 +183,30 @@ exports.getProducts = async (req, res) => {
 
           const exchangeRate = parseFloat(settingsDb.exchangeRate || 17.60);
           const rate = serverId === '3' ? 1 : exchangeRate;
-          const rawCreditStr = service.CREDIT || service.credit || service.PRICE || service.price || service.AMOUNT || service.amount || '0';
-          const realCredit = parseFloat(rawCreditStr) * rate;
-          priceCache[realServiceId] = realCredit;
+          const rawCreditStr = service.CREDIT ?? service.credit ?? service.CREDITS ?? service.credits ?? service.Credits ?? service.PRICE ?? service.price ?? service.Price ?? service.AMOUNT ?? service.amount ?? service.Amount ?? service.COST ?? service.cost ?? service.Cost ?? '0';
+          let realCredit = (parseFloat(rawCreditStr) || 0) * rate;
+
+          // If upstream returns 0/empty, check if we have a known cached real cost for this service
+          if (realCredit <= 0 && fallbackPrices[realServiceId]) {
+            const cachedCost = parseFloat(fallbackPrices[realServiceId]) || 0;
+            if (cachedCost > 0) realCredit = cachedCost;
+          }
           
-          let resellerCost, clientPrice;
+          if (realCredit > 0) {
+            priceCache[realServiceId] = realCredit;
+          } else if (fallbackPrices[realServiceId]) {
+            priceCache[realServiceId] = fallbackPrices[realServiceId];
+          }
+          
+          const groupLower = (groupName || '').toLowerCase();
+          const serviceNameLower = (service.SERVICENAME || service.SERVICE || serviceKey || '').toLowerCase();
+          const isFreeService = groupLower.includes('gratuito') || groupLower.includes('gratis') || serviceNameLower.includes('gratuito') || serviceNameLower.includes('gratis') || serviceNameLower.includes('free');
+
+          let resellerCost = 0, clientPrice = 0;
+          let isNoPrice = false;
+
           const isManager = req.user.role === 'admin' || req.user.role === 'colaborador';
+          const isReseller = req.user.role === 'reseller';
           const ucp = !isManager && serverUserCustomPrices[realServiceId] && serverUserCustomPrices[realServiceId][req.user.id];
 
           if (customPrices[realServiceId]) {
@@ -198,7 +217,11 @@ exports.getProducts = async (req, res) => {
             delete service._CUSTOM_CLIENT;
           }
 
-          if (ucp && ucp.resellerPrice !== undefined) {
+          if (isFreeService) {
+            resellerCost = 0;
+            clientPrice = 0;
+            service._IS_FREE = true;
+          } else if (ucp && ucp.resellerPrice !== undefined) {
             resellerCost = parseFloat(ucp.resellerPrice);
             
             let cMarkup = calculateGroupMarkup(resellerCost, groupMarkupObj, true, settings);
@@ -209,7 +232,7 @@ exports.getProducts = async (req, res) => {
           } else if (customPrices[realServiceId]) {
             resellerCost = parseFloat(customPrices[realServiceId].resellerPrice);
             clientPrice = parseFloat(customPrices[realServiceId].clientPrice);
-          } else {
+          } else if (realCredit > 0) {
             let activeMarkup = 0;
             if (dbUser.markup !== null && dbUser.markup !== undefined && String(dbUser.markup).trim() !== '' && !isNaN(dbUser.markup)) {
               activeMarkup = parseFloat(dbUser.markup);
@@ -223,16 +246,30 @@ exports.getProducts = async (req, res) => {
             let cMarkup = calculateGroupMarkup(resellerCost, groupMarkupObj, true, settings);
             if (cMarkup === null) cMarkup = calculateMarkup(resellerCost, clientTier1, clientTier2, clientTier3);
             clientPrice = Math.ceil(resellerCost + cMarkup);
+          } else {
+            isNoPrice = true;
+            resellerCost = 0;
+            clientPrice = 0;
           }
           
-          // Enforce minimum price (must be at least API cost)
-          if (isNaN(resellerCost) || resellerCost < realCredit) resellerCost = Math.ceil(realCredit);
-          if (isNaN(clientPrice) || clientPrice < resellerCost) clientPrice = resellerCost;
+          if (!isFreeService && !isNoPrice) {
+            // Enforce minimum price (must be at least API cost)
+            if (isNaN(resellerCost) || (realCredit > 0 && resellerCost < realCredit)) resellerCost = Math.ceil(realCredit);
+            if (isNaN(clientPrice) || clientPrice < resellerCost) clientPrice = resellerCost;
+          }
 
-          service.CREDIT = resellerCost.toString();
+          service._IS_FREE = isFreeService;
+          service._NO_PRICE = isNoPrice;
           service._RESELLER_COST = resellerCost.toString();
           service._CLIENT_PRICE = clientPrice.toString();
-          if (req.user.role === 'admin' || req.user.role === 'colaborador') {
+
+          // User role pricing display:
+          // Admins, colaboradores and resellers see resellerCost as primary credit.
+          // Clients and unauthenticated guests ("sin cuenta") see clientPrice!
+          const displayPrice = (isReseller || isManager) ? resellerCost : clientPrice;
+          service.CREDIT = displayPrice.toString();
+
+          if (isManager) {
             service._REAL_COST = realCredit.toFixed(2);
           }
         }

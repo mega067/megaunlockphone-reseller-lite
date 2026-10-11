@@ -116,33 +116,7 @@ let g_rawServicesList = [];
 let g_categorizedGroups = {}; 
 let g_currentHistory = [];
 
-// Add click handlers for Server Tabs
-document.querySelectorAll('.server-tab').forEach(tab => {
-  tab.addEventListener('click', (e) => {
-    document.querySelectorAll('.server-tab').forEach(t => t.classList.remove('active'));
-    e.currentTarget.classList.add('active');
-    const newServerId = e.currentTarget.dataset.server;
-    
-    if (newServerId !== currentServerId) {
-      currentServerId = newServerId;
-      g_currentHistory = [];
-      historyCount.textContent = '0';
-      historyBody.innerHTML = '';
-      if (consoleList) consoleList.innerHTML = '';
-      if (consoleCount) consoleCount.textContent = '0';
-      if (consoleEmpty) consoleEmpty.classList.remove('hidden');
-      
-      // Hide advanced filter dropdown instantly when switching servers
-      if (filterServiceSelect) {
-         filterServiceSelect.innerHTML = '<option value="">Selecciona un grupo primero...</option>';
-         filterServiceSelect.value = '';
-      }
-      
-      tabCatalog.click(); // Always go back to catalog when switching servers
-      syncProducts(false);
-    }
-  });
-});
+// Legacy server tabs removed (handled by btn-server-switch)
 
 
 
@@ -280,15 +254,18 @@ if (switchContainer) {
   document.querySelectorAll('.btn-server-switch').forEach(btn => {
     btn.addEventListener('click', () => {
       const id = btn.dataset.server;
-              if (currentServerId !== id) {
+      if (currentServerId !== id) {
         currentServerId = id;
         localStorage.setItem('currentServerId', id);
         updateSliderUI();
         
-        // IMMEDIATE UI WIPE TO PREVENT GHOST DATA IF API FAILS
-        productsList = [];
-        uniqueGroups.clear();
-        if (typeof renderProducts === 'function') renderProducts([]);
+        // Cleanly switch back to catalog view if user was elsewhere
+        if (tabCatalog && (!tabCatalog.classList.contains('active') || (productsSection && productsSection.classList.contains('hidden')))) {
+          tabCatalog.click();
+        } else if (typeof showCategoriesView === 'function') {
+          showCategoriesView();
+        }
+
         if (filterTypeSelect && tsInstances[filterTypeSelect.id]) { tsInstances[filterTypeSelect.id].clear(true); window.lastSelectedType = 'all'; }
         if (typeof populateGroupsFilter === 'function') populateGroupsFilter('all');
         if (typeof populateServicesFilter === 'function') populateServicesFilter('all', 'all');
@@ -297,7 +274,7 @@ if (switchContainer) {
         
         updateAccountCredits();
         syncProducts(false); // DO NOT force sync when switching tabs
-        if (!document.getElementById('historySection').classList.contains('hidden')) {
+        if (historySection && !historySection.classList.contains('hidden')) {
           fetchOrderHistory();
         }
         if (authToken && adminSection && !adminSection.classList.contains('hidden')) {

@@ -1,3 +1,9 @@
+window.clearFrontendCatalogCache = function() {
+  if (typeof frontendCatalogCache === 'object' && frontendCatalogCache !== null) {
+    for (const k in frontendCatalogCache) delete frontendCatalogCache[k];
+  }
+};
+
 // Sychronize Products implementation
 async function syncProducts(shouldPersist = false) {
   // Capture the server ID we are syncing for!
@@ -15,9 +21,10 @@ async function syncProducts(shouldPersist = false) {
   try {
     let data;
     
-    // Use frontend cache if we aren't forcing a sync
-    const cachedEntry = frontendCatalogCache[targetServerId];
-    const isCacheValid = cachedEntry && (Date.now() - cachedEntry.timestamp < 15 * 60 * 1000);
+    // Key cache by server + role + userId to avoid cross-role cache bleeding (e.g. guest cache giving $0 API cost to admin)
+    const cacheKey = `${targetServerId}_${authRole || 'guest'}_${authUserId || '0'}`;
+    const cachedEntry = frontendCatalogCache[cacheKey];
+    const isCacheValid = cachedEntry && (Date.now() - cachedEntry.timestamp < 3 * 60 * 1000);
     
     if (!shouldPersist && isCacheValid) {
       data = cachedEntry.data;
@@ -54,7 +61,7 @@ async function syncProducts(shouldPersist = false) {
       
       // Cache it for future tab switches with timestamp
       if (!data.ERROR || data.ERROR.length === 0) {
-         frontendCatalogCache[targetServerId] = { data: data, timestamp: Date.now() };
+         frontendCatalogCache[cacheKey] = { data: data, timestamp: Date.now() };
       }
     }
 
@@ -166,13 +173,18 @@ async function syncProducts(shouldPersist = false) {
     await new Promise(resolve => setTimeout(resolve, 50));
     renderProducts(productsList);
 
-    // Restore view if user was inside a category or search
-    if (q) {
-      // Re-trigger the global search to update results for the new server
+    const isDifferentServer = (window.lastLoadedServerId !== targetServerId);
+    window.lastLoadedServerId = targetServerId;
+
+    if (isDifferentServer) {
+      if (globalProductSearch) globalProductSearch.value = '';
+      showCategoriesView();
+    } else if (q) {
+      // Re-trigger the global search to update results
       globalProductSearch.dispatchEvent(new Event('input'));
     } else if (wasViewingProducts) {
       if (prevTitle === 'Resultados de Búsqueda') {
-        btnAdvancedSearch.click();
+        if (btnAdvancedSearch) btnAdvancedSearch.click();
       } else {
         const groupItems = productsList.filter(p => {
           let gName = p.group || 'Otros Servicios';
@@ -184,8 +196,12 @@ async function syncProducts(shouldPersist = false) {
         });
         if (groupItems.length > 0) {
           showCategoryProducts(prevTitle, groupItems);
+        } else {
+          showCategoriesView();
         }
       }
+    } else {
+      showCategoriesView();
     }
 
     renderOrderHistory();
@@ -515,13 +531,18 @@ function renderProductCards(items) {
   } catch (e) {}
   
   items.forEach(p => {
+    const isFree = p.rawItem._IS_FREE || false;
+    const noPrice = p.rawItem._NO_PRICE || (parseFloat(p.credit) <= 0 && !isFree);
     const priceText = formatPrice(p.credit);
     
     let adminPricesHtml = '';
     let adminCustomPriceHtml = '';
     if (authRole === 'admin' || authRole === 'colaborador') {
-      const real = formatPrice(p.rawItem._REAL_COST || '0');
-      const client = formatPrice(p.rawItem._CLIENT_PRICE || '0');
+      const realCostNum = parseFloat(p.rawItem._REAL_COST) || 0;
+      const realCostDisplay = realCostNum > 0 ? formatPrice(p.rawItem._REAL_COST) : (isFree ? 'Gratis' : '<span style="color: #f59e0b;">Sin costo API</span>');
+      
+      const clientPriceNum = parseFloat(p.rawItem._CLIENT_PRICE) || 0;
+      const clientPriceDisplay = clientPriceNum > 0 ? formatPrice(p.rawItem._CLIENT_PRICE) : (isFree ? 'Gratis' : '<span style="color: #f59e0b;">No asignado</span>');
       
       const isOff = p.rawItem._DISABLED;
       const toggleBtnHtml = `
@@ -532,8 +553,8 @@ function renderProductCards(items) {
 
       adminPricesHtml = `
         <div style="font-size: 0.8rem; margin-top: 5px; background: rgba(0,0,0,0.2); padding: 5px; border-radius: 4px;">
-          <div style="color: #10b981; margin-bottom: 2px;">Costo API: <strong>${real}</strong></div>
-          <div style="color: #c4b5fd;">Precio Cliente: <strong>${client}</strong></div>
+          <div style="color: #10b981; margin-bottom: 2px;">Costo API: <strong>${realCostDisplay}</strong></div>
+          <div style="color: #c4b5fd;">Precio Cliente: <strong>${clientPriceDisplay}</strong></div>
           ${toggleBtnHtml}
         </div>
       `;
@@ -592,6 +613,19 @@ function renderProductCards(items) {
     const card = document.createElement('div');
     card.className = 'product-card' + (p.rawItem._DISABLED ? ' disabled-card' : '');
     
+    let mainPriceHtml = '';
+    if (authRole === 'admin' || authRole === 'colaborador') {
+      const resellerText = (noPrice && !isFree) ? '<span style="color:#f59e0b;">Sin precio asignado</span>' : formatPrice(p.rawItem._RESELLER_COST || p.credit);
+      const adminNotice = (noPrice && !isFree) ? '<div style="color: #ef4444; font-size: 0.75rem; margin-top: 3px; font-weight: bold;">⚠️ Sin precio ($0.00) - Asignar Manual</div>' : '';
+      mainPriceHtml = `Precio Reseller: ${resellerText}${adminNotice}`;
+    } else if (isFree) {
+      mainPriceHtml = `<span style="color: #10b981; font-weight: bold;">✨ GRATIS</span>`;
+    } else if (noPrice) {
+      mainPriceHtml = `<span style="color: #f59e0b; font-weight: bold;">Consultar Disponibilidad</span>`;
+    } else {
+      mainPriceHtml = priceText;
+    }
+
     card.innerHTML = `
       <div class="product-card-header">
         <span class="product-id">ID: ${escapeHtml(p.serviceid)}</span>
@@ -602,7 +636,10 @@ function renderProductCards(items) {
           <i data-lucide="clock"></i> <span>${escapeHtml(p.time)}</span>
         </div>
         <div class="detail-row" style="align-items: flex-start; flex-direction: column;">
-          <div style="margin-bottom: ${authRole === 'admin' || authRole === 'colaborador' ? '5px' : '0'};"><i data-lucide="dollar-sign" style="width: 14px; display: inline-block;"></i> <strong style="color: #fff;">${authRole === 'admin' || authRole === 'colaborador' ? 'Precio Reseller: ' : ''}${priceText}</strong></div>
+          <div style="margin-bottom: ${authRole === 'admin' || authRole === 'colaborador' ? '5px' : '0'};">
+            <i data-lucide="dollar-sign" style="width: 14px; display: inline-block;"></i> 
+            <strong style="color: #fff;">${mainPriceHtml}</strong>
+          </div>
           ${adminPricesHtml}
         </div>
       </div>
@@ -617,6 +654,10 @@ function renderProductCards(items) {
         ${p.rawItem._DISABLED ? `
           <button type="button" class="btn-action-buy" style="background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.5); color: #ef4444; cursor: not-allowed;" disabled>
             <i data-lucide="x-circle"></i> OFF
+          </button>
+        ` : (noPrice && !isFree) ? `
+          <button type="button" class="btn-action-buy btn-consult-price" data-service="${escapeHtml(p.service)}" data-id="${escapeHtml(p.serviceid)}" style="background: rgba(245, 158, 11, 0.2); border-color: rgba(245, 158, 11, 0.5); color: #f59e0b;" title="Consultar Disponibilidad">
+            <i data-lucide="help-circle"></i> Consultar
           </button>
         ` : `
           <button type="button" class="btn-action-buy" data-id="${escapeHtml(p.serviceid)}">
@@ -636,10 +677,18 @@ function renderProductCards(items) {
 
   lucide.createIcons();
 
-  document.querySelectorAll('.btn-action-buy').forEach(btn => {
+  document.querySelectorAll('.btn-action-buy:not(.btn-consult-price)').forEach(btn => {
     btn.addEventListener('click', () => {
       const serviceId = btn.getAttribute('data-id');
       openPurchaseModal(serviceId);
+    });
+  });
+
+  document.querySelectorAll('.btn-consult-price').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const sName = btn.getAttribute('data-service') || 'este servicio';
+      const msg = encodeURIComponent(`Hola, me interesa consultar precio y disponibilidad para el servicio: ${sName}`);
+      window.open(`https://wa.me/522216936720?text=${msg}`, '_blank');
     });
   });
 
@@ -696,7 +745,8 @@ function renderProductCards(items) {
           });
           if (res.ok) {
             alert('Precio manual guardado correctamente.');
-            await syncProducts(true);
+            if (window.clearFrontendCatalogCache) window.clearFrontendCatalogCache();
+            await syncProducts(false);
           } else {
             const errText = await res.text();
             alert(`Error al guardar el precio manual. Código: ${res.status}. Detalles: ${errText}`);
@@ -718,7 +768,8 @@ function renderProductCards(items) {
           });
           if (res.ok) {
             alert('Precio restablecido a automático.');
-            await syncProducts(true);
+            if (window.clearFrontendCatalogCache) window.clearFrontendCatalogCache();
+            await syncProducts(false);
           } else {
             alert('Error al restablecer.');
           }
