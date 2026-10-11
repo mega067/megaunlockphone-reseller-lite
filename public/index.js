@@ -1072,6 +1072,11 @@ function openPurchaseModal(serviceId) {
   const product = productsList.find(p => p.serviceid.toString() === serviceId.toString());
   if (!product) return;
 
+  if (product.rawItem._NO_PRICE || parseFloat(product.credit) <= 0) {
+    alert('Este servicio requiere confirmación de precio previa. Por favor haz clic en "Consultar" para contactar a soporte.');
+    return;
+  }
+
   selectedProductForOrder = product;
 
   modalServiceId.textContent = `ID: ${product.serviceid}`;
@@ -2243,8 +2248,11 @@ setInterval(() => {
     fetch('/api/status').then(r => r.json()).then(data => {
       if (data.version && data.version > localCatalogVersion) {
         localCatalogVersion = data.version;
+        if (typeof window.clearFrontendCatalogCache === 'function') {
+          window.clearFrontendCatalogCache();
+        }
         if (!dashboardView.classList.contains('hidden')) {
-          syncProducts(false); // Silent sync
+          syncProducts(false); // Silent sync with fresh version
         }
       }
     }).catch(e => {});

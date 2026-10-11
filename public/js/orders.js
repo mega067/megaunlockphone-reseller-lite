@@ -300,21 +300,17 @@ if (window.MegaApp && window.MegaApp.Ticket) {
 
 // Setup back button
 btnBackToCategories.addEventListener('click', () => {
-  if (filterTypeSelect) filterTypeSelect.value = 'all';
-  if (filterGroupSelect) {
-     filterGroupSelect.innerHTML = '<option value="all">Todos los grupos</option>';
-     filterGroupSelect.value = 'all';
+  if (typeof globalProductSearch !== 'undefined' && globalProductSearch) {
+    globalProductSearch.value = '';
   }
-  if (filterServiceSelect) {
-     filterServiceSelect.innerHTML = '<option value="">Selecciona una opción</option>';
-     filterServiceSelect.value = '';
+  if (typeof showCategoriesView === 'function') {
+    showCategoriesView();
+  } else if (categoriesGrid && productsBody) {
+    categoriesGrid.classList.remove('hidden');
+    productsBody.classList.add('hidden');
+    btnBackToCategories.classList.add('hidden');
+    if (catalogTitle) catalogTitle.textContent = 'Catálogo de Productos';
   }
-  const loadingOverlay = document.getElementById('globalLoadingOverlay');
-  if (loadingOverlay) loadingOverlay.classList.remove('hidden');
-  setTimeout(() => {
-    renderProducts(productsList);
-    if (loadingOverlay) loadingOverlay.classList.add('hidden');
-  }, 50);
 });
 
 // Setup Tabs

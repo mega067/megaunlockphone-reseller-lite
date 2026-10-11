@@ -7,6 +7,17 @@ const { catalogCache, CACHE_TTL } = require('../cacheManager');
 
 const ipv4Agent = new https.Agent({ family: 4 });
 
+// Pre-populate in-memory cache from persistent disk cache on startup
+['1', '2', '3'].forEach(sId => {
+  try {
+    const diskCached = readDB('catalog_cache_server' + sId + '.json');
+    if (diskCached && typeof diskCached === 'object' && Object.keys(diskCached).length > 0) {
+      catalogCache['server' + sId].data = diskCached;
+      catalogCache['server' + sId].lastFetch = Date.now();
+    }
+  } catch (e) {}
+});
+
 exports.getProducts = async (req, res) => {
   const settingsDb = readDB('settings.json');
   const serverId = getServerId(req);
@@ -27,101 +38,133 @@ exports.getProducts = async (req, res) => {
     const forceSync = req.query.forceSync === 'true';
     const now = Date.now();
     
-    // Use Cache if valid
+    // 1. Use Cache if valid
     if (!forceSync && catalogCache[serverKey].data && (now - catalogCache[serverKey].lastFetch < CACHE_TTL)) {
        mergedList = JSON.parse(JSON.stringify(catalogCache[serverKey].data));
        hasSuccess = true;
     } else {
-      // Fetch from External API
-      if (serverId === '1' || serverId === '3') {
-        const paramsImei = new URLSearchParams();
-        paramsImei.append('username', username);
-        paramsImei.append('apiaccesskey', apiaccesskey);
-        paramsImei.append('action', 'imeiservicelist');
-        paramsImei.append('requestformat', 'JSON');
+      // 2. Fetch from External API
+      try {
+        if (serverId === '1' || serverId === '3') {
+          const paramsImei = new URLSearchParams();
+          paramsImei.append('username', username);
+          paramsImei.append('apiaccesskey', apiaccesskey);
+          paramsImei.append('action', 'imeiservicelist');
+          paramsImei.append('requestformat', 'JSON');
 
-        const paramsServer = new URLSearchParams();
-        paramsServer.append('username', username);
-        paramsServer.append('apiaccesskey', apiaccesskey);
-        paramsServer.append('action', 'serverservicelist');
-        paramsServer.append('requestformat', 'JSON');
+          const paramsServer = new URLSearchParams();
+          paramsServer.append('username', username);
+          paramsServer.append('apiaccesskey', apiaccesskey);
+          paramsServer.append('action', 'serverservicelist');
+          paramsServer.append('requestformat', 'JSON');
 
-        const [resImei, resServer] = await Promise.all([
-          axios.post(targetUrl, paramsImei.toString(), {
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'Dhru-Fusion-Web-Client/1.0' },
-            timeout: 15000, httpsAgent: ipv4Agent
-          }).catch(e => ({ data: { ERROR: e.message } })),
-          axios.post(targetUrl, paramsServer.toString(), {
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'Dhru-Fusion-Web-Client/1.0' },
-            timeout: 15000, httpsAgent: ipv4Agent
-          }).catch(e => ({ data: { ERROR: e.message } }))
-        ]);
+          const [resImei, resServer] = await Promise.all([
+            axios.post(targetUrl, paramsImei.toString(), {
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'Dhru-Fusion-Web-Client/1.0' },
+              timeout: 15000, httpsAgent: ipv4Agent
+            }).catch(e => ({ data: { ERROR: e.message } })),
+            axios.post(targetUrl, paramsServer.toString(), {
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'Dhru-Fusion-Web-Client/1.0' },
+              timeout: 15000, httpsAgent: ipv4Agent
+            }).catch(e => ({ data: { ERROR: e.message } }))
+          ]);
 
-        if (resImei.data && resImei.data.SUCCESS && resImei.data.SUCCESS[0] && resImei.data.SUCCESS[0].LIST) {
-          mergedList = { ...resImei.data.SUCCESS[0].LIST };
-          for (const g in mergedList) {
-            for (const s in mergedList[g].SERVICES || {}) {
-               const t = mergedList[g].SERVICES[s].SERVICETYPE;
-               mergedList[g].SERVICES[s]._SERVICE_TYPE = t ? t.toUpperCase() : 'IMEI';
+          if (resImei.data && resImei.data.SUCCESS && resImei.data.SUCCESS[0] && resImei.data.SUCCESS[0].LIST) {
+            mergedList = { ...resImei.data.SUCCESS[0].LIST };
+            for (const g in mergedList) {
+              for (const s in mergedList[g].SERVICES || {}) {
+                 const t = mergedList[g].SERVICES[s].SERVICETYPE;
+                 mergedList[g].SERVICES[s]._SERVICE_TYPE = t ? t.toUpperCase() : 'IMEI';
+              }
             }
+            hasSuccess = true;
           }
-          hasSuccess = true;
-        }
-        
-        if (resServer.data && resServer.data.SUCCESS && resServer.data.SUCCESS[0] && resServer.data.SUCCESS[0].LIST) {
-          const serverList = resServer.data.SUCCESS[0].LIST;
-          for (const g in serverList) {
-            for (const s in serverList[g].SERVICES || {}) {
-              serverList[g].SERVICES[s]._SERVICE_TYPE = 'SERVER';
+          
+          if (resServer.data && resServer.data.SUCCESS && resServer.data.SUCCESS[0] && resServer.data.SUCCESS[0].LIST) {
+            const serverList = resServer.data.SUCCESS[0].LIST;
+            for (const g in serverList) {
+              for (const s in serverList[g].SERVICES || {}) {
+                serverList[g].SERVICES[s]._SERVICE_TYPE = 'SERVER';
+              }
+              if (mergedList[g]) {
+                 mergedList[g].SERVICES = { ...mergedList[g].SERVICES, ...serverList[g].SERVICES };
+              } else {
+                 mergedList[g] = serverList[g];
+              }
             }
-            if (mergedList[g]) {
-               mergedList[g].SERVICES = { ...mergedList[g].SERVICES, ...serverList[g].SERVICES };
-            } else {
-               mergedList[g] = serverList[g];
-            }
+            hasSuccess = true;
           }
-          hasSuccess = true;
-        }
-      } else {
-        // SERVER 2: GSM THEME API
-        const [resImei, resServer] = await Promise.all([
-          callGsmThemeApi(targetUrl, 'imeiservicelist', null, username, apiaccesskey).catch(e => ({ data: { ERROR: e.message } })),
-          callGsmThemeApi(targetUrl, 'serverservicelist', null, username, apiaccesskey).catch(e => ({ data: { ERROR: e.message } }))
-        ]);
+        } else {
+          // SERVER 2: GSM THEME API
+          const [resImei, resServer] = await Promise.all([
+            callGsmThemeApi(targetUrl, 'imeiservicelist', null, username, apiaccesskey).catch(e => ({ data: { ERROR: e.message } })),
+            callGsmThemeApi(targetUrl, 'serverservicelist', null, username, apiaccesskey).catch(e => ({ data: { ERROR: e.message } }))
+          ]);
 
-        if (resImei.data && resImei.data.SUCCESS && resImei.data.SUCCESS[0] && resImei.data.SUCCESS[0].LIST) {
-          mergedList = { ...resImei.data.SUCCESS[0].LIST };
-          for (const g in mergedList) {
-            for (const s in mergedList[g].SERVICES || {}) {
-               mergedList[g].SERVICES[s]._SERVICE_TYPE = 'IMEI';
+          if (resImei.data && resImei.data.SUCCESS && resImei.data.SUCCESS[0] && resImei.data.SUCCESS[0].LIST) {
+            mergedList = { ...resImei.data.SUCCESS[0].LIST };
+            for (const g in mergedList) {
+              for (const s in mergedList[g].SERVICES || {}) {
+                 mergedList[g].SERVICES[s]._SERVICE_TYPE = 'IMEI';
+              }
             }
+            hasSuccess = true;
           }
-          hasSuccess = true;
-        }
-        
-        if (resServer.data && resServer.data.SUCCESS && resServer.data.SUCCESS[0] && resServer.data.SUCCESS[0].LIST) {
-          const serverList = resServer.data.SUCCESS[0].LIST;
-          for (const g in serverList) {
-            for (const s in serverList[g].SERVICES || {}) {
-              serverList[g].SERVICES[s]._SERVICE_TYPE = 'SERVER';
+          
+          if (resServer.data && resServer.data.SUCCESS && resServer.data.SUCCESS[0] && resServer.data.SUCCESS[0].LIST) {
+            const serverList = resServer.data.SUCCESS[0].LIST;
+            for (const g in serverList) {
+              for (const s in serverList[g].SERVICES || {}) {
+                serverList[g].SERVICES[s]._SERVICE_TYPE = 'SERVER';
+              }
+              if (mergedList[g]) {
+                 mergedList[g].SERVICES = { ...mergedList[g].SERVICES, ...serverList[g].SERVICES };
+              } else {
+                 mergedList[g] = serverList[g];
+              }
             }
-            if (mergedList[g]) {
-               mergedList[g].SERVICES = { ...mergedList[g].SERVICES, ...serverList[g].SERVICES };
-            } else {
-               mergedList[g] = serverList[g];
-            }
+            hasSuccess = true;
           }
-          hasSuccess = true;
         }
+      } catch (fetchErr) {
+        console.warn(`[Catalog] External API error for Server ${serverId}:`, fetchErr.message);
       }
 
-      if (hasSuccess) {
+      if (hasSuccess && Object.keys(mergedList).length > 0) {
         catalogCache[serverKey].data = JSON.parse(JSON.stringify(mergedList));
         catalogCache[serverKey].lastFetch = Date.now();
+        // Persist to disk so restarts or future API errors never drop catalog
+        try {
+          writeDB('catalog_cache_server' + serverId + '.json', mergedList);
+        } catch (e) {
+          console.error('Error saving disk catalog cache:', e.message);
+        }
       }
     }
 
-    if (hasSuccess) {
+    // 3. Fallback Safety Net: If external API failed, recover from memory or disk cache!
+    if (!hasSuccess || Object.keys(mergedList).length === 0) {
+      if (catalogCache[serverKey].data && Object.keys(catalogCache[serverKey].data).length > 0) {
+        mergedList = JSON.parse(JSON.stringify(catalogCache[serverKey].data));
+        hasSuccess = true;
+        console.warn(`[Catalog] External API unavailable for Server ${serverId}. Using in-memory fallback.`);
+      } else {
+        try {
+          const diskData = readDB('catalog_cache_server' + serverId + '.json');
+          if (diskData && typeof diskData === 'object' && Object.keys(diskData).length > 0) {
+            mergedList = JSON.parse(JSON.stringify(diskData));
+            catalogCache[serverKey].data = JSON.parse(JSON.stringify(diskData));
+            catalogCache[serverKey].lastFetch = Date.now();
+            hasSuccess = true;
+            console.warn(`[Catalog] External API unavailable for Server ${serverId}. Restored from persistent disk cache.`);
+          }
+        } catch (e) {
+          console.error('Error reading disk catalog cache:', e.message);
+        }
+      }
+    }
+
+    if (hasSuccess && Object.keys(mergedList).length > 0) {
       const priceCache = {};
       const fallbackPrices = readDB('prices_' + serverId + '.json') || {};
       const allCustomPrices = readDB('custom_prices.json') || {};
@@ -157,9 +200,13 @@ exports.getProducts = async (req, res) => {
           const service = mergedList[groupKey].SERVICES[serviceKey];
           const realServiceId = service.SERVICEID || service.serviceid || serviceKey;
           
-          if (serverCustomGroups[realServiceId]) {
-              service._CUSTOM_GROUP = serverCustomGroups[realServiceId];
-              // Also ensure we pass the custom group's markups/hot status if they exist
+          const assignedCustomGroup = serverCustomGroups[realServiceId] || 
+                                      serverCustomGroups[String(realServiceId)] || 
+                                      (service.SERVICEID && serverCustomGroups[String(service.SERVICEID)]) || 
+                                      (serviceKey && serverCustomGroups[String(serviceKey)]);
+
+          if (assignedCustomGroup) {
+              service._CUSTOM_GROUP = assignedCustomGroup;
               const customMarkup = serverGroupMarkups[service._CUSTOM_GROUP];
               if (customMarkup) {
                   if (customMarkup.isHot) service._IS_HOT_OVERRIDE = true;
@@ -194,13 +241,12 @@ exports.getProducts = async (req, res) => {
           
           if (realCredit > 0) {
             priceCache[realServiceId] = realCredit;
-          } else if (fallbackPrices[realServiceId]) {
-            priceCache[realServiceId] = fallbackPrices[realServiceId];
+          } else if (fallbackPrices[realServiceId] && parseFloat(fallbackPrices[realServiceId]) > 0) {
+            priceCache[realServiceId] = parseFloat(fallbackPrices[realServiceId]);
           }
-          
-          const groupLower = (groupName || '').toLowerCase();
-          const serviceNameLower = (service.SERVICENAME || service.SERVICE || serviceKey || '').toLowerCase();
-          const isFreeService = groupLower.includes('gratuito') || groupLower.includes('gratis') || serviceNameLower.includes('gratuito') || serviceNameLower.includes('gratis') || serviceNameLower.includes('free');
+
+          // Active group markup for custom groups or original groups
+          const activeGroupMarkup = (service._CUSTOM_GROUP && serverGroupMarkups[service._CUSTOM_GROUP]) || groupMarkupObj;
 
           let resellerCost = 0, clientPrice = 0;
           let isNoPrice = false;
@@ -217,14 +263,10 @@ exports.getProducts = async (req, res) => {
             delete service._CUSTOM_CLIENT;
           }
 
-          if (isFreeService) {
-            resellerCost = 0;
-            clientPrice = 0;
-            service._IS_FREE = true;
-          } else if (ucp && ucp.resellerPrice !== undefined) {
+          if (ucp && ucp.resellerPrice !== undefined) {
             resellerCost = parseFloat(ucp.resellerPrice);
             
-            let cMarkup = calculateGroupMarkup(resellerCost, groupMarkupObj, true, settings);
+            let cMarkup = calculateGroupMarkup(resellerCost, activeGroupMarkup, true, settings);
             if (cMarkup === null) cMarkup = calculateMarkup(resellerCost, clientTier1, clientTier2, clientTier3);
             
             clientPrice = ucp.clientPrice !== undefined ? parseFloat(ucp.clientPrice) :
@@ -237,13 +279,13 @@ exports.getProducts = async (req, res) => {
             if (dbUser.markup !== null && dbUser.markup !== undefined && String(dbUser.markup).trim() !== '' && !isNaN(dbUser.markup)) {
               activeMarkup = parseFloat(dbUser.markup);
             } else {
-              let rMarkup = calculateGroupMarkup(realCredit, groupMarkupObj, false, settings);
+              let rMarkup = calculateGroupMarkup(realCredit, activeGroupMarkup, false, settings);
               if (rMarkup === null) rMarkup = calculateMarkup(realCredit, resellerTier1, resellerTier2, resellerTier3);
               activeMarkup = rMarkup;
             }
             resellerCost = Math.ceil(realCredit + activeMarkup);
             
-            let cMarkup = calculateGroupMarkup(resellerCost, groupMarkupObj, true, settings);
+            let cMarkup = calculateGroupMarkup(resellerCost, activeGroupMarkup, true, settings);
             if (cMarkup === null) cMarkup = calculateMarkup(resellerCost, clientTier1, clientTier2, clientTier3);
             clientPrice = Math.ceil(resellerCost + cMarkup);
           } else {
@@ -252,13 +294,14 @@ exports.getProducts = async (req, res) => {
             clientPrice = 0;
           }
           
-          if (!isFreeService && !isNoPrice) {
+          if (!isNoPrice) {
             // Enforce minimum price (must be at least API cost)
             if (isNaN(resellerCost) || (realCredit > 0 && resellerCost < realCredit)) resellerCost = Math.ceil(realCredit);
             if (isNaN(clientPrice) || clientPrice < resellerCost) clientPrice = resellerCost;
           }
 
-          service._IS_FREE = isFreeService;
+          // NEVER mark as free - all products require real payment or inquiry
+          delete service._IS_FREE;
           service._NO_PRICE = isNoPrice;
           service._RESELLER_COST = resellerCost.toString();
           service._CLIENT_PRICE = clientPrice.toString();

@@ -124,7 +124,9 @@ async function syncProducts(shouldPersist = false) {
       productsList = data.SUCCESS.map(item => ({
         serviceid: item.SERVICEID || item.serviceid || 'N/A',
         service: item.SERVICENAME || item.SERVICE || item.service || 'Sin nombre',
-        group: item.GROUP || item.group || 'General',
+        group: item._CUSTOM_GROUP || item.GROUP || item.group || 'General',
+        groupIsHot: item._IS_HOT_OVERRIDE || item._IS_HOT || false,
+        groupLogo: item._LOGO_OVERRIDE || item._LOGO || null,
         type: item.GROUPTYPE || item.SERVICETYPE || item.TYPE || item.type || 'General',
         credit: item.CREDIT || item.credit || '0.00',
         time: item.TIME || item.time || 'N/A',
@@ -137,7 +139,9 @@ async function syncProducts(shouldPersist = false) {
             productsList.push({
               serviceid: item.SERVICEID || item.serviceid || 'N/A',
               service: item.SERVICENAME || item.SERVICE || item.service || 'Sin nombre',
-              group: groupName || 'General',
+              group: item._CUSTOM_GROUP || groupName || 'General',
+              groupIsHot: item._IS_HOT_OVERRIDE || item._IS_HOT || false,
+              groupLogo: item._LOGO_OVERRIDE || item._LOGO || null,
               type: item.GROUPTYPE || item.SERVICETYPE || item.TYPE || item.type || 'General',
               credit: item.CREDIT || item.credit || '0.00',
               time: item.TIME || item.time || 'N/A',
@@ -171,10 +175,12 @@ async function syncProducts(shouldPersist = false) {
 
     // Yield to the event loop so the browser can render the loading overlay
     await new Promise(resolve => setTimeout(resolve, 50));
-    renderProducts(productsList);
 
     const isDifferentServer = (window.lastLoadedServerId !== targetServerId);
     window.lastLoadedServerId = targetServerId;
+    const shouldKeepCategoryView = wasViewingProducts && !isDifferentServer && (prevTitle !== 'Catálogo de Productos');
+
+    renderProducts(productsList, shouldKeepCategoryView);
 
     if (isDifferentServer) {
       if (globalProductSearch) globalProductSearch.value = '';
@@ -182,9 +188,14 @@ async function syncProducts(shouldPersist = false) {
     } else if (q) {
       // Re-trigger the global search to update results
       globalProductSearch.dispatchEvent(new Event('input'));
-    } else if (wasViewingProducts) {
+    } else if (shouldKeepCategoryView) {
       if (prevTitle === 'Resultados de Búsqueda') {
         if (btnAdvancedSearch) btnAdvancedSearch.click();
+      } else if (prevTitle === '⭐ Mis Favoritos') {
+        let favs = [];
+        try { favs = JSON.parse(localStorage.getItem('mega_favorites') || '[]'); } catch(e){}
+        const favItems = productsList.filter(p => favs.includes(String(p.serviceid)));
+        showCategoryProducts('⭐ Mis Favoritos', favItems);
       } else {
         const groupItems = productsList.filter(p => {
           let gName = p.group || 'Otros Servicios';
@@ -357,8 +368,10 @@ if (window.SearchEngine) {
   });
 }
 
-function renderProducts(products) {
-  productsBody.innerHTML = '';
+function renderProducts(products, stayOnCurrentView = false) {
+  if (!stayOnCurrentView) {
+    productsBody.innerHTML = '';
+  }
   productCount.textContent = products.length;
 
   if (!products || products.length === 0) {
@@ -425,17 +438,17 @@ function renderProducts(products) {
     const isCustomA = a[1].length > 0 && a[1].some(i => !!i.rawItem._CUSTOM_GROUP);
     const isCustomB = b[1].length > 0 && b[1].some(i => !!i.rawItem._CUSTOM_GROUP);
     
-    // Custom groups go above everything else and don't sort alphabetically between themselves
+    // Custom groups go above everything else and sort alphabetically among themselves
     if (isCustomA && !isCustomB) return -1;
     if (!isCustomA && isCustomB) return 1;
-    if (isCustomA && isCustomB) return 0;
+    if (isCustomA && isCustomB) return a[0].localeCompare(b[0]);
     
     // Check dynamic isHot property and custom logo
-    const isHotA = a[1].length > 0 && a[1][0].groupIsHot ? true : isHotCategory(a[0]);
-    const isHotB = b[1].length > 0 && b[1][0].groupIsHot ? true : isHotCategory(b[0]);
+    const isHotA = a[1].length > 0 && a[1].some(i => i.groupIsHot) ? true : isHotCategory(a[0]);
+    const isHotB = b[1].length > 0 && b[1].some(i => i.groupIsHot) ? true : isHotCategory(b[0]);
     
-    const hasLogoA = a[1].length > 0 && !!a[1][0].groupLogo;
-    const hasLogoB = b[1].length > 0 && !!b[1][0].groupLogo;
+    const hasLogoA = a[1].length > 0 && a[1].some(i => !!i.groupLogo);
+    const hasLogoB = b[1].length > 0 && b[1].some(i => !!i.groupLogo);
     
     const priorityA = isHotA || hasLogoA;
     const priorityB = isHotB || hasLogoB;
@@ -450,8 +463,8 @@ function renderProducts(products) {
     const tile = document.createElement('div');
     tile.className = 'category-tile';
     
-    const isHot = items.length > 0 && items[0].groupIsHot ? true : isHotCategory(groupName);
-    const customLogo = items.length > 0 ? items[0].groupLogo : null;
+    const isHot = items.length > 0 && items.some(i => i.groupIsHot) ? true : isHotCategory(groupName);
+    const customLogo = items.length > 0 ? (items.find(i => i.groupLogo)?.groupLogo || items[0].groupLogo) : null;
     
     if (isHot) tile.classList.add('hot-category');
     
@@ -497,7 +510,9 @@ function renderProducts(products) {
     categoriesGrid.appendChild(tile);
   }
   
-  showCategoriesView();
+  if (!stayOnCurrentView) {
+    showCategoriesView();
+  }
 }
 
 function isHotCategory(groupName) {
@@ -531,18 +546,17 @@ function renderProductCards(items) {
   } catch (e) {}
   
   items.forEach(p => {
-    const isFree = p.rawItem._IS_FREE || false;
-    const noPrice = p.rawItem._NO_PRICE || (parseFloat(p.credit) <= 0 && !isFree);
+    const noPrice = p.rawItem._NO_PRICE || (parseFloat(p.credit) <= 0);
     const priceText = formatPrice(p.credit);
     
     let adminPricesHtml = '';
     let adminCustomPriceHtml = '';
     if (authRole === 'admin' || authRole === 'colaborador') {
       const realCostNum = parseFloat(p.rawItem._REAL_COST) || 0;
-      const realCostDisplay = realCostNum > 0 ? formatPrice(p.rawItem._REAL_COST) : (isFree ? 'Gratis' : '<span style="color: #f59e0b;">Sin costo API</span>');
+      const realCostDisplay = realCostNum > 0 ? formatPrice(p.rawItem._REAL_COST) : '<span style="color: #ef4444; font-weight: bold;">Sin costo API ($0.00)</span>';
       
       const clientPriceNum = parseFloat(p.rawItem._CLIENT_PRICE) || 0;
-      const clientPriceDisplay = clientPriceNum > 0 ? formatPrice(p.rawItem._CLIENT_PRICE) : (isFree ? 'Gratis' : '<span style="color: #f59e0b;">No asignado</span>');
+      const clientPriceDisplay = clientPriceNum > 0 ? formatPrice(p.rawItem._CLIENT_PRICE) : '<span style="color: #ef4444; font-weight: bold;">⚠️ No asignado</span>';
       
       const isOff = p.rawItem._DISABLED;
       const toggleBtnHtml = `
@@ -615,13 +629,11 @@ function renderProductCards(items) {
     
     let mainPriceHtml = '';
     if (authRole === 'admin' || authRole === 'colaborador') {
-      const resellerText = (noPrice && !isFree) ? '<span style="color:#f59e0b;">Sin precio asignado</span>' : formatPrice(p.rawItem._RESELLER_COST || p.credit);
-      const adminNotice = (noPrice && !isFree) ? '<div style="color: #ef4444; font-size: 0.75rem; margin-top: 3px; font-weight: bold;">⚠️ Sin precio ($0.00) - Asignar Manual</div>' : '';
+      const resellerText = noPrice ? '<span style="color:#ef4444; font-weight: bold;">Sin precio asignado</span>' : formatPrice(p.rawItem._RESELLER_COST || p.credit);
+      const adminNotice = noPrice ? '<div style="color: #ef4444; font-size: 0.75rem; margin-top: 3px; font-weight: bold;">⚠️ Sin precio en API ($0.00) - Asignar Manual</div>' : '';
       mainPriceHtml = `Precio Reseller: ${resellerText}${adminNotice}`;
-    } else if (isFree) {
-      mainPriceHtml = `<span style="color: #10b981; font-weight: bold;">✨ GRATIS</span>`;
     } else if (noPrice) {
-      mainPriceHtml = `<span style="color: #f59e0b; font-weight: bold;">Consultar Disponibilidad</span>`;
+      mainPriceHtml = `<span style="color: #f59e0b; font-weight: bold;">Precio a Consultar</span>`;
     } else {
       mainPriceHtml = priceText;
     }
@@ -655,7 +667,7 @@ function renderProductCards(items) {
           <button type="button" class="btn-action-buy" style="background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.5); color: #ef4444; cursor: not-allowed;" disabled>
             <i data-lucide="x-circle"></i> OFF
           </button>
-        ` : (noPrice && !isFree) ? `
+        ` : noPrice ? `
           <button type="button" class="btn-action-buy btn-consult-price" data-service="${escapeHtml(p.service)}" data-id="${escapeHtml(p.serviceid)}" style="background: rgba(245, 158, 11, 0.2); border-color: rgba(245, 158, 11, 0.5); color: #f59e0b;" title="Consultar Disponibilidad">
             <i data-lucide="help-circle"></i> Consultar
           </button>
