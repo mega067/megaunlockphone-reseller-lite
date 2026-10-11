@@ -342,14 +342,18 @@ function checkPersistedSession() {
     
     if (btnLoginTop) btnLoginTop.classList.add('hidden');
   } else {
-    // Unauthenticated state
+    // Unauthenticated state (No session / Session dropped)
     if (btnLoginTop) btnLoginTop.classList.remove('hidden');
     btnLogout.classList.add('hidden');
     btnAdminManage.classList.add('hidden');
     btnRechargeBalance.classList.add('hidden');
     btnWhatsappBot.classList.add('hidden');
     btnUserProfile.classList.add('hidden');
-    creditsBadgeContainer.classList.add('hidden');
+    
+    // Always show 0 credits when outside of session
+    globalApiCreditRaw = 0;
+    creditsBalanceText.textContent = 'Créditos: $0.00 MXN';
+    creditsBadgeContainer.classList.remove('hidden');
     
     const ssc = document.getElementById('serverSwitchContainer');
     if (ssc) ssc.classList.remove('hidden');
@@ -383,7 +387,12 @@ if (btnBackToCatalog) {
 // checkPersistedSession moved to the bottom of the script
 
 async function updateAccountCredits() {
-  if (!authToken) return;
+  if (!authToken) {
+    globalApiCreditRaw = 0;
+    creditsBalanceText.textContent = 'Créditos: $0.00 MXN';
+    creditsBadgeContainer.classList.remove('hidden');
+    return;
+  }
   try {
     const res = await fetch('/api/account', {
       method: 'GET',
@@ -426,6 +435,20 @@ async function updateAccountCredits() {
           creditsBalanceText.textContent = `Créditos: $${rawCredits.toFixed(2)} MXN`;
         }
       }
+    } else if (res.status === 401) {
+      // Session expired or logged out from server
+      authToken = null;
+      authRole = null;
+      authUsername = null;
+      authUserId = null;
+      localStorage.removeItem('dhru_token');
+      localStorage.removeItem('dhru_role');
+      localStorage.removeItem('dhru_username');
+      localStorage.removeItem('dhru_uid');
+      globalApiCreditRaw = 0;
+      creditsBalanceText.textContent = 'Créditos: $0.00 MXN';
+      creditsBadgeContainer.classList.remove('hidden');
+      checkPersistedSession();
     }
   } catch (e) {
     console.warn('Failed to fetch account credits balance', e);
