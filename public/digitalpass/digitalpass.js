@@ -62,6 +62,42 @@ window.IS_DIGITAL_PASS = true;
       loginDesc.textContent = 'Entretenimiento sin límites, precios sin exceso.';
     }
 
+    // Ensure Marquee contains pure Streaming & AI brand chips
+    function applyDigitalPassMarquee() {
+      const marquees = document.querySelectorAll('.header-marquee .marquee-item');
+      if (!marquees || marquees.length === 0) return;
+
+      const brandsHtml = `
+        <span class="brand-chip"><img src="/digitalpass/brands/gemini.svg" alt="Gemini"> Gemini</span>
+        <span class="brand-chip"><img src="/digitalpass/brands/chatgpt.svg" alt="ChatGPT"> ChatGPT</span>
+        <span class="brand-chip"><img src="/digitalpass/brands/netflix.svg" alt="Netflix"> Netflix</span>
+        <span class="brand-chip"><img src="/digitalpass/brands/disney.svg" alt="Disney+"> Disney+</span>
+        <span class="brand-chip"><img src="/digitalpass/brands/prime.svg" alt="Prime Video"> Prime Video</span>
+        <span class="brand-chip"><img src="/digitalpass/brands/max.svg" alt="Max"> Max</span>
+        <span class="brand-chip"><img src="/digitalpass/brands/spotify.svg" alt="Spotify"> Spotify</span>
+        <span class="brand-chip"><img src="/digitalpass/brands/youtube.svg" alt="YouTube"> YouTube</span>
+        <span class="brand-chip"><img src="/digitalpass/brands/claude.svg" alt="Claude AI"> Claude</span>
+        <span class="brand-chip"><img src="/digitalpass/brands/canva.svg" alt="Canva"> Canva</span>
+        <span class="brand-chip"><img src="/digitalpass/brands/playstation.svg" alt="PlayStation"> PlayStation</span>
+        <span class="brand-chip"><img src="/digitalpass/brands/xbox.svg" alt="Xbox"> Xbox</span>
+        <span class="brand-chip"><img src="/digitalpass/brands/crunchyroll.svg" alt="Crunchyroll"> Crunchyroll</span>
+        <span class="brand-chip"><img src="/digitalpass/brands/steam.svg" alt="Steam"> Steam</span>
+      `;
+
+      marquees.forEach(m => {
+        // Only update if it doesn't already have our brand-chips or if index.js replaced it
+        if (!m.querySelector('.brand-chip') || m.querySelector('img[src*="fullbrand"]')) {
+          m.innerHTML = brandsHtml;
+        }
+      });
+    }
+
+    applyDigitalPassMarquee();
+    // Protect marquee against late async updates from /api/public_settings
+    setTimeout(applyDigitalPassMarquee, 500);
+    setTimeout(applyDigitalPassMarquee, 1500);
+    setTimeout(applyDigitalPassMarquee, 3000);
+
     // Marquee brand replacement or subtitle
     const brandSpan = document.querySelector('.logo-text h1 span');
     if (brandSpan) {

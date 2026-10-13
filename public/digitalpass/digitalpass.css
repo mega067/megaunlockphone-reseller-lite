@@ -44,11 +44,67 @@ body {
   display: none !important;
 }
 
-.logo-area .logo-icon img {
+.logo-area .logo-icon {
+  background: linear-gradient(135deg, #ffffff, #e0f2fe) !important;
   border: 2px solid #38bdf8 !important;
-  box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
-  background: #0f1c2d;
-  padding: 3px !important;
+  border-radius: 14px !important;
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.45), inset 0 1px 2px #ffffff !important;
+  padding: 4px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 52px !important;
+  height: 52px !important;
+  overflow: hidden !important;
+}
+
+.logo-area .logo-icon img {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  filter: contrast(1.05) saturate(1.1) !important;
+}
+
+/* Header Marquee Brand Chips */
+.header-marquee {
+  gap: 1.5rem !important;
+}
+
+.brand-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(15, 28, 45, 0.7);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 999px;
+  padding: 5px 14px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: #e0f2fe;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.brand-chip:hover {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: #38bdf8;
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
+}
+
+.brand-chip img {
+  height: 20px !important;
+  width: auto !important;
+  max-width: 26px !important;
+  object-fit: contain !important;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.4)) !important;
 }
 
 /* Category Cards */
