@@ -1,43 +1,49 @@
 @import url('/index.css?v=34');
 
 /* ============================================================
-   DIGITALPASS THEME PALETTE
-   Inspirado en el logo oficial:
-   - Azul cielo suave (#88c2eb, #64a6d6)
-   - Azul profundo / marino (#153354, #1a3c61)
-   - Acentos cian eléctrico (#38bdf8, #0ea5e9)
-   - Fondo oscuro azulado (#070e17, #0b1522, #0f1c2d)
+   DIGITALPASS PALETTE: TEMA CLARO (POR DEFECTO)
+   Inspirado directamente en los colores del logo:
+   - Fondo: Azul cielo muy claro y luminoso (#dff1fd, #eaf6fe, #ffffff)
+   - Contenedores: Blanco cristalino con sombras suaves de color azul (#ffffff, #f0f7fe)
+   - Primario / Acentos: Azul celeste vivo (#0284c7, #0ea5e9, #38bdf8)
+   - Texto principal: Azul marino oscuro intenso (#0f2d4a, #132f4c)
+   - Texto secundario: Azul acero (#476b8a, #5c7e9e)
+   - Bordes: Azul suave (#bae6fd, #93c5fd)
 ============================================================ */
 :root {
-  --primary-color: #38bdf8;          /* Electric Sky Blue */
-  --secondary-color: #0ea5e9;        /* Vibrant Blue */
-  --accent-blue: #60a5fa;           /* Soft Accent */
-  --bg-color: #070e17;              /* Deep Slate/Navy Background */
-  --panel-bg: rgba(15, 28, 45, 0.75);
-  --border-color: rgba(56, 189, 248, 0.25);
-  --text-primary: #f0f9ff;
-  --text-secondary: #94a3b8;
+  --primary-color: #0284c7;
+  --secondary-color: #0ea5e9;
+  --accent-blue: #38bdf8;
+  --bg-color: #ebf6ff;
+  --panel-bg: rgba(255, 255, 255, 0.92);
+  --border-color: rgba(56, 189, 248, 0.35);
+  --text-primary: #0f2d4a;
+  --text-secondary: #4b6b8b;
   --status-online: #10b981;
   --status-offline: #ef4444;
   --status-pending: #f59e0b;
-  --glass-border: rgba(56, 189, 248, 0.12);
-  --glass-shadow: 0 12px 36px 0 rgba(0, 0, 0, 0.55);
-  --btn-hover: rgba(56, 189, 248, 0.15);
+  --glass-border: rgba(14, 165, 233, 0.2);
+  --glass-shadow: 0 10px 30px rgba(2, 132, 199, 0.08);
+  --btn-hover: rgba(14, 165, 233, 0.12);
 }
 
 body {
   background-color: var(--bg-color) !important;
+  color: var(--text-primary) !important;
   background-image: 
-    radial-gradient(circle at 18% 40%, rgba(56, 189, 248, 0.1), transparent 30%),
-    radial-gradient(circle at 82% 25%, rgba(14, 165, 233, 0.08), transparent 30%),
-    radial-gradient(circle at 50% 85%, rgba(30, 64, 175, 0.07), transparent 35%) !important;
+    radial-gradient(circle at 15% 20%, rgba(186, 230, 253, 0.7), transparent 45%),
+    radial-gradient(circle at 85% 15%, rgba(125, 211, 252, 0.5), transparent 40%),
+    radial-gradient(circle at 50% 80%, rgba(224, 242, 254, 0.8), transparent 50%),
+    linear-gradient(180deg, #f0f9ff 0%, #ebf6ff 100%) !important;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* App Header */
 .app-header {
-  background: linear-gradient(180deg, rgba(15, 28, 45, 0.98), rgba(11, 21, 34, 0.95)) !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  backdrop-filter: blur(16px) !important;
   border-bottom: 1px solid rgba(56, 189, 248, 0.3) !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 -1px 0 rgba(56, 189, 248, 0.2);
+  box-shadow: 0 4px 20px rgba(14, 165, 233, 0.08) !important;
 }
 
 .app-header::before {
@@ -45,17 +51,16 @@ body {
 }
 
 .logo-area .logo-icon {
-  background: linear-gradient(135deg, #ffffff, #e0f2fe) !important;
-  border: 2px solid #38bdf8 !important;
+  background: #ffffff !important;
+  border: 2px solid #0ea5e9 !important;
   border-radius: 14px !important;
-  box-shadow: 0 0 20px rgba(56, 189, 248, 0.45), inset 0 1px 2px #ffffff !important;
+  box-shadow: 0 4px 14px rgba(14, 165, 233, 0.25) !important;
   padding: 4px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   width: 52px !important;
   height: 52px !important;
-  overflow: hidden !important;
 }
 
 .logo-area .logo-icon img {
@@ -66,37 +71,48 @@ body {
   width: 100% !important;
   height: 100% !important;
   object-fit: contain !important;
-  filter: contrast(1.05) saturate(1.1) !important;
 }
 
-/* Header Marquee Brand Chips */
+.logo-text h1 {
+  color: #0f2d4a !important;
+  -webkit-text-fill-color: #0f2d4a !important;
+  font-weight: 800 !important;
+}
+
+/* Marquee Header */
+.header-marquee-container {
+  background: rgba(255, 255, 255, 0.75) !important;
+  border: 1px solid rgba(56, 189, 248, 0.35) !important;
+  box-shadow: inset 0 1px 4px rgba(2, 132, 199, 0.05), 0 2px 8px rgba(0,0,0,0.02) !important;
+}
+
 .header-marquee {
-  gap: 1.5rem !important;
+  gap: 1.25rem !important;
 }
 
 .brand-chip {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: rgba(15, 28, 45, 0.7);
-  border: 1px solid rgba(56, 189, 248, 0.25);
+  background: #ffffff !important;
+  border: 1px solid rgba(14, 165, 233, 0.3) !important;
   border-radius: 999px;
   padding: 5px 14px;
   font-size: 0.82rem;
   font-weight: 700;
-  letter-spacing: 0.4px;
-  color: #e0f2fe;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  letter-spacing: 0.3px;
+  color: #0f2d4a !important;
+  box-shadow: 0 2px 6px rgba(14, 165, 233, 0.08);
   transition: all 0.2s ease;
   white-space: nowrap;
 }
 
 .brand-chip:hover {
-  background: rgba(56, 189, 248, 0.15);
-  border-color: #38bdf8;
-  color: #ffffff;
+  background: #f0f9ff !important;
+  border-color: #0284c7 !important;
+  color: #0284c7 !important;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.2);
 }
 
 .brand-chip img {
@@ -104,82 +120,290 @@ body {
   width: auto !important;
   max-width: 26px !important;
   object-fit: contain !important;
-  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.4)) !important;
 }
 
 /* Category Cards */
 .category-card {
-  background: linear-gradient(145deg, rgba(15, 28, 45, 0.65), rgba(7, 14, 23, 0.8)) !important;
-  border: 1px solid rgba(56, 189, 248, 0.18) !important;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  background: #ffffff !important;
+  border: 1px solid rgba(14, 165, 233, 0.22) !important;
+  box-shadow: 0 4px 16px rgba(2, 132, 199, 0.05) !important;
+  border-radius: 14px !important;
 }
 
 .category-card:hover {
-  border-color: rgba(56, 189, 248, 0.6) !important;
-  box-shadow: 0 10px 30px rgba(56, 189, 248, 0.15) !important;
-  transform: translateY(-4px);
+  border-color: #0ea5e9 !important;
+  box-shadow: 0 10px 28px rgba(14, 165, 233, 0.15) !important;
+  transform: translateY(-3px);
 }
 
 .category-card .category-icon {
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(14, 165, 233, 0.05)) !important;
-  border: 1px solid rgba(56, 189, 248, 0.3) !important;
-  color: #38bdf8 !important;
+  background: linear-gradient(135deg, #e0f2fe, #bae6fd) !important;
+  border: 1px solid rgba(14, 165, 233, 0.3) !important;
+  color: #0284c7 !important;
+}
+
+.category-card .category-name {
+  color: #0f2d4a !important;
+  font-weight: 700 !important;
+}
+
+.category-card .category-count {
+  color: #5c7e9e !important;
+}
+
+/* Sections, Cards & Modals */
+.card, .table-container, .modal-card, .admin-card, .search-container, .order-history-container {
+  background: #ffffff !important;
+  border: 1px solid rgba(14, 165, 233, 0.25) !important;
+  box-shadow: 0 8px 24px rgba(2, 132, 199, 0.06) !important;
+  color: #0f2d4a !important;
+}
+
+.section-header h2, .card-header h2, .card-header h3, .modal-header h2 {
+  color: #0f2d4a !important;
+}
+
+/* Inputs & Form Controls */
+input[type="text"], input[type="password"], input[type="number"], select, textarea {
+  background: #f8fafc !important;
+  border: 1px solid rgba(14, 165, 233, 0.3) !important;
+  color: #0f2d4a !important;
+}
+
+input[type="text"]:focus, input[type="password"]:focus, select:focus, textarea:focus {
+  background: #ffffff !important;
+  border-color: #0284c7 !important;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.18) !important;
 }
 
 /* Buttons */
 .btn-primary {
-  background: linear-gradient(135deg, #0284c7, #0ea5e9, #38bdf8) !important;
-  box-shadow: 0 4px 14px rgba(14, 165, 233, 0.35) !important;
+  background: linear-gradient(135deg, #0284c7, #0ea5e9) !important;
+  box-shadow: 0 4px 14px rgba(14, 165, 233, 0.3) !important;
   border: none !important;
   color: #ffffff !important;
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, #0369a1, #0284c7, #0ea5e9) !important;
-  box-shadow: 0 6px 20px rgba(14, 165, 233, 0.5) !important;
-  transform: translateY(-1px);
+  background: linear-gradient(135deg, #0369a1, #0284c7) !important;
+  box-shadow: 0 6px 18px rgba(14, 165, 233, 0.4) !important;
+}
+
+.btn-secondary {
+  background: #ffffff !important;
+  border: 1px solid rgba(14, 165, 233, 0.35) !important;
+  color: #0284c7 !important;
+}
+
+.btn-secondary:hover {
+  background: #f0f9ff !important;
+  border-color: #0284c7 !important;
 }
 
 /* Navigation Tabs */
+.app-tabs .tab-btn {
+  color: #5c7e9e !important;
+}
+
 .app-tabs .tab-btn.active {
+  color: #0284c7 !important;
+  border-bottom: 2px solid #0284c7 !important;
+  background: rgba(14, 165, 233, 0.08) !important;
+  font-weight: 700 !important;
+}
+
+/* Tables */
+table th {
+  background: #f0f9ff !important;
+  color: #0f2d4a !important;
+  border-bottom: 1px solid rgba(14, 165, 233, 0.2) !important;
+}
+
+table td {
+  border-bottom: 1px solid rgba(14, 165, 233, 0.1) !important;
+  color: #1e293b !important;
+}
+
+table tr:hover td {
+  background: rgba(224, 242, 254, 0.3) !important;
+}
+
+/* Price Tags */
+.product-price, .detail-price {
+  color: #0284c7 !important;
+  font-weight: 800 !important;
+}
+
+/* Badges */
+.credits-badge-container {
+  background: #ffffff !important;
+  border: 1px solid rgba(14, 165, 233, 0.4) !important;
+  color: #0284c7 !important;
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.1) !important;
+}
+
+.connection-status {
+  background: #ffffff !important;
+  border: 1px solid rgba(14, 165, 233, 0.3) !important;
+  color: #476b8a !important;
+}
+
+/* Server Switch */
+.server-switch-container {
+  background: #ffffff !important;
+  border: 1px solid rgba(14, 165, 233, 0.35) !important;
+}
+
+.btn-server-switch {
+  color: #476b8a !important;
+}
+
+.btn-server-switch.active {
+  color: #ffffff !important;
+}
+
+/* ============================================================
+   DIGITALPASS TEMA OSCURO (OPCIONAL VÍA TOGGLE)
+============================================================ */
+body.dark-mode {
+  --primary-color: #38bdf8;
+  --secondary-color: #0ea5e9;
+  --accent-blue: #60a5fa;
+  --bg-color: #070e17;
+  --panel-bg: rgba(15, 28, 45, 0.85);
+  --border-color: rgba(56, 189, 248, 0.25);
+  --text-primary: #f0f9ff;
+  --text-secondary: #94a3b8;
+  --glass-border: rgba(56, 189, 248, 0.15);
+  --glass-shadow: 0 12px 36px 0 rgba(0, 0, 0, 0.55);
+
+  background-color: #070e17 !important;
+  color: #f0f9ff !important;
+  background-image: 
+    radial-gradient(circle at 18% 40%, rgba(56, 189, 248, 0.12), transparent 30%),
+    radial-gradient(circle at 82% 25%, rgba(14, 165, 233, 0.1), transparent 30%),
+    radial-gradient(circle at 50% 85%, rgba(30, 64, 175, 0.08), transparent 35%) !important;
+}
+
+body.dark-mode .app-header {
+  background: linear-gradient(180deg, rgba(15, 28, 45, 0.98), rgba(11, 21, 34, 0.95)) !important;
+  border-bottom: 1px solid rgba(56, 189, 248, 0.3) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+}
+
+body.dark-mode .logo-text h1 {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+body.dark-mode .header-marquee-container {
+  background: rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+body.dark-mode .brand-chip {
+  background: rgba(15, 28, 45, 0.75) !important;
+  border: 1px solid rgba(56, 189, 248, 0.25) !important;
+  color: #e0f2fe !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+body.dark-mode .brand-chip:hover {
+  background: rgba(56, 189, 248, 0.15) !important;
+  border-color: #38bdf8 !important;
+  color: #ffffff !important;
+}
+
+body.dark-mode .category-card {
+  background: linear-gradient(145deg, rgba(15, 28, 45, 0.7), rgba(7, 14, 23, 0.85)) !important;
+  border: 1px solid rgba(56, 189, 248, 0.18) !important;
+}
+
+body.dark-mode .category-card .category-icon {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(14, 165, 233, 0.05)) !important;
+  border: 1px solid rgba(56, 189, 248, 0.3) !important;
+  color: #38bdf8 !important;
+}
+
+body.dark-mode .category-card .category-name {
+  color: #f0f9ff !important;
+}
+
+body.dark-mode .category-card .category-count {
+  color: #94a3b8 !important;
+}
+
+body.dark-mode .card,
+body.dark-mode .table-container,
+body.dark-mode .modal-card,
+body.dark-mode .admin-card,
+body.dark-mode .search-container,
+body.dark-mode .order-history-container {
+  background: rgba(11, 21, 34, 0.85) !important;
+  border: 1px solid rgba(56, 189, 248, 0.2) !important;
+  color: #f0f9ff !important;
+}
+
+body.dark-mode .section-header h2,
+body.dark-mode .card-header h2,
+body.dark-mode .card-header h3,
+body.dark-mode .modal-header h2 {
+  color: #f0f9ff !important;
+}
+
+body.dark-mode input[type="text"],
+body.dark-mode input[type="password"],
+body.dark-mode input[type="number"],
+body.dark-mode select,
+body.dark-mode textarea {
+  background: rgba(7, 14, 23, 0.7) !important;
+  border: 1px solid rgba(56, 189, 248, 0.25) !important;
+  color: #f0f9ff !important;
+}
+
+body.dark-mode .btn-secondary {
+  background: rgba(15, 28, 45, 0.6) !important;
+  border: 1px solid rgba(56, 189, 248, 0.3) !important;
+  color: #38bdf8 !important;
+}
+
+body.dark-mode .app-tabs .tab-btn {
+  color: #94a3b8 !important;
+}
+
+body.dark-mode .app-tabs .tab-btn.active {
   color: #38bdf8 !important;
   border-bottom: 2px solid #38bdf8 !important;
-  background: linear-gradient(180deg, transparent, rgba(56, 189, 248, 0.08)) !important;
+  background: rgba(56, 189, 248, 0.1) !important;
 }
 
-/* Tables and Panels */
-.table-container, .modal-card, .admin-card, .search-container {
-  background: rgba(11, 21, 34, 0.8) !important;
-  border: 1px solid rgba(56, 189, 248, 0.18) !important;
-  backdrop-filter: blur(12px) !important;
+body.dark-mode table th {
+  background: rgba(15, 28, 45, 0.95) !important;
+  color: #f0f9ff !important;
 }
 
-/* Scrollbars */
-::-webkit-scrollbar-thumb {
-  background: rgba(56, 189, 248, 0.3) !important;
+body.dark-mode table td {
+  border-bottom: 1px solid rgba(56, 189, 248, 0.12) !important;
+  color: #e2e8f0 !important;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #38bdf8 !important;
+body.dark-mode table tr:hover td {
+  background: rgba(56, 189, 248, 0.08) !important;
 }
 
-/* Badge and Highlight */
-.badge-custom, .badge-hot {
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(14, 165, 233, 0.3)) !important;
-  border: 1px solid rgba(56, 189, 248, 0.4) !important;
-  color: #7dd3fc !important;
-}
-
-/* Price tags */
-.product-price, .detail-price {
+body.dark-mode .credits-badge-container {
+  background: rgba(56, 189, 248, 0.1) !important;
+  border: 1px solid rgba(56, 189, 248, 0.3) !important;
   color: #38bdf8 !important;
-  text-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
 }
 
-/* Glowing decorative accents */
-.background-decor .orb-1 {
-  background: radial-gradient(circle, rgba(56, 189, 248, 0.2) 0%, transparent 70%) !important;
+body.dark-mode .connection-status {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #94a3b8 !important;
 }
-.background-decor .orb-2 {
-  background: radial-gradient(circle, rgba(14, 165, 233, 0.15) 0%, transparent 70%) !important;
+
+body.dark-mode .server-switch-container {
+  background: rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
 }

@@ -98,11 +98,47 @@ window.IS_DIGITAL_PASS = true;
     setTimeout(applyDigitalPassMarquee, 1500);
     setTimeout(applyDigitalPassMarquee, 3000);
 
-    // Marquee brand replacement or subtitle
-    const brandSpan = document.querySelector('.logo-text h1 span');
-    if (brandSpan) {
-      brandSpan.textContent = 'Streaming & AI';
+    // Theme Manager (Light by default, Dark mode toggle)
+    function setupThemeToggle() {
+      const savedTheme = localStorage.getItem('digitalpass_theme') || 'light';
+      applyTheme(savedTheme);
+
+      const btnToggle = document.getElementById('btnThemeToggle');
+      if (btnToggle && !btnToggle._boundTheme) {
+        btnToggle._boundTheme = true;
+        btnToggle.addEventListener('click', () => {
+          const isDark = document.body.classList.contains('dark-mode');
+          const nextTheme = isDark ? 'light' : 'dark';
+          applyTheme(nextTheme);
+          localStorage.setItem('digitalpass_theme', nextTheme);
+        });
+      }
     }
+
+    function applyTheme(theme) {
+      const toggleText = document.getElementById('themeToggleText');
+      const toggleIcon = document.getElementById('themeToggleIcon');
+
+      if (theme === 'dark') {
+        document.body.classList.add('dark-mode');
+        if (toggleText) toggleText.textContent = 'Claro';
+        if (toggleIcon) {
+          toggleIcon.setAttribute('data-lucide', 'sun');
+        }
+      } else {
+        document.body.classList.remove('dark-mode');
+        if (toggleText) toggleText.textContent = 'Oscuro';
+        if (toggleIcon) {
+          toggleIcon.setAttribute('data-lucide', 'moon');
+        }
+      }
+
+      if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons();
+      }
+    }
+
+    setupThemeToggle();
   }
 
   if (document.readyState === 'loading') {
