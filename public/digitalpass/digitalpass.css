@@ -1,66 +1,62 @@
 @import url('/index.css?v=34');
 
 /* ============================================================
-   DIGITALPASS PALETTE: TEMA CLARO (POR DEFECTO)
-   Inspirado directamente en los colores del logo:
-   - Fondo: Azul cielo muy claro y luminoso (#dff1fd, #eaf6fe, #ffffff)
-   - Contenedores: Blanco cristalino con sombras suaves de color azul (#ffffff, #f0f7fe)
-   - Primario / Acentos: Azul celeste vivo (#0284c7, #0ea5e9, #38bdf8)
-   - Texto principal: Azul marino oscuro intenso (#0f2d4a, #132f4c)
-   - Texto secundario: Azul acero (#476b8a, #5c7e9e)
-   - Bordes: Azul suave (#bae6fd, #93c5fd)
+   DIGITALPASS PALETTE: TEMA CLARO SUAVE (POR DEFECTO)
+   Inspirado en el fondo azul cielo con degradado del logo original:
+   - Fondo: Tono azul cielo suave elegante (#8ec5ec -> #74b3e3)
+   - Contenedores & Tarjetas: Azul hielo claro translúcido / blanco suave
+   - Textos: Azul marino oscuro intenso (#0f2a42, #163654)
+   - Acentos: Azul celeste eléctrico (#0284c7, #0ea5e9)
 ============================================================ */
 :root {
   --primary-color: #0284c7;
   --secondary-color: #0ea5e9;
   --accent-blue: #38bdf8;
-  --bg-color: #ebf6ff;
-  --panel-bg: rgba(255, 255, 255, 0.92);
-  --border-color: rgba(56, 189, 248, 0.35);
-  --text-primary: #0f2d4a;
-  --text-secondary: #4b6b8b;
+  --bg-color: #7cbfe8;
+  --panel-bg: rgba(235, 246, 255, 0.88);
+  --border-color: rgba(14, 165, 233, 0.35);
+  --text-primary: #0f2a42;
+  --text-secondary: #2f5475;
   --status-online: #10b981;
   --status-offline: #ef4444;
   --status-pending: #f59e0b;
-  --glass-border: rgba(14, 165, 233, 0.2);
-  --glass-shadow: 0 10px 30px rgba(2, 132, 199, 0.08);
-  --btn-hover: rgba(14, 165, 233, 0.12);
+  --glass-border: rgba(14, 165, 233, 0.25);
+  --glass-shadow: 0 10px 30px rgba(15, 42, 66, 0.12);
+  --btn-hover: rgba(14, 165, 233, 0.15);
 }
 
 body {
-  background-color: var(--bg-color) !important;
+  background-color: #7fbfe9 !important;
   color: var(--text-primary) !important;
   background-image: 
-    radial-gradient(circle at 15% 20%, rgba(186, 230, 253, 0.7), transparent 45%),
-    radial-gradient(circle at 85% 15%, rgba(125, 211, 252, 0.5), transparent 40%),
-    radial-gradient(circle at 50% 80%, rgba(224, 242, 254, 0.8), transparent 50%),
-    linear-gradient(180deg, #f0f9ff 0%, #ebf6ff 100%) !important;
+    radial-gradient(circle at 50% 30%, #a2d6f9 0%, #73b3e2 70%, #5d9fce 100%) !important;
+  background-attachment: fixed !important;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* App Header */
 .app-header {
-  background: rgba(255, 255, 255, 0.94) !important;
-  backdrop-filter: blur(16px) !important;
-  border-bottom: 1px solid rgba(56, 189, 248, 0.3) !important;
-  box-shadow: 0 4px 20px rgba(14, 165, 233, 0.08) !important;
+  background: rgba(225, 242, 254, 0.88) !important;
+  backdrop-filter: blur(18px) !important;
+  border-bottom: 1px solid rgba(14, 165, 233, 0.35) !important;
+  box-shadow: 0 4px 20px rgba(15, 42, 66, 0.1) !important;
 }
 
 .app-header::before {
   display: none !important;
 }
 
+/* Logo Oficial DigitalPass en Header */
 .logo-area .logo-icon {
-  background: #ffffff !important;
-  border: 2px solid #0ea5e9 !important;
-  border-radius: 14px !important;
-  box-shadow: 0 4px 14px rgba(14, 165, 233, 0.25) !important;
-  padding: 4px !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  width: 52px !important;
-  height: 52px !important;
+  width: 50px !important;
+  height: 50px !important;
 }
 
 .logo-area .logo-icon img {
@@ -71,19 +67,20 @@ body {
   width: 100% !important;
   height: 100% !important;
   object-fit: contain !important;
+  filter: drop-shadow(0 2px 6px rgba(15, 42, 66, 0.2)) !important;
 }
 
 .logo-text h1 {
-  color: #0f2d4a !important;
-  -webkit-text-fill-color: #0f2d4a !important;
+  color: #0f2a42 !important;
+  -webkit-text-fill-color: #0f2a42 !important;
   font-weight: 800 !important;
 }
 
 /* Marquee Header */
 .header-marquee-container {
-  background: rgba(255, 255, 255, 0.75) !important;
-  border: 1px solid rgba(56, 189, 248, 0.35) !important;
-  box-shadow: inset 0 1px 4px rgba(2, 132, 199, 0.05), 0 2px 8px rgba(0,0,0,0.02) !important;
+  background: rgba(210, 235, 252, 0.75) !important;
+  border: 1px solid rgba(14, 165, 233, 0.35) !important;
+  box-shadow: inset 0 1px 4px rgba(15, 42, 66, 0.08) !important;
 }
 
 .header-marquee {
@@ -94,25 +91,25 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: #ffffff !important;
-  border: 1px solid rgba(14, 165, 233, 0.3) !important;
+  background: rgba(240, 248, 255, 0.9) !important;
+  border: 1px solid rgba(14, 165, 233, 0.35) !important;
   border-radius: 999px;
   padding: 5px 14px;
   font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.3px;
-  color: #0f2d4a !important;
-  box-shadow: 0 2px 6px rgba(14, 165, 233, 0.08);
+  color: #0f2a42 !important;
+  box-shadow: 0 2px 6px rgba(15, 42, 66, 0.08);
   transition: all 0.2s ease;
   white-space: nowrap;
 }
 
 .brand-chip:hover {
-  background: #f0f9ff !important;
+  background: #ffffff !important;
   border-color: #0284c7 !important;
   color: #0284c7 !important;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.2);
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.25);
 }
 
 .brand-chip img {
@@ -124,108 +121,118 @@ body {
 
 /* Category Cards */
 .category-card {
-  background: #ffffff !important;
-  border: 1px solid rgba(14, 165, 233, 0.22) !important;
-  box-shadow: 0 4px 16px rgba(2, 132, 199, 0.05) !important;
+  background: rgba(235, 246, 255, 0.9) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(14, 165, 233, 0.28) !important;
+  box-shadow: 0 6px 20px rgba(15, 42, 66, 0.08) !important;
   border-radius: 14px !important;
 }
 
 .category-card:hover {
-  border-color: #0ea5e9 !important;
-  box-shadow: 0 10px 28px rgba(14, 165, 233, 0.15) !important;
+  border-color: #0284c7 !important;
+  box-shadow: 0 10px 28px rgba(14, 165, 233, 0.22) !important;
   transform: translateY(-3px);
+  background: rgba(245, 251, 255, 0.96) !important;
 }
 
 .category-card .category-icon {
-  background: linear-gradient(135deg, #e0f2fe, #bae6fd) !important;
-  border: 1px solid rgba(14, 165, 233, 0.3) !important;
+  background: linear-gradient(135deg, #cde9fc, #b2dcfa) !important;
+  border: 1px solid rgba(14, 165, 233, 0.4) !important;
   color: #0284c7 !important;
 }
 
 .category-card .category-name {
-  color: #0f2d4a !important;
+  color: #0f2a42 !important;
   font-weight: 700 !important;
 }
 
 .category-card .category-count {
-  color: #5c7e9e !important;
+  color: #2f5475 !important;
 }
 
-/* Sections, Cards & Modals */
+/* Sections, Cards, Search & Modals */
 .card, .table-container, .modal-card, .admin-card, .search-container, .order-history-container {
-  background: #ffffff !important;
-  border: 1px solid rgba(14, 165, 233, 0.25) !important;
-  box-shadow: 0 8px 24px rgba(2, 132, 199, 0.06) !important;
-  color: #0f2d4a !important;
+  background: rgba(238, 247, 255, 0.92) !important;
+  backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(14, 165, 233, 0.3) !important;
+  box-shadow: 0 8px 24px rgba(15, 42, 66, 0.1) !important;
+  color: #0f2a42 !important;
 }
 
 .section-header h2, .card-header h2, .card-header h3, .modal-header h2 {
-  color: #0f2d4a !important;
+  color: #0f2a42 !important;
+}
+
+/* Login Card Specific */
+.login-card {
+  background: rgba(240, 248, 255, 0.95) !important;
+  box-shadow: 0 16px 40px rgba(15, 42, 66, 0.18) !important;
+  border: 1px solid rgba(14, 165, 233, 0.4) !important;
 }
 
 /* Inputs & Form Controls */
 input[type="text"], input[type="password"], input[type="number"], select, textarea {
-  background: #f8fafc !important;
-  border: 1px solid rgba(14, 165, 233, 0.3) !important;
-  color: #0f2d4a !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(14, 165, 233, 0.35) !important;
+  color: #0f2a42 !important;
 }
 
 input[type="text"]:focus, input[type="password"]:focus, select:focus, textarea:focus {
   background: #ffffff !important;
   border-color: #0284c7 !important;
-  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.18) !important;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.22) !important;
 }
 
 /* Buttons */
 .btn-primary {
   background: linear-gradient(135deg, #0284c7, #0ea5e9) !important;
-  box-shadow: 0 4px 14px rgba(14, 165, 233, 0.3) !important;
+  box-shadow: 0 4px 14px rgba(14, 165, 233, 0.35) !important;
   border: none !important;
   color: #ffffff !important;
 }
 
 .btn-primary:hover {
   background: linear-gradient(135deg, #0369a1, #0284c7) !important;
-  box-shadow: 0 6px 18px rgba(14, 165, 233, 0.4) !important;
+  box-shadow: 0 6px 18px rgba(14, 165, 233, 0.45) !important;
 }
 
 .btn-secondary {
-  background: #ffffff !important;
+  background: rgba(240, 248, 255, 0.85) !important;
   border: 1px solid rgba(14, 165, 233, 0.35) !important;
   color: #0284c7 !important;
 }
 
 .btn-secondary:hover {
-  background: #f0f9ff !important;
+  background: #ffffff !important;
   border-color: #0284c7 !important;
 }
 
 /* Navigation Tabs */
 .app-tabs .tab-btn {
-  color: #5c7e9e !important;
+  color: #2f5475 !important;
 }
 
 .app-tabs .tab-btn.active {
   color: #0284c7 !important;
   border-bottom: 2px solid #0284c7 !important;
-  background: rgba(14, 165, 233, 0.08) !important;
+  background: rgba(14, 165, 233, 0.12) !important;
   font-weight: 700 !important;
 }
 
 /* Tables */
 table th {
-  background: #f0f9ff !important;
-  color: #0f2d4a !important;
-  border-bottom: 1px solid rgba(14, 165, 233, 0.2) !important;
+  background: rgba(215, 237, 254, 0.9) !important;
+  color: #0f2a42 !important;
+  border-bottom: 1px solid rgba(14, 165, 233, 0.25) !important;
 }
 
 table td {
-  border-bottom: 1px solid rgba(14, 165, 233, 0.1) !important;
-  color: #1e293b !important;
+  border-bottom: 1px solid rgba(14, 165, 233, 0.15) !important;
+  color: #123454 !important;
 }
 
 table tr:hover td {
-  background: rgba(224, 242, 254, 0.3) !important;
+  background: rgba(195, 228, 252, 0.4) !important;
 }
 
 /* Price Tags */
@@ -234,28 +241,28 @@ table tr:hover td {
   font-weight: 800 !important;
 }
 
-/* Badges */
+/* Badges & Meta */
 .credits-badge-container {
-  background: #ffffff !important;
+  background: rgba(235, 246, 255, 0.9) !important;
   border: 1px solid rgba(14, 165, 233, 0.4) !important;
   color: #0284c7 !important;
-  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.1) !important;
+  box-shadow: 0 2px 8px rgba(15, 42, 66, 0.08) !important;
 }
 
 .connection-status {
-  background: #ffffff !important;
+  background: rgba(235, 246, 255, 0.85) !important;
   border: 1px solid rgba(14, 165, 233, 0.3) !important;
-  color: #476b8a !important;
+  color: #2f5475 !important;
 }
 
 /* Server Switch */
 .server-switch-container {
-  background: #ffffff !important;
+  background: rgba(225, 242, 254, 0.9) !important;
   border: 1px solid rgba(14, 165, 233, 0.35) !important;
 }
 
 .btn-server-switch {
-  color: #476b8a !important;
+  color: #2f5475 !important;
 }
 
 .btn-server-switch.active {
@@ -338,7 +345,8 @@ body.dark-mode .table-container,
 body.dark-mode .modal-card,
 body.dark-mode .admin-card,
 body.dark-mode .search-container,
-body.dark-mode .order-history-container {
+body.dark-mode .order-history-container,
+body.dark-mode .login-card {
   background: rgba(11, 21, 34, 0.85) !important;
   border: 1px solid rgba(56, 189, 248, 0.2) !important;
   color: #f0f9ff !important;
