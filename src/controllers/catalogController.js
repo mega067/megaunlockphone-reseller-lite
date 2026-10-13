@@ -322,19 +322,28 @@ exports.getProducts = async (req, res) => {
       const isDigitalPass = req.query.digitalPass === 'true' || req.headers['x-digital-pass'] === 'true';
       if (isDigitalPass) {
         const streamingKeywords = [
-          'stream', 'netflix', 'disney', 'prime', 'amazon', 'youtube', 'paramount', 'max', 'hbo', 
-          'spotify', 'apple music', 'crunchyroll', 'deezer', 'tidal', 'vix', 'magis', 'iptv', 'tv', 
-          'chatgpt', 'openai', 'claude', 'midjourney', 'canva', 'capcut', 'gemini', 'copilot', 'ai',
-          'ia', 'plex', 'tele latino', 'flujo tv', 'oleada tv', 'stella tv', 'cine-moon', 'optimus tv', 'emby',
-          'playstation', 'xbox', 'game', 'gocash', 'free fire', 'pubg', 'roblox', 'steam', 'nintendo',
-          'cuenta', 'cuentas', 'digital', 'licencia', 'smart tools'
+          'stream', 'streaming', 'netflix', 'disney', 'prime video', 'amazon prime', 'youtube', 'paramount', 'max', 'hbo', 
+          'spotify', 'apple music', 'crunchyroll', 'deezer', 'tidal', 'vix', 'magis', 'magistv', 'iptv', 
+          'chatgpt', 'openai', 'claude', 'midjourney', 'canva', 'capcut', 'gemini', 'copilot', 'inteligencia artificial',
+          'plex', 'tele latino', 'flujo tv', 'oleada tv', 'stella tv', 'cine-moon', 'optimus tv', 'emby',
+          'playstation', 'xbox', 'game pass', 'free fire', 'pubg', 'roblox', 'steam', 'nintendo',
+          'combo plus', 'star+', 'star plus', 'directv', 'dgo', 'viki', 'rakuten', 'plex pass', 'office 365', 'windows key',
+          'antivirus', 'vpn', 'nordvpn', 'surfshark', 'expressvpn', 'duolingo'
         ];
+
+        // Specific keywords regex matching full words or exact brands
+        const streamingRegex = new RegExp(
+          '\\b(streaming|netflix|disney|prime|amazon|youtube|paramount|max|hbo|spotify|apple music|crunchyroll|deezer|tidal|vix|magis|iptv|chatgpt|openai|claude|midjourney|canva|capcut|gemini|copilot|ai pro|ia pro|plex|emby|playstation|xbox|nintendo|steam|roblox|free fire|duolingo|vpn|office 365)\\b',
+          'i'
+        );
 
         const nonStreamingBlacklist = [
           'bypass', 'icloud', 'frp', 'imei repair', 'cpid', 'unlock', 'motorola', 'samsung unlock',
           'xiaomi qualcomm', 'xiaomi mediatek', 't-mobile usa', 'tracfone', 'at&t usa', 'cricket usa',
           'esim data plan', 'tiempo aire', 'recarga saldo', 'recargas saldo', 'recargas axios',
-          'registro líneas', 'jailbreak', 'seguridad email', 'mac os email', 'repair fix auth'
+          'registro líneas', 'jailbreak', 'seguridad email', 'mac os email', 'repair fix auth',
+          'check apple', 'fmi off', 'clean carrier', 'sim mágico', 'sim magico', 'ramdisk',
+          'mdm', 'carrier', 'blacklist', 'gsma', 'server token', 'auth tool'
         ];
 
         const filteredList = {};
@@ -349,12 +358,12 @@ exports.getProducts = async (req, res) => {
             const sName = (sObj.SERVICENAME || sObj.service || '').toLowerCase();
             const customG = (sObj._CUSTOM_GROUP || '').toLowerCase();
 
-            // If user explicitly assigned a custom group that is marked or user created for digitalpass
-            const hasCustomMatch = customG && streamingKeywords.some(kw => customG.includes(kw));
+            // If user explicitly marked this service in custom_groups.json or assigned it to custom group
+            const hasCustomMatch = customG && (streamingRegex.test(customG) || customG.includes('digital') || customG.includes('pass') || customG.includes('stream'));
             
             // Check whitelist match
-            const matchesKeyword = streamingKeywords.some(kw => gName.includes(kw) || sName.includes(kw));
-            const isBlacklisted = nonStreamingBlacklist.some(bl => gName.includes(bl) && !hasCustomMatch);
+            const matchesKeyword = streamingRegex.test(gName) || streamingRegex.test(sName) || streamingKeywords.some(kw => gName.includes(kw) || sName.includes(kw));
+            const isBlacklisted = nonStreamingBlacklist.some(bl => gName.includes(bl) || sName.includes(bl));
 
             if (hasCustomMatch || (matchesKeyword && !isBlacklisted)) {
               matchedServices[sKey] = sObj;
