@@ -140,6 +140,60 @@ function buildTargetUrl(endpoint) {
   return targetUrl;
 }
 
+function processRefund(order) {
+  if (!order) return { success: false, error: 'Orden no válida' };
+  if (order.isRefunded) return { success: false, error: 'La orden ya fue reembolsada previamente' };
+
+  const { readDB, writeDB } = require('./db');
+  const { incrementHistoryVersion } = require('./cacheManager');
+
+  const users = readDB('users.json') || [];
+  const history = readDB('history.json') || [];
+  const settingsDb = readDB('settings.json') || {};
+
+  const user = users.find(u => String(u.id) === String(order.userId));
+  if (!user) return { success: false, error: 'Usuario no encontrado para reembolsar' };
+
+  const serverId = String(order.serverId || '1');
+  const amountToRefund = parseFloat(order.costCharged !== undefined ? order.costCharged : (order.resellerCost || order.price || 0));
+
+  if (amountToRefund > 0) {
+    const currentCredit = getUserCredit(user, serverId);
+    const newCredit = parseFloat((currentCredit + amountToRefund).toFixed(4));
+    setUserCredit(user, serverId, newCredit);
+
+    // Deduct admin profit if it was accounted for
+    const orderProfit = parseFloat(order.profit || 0);
+    if (orderProfit > 0) {
+      settingsDb.adminProfitBalance = Math.max(0, parseFloat(((settingsDb.adminProfitBalance || 0) - orderProfit).toFixed(4)));
+      writeDB('settings.json', settingsDb);
+    }
+
+    writeDB('users.json', users);
+  }
+
+  // Update order in history.json
+  const targetOrderId = String(order.orderId || order.id);
+  const historyIdx = history.findIndex(h => String(h.orderId || h.id) === targetOrderId && String(h.serverId || '1') === serverId);
+  if (historyIdx !== -1) {
+    history[historyIdx].isRefunded = true;
+    history[historyIdx].refundDate = new Date().toISOString();
+    history[historyIdx].refundAmount = amountToRefund;
+  }
+  order.isRefunded = true;
+  order.refundDate = new Date().toISOString();
+  order.refundAmount = amountToRefund;
+
+  writeDB('history.json', history);
+  incrementHistoryVersion();
+
+  return {
+    success: true,
+    amountRefunded: amountToRefund,
+    newBalance: user ? getUserCredit(user, serverId) : 0
+  };
+}
+
 module.exports = {
   getServerDisplayName,
   getServerId,
@@ -149,5 +203,6 @@ module.exports = {
   getUserCredit,
   setUserCredit,
   callGsmThemeApi,
-  buildTargetUrl
+  buildTargetUrl,
+  processRefund
 };

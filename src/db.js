@@ -104,8 +104,10 @@ function writeDB(file, data) {
     const transaction = sqliteDb.transaction(() => {
       deleteStmt.run();
       data.forEach(o => {
-        const statusText = typeof o.statusText === 'string' ? o.statusText : (o.status || 'N/A');
-        stmt.run(String(o.orderId), String(o.userId), o.serverId ? String(o.serverId) : null, o.serviceId ? String(o.serviceId) : null, o.serviceName || 'Desconocido', o.imei || null, o.quantity || 1, o.price || 0, o.status || 'pending', statusText, o.date || null, JSON.stringify(o));
+        const statusText = typeof o.statusText === 'string' ? o.statusText : (o.msg || o.status || 'N/A');
+        const orderIdVal = String(o.orderId || o.id || Date.now());
+        const costVal = o.costCharged !== undefined ? Number(o.costCharged) : Number(o.price || 0);
+        stmt.run(orderIdVal, String(o.userId || ''), o.serverId ? String(o.serverId) : null, o.serviceId ? String(o.serviceId) : null, o.serviceName || 'Desconocido', o.imei || null, o.quantity || 1, costVal, o.status || 'pending', statusText, o.date || null, JSON.stringify(o));
       });
     });
     transaction();

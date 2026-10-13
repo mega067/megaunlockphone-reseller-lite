@@ -81,6 +81,8 @@ module.exports = function(app, deps) {
 
     if (history.length > 500) history.pop();
     writeDB('history.json', history);
+    const { incrementHistoryVersion } = require('./cacheManager');
+    incrementHistoryVersion();
     
     return res.json({ success: true, message: 'Pedido importado exitosamente.' });
   });
@@ -97,6 +99,8 @@ module.exports = function(app, deps) {
     }
     
     writeDB('history.json', history);
+    const { incrementHistoryVersion } = require('./cacheManager');
+    incrementHistoryVersion();
     return res.json({ success: true });
   });
 
@@ -121,6 +125,12 @@ module.exports = function(app, deps) {
             const isRejected = uo.status === 'failed' || uo.status === 'rejected';
             const settingsDb = readDB('settings.json') || {};
             
+            // Auto-refund if rejected
+            if (isRejected && !history[idx].isRefunded) {
+              const { processRefund } = require('./helpers');
+              processRefund(history[idx]);
+            }
+
             let privateMsg = '';
             let costToUse = parseFloat(history[idx].resellerCost || history[idx].costCharged || 0);
             
@@ -163,6 +173,8 @@ module.exports = function(app, deps) {
 
     if (changed) {
       writeDB('history.json', history);
+      const { incrementHistoryVersion } = require('./cacheManager');
+      incrementHistoryVersion();
     }
     res.json({ success: true });
   });

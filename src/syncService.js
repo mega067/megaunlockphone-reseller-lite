@@ -1,5 +1,4 @@
-const axios = require('axios');
-const http = require('http');
+const axios = require('axios');onst http = require('http');
 const https = require('https');
 const ipv4Agent = new https.Agent({ family: 4 });
 const { buildTargetUrl, callGsmThemeApi } = require('./helpers');
@@ -14,11 +13,11 @@ const { buildTargetUrl, callGsmThemeApi } = require('./helpers');
  */
 async function fetchBulkOrdersStatus(syncList, settings, sId) {
   const targetUrl = buildTargetUrl(settings.endpoint);
-  
+
   const requests = syncList.map(async (itemObj) => {
     const orderid = itemObj.id;
     let action = 'getimeiorder';
-    
+
     if (itemObj.type) {
       let t = String(itemObj.type).toLowerCase().trim();
       if (t !== 'server' && t !== 'file') {
@@ -40,49 +39,77 @@ async function fetchBulkOrdersStatus(syncList, settings, sId) {
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 15000, httpsAgent: ipv4Agent
         });
 
-        if ((!response.data || !response.data.SUCCESS || response.data.SUCCESS.length === 0) && action === 'getserverorder') {
-          params.set('action', 'getimeiorder');
-          response = await axios.post(targetUrl, params.toString(), {
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 15000, httpsAgent: ipv4Agent
-          });
+        let hasSuccess = response.data && response.data.SUCCESS && (!Array.isArray(response.data.SUCCESS) || response.data.SUCCESS.length > 0);
+        if (!hasSuccess) {
+          const altAction = (action === 'getserverorder') ? 'getimeiorder' : 'getserverorder';
+          params.set('action', altAction);
+          try {
+            const altResponse = await axios.post(targetUrl, params.toString(), {
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 15000, httpsAgent: ipv4Agent
+            });
+            if (altResponse.data && altResponse.data.SUCCESS && (!Array.isArray(altResponse.data.SUCCESS) || altResponse.data.SUCCESS.length > 0)) {
+              response = altResponse;
+            }
+          } catch (eAlt) { }
         }
 
         if (response.data && response.data.SUCCESS) {
-           const itemArr = Array.isArray(response.data.SUCCESS) ? response.data.SUCCESS : [response.data.SUCCESS];
-           if (itemArr.length > 0) {
-              const item = itemArr[0];
-              const orderStatus = String(item.STATUS || item.status || '').toLowerCase();
-              const isSuccess = orderStatus === '4' || orderStatus === 'completed' || orderStatus === 'success';
-              const isFailed = orderStatus === '3' || orderStatus === 'failed' || orderStatus === 'rejected' || orderStatus === 'error' || orderStatus === 'cancel' || orderStatus === 'canceled' || orderStatus === 'cancelled';
-              const finalStatus = isSuccess ? 'success' : (isFailed ? 'failed' : 'pending');
-              
-              return {
-                orderid: orderid,
-                status: finalStatus,
-                statusText: item.REPLY || item.REJECT_REASON || item.CODE || item.MESSAGE || (isSuccess ? 'Completado' : (isFailed ? 'Rechazado' : 'En proceso')),
-                raw: item
-              };
-           }
+          const itemArr = Array.isArray(response.data.SUCCESS) ? response.data.SUCCESS : [response.data.SUCCESS];
+          if (itemArr.length > 0) {
+            const item = itemArr[0];
+            const orderStatus = String(item.STATUS || item.status || '').toLowerCase();
+            const isSuccess = orderStatus === '4' || orderStatus === 'completed' || orderStatus === 'success';
+            const isFailed = orderStatus === '3' || orderStatus === 'failed' || orderStatus === 'rejected' || orderStatus === 'error' || orderStatus === 'cancel' || orderStatus === 'canceled' || orderStatus === 'cancelled';
+            const finalStatus = isSuccess ? 'success' : (isFailed ? 'failed' : 'pending');
+
+            let rawReply = item.REPLY || item.REJECT_REASON || item.CODE || item.MESSAGE || '';
+            if (typeof rawReply === 'object' && rawReply !== null) rawReply = JSON.stringify(rawReply);
+            let cleanText = String(rawReply).replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').trim();
+            if (!cleanText) cleanText = isSuccess ? 'Completado' : (isFailed ? 'Rechazado' : 'En proceso');
+
+            return {
+              orderid: orderid,
+              status: finalStatus,
+              statusText: cleanText,
+              raw: item
+            };
+          }
         }
       } else {
         const gsmParams = { ID: orderid };
-        const res = await callGsmThemeApi(targetUrl, action, gsmParams, settings.username, settings.apiaccesskey);
+        let res = await callGsmThemeApi(targetUrl, action, gsmParams, settings.username, settings.apiaccesskey);
+        let hasSuccessGsm = res && res.data && res.data.SUCCESS && (!Array.isArray(res.data.SUCCESS) || res.data.SUCCESS.length > 0);
+        if (!hasSuccessGsm) {
+          const altAction = (action === 'getserverorder') ? 'getimeiorder' : 'getserverorder';
+          try {
+            const altRes = await callGsmThemeApi(targetUrl, altAction, gsmParams, settings.username, settings.apiaccesskey);
+            if (altRes && altRes.data && altRes.data.SUCCESS && (!Array.isArray(altRes.data.SUCCESS) || altRes.data.SUCCESS.length > 0)) {
+              res = altRes;
+            }
+          } catch (eAlt) { }
+        }
+
         if (res && res.data && res.data.SUCCESS) {
-           const itemArr = Array.isArray(res.data.SUCCESS) ? res.data.SUCCESS : [res.data.SUCCESS];
-           if (itemArr.length > 0) {
-              const item = itemArr[0];
-              const orderStatus = String(item.STATUS || item.status || '').toLowerCase();
-              const isSuccess = orderStatus === '4' || orderStatus === 'completed' || orderStatus === 'success';
-              const isFailed = orderStatus === '3' || orderStatus === 'failed' || orderStatus === 'rejected' || orderStatus === 'error' || orderStatus === 'cancel' || orderStatus === 'canceled' || orderStatus === 'cancelled';
-              const finalStatus = isSuccess ? 'success' : (isFailed ? 'failed' : 'pending');
-              
-              return {
-                orderid: orderid,
-                status: finalStatus,
-                statusText: item.REPLY || item.REJECT_REASON || item.CODE || item.MESSAGE || (isSuccess ? 'Completado' : (isFailed ? 'Rechazado' : 'En proceso')),
-                raw: item
-              };
-           }
+          const itemArr = Array.isArray(res.data.SUCCESS) ? res.data.SUCCESS : [res.data.SUCCESS];
+          if (itemArr.length > 0) {
+            const item = itemArr[0];
+            const orderStatus = String(item.STATUS || item.status || '').toLowerCase();
+            const isSuccess = orderStatus === '4' || orderStatus === 'completed' || orderStatus === 'success';
+            const isFailed = orderStatus === '3' || orderStatus === 'failed' || orderStatus === 'rejected' || orderStatus === 'error' || orderStatus === 'cancel' || orderStatus === 'canceled' || orderStatus === 'cancelled';
+            const finalStatus = isSuccess ? 'success' : (isFailed ? 'failed' : 'pending');
+
+            let rawReply = item.REPLY || item.REJECT_REASON || item.CODE || item.MESSAGE || '';
+            if (typeof rawReply === 'object' && rawReply !== null) rawReply = JSON.stringify(rawReply);
+            let cleanText = String(rawReply).replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').trim();
+            if (!cleanText) cleanText = isSuccess ? 'Completado' : (isFailed ? 'Rechazado' : 'En proceso');
+
+            return {
+              orderid: orderid,
+              status: finalStatus,
+              statusText: cleanText,
+              raw: item
+            };
+          }
         }
       }
     } catch (err) {

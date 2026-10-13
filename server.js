@@ -140,8 +140,11 @@ app.post('/api/debug/history', (req, res) => {
 });
 
 app.get('/api/status', (req, res) => {
-  const { getCatalogVersion } = require('./src/cacheManager');
-  res.json({ version: getCatalogVersion() });
+  const { getCatalogVersion, getHistoryVersion } = require('./src/cacheManager');
+  res.json({
+    version: getCatalogVersion(),
+    historyVersion: getHistoryVersion ? getHistoryVersion() : 1
+  });
 });
 
 // Global Error Handler

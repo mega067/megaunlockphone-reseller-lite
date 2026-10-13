@@ -1,5 +1,6 @@
 // DOMContentLoaded Wrapper Removed
 let localCatalogVersion = 1;
+let localHistoryVersion = 1;
 
 // Initialize Lucide icons
 lucide.createIcons();
@@ -986,11 +987,13 @@ function renderOrderHistory() {
 
 function addOrderToHistory(orderRecord) {
   orderRecord.localUniqueId = 'row_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-  orderHistory.push(orderRecord);
-  if (orderHistory.length > 100) {
-    orderHistory.shift();
+  orderRecord.id = orderRecord.id || orderRecord.localUniqueId;
+  orderRecord.serverId = currentServerId;
+  if (!Array.isArray(orderHistory)) orderHistory = [];
+  orderHistory.unshift(orderRecord);
+  if (orderHistory.length > 500) {
+    orderHistory.pop();
   }
-  localStorage.setItem('dhru_order_history', JSON.stringify(orderHistory));
   renderOrderHistory();
 }
 
@@ -1626,17 +1629,33 @@ orderForm.addEventListener('submit', async (e) => {
       serviceType
     });
 
-    alert(`¡Pedido Exitoso!\n\nID de Orden: ${orderId}\nMensaje: ${msg}`);
     closePurchaseModal();
+    if (window.showToast) {
+      window.showToast(`ID de Orden: #${orderId}\n${msg}`, 'success', '¡Pedido Realizado!');
+    } else {
+      alert(`¡Pedido Exitoso!\n\nID de Orden: ${orderId}\nMensaje: ${msg}`);
+    }
     
+    // Update credits immediately
+    if (typeof updateAccountCredits === 'function') {
+      updateAccountCredits();
+    }
+
     // Navigate to history tab automatically
     tabHistory.click();
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // Auto-trigger order status query after 1.5 seconds to pull codes instantly if completed
+    // Start smart real-time pending poller immediately
+    if (typeof startPendingOrdersPoller === 'function') {
+      startPendingOrdersPoller();
+    }
+
+    // Trigger initial silent check after 2 seconds
     setTimeout(() => {
-      btnSyncHistory.click();
-    }, 1500);
+      if (typeof autoSyncHistory === 'function') {
+        autoSyncHistory(true);
+      }
+    }, 2000);
 
   } catch (err) {
     console.error(err);
@@ -2267,7 +2286,7 @@ setInterval(() => {
        }
     }
     
-    // Check catalog version for real-time sync
+    // Check catalog version and history version for real-time sync
     fetch('/api/status').then(r => r.json()).then(data => {
       if (data.version && data.version > localCatalogVersion) {
         localCatalogVersion = data.version;
@@ -2278,9 +2297,18 @@ setInterval(() => {
           syncProducts(false); // Silent sync with fresh version
         }
       }
+      if (data.historyVersion && data.historyVersion > localHistoryVersion) {
+        localHistoryVersion = data.historyVersion;
+        if (typeof fetchOrderHistory === 'function') {
+          fetchOrderHistory();
+        }
+        if (typeof updateAccountCredits === 'function') {
+          updateAccountCredits();
+        }
+      }
     }).catch(e => {});
   }
-}, 60000); // Increased from 15s to 60s to reduce UI lag
+}, 20000); // Polling every 20s for real-time history & catalog sync
 
 async function fetchPublicSettings() {
   try {

@@ -43,5 +43,6 @@ router.get('/admin/service-warnings', requireAuth, requireAdmin, adminController
 router.post('/admin/service-warnings', requireAuth, requireAdmin, adminController.saveServiceWarning);
 
 router.post('/admin/disable-imei', requireAuth, requireAdmin, adminController.toggleDisableImei);
+router.post('/admin/refund', requireAuth, requireAdmin, adminController.adminRefund);
 
 module.exports = router;

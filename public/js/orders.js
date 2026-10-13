@@ -6,7 +6,6 @@ async function fetchOrderHistory() {
     if (historyCount) historyCount.textContent = '0';
     return;
   }
-  if (!authToken) return;
   try {
     const res = await fetch('/api/history', {
       headers: { 'X-Server-Id': currentServerId, 'Authorization': `Bearer ${authToken}` }
@@ -14,7 +13,14 @@ async function fetchOrderHistory() {
     if (res.ok) {
       orderHistory = await res.json();
       renderOrderHistory();
-      autoSyncHistory(true); // Auto-sync in background without alerts
+
+      const hasPending = Array.isArray(orderHistory) && orderHistory.some(o => o.status === 'pending' && o.orderId && o.orderId !== 'Error');
+      if (hasPending) {
+        startPendingOrdersPoller();
+        autoSyncHistory(true); // Immediate background sync
+      } else {
+        stopPendingOrdersPoller();
+      }
     }
   } catch (e) {
     console.warn('Failed to fetch history', e);
@@ -615,146 +621,152 @@ if (btnImportOrder) {
   });
 }
 
+let pendingOrdersPollTimer = null;
+let isSyncingPending = false;
+
+function startPendingOrdersPoller() {
+  if (pendingOrdersPollTimer) return;
+
+  const checkPending = async () => {
+    if (!authToken || isSyncingPending) return;
+
+    const hasLocalPending = Array.isArray(orderHistory) && orderHistory.some(o => o.status === 'pending' && o.orderId && o.orderId !== 'Error');
+    if (!hasLocalPending) {
+      stopPendingOrdersPoller();
+      return;
+    }
+
+    isSyncingPending = true;
+    try {
+      const res = await fetch('/api/orders/sync-pending', {
+        method: 'POST',
+        headers: {
+          'X-Server-Id': currentServerId,
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.history && Array.isArray(data.history)) {
+          orderHistory = data.history;
+          renderOrderHistory();
+        }
+        if (typeof updateAccountCredits === 'function') {
+          updateAccountCredits();
+        }
+        if (data.updated && data.count > 0) {
+          if (window.showToast) {
+            window.showToast(`Se actualizaron ${data.count} pedidos en tiempo real.`, 'success', 'Pedido Actualizado');
+          }
+        }
+        if (data.remainingPending === 0) {
+          stopPendingOrdersPoller();
+        }
+      }
+    } catch (e) {
+      console.warn('Pending orders poll error:', e);
+    } finally {
+      isSyncingPending = false;
+    }
+  };
+
+  pendingOrdersPollTimer = setInterval(checkPending, 8000);
+}
+
+function stopPendingOrdersPoller() {
+  if (pendingOrdersPollTimer) {
+    clearInterval(pendingOrdersPollTimer);
+    pendingOrdersPollTimer = null;
+  }
+}
+
+window.startPendingOrdersPoller = startPendingOrdersPoller;
+window.stopPendingOrdersPoller = stopPendingOrdersPoller;
+
 async function autoSyncHistory(silent = false) {
   if (!authToken) {
-    if (!silent) alert('Faltan credenciales en la sesión.');
+    if (!silent) {
+      if (window.showToast) window.showToast('Faltan credenciales en la sesión.', 'warning');
+      else alert('Faltan credenciales en la sesión.');
+    }
     return;
   }
 
-  // Let's sync ALL orders that have a valid order ID and whose statusText contains a placeholder message
-  const pendingOrders = orderHistory.filter(o => {
-    if (!o.orderId || o.orderId === 'Error') return false;
-    const isPending = o.status === 'pending';
-    const txt = String(o.statusText || '').toLowerCase();
-    const isGenericText = !txt || txt.includes('received') || txt.includes('espera') || txt === 'exitoso' || txt === 'rechazado' || txt === 'completado';
-    return isPending || isGenericText;
-  });
-
+  const pendingOrders = Array.isArray(orderHistory) ? orderHistory.filter(o => o.status === 'pending' && o.orderId && o.orderId !== 'Error') : [];
   if (pendingOrders.length === 0) {
-    if (!silent) alert('No hay pedidos pendientes por sincronizar en el historial.');
+    if (!silent) {
+      if (window.showToast) window.showToast('No hay pedidos pendientes por sincronizar en el historial.', 'info');
+      else alert('No hay pedidos pendientes por sincronizar en el historial.');
+    }
     return;
   }
 
-  if (!silent) {
+  if (!silent && btnSyncHistory) {
     btnSyncHistory.setAttribute('disabled', 'true');
-    btnSyncHistory.querySelector('span').textContent = 'Sincronizando...';
+    const span = btnSyncHistory.querySelector('span');
+    if (span) span.textContent = 'Sincronizando...';
     const icon = btnSyncHistory.querySelector('svg');
     if (icon) icon.classList.add('icon-spin');
   }
 
-  let updatedCount = 0;
-  const updatedOrders = [];
-
-  const itemsToSync = pendingOrders.map(o => {
-    let t = o.serviceType;
-    if (!t) {
-      const matchingProduct = productsList.find(p => String(p.serviceid) === String(o.serviceId));
-      if (matchingProduct && matchingProduct.serviceType === 'SERVER') {
-        t = 'SERVER';
-      } else {
-        t = 'IMEI';
-      }
-    }
-    return { id: o.orderId, type: t };
-  });
-  
   try {
-    const payload = { items: itemsToSync };
-    
-    const res = await fetch('/api/orders/bulk-status', {
+    const res = await fetch('/api/orders/sync-pending', {
       method: 'POST',
-      headers: { 'X-Server-Id': currentServerId, 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`
-      },
-      body: JSON.stringify(payload)
+      headers: {
+        'X-Server-Id': currentServerId,
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+      }
     });
-    
-    const data = await res.json();
-    logApiCall(`getorderbulk [Count: ${itemsToSync.length}]`, payload, data, res.ok);
-    
+
     if (res.status === 401) {
       if (!silent) alert('Sesión caducada (401). Por favor, vuelve a iniciar sesión.');
-      logout();
+      if (typeof logout === 'function') logout();
       return;
     }
-    
-    if (res.ok && data.SUCCESS && Array.isArray(data.SUCCESS)) {
-      for (const apiOrderWrapper of data.SUCCESS) {
-        let apiOrder = apiOrderWrapper.DATA || apiOrderWrapper.data || apiOrderWrapper;
-        
-        const orderIdToCheck = String(apiOrder.orderid || apiOrder.requested_id || apiOrder.ID || apiOrder.id || apiOrder.REFERENCEID || apiOrder.referenceid || '');
-        const localOrder = orderHistory.find(o => String(o.orderId) === orderIdToCheck);
-        
-        if (localOrder) {
-          const orderStatus = String(apiOrder.STATUS || apiOrder.status || '').toLowerCase();
-          const replyCode = apiOrder.statusText || apiOrder.CODE || apiOrder.code || apiOrder.REPLY || apiOrder.reply || '';
-          
-          const isRejected = orderStatus === '3' || 
-                             orderStatus === 'failed' || 
-                             orderStatus === 'rejected' ||
-                             orderStatus === 'error' ||
-                             orderStatus === 'cancel' ||
-                             orderStatus === 'canceled' ||
-                             orderStatus === 'cancelled';
 
-          const isCompleted = orderStatus === '4' || 
-                              orderStatus === 'completed' || 
-                              orderStatus === 'success';
-                              
-          let hasChanged = false;
+    if (res.ok) {
+      const data = await res.json();
+      if (data.history && Array.isArray(data.history)) {
+        orderHistory = data.history;
+        renderOrderHistory();
+      }
+      if (typeof updateAccountCredits === 'function') {
+        updateAccountCredits();
+      }
 
-          if (isRejected && localOrder.status !== 'failed') {
-            localOrder.status = 'failed';
-            localOrder.statusText = replyCode || apiOrder.MESSAGE || apiOrder.message || 'Rechazado';
-            localOrder.updateTimestamp = new Date().toLocaleString('es-MX');
-            hasChanged = true;
-          } else if (isCompleted && localOrder.status !== 'success') {
-            localOrder.status = 'success';
-            localOrder.statusText = replyCode || apiOrder.MESSAGE || apiOrder.message || 'Completado';
-            localOrder.updateTimestamp = new Date().toLocaleString('es-MX');
-            hasChanged = true;
-          } else if ((replyCode || apiOrder.MESSAGE || apiOrder.message) && localOrder.statusText !== (replyCode || apiOrder.MESSAGE || apiOrder.message)) {
-            localOrder.statusText = replyCode || apiOrder.MESSAGE || apiOrder.message;
-            localOrder.updateTimestamp = new Date().toLocaleString('es-MX');
-            hasChanged = true;
-          }
-
-          if (hasChanged) {
-            updatedCount++;
-            updatedOrders.push(localOrder);
-          }
+      if (!silent) {
+        if (data.updated && data.count > 0) {
+          if (window.showToast) window.showToast(`Sincronización completada. Se actualizaron ${data.count} pedidos.`, 'success');
+          else alert(`Sincronización completada. Se actualizaron ${data.count} pedidos.`);
+        } else {
+          if (window.showToast) window.showToast('Sincronización completada. No hubo cambios en los estados.', 'info');
+          else alert('Sincronización completada. No hubo cambios en los estados de los pedidos.');
         }
+      } else if (data.updated && data.count > 0) {
+        if (window.showToast) window.showToast(`Se actualizaron ${data.count} pedidos automáticamente.`, 'success');
+      }
+
+      if (data.remainingPending > 0) {
+        startPendingOrdersPoller();
+      } else {
+        stopPendingOrdersPoller();
       }
     }
   } catch (err) {
-    console.error(`Error in bulk sync:`, err);
-  }
-
-  // Persist updated history back to backend if anything changed
-  if (updatedOrders.length > 0) {
-    try {
-      await fetch('/api/history', {
-        method: 'PUT',
-        headers: { 'X-Server-Id': currentServerId, 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-        body: JSON.stringify({ updatedOrders })
-      });
-    } catch (e) {
-      console.warn('Failed to save updated history to backend', e);
+    console.error('Error in autoSyncHistory:', err);
+    if (!silent) {
+      if (window.showToast) window.showToast('Error de conexión al sincronizar.', 'error');
     }
-  }
-
-  renderOrderHistory();
-
-  if (!silent) {
-    btnSyncHistory.removeAttribute('disabled');
-    btnSyncHistory.querySelector('span').textContent = 'Sincronizar Pedidos';
-    const icon = btnSyncHistory.querySelector('svg');
-    if (icon) icon.classList.remove('icon-spin');
-    if (updatedCount > 0) {
-      alert(`Sincronización completada. Se actualizaron ${updatedCount} pedidos.`);
-    } else {
-      alert(`Sincronización completada. No hubo cambios en los estados de los pedidos.`);
+  } finally {
+    if (!silent && btnSyncHistory) {
+      btnSyncHistory.removeAttribute('disabled');
+      const span = btnSyncHistory.querySelector('span');
+      if (span) span.textContent = 'Sincronizar Pedidos';
+      const icon = btnSyncHistory.querySelector('svg');
+      if (icon) icon.classList.remove('icon-spin');
     }
   }
 }

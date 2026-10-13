@@ -3,8 +3,8 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const { readDB, writeDB, DATA_DIR } = require('../db');
-const { getServerId, getServerSettings, getUserCredit, setUserCredit, callGsmThemeApi, getServerDisplayName, calculateMarkup, calculateGroupMarkup } = require('../helpers');
-const { catalogCache } = require('../cacheManager');
+const { getServerId, getServerSettings, getUserCredit, setUserCredit, callGsmThemeApi, getServerDisplayName, calculateMarkup, calculateGroupMarkup, processRefund } = require('../helpers');
+const { catalogCache, incrementHistoryVersion } = require('../cacheManager');
 const { enqueueWhatsApp, enqueueWhatsAppAdmin } = require('../whatsappQueue');
 const { fetchBulkOrdersStatus } = require('../syncService');
 
@@ -356,10 +356,12 @@ exports.processOrder = async (req, res) => {
         orderId,
         status: 'pending',
         msg,
+        statusText: msg,
         notes: req.body.notes || ''
       });
       if (history.length > 500) history.pop();
       writeDB('history.json', history);
+      incrementHistoryVersion();
       
       createAutoBackup('Nuevo_Pedido_S' + serverId);
 
@@ -447,6 +449,121 @@ exports.getBulkOrderStatus = async (req, res) => {
     return res.json({ SUCCESS: results });
   } catch (error) {
     return res.status(500).json({ error: 'Failed to fetch bulk statuses.', details: error.message });
+  }
+};
+
+exports.syncPendingOrders = async (req, res) => {
+  const serverId = getServerId(req);
+  const settingsDb = readDB('settings.json');
+  if (!settingsDb) return res.status(500).json({ error: 'Configuración no encontrada' });
+  const settings = getServerSettings(settingsDb, serverId);
+  if (!settings || !settings.endpoint) return res.status(500).json({ error: 'Servidor no configurado' });
+
+  const history = readDB('history.json') || [];
+  const users = readDB('users.json') || [];
+  const currentUser = users.find(u => String(u.id) === String(req.user.id)) || req.user;
+
+  // Filter pending orders
+  const pendingOrders = history.filter(o => {
+    const isMatchingServer = String(o.serverId || '1') === serverId;
+    const isPending = o.status === 'pending';
+    const isOwnerOrAdmin = req.user.role === 'admin' || String(o.userId) === String(req.user.id);
+    return isMatchingServer && isPending && isOwnerOrAdmin && o.orderId && o.orderId !== 'Error';
+  });
+
+  if (pendingOrders.length === 0) {
+    const userCredits = getUserCredit(currentUser, serverId);
+    return res.json({
+      success: true,
+      updated: false,
+      count: 0,
+      remainingPending: 0,
+      userCredits
+    });
+  }
+
+  try {
+    const syncList = pendingOrders.map(o => ({ id: o.orderId, type: o.serviceType }));
+    const results = await fetchBulkOrdersStatus(syncList, settings, serverId);
+
+    let updatedCount = 0;
+    const updatedOrderIds = [];
+
+    for (const r of results) {
+      if (!r || !r.orderid) continue;
+      if (r.status === 'success' || r.status === 'failed') {
+        const idx = history.findIndex(h => String(h.orderId) === String(r.orderid) && String(h.serverId || '1') === serverId);
+        if (idx !== -1 && history[idx].status !== r.status) {
+          history[idx].status = r.status;
+          history[idx].statusText = r.statusText;
+          history[idx].updateTimestamp = new Date().toLocaleString('es-MX');
+          updatedCount++;
+          updatedOrderIds.push(history[idx].orderId);
+
+          const isSuccess = r.status === 'success';
+          const isRejected = r.status === 'failed';
+
+          // Auto Refund if rejected
+          if (isRejected && !history[idx].isRefunded) {
+            processRefund(history[idx]);
+          }
+
+          const costToUse = parseFloat(history[idx].resellerCost || history[idx].costCharged || 0);
+          const cleanMsg = String(r.statusText || '').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').trim();
+
+          if (isSuccess) {
+            const privateMsg = `✅ SERVICIO COMPLETADO\n\n🆔 Orden: #${history[idx].orderId}\n📱 IMEI: ${history[idx].imei || 'N/A'}\n🔧 Servicio: ${history[idx].serviceName}✅\n💲 Costo: $${costToUse.toFixed(2)} MXN\n🔑 Código / Respuesta: ${cleanMsg}\n🎉 Estado: Completado\n\n━━━━━━━━━━━━━━\n🌐 MegaUnlockPhone`;
+            enqueueWhatsApp('private', privateMsg, history[idx].userId);
+          } else if (isRejected) {
+            const privateMsg = `❌ SERVICIO RECHAZADO\n\n🆔 Orden: #${history[idx].orderId}\n📱 IMEI: ${history[idx].imei || 'N/A'}\n🔧 Servicio: ${history[idx].serviceName}❌\n❗ Motivo: ${cleanMsg}\n💲 Costo: $${costToUse.toFixed(2)} MXN\n💸 Créditos: Reembolsados\n🎉 Estado: Rechazado\n\n━━━━━━━━━━━━━━\n🌐 MegaUnlockPhone`;
+            enqueueWhatsApp('private', privateMsg, history[idx].userId);
+          }
+
+          const usersList = readDB('users.json') || [];
+          const orderUser = usersList.find(u => String(u.id) === String(history[idx].userId));
+          const userNameDisplay = (orderUser && orderUser.role === 'admin') ? 'Admin #1' : (orderUser?.username || history[idx].username);
+
+          const statusStr = isSuccess ? '✅ Completado' : '❌ Rechazado';
+          const adminMsg = `🔄 ACTUALIZACIÓN AUTOMÁTICA\n━━━━━━━━━━━━━━━━━━━━━━\n#️⃣ Orden: #${history[idx].orderId}\n👨🏽💻 Usuario: ${userNameDisplay}\n🔧 Servicio: ${history[idx].serviceName}\n📊 Estado: ${statusStr}\n🔑 Respuesta: ${cleanMsg}\n🖥️ Servidor: ${getServerDisplayName(serverId)}\n━━━━━━━━━━━━━━━━━━━━━━\n🛡️ MegaUnlockPhone`;
+          enqueueWhatsAppAdmin(adminMsg);
+
+          const groupMsg = `🔄 ACTUALIZACIÓN DE ORDEN\n━━━━━━━━━━━━━━━━━━━━━━\n#️⃣ Orden: #${history[idx].orderId}\n👨🏽💻 Cliente: ID ${history[idx].userId}\n🔧 Servicio: ${history[idx].serviceName}\n📊 Estado: ${statusStr}\n🖥️ Servidor: ${getServerDisplayName(serverId)}\n━━━━━━━━━━━━━━━━━━━━━━\n🌐 MegaUnlockPhone`;
+          enqueueWhatsApp('group', groupMsg);
+        }
+      }
+    }
+
+    if (updatedCount > 0) {
+      writeDB('history.json', history);
+      incrementHistoryVersion();
+    }
+
+    const freshUsers = readDB('users.json') || [];
+    const freshCurrentUser = freshUsers.find(u => String(u.id) === String(req.user.id)) || req.user;
+    const currentCredits = getUserCredit(freshCurrentUser, serverId);
+
+    const remainingPending = history.filter(o => {
+      const isMatchingServer = String(o.serverId || '1') === serverId;
+      const isPending = o.status === 'pending';
+      const isOwnerOrAdmin = req.user.role === 'admin' || String(o.userId) === String(req.user.id);
+      return isMatchingServer && isPending && isOwnerOrAdmin && o.orderId && o.orderId !== 'Error';
+    }).length;
+
+    const serverHistory = history.filter(h => (h.serverId || '1') === serverId);
+    const visibleHistory = req.user.role === 'admin' ? serverHistory : serverHistory.filter(h => h.userId === req.user.id);
+
+    return res.json({
+      success: true,
+      updated: updatedCount > 0,
+      count: updatedCount,
+      updatedOrderIds,
+      remainingPending,
+      userCredits: currentCredits,
+      history: visibleHistory
+    });
+  } catch (err) {
+    console.error('Error in syncPendingOrders:', err);
+    return res.status(500).json({ error: 'Error al sincronizar pedidos pendientes', details: err.message });
   }
 };
 

@@ -535,3 +535,33 @@ exports.toggleDisableImei = (req, res) => {
   require('../cacheManager').incrementCatalogVersion();
   res.json({ success: true, disabledImei: disabled });
 };
+
+exports.adminRefund = (req, res) => {
+  const { orderId, serverId } = req.body;
+  if (!orderId) return res.status(400).json({ error: 'Falta orderId' });
+
+  const history = readDB('history.json') || [];
+  const sId = serverId ? String(serverId) : null;
+  const order = history.find(h => String(h.orderId || h.id) === String(orderId) && (!sId || String(h.serverId || '1') === sId));
+
+  if (!order) {
+    return res.status(404).json({ error: 'Pedido no encontrado en el historial.' });
+  }
+
+  if (order.isRefunded) {
+    return res.status(400).json({ error: 'Este pedido ya fue reembolsado anteriormente.' });
+  }
+
+  const { processRefund } = require('../helpers');
+  const result = processRefund(order);
+
+  if (result.success) {
+    return res.json({
+      success: true,
+      message: `Pedido #${orderId} reembolsado exitosamente por $${result.amountRefunded.toFixed(2)} MXN.`,
+      newBalance: result.newBalance
+    });
+  } else {
+    return res.status(400).json({ error: result.error || 'Error al procesar el reembolso.' });
+  }
+};

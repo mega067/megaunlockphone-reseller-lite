@@ -1,9 +1,11 @@
 const { readDB, writeDB } = require('./db');
-const { getServerSettings } = require('./helpers');
+const { getServerSettings, processRefund } = require('./helpers');
 const { fetchBulkOrdersStatus } = require('./syncService');
 const { enqueueWhatsApp, enqueueWhatsAppAdmin } = require('./whatsappQueue');
+const { incrementHistoryVersion } = require('./cacheManager');
 
 let isPollingOrders = false;
+let lastIdlePoll = 0;
 
 async function pollPendingOrders() {
   if (isPollingOrders) return;
@@ -15,7 +17,7 @@ async function pollPendingOrders() {
   
     const pendingByServer = {};
     history.forEach(order => {
-      if (order.status === 'pending') {
+      if (order.status === 'pending' && order.orderId && order.orderId !== 'Error') {
         const sId = order.serverId || '1';
         if (!pendingByServer[sId]) pendingByServer[sId] = [];
         pendingByServer[sId].push(order);
@@ -47,16 +49,23 @@ async function pollPendingOrders() {
         orders.forEach(order => {
             const remoteStatus = bulkResults[String(order.orderId)];
             if (remoteStatus && (remoteStatus.status === 'success' || remoteStatus.status === 'failed') && remoteStatus.status !== order.status) {
-                const idx = history.findIndex(h => h.id === order.id);
+                const idx = history.findIndex(h => (h.id && h.id === order.id) || (h.orderId && String(h.orderId) === String(order.orderId)));
                 if (idx !== -1) {
                     history[idx].status = remoteStatus.status;
                     history[idx].statusText = remoteStatus.msg;
+                    history[idx].updateTimestamp = new Date().toLocaleString('es-MX');
                     hasUpdates = true;
                     
                     let isSuccess = remoteStatus.status === 'success';
+                    let isRejected = remoteStatus.status === 'failed';
                     let headerIcon = isSuccess ? '✅ *SERVICIO COMPLETADO*' : '❌ *SERVICIO RECHAZADO*';
                     let statusTxt = isSuccess ? 'Completado' : 'Rechazado';
                     
+                    // Auto Refund if rejected
+                    if (isRejected && !history[idx].isRefunded) {
+                      processRefund(history[idx]);
+                    }
+
                     let cleanMsg = String(remoteStatus.msg || '').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').trim();
                     
                     let resMsg = `${headerIcon}\n━━━━━━━━━━━━━━━━━━━━━━\n`;
@@ -64,6 +73,7 @@ async function pollPendingOrders() {
                     resMsg += `📱 *IMEI:* ${history[idx].imei || 'N/A'}\n`;
                     resMsg += `🔧 *Servicio:* ${history[idx].serviceName} ${isSuccess ? '✅' : '❌'}\n`;
                     resMsg += `💲 *Costo:* $${parseFloat(history[idx].resellerCost || history[idx].costCharged || 0).toFixed(2)} MXN\n`;
+                    if (isRejected) resMsg += `💸 *Créditos:* Reembolsados\n`;
                     resMsg += `🔑 *Respuesta:* ${cleanMsg}\n`;
                     resMsg += `🎉 *Estado:* ${statusTxt}\n\n`;
                     resMsg += `━━━━━━━━━━━━━━━━━━━━━━\n🌐 MegaUnlockPhone`;
@@ -71,11 +81,11 @@ async function pollPendingOrders() {
                     enqueueWhatsApp('private', resMsg, history[idx].userId);
   
                     const usersList = readDB('users.json') || [];
-                    const orderUser = usersList.find(u => u.id === history[idx].userId);
+                    const orderUser = usersList.find(u => String(u.id) === String(history[idx].userId));
                     const userNameDisplay = (orderUser && orderUser.role === 'admin') ? 'Admin #1' : history[idx].username;
   
                     let adminMsg = `🔄 ACTUALIZACIÓN AUTOMÁTICA\n━━━━━━━━━━━━━━━━━━━━━━\n#️⃣ Orden: #${history[idx].orderId}\n👨🏽💻 Usuario: ${userNameDisplay}\n🔧 Servicio: ${history[idx].serviceName}\n📊 Estado: ${statusTxt} ${isSuccess ? '✅' : '❌'}\n━━━━━━━━━━━━━━━━━━━━━━`;
-                    if (isSuccess || remoteStatus.status === 'failed') {
+                    if (isSuccess || isRejected) {
                         adminMsg = `👨🏽💻 Usuario: ${userNameDisplay}\n${resMsg}`;
                     }
                     enqueueWhatsAppAdmin(adminMsg);
@@ -92,14 +102,29 @@ async function pollPendingOrders() {
     
     if (hasUpdates) {
       writeDB('history.json', history);
+      incrementHistoryVersion();
     }
   } finally {
     isPollingOrders = false;
   }
 }
 
+function tickPoller() {
+  try {
+    const history = readDB('history.json') || [];
+    const hasPending = history.some(o => o.status === 'pending' && o.orderId && o.orderId !== 'Error');
+    const now = Date.now();
+    if (hasPending || (now - lastIdlePoll >= 3 * 60 * 1000)) {
+      lastIdlePoll = now;
+      pollPendingOrders();
+    }
+  } catch (e) {
+    console.error('Tick poller error:', e);
+  }
+}
+
 function initPoller() {
-  setInterval(pollPendingOrders, 3 * 60 * 1000); // Poll every 3 minutes
+  setInterval(tickPoller, 20 * 1000); // Check every 20s if pending orders exist
 }
 
 module.exports = {
