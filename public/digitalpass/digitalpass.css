@@ -1,0 +1,129 @@
+@import url('/index.css?v=34');
+
+/* ============================================================
+   DIGITALPASS THEME PALETTE
+   Inspirado en el logo oficial:
+   - Azul cielo suave (#88c2eb, #64a6d6)
+   - Azul profundo / marino (#153354, #1a3c61)
+   - Acentos cian eléctrico (#38bdf8, #0ea5e9)
+   - Fondo oscuro azulado (#070e17, #0b1522, #0f1c2d)
+============================================================ */
+:root {
+  --primary-color: #38bdf8;          /* Electric Sky Blue */
+  --secondary-color: #0ea5e9;        /* Vibrant Blue */
+  --accent-blue: #60a5fa;           /* Soft Accent */
+  --bg-color: #070e17;              /* Deep Slate/Navy Background */
+  --panel-bg: rgba(15, 28, 45, 0.75);
+  --border-color: rgba(56, 189, 248, 0.25);
+  --text-primary: #f0f9ff;
+  --text-secondary: #94a3b8;
+  --status-online: #10b981;
+  --status-offline: #ef4444;
+  --status-pending: #f59e0b;
+  --glass-border: rgba(56, 189, 248, 0.12);
+  --glass-shadow: 0 12px 36px 0 rgba(0, 0, 0, 0.55);
+  --btn-hover: rgba(56, 189, 248, 0.15);
+}
+
+body {
+  background-color: var(--bg-color) !important;
+  background-image: 
+    radial-gradient(circle at 18% 40%, rgba(56, 189, 248, 0.1), transparent 30%),
+    radial-gradient(circle at 82% 25%, rgba(14, 165, 233, 0.08), transparent 30%),
+    radial-gradient(circle at 50% 85%, rgba(30, 64, 175, 0.07), transparent 35%) !important;
+}
+
+/* App Header */
+.app-header {
+  background: linear-gradient(180deg, rgba(15, 28, 45, 0.98), rgba(11, 21, 34, 0.95)) !important;
+  border-bottom: 1px solid rgba(56, 189, 248, 0.3) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 -1px 0 rgba(56, 189, 248, 0.2);
+}
+
+.app-header::before {
+  display: none !important;
+}
+
+.logo-area .logo-icon img {
+  border: 2px solid #38bdf8 !important;
+  box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+  background: #0f1c2d;
+  padding: 3px !important;
+}
+
+/* Category Cards */
+.category-card {
+  background: linear-gradient(145deg, rgba(15, 28, 45, 0.65), rgba(7, 14, 23, 0.8)) !important;
+  border: 1px solid rgba(56, 189, 248, 0.18) !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.category-card:hover {
+  border-color: rgba(56, 189, 248, 0.6) !important;
+  box-shadow: 0 10px 30px rgba(56, 189, 248, 0.15) !important;
+  transform: translateY(-4px);
+}
+
+.category-card .category-icon {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(14, 165, 233, 0.05)) !important;
+  border: 1px solid rgba(56, 189, 248, 0.3) !important;
+  color: #38bdf8 !important;
+}
+
+/* Buttons */
+.btn-primary {
+  background: linear-gradient(135deg, #0284c7, #0ea5e9, #38bdf8) !important;
+  box-shadow: 0 4px 14px rgba(14, 165, 233, 0.35) !important;
+  border: none !important;
+  color: #ffffff !important;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #0369a1, #0284c7, #0ea5e9) !important;
+  box-shadow: 0 6px 20px rgba(14, 165, 233, 0.5) !important;
+  transform: translateY(-1px);
+}
+
+/* Navigation Tabs */
+.app-tabs .tab-btn.active {
+  color: #38bdf8 !important;
+  border-bottom: 2px solid #38bdf8 !important;
+  background: linear-gradient(180deg, transparent, rgba(56, 189, 248, 0.08)) !important;
+}
+
+/* Tables and Panels */
+.table-container, .modal-card, .admin-card, .search-container {
+  background: rgba(11, 21, 34, 0.8) !important;
+  border: 1px solid rgba(56, 189, 248, 0.18) !important;
+  backdrop-filter: blur(12px) !important;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.3) !important;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #38bdf8 !important;
+}
+
+/* Badge and Highlight */
+.badge-custom, .badge-hot {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(14, 165, 233, 0.3)) !important;
+  border: 1px solid rgba(56, 189, 248, 0.4) !important;
+  color: #7dd3fc !important;
+}
+
+/* Price tags */
+.product-price, .detail-price {
+  color: #38bdf8 !important;
+  text-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+}
+
+/* Glowing decorative accents */
+.background-decor .orb-1 {
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.2) 0%, transparent 70%) !important;
+}
+.background-decor .orb-2 {
+  background: radial-gradient(circle, rgba(14, 165, 233, 0.15) 0%, transparent 70%) !important;
+}

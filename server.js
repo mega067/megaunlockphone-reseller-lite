@@ -44,6 +44,11 @@ app.use(express.static(path.join(__dirname, 'public'), {
 }));
 app.use('/logos', express.static(path.join(__dirname, 'data/logos')));
 
+// Route for DigitalPass Fork
+app.get(['/digital-pass', '/digital-pass/'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'digitalpass', 'index.html'));
+});
+
 // Helpers and Utilities for Legacy Routes
 const { readDB, writeDB } = require('./src/db');
 const { requireAuth, requireAdmin } = require('./src/auth');

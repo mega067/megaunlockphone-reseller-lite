@@ -318,6 +318,59 @@ exports.getProducts = async (req, res) => {
         }
       }
 
+      // DigitalPass filtering (Streaming, AI, Digital accounts, Gaming, etc.)
+      const isDigitalPass = req.query.digitalPass === 'true' || req.headers['x-digital-pass'] === 'true';
+      if (isDigitalPass) {
+        const streamingKeywords = [
+          'stream', 'netflix', 'disney', 'prime', 'amazon', 'youtube', 'paramount', 'max', 'hbo', 
+          'spotify', 'apple music', 'crunchyroll', 'deezer', 'tidal', 'vix', 'magis', 'iptv', 'tv', 
+          'chatgpt', 'openai', 'claude', 'midjourney', 'canva', 'capcut', 'gemini', 'copilot', 'ai',
+          'ia', 'plex', 'tele latino', 'flujo tv', 'oleada tv', 'stella tv', 'cine-moon', 'optimus tv', 'emby',
+          'playstation', 'xbox', 'game', 'gocash', 'free fire', 'pubg', 'roblox', 'steam', 'nintendo',
+          'cuenta', 'cuentas', 'digital', 'licencia', 'smart tools'
+        ];
+
+        const nonStreamingBlacklist = [
+          'bypass', 'icloud', 'frp', 'imei repair', 'cpid', 'unlock', 'motorola', 'samsung unlock',
+          'xiaomi qualcomm', 'xiaomi mediatek', 't-mobile usa', 'tracfone', 'at&t usa', 'cricket usa',
+          'esim data plan', 'tiempo aire', 'recarga saldo', 'recargas saldo', 'recargas axios',
+          'registro líneas', 'jailbreak', 'seguridad email', 'mac os email', 'repair fix auth'
+        ];
+
+        const filteredList = {};
+        for (const gKey in mergedList) {
+          const gObj = mergedList[gKey];
+          const gName = (gObj.GROUPNAME || gKey).toLowerCase();
+
+          // Check if custom group or original group matches
+          const matchedServices = {};
+          for (const sKey in gObj.SERVICES || {}) {
+            const sObj = gObj.SERVICES[sKey];
+            const sName = (sObj.SERVICENAME || sObj.service || '').toLowerCase();
+            const customG = (sObj._CUSTOM_GROUP || '').toLowerCase();
+
+            // If user explicitly assigned a custom group that is marked or user created for digitalpass
+            const hasCustomMatch = customG && streamingKeywords.some(kw => customG.includes(kw));
+            
+            // Check whitelist match
+            const matchesKeyword = streamingKeywords.some(kw => gName.includes(kw) || sName.includes(kw));
+            const isBlacklisted = nonStreamingBlacklist.some(bl => gName.includes(bl) && !hasCustomMatch);
+
+            if (hasCustomMatch || (matchesKeyword && !isBlacklisted)) {
+              matchedServices[sKey] = sObj;
+            }
+          }
+
+          if (Object.keys(matchedServices).length > 0) {
+            filteredList[gKey] = {
+              ...gObj,
+              SERVICES: matchedServices
+            };
+          }
+        }
+        mergedList = filteredList;
+      }
+
       writeDB('prices_' + serverId + '.json', priceCache);
       
       const finalData = { SUCCESS: [ { LIST: mergedList } ] };
