@@ -338,12 +338,14 @@ exports.getProducts = async (req, res) => {
         );
 
         const nonStreamingBlacklist = [
-          'bypass', 'icloud', 'frp', 'imei repair', 'cpid', 'unlock', 'motorola', 'samsung unlock',
-          'xiaomi qualcomm', 'xiaomi mediatek', 't-mobile usa', 'tracfone', 'at&t usa', 'cricket usa',
+          'bypass', 'icloud', 'frp', 'imei repair', 'cpid', 'unlock', 'liberacion', 'motorola', 'samsung unlock',
+          'xiaomi qualcomm', 'xiaomi mediatek', 't-mobile', 'tracfone', 'at&t', 'att usa', 'cricket usa',
           'esim data plan', 'tiempo aire', 'recarga saldo', 'recargas saldo', 'recargas axios',
           'registro líneas', 'jailbreak', 'seguridad email', 'mac os email', 'repair fix auth',
           'check apple', 'fmi off', 'clean carrier', 'sim mágico', 'sim magico', 'ramdisk',
-          'mdm', 'carrier', 'blacklist', 'gsma', 'server token', 'auth tool'
+          'mdm', 'carrier', 'blacklist', 'gsma', 'server token', 'auth tool', 'networks', 'network',
+          'apple id locked', 'serial apple', 'a12a13', 'ihello', 'viapass', 'rootmagisk', 'xinzhizao',
+          'reseller policy', 'vodafone', 'claro', 'o2 | tesco'
         ];
 
         const filteredList = {};
@@ -351,7 +353,9 @@ exports.getProducts = async (req, res) => {
           const gObj = mergedList[gKey];
           const gName = (gObj.GROUPNAME || gKey).toLowerCase();
 
-          // Check if custom group or original group matches
+          // If entire group is a phone carrier or unlock service, skip unless custom group assigned
+          const isGroupBlacklisted = nonStreamingBlacklist.some(bl => gName.includes(bl));
+
           const matchedServices = {};
           for (const sKey in gObj.SERVICES || {}) {
             const sObj = gObj.SERVICES[sKey];
@@ -362,10 +366,10 @@ exports.getProducts = async (req, res) => {
             const hasCustomMatch = customG && (streamingRegex.test(customG) || customG.includes('digital') || customG.includes('pass') || customG.includes('stream'));
             
             // Check whitelist match
-            const matchesKeyword = streamingRegex.test(gName) || streamingRegex.test(sName) || streamingKeywords.some(kw => gName.includes(kw) || sName.includes(kw));
-            const isBlacklisted = nonStreamingBlacklist.some(bl => gName.includes(bl) || sName.includes(bl));
+            const matchesKeyword = streamingRegex.test(sName) || (!isGroupBlacklisted && streamingKeywords.some(kw => gName.includes(kw) || sName.includes(kw)));
+            const isServiceBlacklisted = nonStreamingBlacklist.some(bl => sName.includes(bl));
 
-            if (hasCustomMatch || (matchesKeyword && !isBlacklisted)) {
+            if (hasCustomMatch || (matchesKeyword && !isServiceBlacklisted && !isGroupBlacklisted)) {
               matchedServices[sKey] = sObj;
             }
           }
