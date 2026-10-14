@@ -92,6 +92,9 @@ let isReady = false;
 async function connectToWhatsApp() {
     const { state, saveCreds } = await useMultiFileAuthState(path.join(__dirname, 'baileys_auth'));
     
+    // Cache de mensajes en memoria para responder al mecanismo de reintento de claves de WhatsApp (evita "Esperando mensaje")
+    const msgRetryCache = new Map();
+
     sock = makeWASocket({
         auth: state,
         printQRInTerminal: false,
@@ -103,6 +106,9 @@ async function connectToWhatsApp() {
         keepAliveIntervalMs: 15000,
         emitOwnEvents: false,
         getMessage: async (key) => {
+            if (key && key.id && msgRetryCache.has(key.id)) {
+                return msgRetryCache.get(key.id);
+            }
             return undefined;
         },
         shouldIgnoreJid: (jid) => false
@@ -144,6 +150,15 @@ async function connectToWhatsApp() {
                     originalSendMessage.call(sock, jid, content, options),
                     new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout de WhatsApp socket')), 20000))
                 ]);
+
+                if (result && result.key && result.key.id && result.message) {
+                    msgRetryCache.set(result.key.id, result.message);
+                    // Mantener tamaño de caché controlado
+                    if (msgRetryCache.size > 500) {
+                        const firstKey = msgRetryCache.keys().next().value;
+                        msgRetryCache.delete(firstKey);
+                    }
+                }
 
                 try {
                     await sock.sendPresenceUpdate('paused', jid);
