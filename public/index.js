@@ -333,7 +333,7 @@ function checkPersistedSession() {
     btnRechargeBalance.classList.remove('hidden'); // Shown for EVERYONE now
     btnWhatsappBot.classList.remove('hidden');
     
-    syncProducts(true);
+    syncProducts(false); // Utilizar caché instantánea en recargas para máxima velocidad
     updateAccountCredits();
     fetchOrderHistory();
     if (window.MegaApp && window.MegaApp.Ticket) window.MegaApp.Ticket.fetchTicketConfig();
@@ -2274,6 +2274,9 @@ btnCancelCreateUser.addEventListener('click', () => {
 
 // Real-time polling for account balance and background sync
 setInterval(() => {
+  // If the user is on another tab or browser minimized, do not waste network & CPU cycles
+  if (document.hidden) return;
+
   if (authToken) {
     updateAccountCredits();
     if (adminSection && !adminSection.classList.contains('hidden') && authRole === 'admin') {
@@ -2309,7 +2312,7 @@ setInterval(() => {
       }
     }).catch(e => {});
   }
-}, 20000); // Polling every 20s for real-time history & catalog sync
+}, 25000); // Polling every 25s for real-time history & catalog sync
 
 async function fetchPublicSettings() {
   try {

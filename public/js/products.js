@@ -13,9 +13,9 @@ async function syncProducts(shouldPersist = false) {
   updateStatus('loading', 'Sincronizando...');
   
   const loadingOverlay = document.getElementById('globalLoadingOverlay');
-  if (loadingOverlay) {
+  if (loadingOverlay && shouldPersist) {
       loadingOverlay.classList.remove('hidden');
-      lucide.createIcons(); // ensure the icon renders inside the modal
+      if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
   }
 
   try {

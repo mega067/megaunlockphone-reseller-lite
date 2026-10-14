@@ -34,15 +34,25 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-// Serve static files
+// Serve static files with optimized caching
 app.use(express.static(path.join(__dirname, 'public'), {
-  setHeaders: function (res, path) {
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
+  setHeaders: function (res, filePath) {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    } else if (filePath.match(/\.(png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/i)) {
+      // Images & Fonts: Cache for 7 days
+      res.setHeader('Cache-Control', 'public, max-age=604800, stale-while-revalidate=86400');
+    } else if (filePath.match(/\.(css|js)$/i)) {
+      // CSS & JS: Cache for 1 hour with revalidation to ensure quick updates without full reload lag
+      res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=600');
+    }
   }
 }));
-app.use('/logos', express.static(path.join(__dirname, 'data/logos')));
+app.use('/logos', express.static(path.join(__dirname, 'data/logos'), {
+  maxAge: '7d'
+}));
 
 // Route for DigitalPass Fork
 app.get(['/digital-pass', '/digital-pass/'], (req, res) => {

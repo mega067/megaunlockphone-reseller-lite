@@ -281,7 +281,7 @@ credentialsForm.addEventListener('submit', async (e) => {
     btnRechargeBalance.classList.remove('hidden'); // Shown for EVERYONE now
     btnWhatsappBot.classList.remove('hidden');
 
-    syncProducts(true);
+    syncProducts(false); // Carga ultrarrápida aprovechando el catálogo en caché
     updateAccountCredits();
     fetchOrderHistory();
     if (window.MegaApp && window.MegaApp.Ticket) window.MegaApp.Ticket.fetchTicketConfig();
