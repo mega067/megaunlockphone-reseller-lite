@@ -79,26 +79,30 @@ if (btnCloseForgotPasswordModal) {
 
 if (btnRequestRecoveryCode) {
   btnRequestRecoveryCode.addEventListener('click', async () => {
-    const username = fpUsername.value.trim();
-    if (!username) return showToast('Ingresa tu usuario', 'error');
+    const inputVal = fpUsername.value.trim();
+    if (!inputVal) return showToast('Ingresa tu usuario o número de WhatsApp', 'error');
+
+    const isDigits = /^\d{10,13}$/.test(inputVal.replace(/\D/g, ''));
+    const payload = isDigits ? { phone: inputVal } : { username: inputVal };
 
     try {
       const res = await fetch(`${API_BASE_URL}/auth/request-recovery`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username })
+        body: JSON.stringify(payload)
       });
       const data = await res.json();
       
       if (data.success) {
         showToast(data.message, 'success');
+        if (data.username) fpUsername.value = data.username;
         fpStep1.classList.add('hidden');
         fpStep2.classList.remove('hidden');
       } else {
         showToast(data.error || 'Error al solicitar código', 'error');
       }
     } catch (err) {
-      showToast('Error de red', 'error');
+      showToast('Error de red al conectar con el servidor', 'error');
     }
   });
 }

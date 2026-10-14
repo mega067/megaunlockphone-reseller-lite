@@ -17,6 +17,41 @@ async function vincular(context) {
     // Si escribe vincular directamente, O si NO está vinculado y manda un saludo/inicio en privado:
     if (vincularTriggers.includes(lowerWord) || (!isLinked && !isGroup && greetingTriggers.includes(lowerWord))) {
         sessionManager.loginSessions = sessionManager.loginSessions || {};
+        
+        // Verificar si este número ya está registrado en la base de datos (incluso múltiples cuentas)
+        const rawDigits = remoteJid.split('@')[0].replace(/\D/g, '');
+        const users = readDB(USERS_FILE) || [];
+        const matchingUsers = users.filter(u => {
+            if (!u.phone) return false;
+            const uClean = String(u.phone).replace(/\D/g, '');
+            return uClean === rawDigits || (uClean.length >= 10 && rawDigits.endsWith(uClean.slice(-10)));
+        });
+
+        if (matchingUsers.length > 1) {
+            sessionManager.loginSessions[remoteJid] = { 
+                step: 'select_account', 
+                availableUsers: matchingUsers 
+            };
+            let listTxt = '👋 *¡Hola! Cuentas detectadas con tu número*\n\nEncontramos más de una cuenta registrada con tu WhatsApp. ¿Cuál de ellas deseas vincular a este chat?\n\n';
+            matchingUsers.forEach((u, idx) => {
+                listTxt += `*${idx + 1}.* 👤 Usuario: *${u.username}* (Rol: ${u.role})\n`;
+            });
+            listTxt += `\n👉 Responde con el *número de la opción* (ej. 1 o 2), o escribe *cancelar*.`;
+            await sock.sendMessage(remoteJid, { text: listTxt });
+            return true;
+        }
+
+        if (matchingUsers.length === 1) {
+            sessionManager.loginSessions[remoteJid] = { 
+                step: 2, 
+                username: matchingUsers[0].username 
+            };
+            await sock.sendMessage(remoteJid, { 
+                text: `👋 ¡Hola *${matchingUsers[0].username}*!\n\n🔗 Detectamos tu cuenta registrada con este número.\n🔑 Por favor ingresa tu *contraseña* para vincularla a este WhatsApp (o escribe *cancelar*):` 
+            });
+            return true;
+        }
+
         sessionManager.loginSessions[remoteJid] = { step: 1 };
         await sock.sendMessage(remoteJid, { text: '👋 ¡Hola! Para comenzar y activar tu cuenta en WhatsApp:\n\n🔗 *Vincular Cuenta de MegaUnlockPhone*\nPor favor, responde con tu *nombre de usuario* (username) de la plataforma:' });
         return true;
@@ -28,7 +63,22 @@ async function vincular(context) {
         
         if (text.toLowerCase() === 'cancelar') {
             delete sessionManager.loginSessions[remoteJid];
-            await sock.sendMessage(remoteJid, { text: '🚫 Vinculación cancelada.' });
+            await sock.sendMessage(remoteJid, { text: '🚫 Operación cancelada.' });
+            return true;
+        }
+
+        // Selección de cuenta si hay varias asociadas al número
+        if (session.step === 'select_account') {
+            const choice = parseInt(text.trim(), 10);
+            if (isNaN(choice) || choice < 1 || choice > session.availableUsers.length) {
+                await sock.sendMessage(remoteJid, { text: `❌ Opción no válida. Por favor responde con un número del 1 al ${session.availableUsers.length} o escribe "cancelar".` });
+                return true;
+            }
+
+            const chosenUser = session.availableUsers[choice - 1];
+            session.username = chosenUser.username;
+            session.step = 2;
+            await sock.sendMessage(remoteJid, { text: `Has seleccionado: *${chosenUser.username}*.\n\n🔑 Por favor ingresa tu *contraseña*:` });
             return true;
         }
 
@@ -51,7 +101,7 @@ async function vincular(context) {
             }
 
             if (user.password !== password) {
-                await sock.sendMessage(remoteJid, { text: '❌ Contraseña incorrecta. Por favor vuelve a iniciar con /vincular' });
+                await sock.sendMessage(remoteJid, { text: '❌ Contraseña incorrecta.\n\n_¿La olvidaste? Puedes escribir */recuperar* para recibir un código de restablecimiento aquí mismo._' });
                 delete sessionManager.loginSessions[remoteJid];
                 return true;
             }
@@ -73,6 +123,137 @@ async function vincular(context) {
         }
     }
     
+    // FLUJO DE RECUPERACIÓN DE CONTRASEÑA DIRECTO POR BOT
+    const recoveryTriggers = ['/recuperar', '!recuperar', 'recuperar'];
+    if (recoveryTriggers.includes(lowerWord)) {
+        sessionManager.recoverySessions = sessionManager.recoverySessions || {};
+        const rawDigits = remoteJid.split('@')[0].replace(/\D/g, '');
+        const users = readDB(USERS_FILE) || [];
+        
+        // Buscar cuentas asociadas a este JID o a este teléfono
+        const matchingUsers = users.filter(u => {
+            if (wusers[remoteJid] === u.id) return true;
+            if (!u.phone) return false;
+            const uClean = String(u.phone).replace(/\D/g, '');
+            return uClean === rawDigits || (uClean.length >= 10 && rawDigits.endsWith(uClean.slice(-10)));
+        });
+
+        if (matchingUsers.length === 0) {
+            await sock.sendMessage(remoteJid, { 
+                text: '❌ No encontramos ninguna cuenta vinculada o registrada con este número de WhatsApp.\n\nSi necesitas ayuda, puedes contactar al administrador directamente.' 
+            });
+            return true;
+        }
+
+        let targetUser = matchingUsers[0];
+        if (matchingUsers.length > 1) {
+            sessionManager.recoverySessions[remoteJid] = {
+                step: 'select_account',
+                availableUsers: matchingUsers
+            };
+            let listTxt = '🔐 *Recuperación de Contraseña*\n\nTienes más de una cuenta con este teléfono. ¿Cuál deseas restablecer?\n\n';
+            matchingUsers.forEach((u, idx) => {
+                listTxt += `*${idx + 1}.* 👤 *${u.username}*\n`;
+            });
+            listTxt += `\n👉 Escribe el *número de la opción* (o escribe "cancelar"):`;
+            await sock.sendMessage(remoteJid, { text: listTxt });
+            return true;
+        }
+
+        // Generar código OTP de 6 dígitos
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        sessionManager.recoverySessions[remoteJid] = {
+            step: 'verify_otp',
+            userId: targetUser.id,
+            username: targetUser.username,
+            code: otpCode,
+            expires: Date.now() + 10 * 60 * 1000
+        };
+
+        await sock.sendMessage(remoteJid, { 
+            text: `🔐 *Código de Seguridad generado*\n\nHola *${targetUser.username}*, tu código OTP para cambiar tu contraseña es:\n\n*${otpCode}*\n\n👉 Por favor, reenvía o escribe el código de 6 dígitos para continuar (o "cancelar"):` 
+        });
+        return true;
+    }
+
+    sessionManager.recoverySessions = sessionManager.recoverySessions || {};
+    if (sessionManager.recoverySessions[remoteJid]) {
+        const session = sessionManager.recoverySessions[remoteJid];
+        
+        if (text.toLowerCase() === 'cancelar') {
+            delete sessionManager.recoverySessions[remoteJid];
+            await sock.sendMessage(remoteJid, { text: '🚫 Recuperación cancelada.' });
+            return true;
+        }
+
+        if (session.step === 'select_account') {
+            const choice = parseInt(text.trim(), 10);
+            if (isNaN(choice) || choice < 1 || choice > session.availableUsers.length) {
+                await sock.sendMessage(remoteJid, { text: `❌ Opción no válida. Responde con un número del 1 al ${session.availableUsers.length} o "cancelar".` });
+                return true;
+            }
+            const chosen = session.availableUsers[choice - 1];
+            const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+            sessionManager.recoverySessions[remoteJid] = {
+                step: 'verify_otp',
+                userId: chosen.id,
+                username: chosen.username,
+                code: otpCode,
+                expires: Date.now() + 10 * 60 * 1000
+            };
+            await sock.sendMessage(remoteJid, { 
+                text: `🔐 *Código de Seguridad para ${chosen.username}*\n\nTu código OTP es:\n*${otpCode}*\n\n👉 Por favor, escribe este código de 6 dígitos para validar tu identidad:` 
+            });
+            return true;
+        }
+
+        if (session.step === 'verify_otp') {
+            if (Date.now() > session.expires) {
+                delete sessionManager.recoverySessions[remoteJid];
+                await sock.sendMessage(remoteJid, { text: '⏰ El código ha expirado. Escribe */recuperar* para solicitar uno nuevo.' });
+                return true;
+            }
+
+            if (text.trim() !== session.code) {
+                await sock.sendMessage(remoteJid, { text: '❌ Código incorrecto. Por favor verifícalo y escribe el código de 6 dígitos de nuevo (o "cancelar"):' });
+                return true;
+            }
+
+            session.step = 'new_password';
+            await sock.sendMessage(remoteJid, { text: `✅ ¡Identidad confirmada!\n\n🔑 Ahora escribe tu *nueva contraseña* para la cuenta *${session.username}* (mínimo 6 caracteres):` });
+            return true;
+        }
+
+        if (session.step === 'new_password') {
+            const newPass = text.trim();
+            if (newPass.length < 6) {
+                await sock.sendMessage(remoteJid, { text: '❌ La contraseña debe tener al menos 6 caracteres. Por favor ingresa una más segura:' });
+                return true;
+            }
+
+            const users = readDB(USERS_FILE) || [];
+            const userIdx = users.findIndex(u => String(u.id) === String(session.userId));
+            if (userIdx === -1) {
+                delete sessionManager.recoverySessions[remoteJid];
+                await sock.sendMessage(remoteJid, { text: '❌ No se pudo actualizar el usuario.' });
+                return true;
+            }
+
+            users[userIdx].password = newPass;
+            writeDB(USERS_FILE, users);
+
+            // Asegurar que quede vinculada
+            wusers[remoteJid] = users[userIdx].id;
+            writeDB(WHATSAPP_USERS_FILE, wusers);
+
+            delete sessionManager.recoverySessions[remoteJid];
+            await sock.sendMessage(remoteJid, { 
+                text: `🎉 *¡Contraseña actualizada exitosamente!*\n\nTu nueva contraseña ha sido guardada y tu cuenta *${users[userIdx].username}* quedó vinculada a este WhatsApp.\n\nYa puedes usar el bot con /saldo, /bus, /pedir, etc.` 
+            });
+            return true;
+        }
+    }
+
     return false;
 }
 

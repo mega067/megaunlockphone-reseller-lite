@@ -61,16 +61,38 @@ router.post('/register', loginLimiter, (req, res) => {
     return res.status(400).json({ error: 'La contraseña es demasiado débil. Debe tener al menos 6 caracteres, una mayúscula y no ser secuencias simples como 123 o 111.' });
   }
 
-  const users = readDB('users.json') || [];
-  if (users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
-    return res.status(400).json({ error: 'El nombre de usuario ya está en uso.' });
-  }
-
   // Clean phone string
   let cleanPhone = String(phone).replace(/\D/g, '');
   if (cleanPhone.length === 10) {
-    // If it's exactly 10 digits, assume Mexican
     cleanPhone = '52' + cleanPhone;
+  }
+
+  const users = readDB('users.json') || [];
+  if (users.some(u => u.username && u.username.toLowerCase() === username.trim().toLowerCase())) {
+    return res.status(400).json({ error: 'El nombre de usuario ya está registrado. Por favor elige otro o inicia sesión.' });
+  }
+
+  const existingByPhone = users.find(u => {
+    if (!u.phone) return false;
+    const uClean = String(u.phone).replace(/\D/g, '');
+    return uClean === cleanPhone || (uClean.length >= 10 && cleanPhone.endsWith(uClean.slice(-10)));
+  });
+
+  if (existingByPhone) {
+    return res.status(400).json({ 
+      error: `Este número de teléfono ya está registrado en la cuenta "${existingByPhone.username}". Si olvidaste tu contraseña, usa la opción de "Recuperar contraseña".`,
+      existingUsername: existingByPhone.username
+    });
+  }
+
+  if (email && email.trim()) {
+    const existingByEmail = users.find(u => u.email && u.email.trim().toLowerCase() === email.trim().toLowerCase());
+    if (existingByEmail) {
+      return res.status(400).json({ 
+        error: `El correo electrónico ya está registrado en la cuenta "${existingByEmail.username}".`,
+        existingUsername: existingByEmail.username
+      });
+    }
   }
 
   // Generate 6-digit OTP
@@ -169,25 +191,47 @@ router.post('/verify-otp', (req, res) => {
 global.recoveryCodes = global.recoveryCodes || {};
 
 router.post('/request-recovery', async (req, res) => {
-  const { username } = req.body;
-  if (!username) return res.status(400).json({ error: 'Falta el nombre de usuario' });
+  const { username, phone } = req.body;
+  if (!username && !phone) return res.status(400).json({ error: 'Ingresa tu nombre de usuario o número de WhatsApp.' });
 
   const users = readDB('users.json') || [];
-  const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
+  let user = null;
+
+  if (username && username.trim()) {
+    user = users.find(u => u.username && u.username.toLowerCase() === username.trim().toLowerCase());
+  }
+
+  const cleanPhone = phone ? String(phone).replace(/\D/g, '') : '';
+  if (!user && cleanPhone) {
+    user = users.find(u => {
+      if (!u.phone) return false;
+      const uClean = String(u.phone).replace(/\D/g, '');
+      return uClean === cleanPhone || (uClean.length >= 10 && cleanPhone.endsWith(uClean.slice(-10)));
+    });
+  }
   
   if (!user) {
-    // We shouldn't reveal if user exists, but for internal panels it's often fine.
-    // However, to be safe, we just say we sent it if it exists.
-    return res.status(404).json({ error: 'Usuario no encontrado' });
+    return res.status(404).json({ error: 'No se encontró ninguna cuenta asociada a esos datos.' });
   }
 
-  // Check if they have WhatsApp linked
+  // Check if they have WhatsApp linked or at least a registered phone number
   const wUsers = readDB('whatsapp_users.json') || {};
-  const linkedPhoneId = Object.keys(wUsers).find(key => wUsers[key] === user.id);
-
-  if (!linkedPhoneId) {
-    return res.status(400).json({ error: 'El usuario no tiene un número de WhatsApp vinculado. Contacta a un administrador.' });
+  let targetPhone = user.phone ? String(user.phone).replace(/\D/g, '') : null;
+  
+  // Si tiene un JID vinculado directamente, usarlo
+  const linkedPhoneId = Object.keys(wUsers).find(key => String(wUsers[key]) === String(user.id));
+  if (linkedPhoneId) {
+    targetPhone = linkedPhoneId.split('@')[0].replace(/\D/g, '');
   }
+
+  if (!targetPhone) {
+    return res.status(400).json({ 
+      error: 'La cuenta no tiene un número de WhatsApp registrado para recibir el código. Por favor contacta a un administrador para restablecerla.',
+      canContactAdmin: true
+    });
+  }
+
+  if (targetPhone.length === 10) targetPhone = '52' + targetPhone;
 
   // Generate 6 digit code
   const code = Math.floor(100000 + Math.random() * 900000).toString();
@@ -195,14 +239,28 @@ router.post('/request-recovery', async (req, res) => {
   // Store code with 15 mins expiration
   global.recoveryCodes[user.username.toLowerCase()] = {
     code: code,
+    userId: user.id,
     expires: Date.now() + 15 * 60 * 1000
   };
 
-  // Send via WhatsApp
-  const msg = `🔒 *Recuperación de Cuenta*\n\nHola ${user.username}, has solicitado restablecer tu contraseña.\n\nTu código de verificación es: *${code}*\n\n_Este código expirará en 15 minutos._\nSi no fuiste tú, ignora este mensaje.`;
-  enqueueWhatsApp('private', msg, user.id);
+  // Push directly to WhatsApp Queue
+  const queuePath = path.join(__dirname, '../../queue.json');
+  let queue = [];
+  try { if (fs.existsSync(queuePath)) queue = JSON.parse(fs.readFileSync(queuePath)); } catch(e) {}
+  
+  queue.push({
+    type: 'direct',
+    phoneId: `${targetPhone}@s.whatsapp.net`,
+    message: `🔒 *Recuperación de Cuenta - MegaUnlockPhone*\n\nHola *${user.username}*, has solicitado restablecer tu contraseña.\n\n🔑 Tu código de seguridad es:\n*${code}*\n\n_Este código expira en 15 minutos._\nSi tú no realizaste esta solicitud, ignora este mensaje.`
+  });
+  fs.writeFileSync(queuePath, JSON.stringify(queue, null, 2));
 
-  res.json({ success: true, message: 'Código de recuperación enviado por WhatsApp.' });
+  res.json({ 
+    success: true, 
+    message: `Código de recuperación enviado por WhatsApp al número terminado en **${targetPhone.slice(-4)}**.`,
+    username: user.username,
+    phoneMasked: targetPhone.replace(/(\d{3})\d+(\d{2})/, '$1****$2')
+  });
 });
 
 router.post('/reset-password', async (req, res) => {

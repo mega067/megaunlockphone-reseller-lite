@@ -200,17 +200,21 @@
         <div style="padding: 20px;">
           <!-- Step 1: Request Code -->
           <div id="fpStep1">
-            <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 15px;">Ingresa tu nombre de usuario. Te enviaremos un código de recuperación a tu WhatsApp vinculado.</p>
+            <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 15px;">Ingresa tu nombre de usuario o tu número de WhatsApp registrado. Te enviaremos un código de seguridad para restablecer tu acceso.</p>
             <div class="input-group">
-              <label>Usuario</label>
+              <label>Usuario o Teléfono registrado</label>
               <div class="input-wrapper">
                 <i data-lucide="user"></i>
-                <input type="text" id="fpUsername" placeholder="Tu usuario">
+                <input type="text" id="fpUsername" placeholder="Tu usuario o WhatsApp (10 dígitos)">
               </div>
             </div>
             <button id="btnRequestRecoveryCode" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 10px;">
               <i data-lucide="send"></i> Enviar Código por WhatsApp
             </button>
+            <div style="margin-top: 15px; text-align: center; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px;">
+              <span style="font-size: 0.8rem; color: var(--text-muted);">¿No tienes acceso a WhatsApp?</span><br>
+              <a href="https://wa.me/522216936720?text=Hola,%20necesito%20ayuda%20para%20recuperar%20mi%20cuenta" target="_blank" style="font-size: 0.82rem; color: #38bdf8; text-decoration: underline; font-weight: 600;">Contactar Administrador para rescate manual</a>
+            </div>
           </div>
           
           <!-- Step 2: Reset Password -->
@@ -1651,7 +1655,7 @@
   <script src="js/recharge.js?v=17" defer></script>
   <script src="index.js?v=32" defer></script>
   <script src="js/products.js?v=4" defer></script>
-  <script src="js/orders.js?v=3" defer></script>
+  <script src="js/orders.js?v=4" defer></script>
   <script src="js/warnings.js?v=2" defer></script>
   <script src="js/admin.js?v=4" defer></script>
     <div class="modal-overlay hidden" id="globalLoadingOverlay" style="z-index: 100000; flex-direction: column; text-align: center;">
