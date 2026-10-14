@@ -304,26 +304,30 @@ setInterval(async () => {
                     let targetJid = item.phoneId;
                     
                     try {
+                        let sent = false;
                         const [result] = await sock.onWhatsApp(targetJid) || [];
                         console.log(`[QUEUE] onWhatsApp(${targetJid}) result:`, result);
                         
-                        let sent = false;
-                        if (result && result.exists) {
-                            await sock.sendMessage(targetJid, { text: item.message });
-                            console.log(`[QUEUE] Message sent to primary ${targetJid}`);
+                        if (result && result.exists && result.jid) {
+                            await sock.sendMessage(result.jid, { text: item.message });
+                            console.log(`[QUEUE] Message sent to validated JID ${result.jid}`);
                             sent = true;
                         }
                         
                         if (!sent && targetJid.startsWith('52') && targetJid.length === 27) { 
                             const fallbackJid = targetJid.replace(/^52/, '521');
                             const [fallbackResult] = await sock.onWhatsApp(fallbackJid) || [];
-                            if (fallbackResult && fallbackResult.exists) {
-                                await sock.sendMessage(fallbackJid, { text: item.message });
-                                console.log(`[QUEUE] Message sent to fallback ${fallbackJid}`);
+                            if (fallbackResult && fallbackResult.exists && fallbackResult.jid) {
+                                await sock.sendMessage(fallbackResult.jid, { text: item.message });
+                                console.log(`[QUEUE] Message sent to fallback JID ${fallbackResult.jid}`);
+                                sent = true;
                             }
-                        } else if (!sent) {
-                            // If neither exists or we couldn't verify, just try sending to the original
+                        }
+                        
+                        if (!sent) {
+                            // If onWhatsApp check returned undefined or false, try direct target
                             await sock.sendMessage(targetJid, { text: item.message });
+                            console.log(`[QUEUE] Direct message sent to ${targetJid}`);
                         }
                         await randomThrottleDelay();
                     } catch (err) {
