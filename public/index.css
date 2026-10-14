@@ -409,7 +409,7 @@ h1, h2, h3, h4 { color: var(--text-primary); font-family: var(--font-display); f
   max-height: 300px !important;
   overflow-y: auto !important;
   overflow-x: hidden;
-  z-index: 9999 !important;
+  z-index: 100005 !important;
 }
 .ts-dropdown .option {
   padding: 0.75rem 1rem;
