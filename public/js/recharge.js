@@ -91,25 +91,40 @@ window.initRechargeModule = function({
     rechargeServerInput.value = '3';
     if (typeof fetchRecharges === 'function') fetchRecharges();
     rechargeServerCards.forEach(c => c.classList.remove('active'));
-    document.querySelector('.server-card[data-id="3"]').classList.add('active');
+    const defaultCard = document.querySelector('#rechargeServerCards .server-card[data-id="3"]');
+    if (defaultCard) defaultCard.classList.add('active');
     fetchBanksForServer('3');
+
+    // Reset Stepper indicators
+    const stepPill1 = document.getElementById('stepPill1');
+    const stepPill2 = document.getElementById('stepPill2');
+    if (stepPill1) stepPill1.classList.add('active');
+    if (stepPill2) stepPill2.classList.remove('active');
   });
 
-  
+  // Quick Amount Chips
+  document.querySelectorAll('.quick-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const amt = chip.getAttribute('data-amount');
+      rechargeAmount.value = amt;
+      rechargeAmount.focus();
+    });
+  });
+
   closeRechargeModal.addEventListener('click', () => {
     rechargeSection.classList.add('hidden');
     const productsSection = document.getElementById('productsSection');
     if (productsSection) productsSection.classList.remove('hidden');
   });
 
-
-  
   btnRechargeBack.addEventListener('click', () => {
-    rechargeSection.classList.add('hidden');
-    const productsSection = document.getElementById('productsSection');
-    if (productsSection) productsSection.classList.remove('hidden');
+    rechargeStep1.classList.remove('hidden');
+    rechargeStep2.classList.add('hidden');
+    const stepPill1 = document.getElementById('stepPill1');
+    const stepPill2 = document.getElementById('stepPill2');
+    if (stepPill1) stepPill1.classList.add('active');
+    if (stepPill2) stepPill2.classList.remove('active');
   });
-
 
   btnGenerarCuenta.addEventListener('click', async () => {
     const amount = parseFloat(rechargeAmount.value);
@@ -121,7 +136,7 @@ window.initRechargeModule = function({
     const serverId = rechargeServerInput.value;
     
     const btnOriginalText = btnGenerarCuenta.innerHTML;
-    btnGenerarCuenta.innerHTML = '<div class="loading-spinner"></div>';
+    btnGenerarCuenta.innerHTML = '<div class="loading-spinner"></div> Generando cuenta...';
     btnGenerarCuenta.disabled = true;
 
     try {
@@ -140,6 +155,16 @@ window.initRechargeModule = function({
         currentRechargeData.account = data.accounts[0];
         
         lblRechargeAmount.textContent = `$${amount.toFixed(2)}`;
+
+        // Switch to Step 2
+        rechargeStep1.classList.add('hidden');
+        rechargeStep2.classList.remove('hidden');
+
+        // Update Stepper Pill
+        const stepPill1 = document.getElementById('stepPill1');
+        const stepPill2 = document.getElementById('stepPill2');
+        if (stepPill1) stepPill1.classList.remove('active');
+        if (stepPill2) stepPill2.classList.add('active');
         
         const container = document.getElementById('rechargeAccountsContainer');
         container.innerHTML = '';
