@@ -6,12 +6,19 @@ const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const WHATSAPP_USERS_FILE = path.join(DATA_DIR, 'whatsapp_users.json');
 
 async function vincular(context) {
-    const { sock, remoteJid, firstWord, text, sessionManager, wusers } = context;
+    const { sock, remoteJid, firstWord, text, sessionManager, wusers, isGroup } = context;
 
-    if (['/vincular', '!vincular', 'vincular'].includes(firstWord.toLowerCase())) {
+    const lowerWord = firstWord.toLowerCase();
+    const isLinked = !!(wusers[remoteJid] || (remoteJid && Object.keys(wusers).some(k => k.split('@')[0].replace(/\D/g, '') === remoteJid.split('@')[0].replace(/\D/g, ''))));
+
+    const vincularTriggers = ['/vincular', '!vincular', 'vincular'];
+    const greetingTriggers = ['hola', 'buenas', 'buenos', 'saludos', 'inicio', 'start', '/start', 'vincularme', 'conectar'];
+
+    // Si escribe vincular directamente, O si NO está vinculado y manda un saludo/inicio en privado:
+    if (vincularTriggers.includes(lowerWord) || (!isLinked && !isGroup && greetingTriggers.includes(lowerWord))) {
         sessionManager.loginSessions = sessionManager.loginSessions || {};
         sessionManager.loginSessions[remoteJid] = { step: 1 };
-        await sock.sendMessage(remoteJid, { text: '🔗 *Vincular Cuenta*\n\nPor favor, ingresa tu *nombre de usuario* (username):' });
+        await sock.sendMessage(remoteJid, { text: '👋 ¡Hola! Para comenzar y activar tu cuenta en WhatsApp:\n\n🔗 *Vincular Cuenta de MegaUnlockPhone*\nPor favor, responde con tu *nombre de usuario* (username) de la plataforma:' });
         return true;
     }
 

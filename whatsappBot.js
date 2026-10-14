@@ -272,8 +272,14 @@ async function connectToWhatsApp() {
         const handled = await commands.handleCommand(context);
 
         if (!handled && !isGroup && firstWord.length < 30) {
-            if (!wusers[remoteJid]) {
-                await sock.sendMessage(remoteJid, { text: '🤖 ¡Hola! Soy el bot automático de Mega Unlock Phone.\nPara interactuar por este medio, necesitas vincular tu cuenta.\n\nPor favor, responde escribiendo la palabra */vincular* para empezar paso a paso.' });
+            const rawDigits = remoteJid.split('@')[0].replace(/\D/g, '');
+            const isUserLinked = !!(wusers[remoteJid] || Object.keys(wusers).some(k => {
+                const kDigits = k.split('@')[0].replace(/\D/g, '');
+                return kDigits === rawDigits || kDigits.endsWith(rawDigits) || rawDigits.endsWith(kDigits);
+            }));
+
+            if (!isUserLinked) {
+                await sock.sendMessage(remoteJid, { text: '🤖 ¡Hola! Soy el bot oficial de Mega Unlock Phone.\nPara interactuar por este medio, necesitas vincular tu cuenta.\n\nPor favor, responde escribiendo la palabra */vincular* (o *hola*) para empezar paso a paso.' });
             } else {
                 await sock.sendMessage(remoteJid, { text: '🤖 ¡Hola! Soy un bot automatizado y no entendí tu mensaje.\n\nPor favor, escribe */comandos* para ver la lista de acciones disponibles o contacta a un humano para soporte.' });
             }
