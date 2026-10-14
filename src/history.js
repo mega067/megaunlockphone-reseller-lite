@@ -32,10 +32,6 @@ module.exports = function(app, deps) {
 
   app.post('/api/history/add', requireAuth, (req, res) => {
     const user = req.user;
-    if (user.role !== 'admin') {
-      return res.status(403).json({ error: 'Sólo el administrador puede agregar pedidos manualmente.' });
-    }
-
     const { orderId, serviceId, serviceName, imei, status, statusText, serverId: reqServerId, serviceType, cost } = req.body;
     if (!orderId) {
       return res.status(400).json({ error: 'Order ID is required' });
@@ -44,20 +40,25 @@ module.exports = function(app, deps) {
     const serverId = reqServerId || getServerId(req);
     let history = readDB('history.json') || [];
     
+    // Si es un usuario normal, verificar que no intente sobreescribir una orden que no le pertenece
     const existingIdx = history.findIndex(o => String(o.orderId) === String(orderId) && (o.serverId || '1') === serverId);
     
     if (existingIdx !== -1) {
+      if (user.role !== 'admin' && String(history[existingIdx].userId) !== String(user.id)) {
+        return res.status(403).json({ error: 'Esta orden ya se encuentra registrada en el historial de otro usuario.' });
+      }
+
       history[existingIdx] = {
         ...history[existingIdx],
         serviceId: serviceId || history[existingIdx].serviceId,
         serviceName: serviceName || history[existingIdx].serviceName,
         serviceType: serviceType || history[existingIdx].serviceType,
         imei: (imei && imei !== 'N/A') ? imei : history[existingIdx].imei,
-        costCharged: (cost !== undefined) ? Number(cost) : history[existingIdx].costCharged,
-        realCost: (cost !== undefined) ? Number(cost) : history[existingIdx].realCost,
+        costCharged: (user.role === 'admin' && cost !== undefined) ? Number(cost) : history[existingIdx].costCharged,
+        realCost: (user.role === 'admin' && cost !== undefined) ? Number(cost) : history[existingIdx].realCost,
         status: status || history[existingIdx].status,
         msg: statusText || history[existingIdx].msg,
-        date: new Date().toISOString()
+        date: history[existingIdx].date || new Date().toISOString()
       };
     } else {
       history.unshift({
@@ -75,7 +76,7 @@ module.exports = function(app, deps) {
         profit: 0,
         orderId: String(orderId),
         status: status || 'success',
-        msg: statusText || 'Importado manualmente'
+        msg: statusText || 'Importado desde servidor'
       });
     }
 

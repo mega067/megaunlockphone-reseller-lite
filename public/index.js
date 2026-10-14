@@ -326,6 +326,7 @@ function checkPersistedSession() {
     } else {
       btnUserProfile.classList.remove('hidden');
       if (btnCustomTicket) btnCustomTicket.classList.add('hidden');
+      if (btnImportOrder) btnImportOrder.classList.remove('hidden');
       if (btnRechargesHistory) btnRechargesHistory.classList.remove('hidden');
     }
     

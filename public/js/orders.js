@@ -269,9 +269,12 @@ credentialsForm.addEventListener('submit', async (e) => {
       btnAdminManage.classList.remove('hidden');
       if (typeof btnAdminCoupons !== 'undefined' && btnAdminCoupons) btnAdminCoupons.classList.remove('hidden');
       btnBulkSavePrices.classList.remove('hidden');
+      if (btnCustomTicket) btnCustomTicket.classList.remove('hidden');
       if (btnImportOrder) btnImportOrder.classList.remove('hidden');
     } else {
       btnUserProfile.classList.remove('hidden');
+      if (btnCustomTicket) btnCustomTicket.classList.add('hidden');
+      if (btnImportOrder) btnImportOrder.classList.remove('hidden');
       if (btnRechargesHistory) btnRechargesHistory.classList.remove('hidden');
     }
 
@@ -521,37 +524,87 @@ btnSyncHistory.addEventListener('click', async () => {
   await autoSyncHistory(false);
 });
 
+// Modal y Lógica de Importación de Pedidos para todos los usuarios autenticados
+const importOrderModal = document.getElementById('importOrderModal');
+const btnCloseImportOrderModal = document.getElementById('btnCloseImportOrderModal');
+const btnCancelImportOrder = document.getElementById('btnCancelImportOrder');
+const formImportOrder = document.getElementById('formImportOrder');
+const importOrderIdInput = document.getElementById('importOrderId');
+const importServiceSelect = document.getElementById('importServiceSelect');
+const importTypeSelect = document.getElementById('importTypeSelect');
+const importImeiInput = document.getElementById('importImei');
+
+function populateImportServices() {
+  if (!importServiceSelect) return;
+  importServiceSelect.innerHTML = '<option value="">Selecciona el servicio...</option>';
+  if (!Array.isArray(productsList)) return;
+  
+  // Ordenar alfabéticamente
+  const sorted = [...productsList].sort((a,b) => (a.service || '').localeCompare(b.service || ''));
+  sorted.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.serviceid;
+    opt.dataset.type = p.serviceType === 'SERVER' ? 'SERVER' : 'IMEI';
+    opt.dataset.name = p.service;
+    opt.dataset.cost = (p.rawItem && p.rawItem._REAL_COST) ? p.rawItem._REAL_COST : (p.credit || 0);
+    opt.textContent = `[${p.serviceType || 'SRV'}] ${p.service}`;
+    importServiceSelect.appendChild(opt);
+  });
+}
+
+if (importServiceSelect && importTypeSelect) {
+  importServiceSelect.addEventListener('change', () => {
+    const selectedOpt = importServiceSelect.selectedOptions[0];
+    if (selectedOpt && selectedOpt.dataset.type) {
+      importTypeSelect.value = selectedOpt.dataset.type;
+    }
+  });
+}
+
 if (btnImportOrder) {
-  btnImportOrder.addEventListener('click', async () => {
-    if (authRole !== 'admin') return;
-    
-    const orderId = prompt('Ingresa el ID del pedido del servidor que deseas importar al panel (Ej: 228):');
-    if (!orderId) return;
+  btnImportOrder.addEventListener('click', () => {
+    if (!authToken) {
+      if (typeof showToast === 'function') showToast('Debes iniciar sesión para importar pedidos', 'error');
+      return;
+    }
+    populateImportServices();
+    if (formImportOrder) formImportOrder.reset();
+    if (importOrderModal) {
+      importOrderModal.classList.remove('hidden');
+      if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+      setTimeout(() => importOrderIdInput?.focus(), 100);
+    }
+  });
+}
 
-    const manualServiceId = prompt('Ingresa el ID del Producto/Servicio asociado a este pedido (Ej: 34):');
-    if (!manualServiceId) return;
+if (btnCloseImportOrderModal) {
+  btnCloseImportOrderModal.addEventListener('click', () => importOrderModal?.classList.add('hidden'));
+}
+if (btnCancelImportOrder) {
+  btnCancelImportOrder.addEventListener('click', () => importOrderModal?.classList.add('hidden'));
+}
 
-    // Auto-detect service name and type from local catalog
-    const product = productsList.find(p => String(p.serviceid) === String(manualServiceId));
-    let type = 'SERVER';
-    let defaultName = 'Importado Manualmente';
-    let defaultCost = 0;
+if (formImportOrder) {
+  formImportOrder.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const orderId = importOrderIdInput.value.trim();
+    const serviceId = importServiceSelect.value;
+    const type = importTypeSelect.value || 'SERVER';
+    let imei = importImeiInput.value.trim();
 
-    if (product) {
-       type = product.serviceType === 'SERVER' ? 'SERVER' : 'IMEI';
-       defaultName = product.service;
-       defaultCost = (product.rawItem && product.rawItem._REAL_COST) ? product.rawItem._REAL_COST : (product.credit || 0);
-    } else {
-       let promptType = prompt('Servicio no encontrado en el catálogo local. ¿El pedido es de tipo IMEI o SERVER? (Escribe IMEI o SERVER):', 'SERVER');
-       if (!promptType) return;
-       type = promptType.toUpperCase().trim();
-       if (type !== 'IMEI' && type !== 'SERVER') type = 'IMEI';
+    if (!orderId || !serviceId) {
+      if (typeof showToast === 'function') showToast('Ingresa el ID del pedido y selecciona un servicio', 'error');
+      return;
     }
 
-    const btnSpan = btnImportOrder.querySelector('span');
-    const originalText = btnSpan.textContent;
-    btnSpan.textContent = 'Buscando...';
-    btnImportOrder.setAttribute('disabled', 'true');
+    const selectedOpt = importServiceSelect.selectedOptions[0];
+    const serviceName = selectedOpt ? selectedOpt.dataset.name : 'Importado';
+    const defaultCost = selectedOpt ? parseFloat(selectedOpt.dataset.cost || 0) : 0;
+
+    const btnSubmit = document.getElementById('btnSubmitImportOrder');
+    const originalText = btnSubmit.innerHTML;
+    btnSubmit.setAttribute('disabled', 'true');
+    btnSubmit.innerHTML = '<span>Consultando...</span>';
 
     try {
       const res = await fetch('/api/orders/bulk-status', {
@@ -566,8 +619,8 @@ if (btnImportOrder) {
         const apiOrder = data.SUCCESS[0].raw || data.SUCCESS[0].DATA || data.SUCCESS[0].data || data.SUCCESS[0];
         
         if (!apiOrder) {
-           alert('El servidor no devolvió datos válidos para esta orden.');
-           return;
+          if (typeof showToast === 'function') showToast('El servidor no devolvió datos válidos para este pedido.', 'error');
+          return;
         }
 
         const statusVal = String(apiOrder.STATUS || apiOrder.status || '');
@@ -575,26 +628,17 @@ if (btnImportOrder) {
         if (statusVal === '4' || statusVal.toLowerCase() === 'completed' || statusVal.toLowerCase() === 'success') statusStr = 'success';
         else if (statusVal === '3' || statusVal.toLowerCase() === 'failed' || statusVal.toLowerCase() === 'rejected' || statusVal.toLowerCase() === 'canceled') statusStr = 'failed';
 
-        let serviceId = apiOrder.SERVICEID || apiOrder.serviceid || apiOrder.serviceId || manualServiceId;
-        let serviceName = apiOrder.SERVICENAME || apiOrder.servicename || apiOrder.serviceName || '';
-        let imei = apiOrder.IMEI || apiOrder.imei || apiOrder.REFERENCEID || apiOrder.QTY || '';
-
-        if (!serviceName) {
-          serviceName = defaultName;
-        }
-
-        if (!imei) {
-          const manualImei = prompt(`La API no devolvió los Detalles/IMEI para "${serviceName}". Por favor, ingresa el detalle de la orden (Ej: correo del cliente o IMEI):`, 'N/A');
-          imei = manualImei || 'N/A';
-        }
+        const apiServiceId = apiOrder.SERVICEID || apiOrder.serviceid || apiOrder.serviceId || serviceId;
+        const apiServiceName = apiOrder.SERVICENAME || apiOrder.servicename || apiOrder.serviceName || serviceName;
+        const apiImei = apiOrder.IMEI || apiOrder.imei || apiOrder.REFERENCEID || apiOrder.QTY || imei || 'N/A';
 
         const importPayload = {
           orderId: orderId,
-          serviceId: serviceId,
-          serviceName: serviceName,
-          imei: imei,
+          serviceId: apiServiceId,
+          serviceName: apiServiceName,
+          imei: apiImei,
           status: statusStr,
-          statusText: apiOrder.REPLY || apiOrder.REJECT_REASON || apiOrder.CODE || apiOrder.MESSAGE || apiOrder.statusText || 'Importado',
+          statusText: apiOrder.REPLY || apiOrder.REJECT_REASON || apiOrder.CODE || apiOrder.MESSAGE || apiOrder.statusText || 'Importado exitosamente',
           serverId: currentServerId,
           serviceType: type,
           cost: defaultCost
@@ -608,19 +652,33 @@ if (btnImportOrder) {
         const addData = await addRes.json();
         
         if (addRes.ok) {
-          alert('¡Pedido importado con éxito!');
+          if (typeof showToast === 'function') {
+            showToast('¡Pedido #' + orderId + ' importado con éxito a tu historial!', 'success');
+          } else {
+            alert('¡Pedido importado con éxito!');
+          }
+          if (importOrderModal) importOrderModal.classList.add('hidden');
           fetchOrderHistory(); 
         } else {
-          alert('Error al importar: ' + (addData.error || 'Desconocido'));
+          if (typeof showToast === 'function') {
+            showToast(addData.error || 'Error al importar', 'error');
+          } else {
+            alert('Error al importar: ' + (addData.error || 'Desconocido'));
+          }
         }
       } else {
-        alert('No se encontró el pedido o hubo un error al consultarlo.');
+        if (typeof showToast === 'function') {
+          showToast('No se encontró el pedido en el servidor o ID no válido.', 'error');
+        } else {
+          alert('No se encontró el pedido o hubo un error al consultarlo.');
+        }
       }
     } catch (err) {
-      alert('Error de conexión al intentar importar.');
+      if (typeof showToast === 'function') showToast('Error de conexión al importar', 'error');
     } finally {
-      btnSpan.textContent = originalText;
-      btnImportOrder.removeAttribute('disabled');
+      btnSubmit.removeAttribute('disabled');
+      btnSubmit.innerHTML = originalText;
+      if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
     }
   });
 }

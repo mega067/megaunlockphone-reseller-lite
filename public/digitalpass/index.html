@@ -382,7 +382,7 @@
             <span class="badge" id="historyCount">0</span>
           </div>
           <div class="header-actions">
-            <button type="button" class="btn btn-secondary btn-small" id="btnCustomTicket" style="margin-right: 0.5rem; background: rgba(14, 165, 233, 0.15); border-color: rgba(14, 165, 233, 0.3); color: #0ea5e9;">
+            <button type="button" class="btn btn-secondary btn-small hidden" id="btnCustomTicket" style="margin-right: 0.5rem; background: rgba(14, 165, 233, 0.15); border-color: rgba(14, 165, 233, 0.3); color: #0ea5e9;">
               <i data-lucide="file-signature"></i>
               <span>Ticket Manual</span>
             </button>
@@ -1406,6 +1406,74 @@
     </div>
   </div>
 
+  <!-- Modal de Importar Pedido con UI/UX Pro Max -->
+  <div class="modal-overlay hidden" id="importOrderModal" style="z-index: 10000;">
+    <div class="modal-card" style="max-width: 480px; width: 95%; background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.6); overflow: hidden;">
+      <div class="modal-header" style="padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, rgba(34,211,238,0.1), transparent);">
+        <h2 style="font-size: 1.25rem; font-weight: 700; color: #22d3ee; display: flex; align-items: center; gap: 0.6rem; margin: 0;">
+          <i data-lucide="download-cloud" style="width: 22px; height: 22px;"></i>
+          Importar Pedido a tu Historial
+        </h2>
+        <button type="button" class="btn-icon" id="btnCloseImportOrderModal" style="background: none; border: none; color: var(--text-muted); cursor: pointer;">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <form id="formImportOrder" style="padding: 1.5rem;">
+        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.25rem; line-height: 1.4;">
+          Sincroniza y trae al panel cualquier pedido generado en el servidor remoto con su estatus, código y respuesta oficial.
+        </p>
+
+        <div class="input-group" style="margin-bottom: 1rem;">
+          <label for="importOrderId" style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.4rem; display: block;">
+            ID del Pedido Remoto <span style="color: #ef4444;">*</span>
+          </label>
+          <div class="input-wrapper">
+            <i data-lucide="hash"></i>
+            <input type="text" id="importOrderId" placeholder="Ej. 128945" required style="width: 100%; border-radius: 8px;">
+          </div>
+        </div>
+
+        <div class="input-group" style="margin-bottom: 1rem;">
+          <label for="importServiceSelect" style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.4rem; display: block;">
+            Servicio / Producto Asociado <span style="color: #ef4444;">*</span>
+          </label>
+          <select id="importServiceSelect" required style="width: 100%; padding: 0.65rem 0.75rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary); font-size: 0.88rem;">
+            <option value="">Selecciona el servicio...</option>
+          </select>
+        </div>
+
+        <div class="input-group" style="margin-bottom: 1rem;">
+          <label for="importTypeSelect" style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.4rem; display: block;">
+            Tipo de Servicio
+          </label>
+          <select id="importTypeSelect" style="width: 100%; padding: 0.65rem 0.75rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary); font-size: 0.88rem;">
+            <option value="SERVER">SERVER / Digital / Cuenta</option>
+            <option value="IMEI">IMEI / Desbloqueo</option>
+          </select>
+        </div>
+
+        <div class="input-group" style="margin-bottom: 1.5rem;">
+          <label for="importImei" style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.4rem; display: block;">
+            Detalle / IMEI / Cuenta (Opcional)
+          </label>
+          <div class="input-wrapper">
+            <i data-lucide="smartphone"></i>
+            <input type="text" id="importImei" placeholder="Ej. IMEI, correo o cuenta del cliente">
+          </div>
+          <small style="color: var(--text-muted); font-size: 0.75rem; margin-top: 4px; display: block;">Si la API ya tiene el IMEI guardado, se completará automáticamente.</small>
+        </div>
+
+        <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1rem;">
+          <button type="button" class="btn btn-secondary" id="btnCancelImportOrder" style="padding: 0.6rem 1.25rem;">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btnSubmitImportOrder" style="background: linear-gradient(135deg, #06b6d4, #0284c7); border: none; padding: 0.6rem 1.25rem; font-weight: 600;">
+            <i data-lucide="check-circle"></i>
+            <span>Consultar e Importar</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Coupon Preview Modal -->
   <div class="modal-overlay hidden" id="couponPreviewModal" style="z-index: 10000;">
     <div class="modal-card" style="max-width: 500px; width: 95%;">
@@ -1636,9 +1704,9 @@
   <script src="js/recharges.js" defer></script>
   <script src="js/recharge.js?v=15" defer></script>
   <script src="/digitalpass/digitalpass.js?v=1" defer></script>
-  <script src="/index.js?v=32" defer></script>
+  <script src="/index.js?v=33" defer></script>
   <script src="js/products.js?v=4" defer></script>
-  <script src="js/orders.js?v=3" defer></script>
+  <script src="js/orders.js?v=5" defer></script>
   <script src="js/warnings.js?v=2" defer></script>
   <script src="js/admin.js?v=2" defer></script>
     <div class="modal-overlay hidden" id="globalLoadingOverlay" style="z-index: 100000; flex-direction: column; text-align: center;">
