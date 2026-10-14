@@ -6,20 +6,48 @@ const axios = require('axios');
 const http = require('http');
 const https = require('https');
 
-// Single-Instance File Lock (Heartbeat based)
+// Single-Instance File Lock (Process-aware + Heartbeat)
 const lockFile = path.join(__dirname, 'bot.lock');
 try {
     if (fs.existsSync(lockFile)) {
+        let isAlive = false;
+        try {
+            const oldPid = parseInt(fs.readFileSync(lockFile, 'utf8').trim(), 10);
+            if (!isNaN(oldPid) && oldPid > 0) {
+                // Check if process is actually running
+                process.kill(oldPid, 0);
+                isAlive = true;
+            }
+        } catch (e) {
+            // process.kill throws if PID doesn't exist (ESRCH), meaning old process is dead
+            isAlive = false;
+        }
+
         const stats = fs.statSync(lockFile);
-        if (Date.now() - stats.mtimeMs < 60000) {
-            console.error('⚠️ Otra instancia del bot ya está corriendo (lock reciente). Saliendo para evitar corrupción de BD.');
+        if (isAlive && (Date.now() - stats.mtimeMs < 60000)) {
+            console.error('⚠️ Otra instancia del bot ya está corriendo (PID activo). Saliendo para evitar corrupción de BD.');
             process.exit(0);
+        } else {
+            // Stale lock file from killed/crashed process
+            try { fs.unlinkSync(lockFile); } catch (e) {}
         }
     }
     fs.writeFileSync(lockFile, process.pid.toString());
     setInterval(() => {
         try { fs.utimesSync(lockFile, new Date(), new Date()); } catch (e) {}
     }, 15000);
+
+    const cleanupLock = () => {
+        try {
+            if (fs.existsSync(lockFile)) {
+                const curPid = parseInt(fs.readFileSync(lockFile, 'utf8').trim(), 10);
+                if (curPid === process.pid) fs.unlinkSync(lockFile);
+            }
+        } catch (e) {}
+    };
+    process.on('exit', cleanupLock);
+    process.on('SIGINT', () => { cleanupLock(); process.exit(0); });
+    process.on('SIGTERM', () => { cleanupLock(); process.exit(0); });
 } catch (e) {
     console.error('Lock system error', e);
 }
