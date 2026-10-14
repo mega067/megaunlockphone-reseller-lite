@@ -12,6 +12,22 @@
 - **Portal DigitalPass:** [https://megaunlockphone-panel.alwaysdata.net/digital-pass](https://megaunlockphone-panel.alwaysdata.net/digital-pass)
 - **Servidor Web:** Node.js Express bajo Phusion Passenger.
 - **Demonio de Mensajería:** Node.js Baileys Socket (`whatsappBot.js`).
+- **Skills de UI/UX Pro Max Integradas:** [`.agents/skills/`](file:///home/angel/Projects/REPOS/dhru-client-web/.agents/skills/) (ui-ux-pro-max, ui-styling, design-system, brand, design, banner-design, slides).
+
+---
+
+## 🎨 1.1. Skills de Diseño & UI/UX Pro Max Integradas
+El repositorio cuenta con la suite oficial de habilidades de diseño de [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill):
+- **Ubicación en el Workspace:** `.agents/skills/` (versionado en Git para todos los desarrolladores y agentes).
+- **Ubicación Global:** `~/.gemini/config/skills/` (disponible permanentemente para el entorno de Antigravity).
+- **Skills disponibles:**
+  1. `ui-ux-pro-max`: Inteligencia de diseño con 79 estilos (50 activos), 192 paletas de producto, 119 reglas de UX y 74 combinaciones de fuentes.
+  2. `ui-styling`: Directrices de maquetación, Tailwind, componentes y accesibilidad.
+  3. `design-system`: Arquitectura de tokens, variables y estados de componentes.
+  4. `brand`: Identidad visual, tipografía y coherencia de marca.
+  5. `design`: Diseño de banners, logos y composición de interfaces.
+  6. `slides`: Presentaciones y estructuras visuales.
+  7. `banner-design`: Especificaciones de formatos publicitarios y banners.
 
 ---
 
