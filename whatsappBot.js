@@ -1,4 +1,4 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers } = require('@whiskeysockets/baileys');
 const qrcode = require('qrcode-terminal');
 const fs = require('fs');
 const path = require('path');
@@ -95,11 +95,13 @@ async function connectToWhatsApp() {
     sock = makeWASocket({
         auth: state,
         printQRInTerminal: false,
-        browser: ["Mega Unlock Panel", "Chrome", "10.0.0"],
+        browser: Browsers.ubuntu('Chrome'),
         markOnlineOnConnect: true,
-        connectTimeoutMs: 300000,
-        defaultQueryTimeoutMs: 300000,
-        keepAliveIntervalMs: 10000
+        syncFullHistory: false,
+        connectTimeoutMs: 120000,
+        defaultQueryTimeoutMs: 60000,
+        keepAliveIntervalMs: 25000,
+        emitOwnEvents: false
     });
 
     const originalSendMessage = sock.sendMessage;
