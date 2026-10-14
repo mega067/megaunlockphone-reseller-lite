@@ -726,7 +726,10 @@ h1, h2, h3, h4 { color: var(--text-primary); font-family: var(--font-display); f
     background-color: rgba(15, 23, 42, 0.98);
   }
   .app-header::before {
-    display: none !important; /* Remove giant dark flag overlay on mobile that balloons header height */
+    display: block !important;
+    opacity: 0.6;
+    background-size: cover;
+    background-position: center;
   }
   .header-right-meta {
     justify-content: center;
