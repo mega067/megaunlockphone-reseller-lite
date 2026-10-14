@@ -421,28 +421,28 @@ table tr:hover td {
   .app-header {
     flex-direction: column !important;
     align-items: stretch !important;
-    padding: 0.85rem !important;
-    border-radius: var(--radius-md) !important;
-    margin-bottom: 0.85rem !important;
-    gap: 0.75rem !important;
+    padding: 0.5rem 0.6rem !important;
+    border-radius: var(--radius-sm) !important;
+    margin-bottom: 0.65rem !important;
+    gap: 0.4rem !important;
   }
 
   .header-marquee-container {
     width: 100% !important;
     max-width: 100% !important;
-    margin: 0.65rem 0 !important;
+    margin: 0.35rem 0 !important;
     order: 3 !important;
     min-width: unset !important;
-    height: 48px !important;
+    height: 38px !important;
   }
 
   .brand-chip {
-    padding: 4px 12px !important;
-    font-size: 0.8rem !important;
+    padding: 3px 10px !important;
+    font-size: 0.75rem !important;
   }
 
   .brand-chip img {
-    height: 18px !important;
+    height: 16px !important;
   }
 
   /* Grid de productos en móvil: 1 columna perfecta que ocupa el ancho */
