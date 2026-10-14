@@ -113,29 +113,48 @@ async function connectToWhatsApp() {
         isSending = true;
         
         while (messageQueue.length > 0) {
-            const { jid, content, options, resolve, reject } = messageQueue.shift();
+            const item = messageQueue.shift();
+            const { jid, content, options, resolve, reject } = item;
+            item.retries = item.retries || 0;
+
             try {
-                // Presence update helps sync encryption keys and prevents the "waiting for message" bug
+                // Sincronizar presencia y estado para negociar claves de cifrado activas
                 try {
+                    await sock.sendPresenceUpdate('available');
                     await sock.sendPresenceUpdate('composing', jid);
                 } catch (e) {}
 
-                // Throttle: wait 1.5 - 2.5 seconds between messages
-                await new Promise(r => setTimeout(r, 1500 + Math.random() * 1000)); 
+                // Throttle: esperar entre 1.2s y 2.0s para evitar detección y buffering de WhatsApp
+                await new Promise(r => setTimeout(r, 1200 + Math.random() * 800)); 
                 
                 if (content && typeof content.text === 'string' && content.text.includes('❌')) {
                     if (!content.text.includes('Soporte: https://wa.me/')) {
                         content.text += '\n\n🎧 Soporte: https://wa.me/522216936720';
                     }
                 }
+
                 const result = await Promise.race([
                     originalSendMessage.call(sock, jid, content, options),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout de WhatsApp')), 15000))
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout de WhatsApp socket')), 20000))
                 ]);
+
+                try {
+                    await sock.sendPresenceUpdate('paused', jid);
+                } catch (e) {}
+
                 resolve(result);
             } catch (err) {
-                console.error('Error enviando mensaje encolado:', err);
-                reject(err);
+                console.error(`Error enviando mensaje a ${jid} (intento ${item.retries + 1}):`, err.message);
+                
+                // Reintento automático inteligente hasta 3 veces si es fallo de conexión o timeout
+                if (item.retries < 2 && (err.message.includes('Timeout') || err.message.includes('socket') || err.message.includes('rate-overlimit'))) {
+                    item.retries++;
+                    console.log(`Re-encolando mensaje para ${jid} tras pausa de seguridad...`);
+                    await new Promise(r => setTimeout(r, 3000));
+                    messageQueue.unshift(item);
+                } else {
+                    reject(err);
+                }
             }
         }
         isSending = false;

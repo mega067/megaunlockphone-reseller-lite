@@ -306,4 +306,49 @@ router.post('/change-phone', requireAuth, (req, res) => {
   res.json({ success: true, message: 'Número de WhatsApp actualizado' });
 });
 
+// Endpoint de verificación y rescate de cuenta alternativo (por si WhatsApp Bot está en mantenimiento)
+router.post('/verify-account', loginLimiter, (req, res) => {
+  const { username, email, phone } = req.body;
+  if (!username) return res.status(400).json({ error: 'Se requiere el nombre de usuario.' });
+
+  const users = readDB('users.json') || [];
+  const user = users.find(u => u.username.toLowerCase() === username.trim().toLowerCase());
+
+  if (!user) {
+    return res.status(404).json({ error: 'Usuario no encontrado.' });
+  }
+
+  // Validación de coincidencia de correo o teléfono
+  const cleanPhone = phone ? String(phone).replace(/\D/g, '') : '';
+  const matchEmail = email && user.email && user.email.toLowerCase() === email.trim().toLowerCase();
+  const matchPhone = cleanPhone && user.phone && (user.phone.includes(cleanPhone) || cleanPhone.includes(user.phone));
+
+  if (!matchEmail && !matchPhone) {
+    return res.status(400).json({ 
+      error: 'Los datos proporcionados no coinciden con los registros de la cuenta.',
+      supportHelp: 'Si el bot no responde, contacta directamente al administrador.'
+    });
+  }
+
+  const wUsers = readDB('whatsapp_users.json') || {};
+  let isLinkedToWhatsapp = false;
+  for (const [jid, uid] of Object.entries(wUsers)) {
+    if (String(uid) === String(user.id)) {
+      isLinkedToWhatsapp = true;
+      break;
+    }
+  }
+
+  res.json({
+    success: true,
+    accountStatus: 'active',
+    username: user.username,
+    role: user.role,
+    credits: user.credits,
+    isLinkedToWhatsapp,
+    phoneMasked: user.phone ? user.phone.replace(/(\d{3})\d+(\d{2})/, '$1****$2') : 'No registrado',
+    emailMasked: user.email ? user.email.replace(/(.{2})(.*)(@.*)/, '$1***$3') : 'No registrado'
+  });
+});
+
 module.exports = router;

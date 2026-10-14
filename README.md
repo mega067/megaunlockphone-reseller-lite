@@ -2,30 +2,38 @@
   <img src="public/logo.png" width="150" alt="MegaUnlockPhone Logo">
 </p>
 
-# MegaUnlockPhone - Panel Cliente Dhru
-**Sitio Web:** [megaunlockphone.com](https://megaunlockphone-panel.alwaysdata.net/) (Reemplazar con el dominio oficial si aplica)
+# MegaUnlockPhone - Panel Cliente Dhru & DigitalPass
+
+> 📘 **DOCUMENTACIÓN MAESTRA DEL SISTEMA:**
+> - [AGENTS.md](file:///home/angel/Projects/REPOS/dhru-client-web/AGENTS.md): **Blueprint técnico principal para Agentes de IA y Desarrolladores** (Seguridad de saldos, Prepared Statements anti SQL-injection, endpoints de contingencia, historial de commits y enlaces directos).
+> - [Architecture.md](file:///home/angel/Projects/REPOS/dhru-client-web/Architecture.md): **Mapa del proyecto y guía de configuración de servidores** (Estructura de carpetas, modificación de endpoints/APIKEYS en `settings.json`, y patrones de modularidad).
+
+**Sitio Web Principal:** [https://megaunlockphone-panel.alwaysdata.net/](https://megaunlockphone-panel.alwaysdata.net/)  
+**Portal DigitalPass (Streaming & IA):** [https://megaunlockphone-panel.alwaysdata.net/digital-pass](https://megaunlockphone-panel.alwaysdata.net/digital-pass)
 
 ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
 ![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)
 ![Express.js](https://img.shields.io/badge/Express.js-404D59?style=for-the-badge)
 ![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)
 
-Panel web para la gestión de desbloqueos, recargas y servicios digitales integrado con múltiples proveedores a través de la API de Dhru Fusion.
+Plataforma web unificada para la comercialización de servicios de telecomunicaciones (desbloqueo de red IMEI, servidores, FRP/Bypass) y servicios digitales (cuentas de Streaming, herramientas de Inteligencia Artificial, licencias de software y gaming).
 
 ## Servidores de Proveedores Integrados
-El panel soporta múltiples servidores Dhru configurables desde `settings.json`:
-- **Servidor 1:** LatamGSM (Endpoints principales para recargas como Free Fire).
-- **Servidor 2:** POPI-GSM.
-- **Servidor 3:** UnlockerFast.
+El panel soporta múltiples servidores Dhru configurables desde `data/settings.json` o desde el Panel Admin:
+- **Servidor 1 (MEGA-SERVER):** LatamGSM (Recargas directas Free Fire, servicios IMEI y Server).
+- **Servidor 2 (ALPHA-SERVER):** POPI-GSM.
+- **Servidor 3 (OMEGA-SERVER):** UnlockerFast (Catálogo masivo con cientos de servicios de Streaming, IA y herramientas).
 
 ## 🚀 Nuevas Funcionalidades
-- **Rediseño UI Premium Dark Mode**: Interfaz completamente renovada utilizando Glassmorphism, degradados modernos, banderas de servidores (México) integradas orgánicamente y alertas flotantes para Notificaciones.
-- **Historial de Recargas Unificado**: Fusión de botones de recarga en una única pestaña. Registro inmutable de cada ingreso de saldo (vía SPEI, Bot o Panel Admin) con visualización de nombre de usuario en vista Admin.
-- **Sistema Inteligente de Reembolsos**: Automáticos (cuando Dhru rechaza) y Manuales (desde el panel Admin).
-- **Soporte Directo Bot WhatsApp**: Integración con un bot para procesar comandos de búsqueda, cotización y gestión de saldo.
-- **Sistema SPEI Inteligente con Colchón**: Triangulación automatizada de pagos SPEI (Banxico CEP) donde el sistema elige a qué cuenta depositar (NU o STP) dependiendo de un "Colchón de Retención" (configurable por el admin).
-- **Rastreo Completo en Historial de Recargas**: El panel de recargas ahora guarda y muestra en tiempo real la Clave de Rastreo de la transferencia SPEI, el nombre del Banco de Origen y el Banco de Destino (NU/STP/Proveedor). Notificaciones enriquecidas por WhatsApp con nombre del usuario y rastreo.
-- **Precios Personalizados (Globales y Especiales)**: Gestión independiente del margen de ganancia a nivel Servidor, Servicio (Personalizado) o Usuario Específico.
+- **Portal Exclusivo DigitalPass (`/digital-pass`)**: Fork desacoplado enfocado al 100% en entretenimiento digital, cuentas y herramientas de Inteligencia Artificial (ChatGPT, Gemini, Claude, Canva, Netflix, Disney+, Prime Video, Max, Spotify, etc.) con paleta de color azul cielo suave oficial, selector de tema claro/oscuro y carrusel de logos vectoriales SVG.
+- **Rediseño UI Premium y Vista Móvil Optimizada**: Ajuste responsive total para tarjetas de servicios, botones táctiles y modales limpios en smartphones sin desbordamientos de pantalla.
+- **Bot de WhatsApp Endurecido (Baileys)**:
+  - Sistema de candado inteligente por proceso (`bot.lock` con auto-limpieza al reiniciar).
+  - Pre-sincronización de presencia (`available` + `composing`) que elimina el error de "Esperando el mensaje".
+  - Cola de mensajes con throttling y reintentos exponenciales automáticos.
+- **Verificación y Rescate de Cuentas (`POST /api/verify-account`)**: Mecanismo alternativo seguro para validar y consultar cuentas activas incluso si el bot de mensajería está en mantenimiento.
+- **Rediseño UI Premium Dark & Light Mode**: Interfaz utilizando Glassmorphism, degradados modernos, banderas de servidores integradas y alertas flotantes para Notificaciones.
+- **Historial de Recargas y Deducción Segura**: Transacciones atómicas de saldo preventivas antes del despacho DHRU y auto-reembolso inmutable en caso de órdenes rechazadas.
 
 ## 🏗️ Nueva Arquitectura Modular
 El servidor se está refactorizando en la carpeta `src/` para separar la lógica masiva de `server.js` y facilitar su mantenimiento:
