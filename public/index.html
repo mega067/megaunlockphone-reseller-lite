@@ -841,14 +841,15 @@
             </div>
           </div>
           
-          <div class="form-group" style="margin-top: 16px;">
-            <label for="rechargeTracking" style="font-size: 0.9rem; font-weight: 700; color: #f1f5f9; margin-bottom: 6px; display: block;">
-              Clave de Rastreo (Banxico) / Folio SPEI
+          <div class="form-group" style="margin-top: 16px;" id="trackingGroup">
+            <label for="rechargeTracking" style="font-size: 0.9rem; font-weight: 700; color: #f1f5f9; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+              <span>Clave de Rastreo (Banxico) / Folio SPEI</span>
+              <span id="trackingLockStatus" style="font-size: 0.75rem; color: #f59e0b; font-weight: 600;">🔒 Selecciona una cuenta arriba</span>
             </label>
-            <input type="text" id="rechargeTracking" placeholder="Ej. 2026101440012B... o Folio" class="search-input" style="width: 100%; box-sizing: border-box; font-family: monospace; font-size: 1rem;">
+            <input type="text" id="rechargeTracking" disabled placeholder="Primero selecciona una cuenta para desbloquear" class="search-input" style="width: 100%; box-sizing: border-box; font-family: monospace; font-size: 1rem; opacity: 0.5; cursor: not-allowed; transition: all 0.25s;">
           </div>
           <div class="modal-actions" style="margin-top: 15px; display: flex; gap: 10px;">
-            <button id="btnVerificarPago" class="btn btn-primary" style="flex: 2; justify-content: center; background: linear-gradient(90deg, #10b981, #059669);">
+            <button id="btnVerificarPago" disabled class="btn btn-primary" style="flex: 2; justify-content: center; background: linear-gradient(90deg, #10b981, #059669); opacity: 0.5; cursor: not-allowed;">
               <i data-lucide="check" style="width: 16px; height: 16px;"></i> Validar Depósito
             </button>
             <button id="btnRechargeBack" class="btn btn-secondary" style="flex: 1; justify-content: center;">
@@ -1642,7 +1643,7 @@
   <script src="/js/ticket.js" defer></script>
   <script src="/js/searchEngine.js?v=1" defer></script>
   <script src="js/recharges.js" defer></script>
-  <script src="js/recharge.js?v=16" defer></script>
+  <script src="js/recharge.js?v=17" defer></script>
   <script src="index.js?v=32" defer></script>
   <script src="js/products.js?v=4" defer></script>
   <script src="js/orders.js?v=3" defer></script>

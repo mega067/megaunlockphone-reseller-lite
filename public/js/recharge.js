@@ -168,6 +168,26 @@ window.initRechargeModule = function({
         
         const container = document.getElementById('rechargeAccountsContainer');
         container.innerHTML = '';
+        currentRechargeData.account = null; // Do NOT pre-select any account
+
+        // Ensure tracking input & submit button start disabled and locked
+        const trackingLockStatus = document.getElementById('trackingLockStatus');
+        if (rechargeTracking) {
+          rechargeTracking.value = '';
+          rechargeTracking.disabled = true;
+          rechargeTracking.style.opacity = '0.5';
+          rechargeTracking.style.cursor = 'not-allowed';
+          rechargeTracking.placeholder = 'Primero selecciona una cuenta arriba para desbloquear';
+        }
+        if (btnVerificarPago) {
+          btnVerificarPago.disabled = true;
+          btnVerificarPago.style.opacity = '0.5';
+          btnVerificarPago.style.cursor = 'not-allowed';
+        }
+        if (trackingLockStatus) {
+          trackingLockStatus.textContent = '🔒 Selecciona una cuenta arriba';
+          trackingLockStatus.style.color = '#f59e0b';
+        }
         
         data.accounts.forEach((acc, index) => {
           const card = document.createElement('div');
@@ -183,24 +203,32 @@ window.initRechargeModule = function({
             position: relative;
             transform-origin: center top;
           `;
+
+          // Mask last 4 digits of CLABE
+          const maskedClabe = acc.clabe && acc.clabe.length > 4 
+            ? acc.clabe.slice(0, -4) + '••••' 
+            : '••••••••••••••••';
           
           card.innerHTML = `
             <div class="card-bank-name" style="font-weight: bold; color: #e2e8f0; margin-bottom: 5px; font-size: 1.1rem; transition: all 0.3s;">${acc.bankName}</div>
-            <div class="card-owner-name" style="font-size: 1rem; color: #94a3b8; margin-bottom: 3px; transition: all 0.3s;">${acc.ownerName}</div>
-            <div class="card-clabe" style="font-family: monospace; font-size: 1.2rem; color: #22d3ee; letter-spacing: 1px; transition: all 0.3s;">${acc.clabe}</div>
-            <div class="selection-indicator" style="font-size: 0.85rem; margin-top: 10px; text-align: center; color: #94a3b8; background: rgba(255,255,255,0.05); padding: 5px; border-radius: 4px;">
-              Haz clic para seleccionar esta cuenta
+            <div class="card-owner-name" style="font-size: 0.95rem; color: #94a3b8; margin-bottom: 6px; transition: all 0.3s;">${acc.ownerName}</div>
+            <div class="card-clabe-wrapper" style="margin-bottom: 6px;">
+              <div class="card-clabe" style="font-family: monospace; font-size: 1.15rem; color: #38bdf8; letter-spacing: 1px; transition: all 0.3s;">${maskedClabe}</div>
+              <span class="clabe-hint" style="font-size: 0.72rem; color: #f59e0b; display: inline-block;">🔒 Dígitos ocultos hasta seleccionar</span>
+            </div>
+            <div class="selection-indicator" style="font-size: 0.85rem; margin-top: 10px; text-align: center; color: #38bdf8; background: rgba(56, 189, 248, 0.08); border: 1px dashed rgba(56, 189, 248, 0.3); padding: 7px; border-radius: 6px; font-weight: 600;">
+              👉 Haz clic aquí para elegir esta cuenta
             </div>
             
-            <div class="selected-actions hidden" style="margin-top: 20px; display: flex; gap: 10px; flex-direction: column;">
-              <button type="button" class="btn-copy-name" style="background: rgba(56, 189, 248, 0.15); border: 1px solid #38bdf8; color: #38bdf8; border-radius: 6px; padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 1rem; font-weight: bold; transition: all 0.2s;">
-                <i data-lucide="copy" style="width:18px; height:18px;"></i> Copiar Nombre
+            <div class="selected-actions hidden" style="margin-top: 16px; display: flex; gap: 8px; flex-direction: column;">
+              <button type="button" class="btn-copy-clabe" style="background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #10b981; border-radius: 6px; padding: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 1rem; font-weight: bold; transition: all 0.2s;">
+                <i data-lucide="copy" style="width:18px; height:18px;"></i> Copiar Cuenta / CLABE Completa
               </button>
-              <button type="button" class="btn-copy-clabe" style="background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #10b981; border-radius: 6px; padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 1rem; font-weight: bold; transition: all 0.2s;">
-                <i data-lucide="copy" style="width:18px; height:18px;"></i> Copiar Cuenta / CLABE
+              <button type="button" class="btn-copy-name" style="background: rgba(56, 189, 248, 0.15); border: 1px solid #38bdf8; color: #38bdf8; border-radius: 6px; padding: 9px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.95rem; font-weight: bold; transition: all 0.2s;">
+                <i data-lucide="copy" style="width:16px; height:16px;"></i> Copiar Nombre del Beneficiario
               </button>
-              <button type="button" class="btn-change-account" style="background: transparent; border: 1px dashed rgba(255,255,255,0.2); color: #cbd5e1; border-radius: 6px; padding: 8px; cursor: pointer; font-size: 0.9rem; margin-top: 5px; transition: all 0.2s;">
-                <i data-lucide="refresh-cw" style="width:14px; height:14px; display:inline-block; vertical-align:middle;"></i> Elegir Otra Cuenta
+              <button type="button" class="btn-change-account" style="background: transparent; border: 1px dashed rgba(255,255,255,0.2); color: #cbd5e1; border-radius: 6px; padding: 7px; cursor: pointer; font-size: 0.85rem; margin-top: 4px; transition: all 0.2s;">
+                <i data-lucide="refresh-cw" style="width:13px; height:13px; display:inline-block; vertical-align:middle;"></i> Elegir Otra Cuenta
               </button>
             </div>
           `;
@@ -226,18 +254,44 @@ window.initRechargeModule = function({
           const btnCopyName = card.querySelector('.btn-copy-name');
           const btnCopyClabe = card.querySelector('.btn-copy-clabe');
           
-          setupCopyBtn(btnCopyName, acc.ownerName, '<i data-lucide="copy" style="width:18px; height:18px;"></i> Copiar Nombre', '#38bdf8');
-          setupCopyBtn(btnCopyClabe, acc.clabe, '<i data-lucide="copy" style="width:18px; height:18px;"></i> Copiar Cuenta / CLABE', '#10b981');
+          setupCopyBtn(btnCopyName, acc.ownerName, '<i data-lucide="copy" style="width:16px; height:16px;"></i> Copiar Nombre del Beneficiario', '#38bdf8');
+          setupCopyBtn(btnCopyClabe, acc.clabe, '<i data-lucide="copy" style="width:18px; height:18px;"></i> Copiar Cuenta / CLABE Completa', '#10b981');
           
           const btnChange = card.querySelector('.btn-change-account');
           btnChange.addEventListener('click', (e) => {
             e.stopPropagation();
+            currentRechargeData.account = null;
+
+            // Re-lock tracking input and validation button
+            if (rechargeTracking) {
+              rechargeTracking.disabled = true;
+              rechargeTracking.style.opacity = '0.5';
+              rechargeTracking.style.cursor = 'not-allowed';
+              rechargeTracking.placeholder = 'Primero selecciona una cuenta arriba para desbloquear';
+            }
+            if (btnVerificarPago) {
+              btnVerificarPago.disabled = true;
+              btnVerificarPago.style.opacity = '0.5';
+              btnVerificarPago.style.cursor = 'not-allowed';
+            }
+            if (trackingLockStatus) {
+              trackingLockStatus.textContent = '🔒 Selecciona una cuenta arriba';
+              trackingLockStatus.style.color = '#f59e0b';
+            }
+
             card.style.flex = '1 1 calc(50% - 10px)';
             card.style.transform = 'scale(1)';
             card.style.background = 'rgba(0,0,0,0.3)';
             card.querySelector('.card-bank-name').style.fontSize = '1.1rem';
-            card.querySelector('.card-owner-name').style.fontSize = '1rem';
-            card.querySelector('.card-clabe').style.fontSize = '1.2rem';
+            card.querySelector('.card-owner-name').style.fontSize = '0.95rem';
+            
+            // Re-mask CLABE
+            const clabeEl = card.querySelector('.card-clabe');
+            clabeEl.textContent = maskedClabe;
+            clabeEl.style.fontSize = '1.15rem';
+            clabeEl.style.color = '#38bdf8';
+            const hintEl = card.querySelector('.clabe-hint');
+            if (hintEl) hintEl.style.display = 'inline-block';
             
             Array.from(container.children).forEach(c => {
               c.style.display = 'block';
@@ -251,19 +305,47 @@ window.initRechargeModule = function({
           
           card.addEventListener('click', () => {
             currentRechargeData.account = acc;
+
+            // Unlock tracking input and submit button
+            if (rechargeTracking) {
+              rechargeTracking.disabled = false;
+              rechargeTracking.style.opacity = '1';
+              rechargeTracking.style.cursor = 'text';
+              rechargeTracking.placeholder = 'Ingresa la clave de rastreo Banxico o Folio SPEI';
+              rechargeTracking.focus();
+            }
+            if (btnVerificarPago) {
+              btnVerificarPago.disabled = false;
+              btnVerificarPago.style.opacity = '1';
+              btnVerificarPago.style.cursor = 'pointer';
+            }
+            if (trackingLockStatus) {
+              trackingLockStatus.textContent = '🔓 Desbloqueado para validar';
+              trackingLockStatus.style.color = '#10b981';
+            }
+
             Array.from(container.children).forEach(c => {
               if (c !== card) c.style.display = 'none';
             });
             
             card.style.flex = '1 1 100%'; 
-            card.style.transform = 'scale(1.02)';
+            card.style.transform = 'scale(1.01)';
             card.style.borderColor = '#10b981';
-            card.style.background = 'rgba(16, 185, 129, 0.05)';
+            card.style.background = 'rgba(16, 185, 129, 0.08)';
             
             card.querySelector('.card-bank-name').style.color = '#10b981';
-            card.querySelector('.card-bank-name').style.fontSize = '1.3rem';
-            card.querySelector('.card-owner-name').style.fontSize = '1.1rem';
-            card.querySelector('.card-clabe').style.fontSize = '1.5rem';
+            card.querySelector('.card-bank-name').style.fontSize = '1.25rem';
+            card.querySelector('.card-owner-name').style.fontSize = '1.05rem';
+            
+            // Reveal full CLABE
+            const clabeEl = card.querySelector('.card-clabe');
+            clabeEl.textContent = acc.clabe;
+            clabeEl.style.fontSize = '1.45rem';
+            clabeEl.style.color = '#34d399';
+            
+            const hintEl = card.querySelector('.clabe-hint');
+            if (hintEl) hintEl.style.display = 'none';
+
             card.querySelector('.selection-indicator').style.display = 'none';
             
             const actions = card.querySelector('.selected-actions');
