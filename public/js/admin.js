@@ -240,6 +240,7 @@ async function loadAdminData() {
              </div>
           </td>
           <td style="text-align: right; vertical-align: middle;">
+            ${u.role !== 'admin' ? `
               <div style="display: flex; gap: 5px; justify-content: flex-end; align-items: center;">
                 ${!u.linkedBot && u.phone && u.phone !== '-' ? `
                   <button type="button" class="btn btn-sm btn-notify-user-bot" data-id="${u.id}" data-name="${escapeHtml(u.username)}" title="Enviar mensaje de WhatsApp para vincular bot" style="background: rgba(37, 211, 102, 0.15); color: #25D366; border: 1px solid rgba(37, 211, 102, 0.35); padding: 6px;"><i data-lucide="message-circle" style="width:16px;height:16px;"></i></button>
