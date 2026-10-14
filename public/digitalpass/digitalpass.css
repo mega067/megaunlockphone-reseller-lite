@@ -433,7 +433,10 @@ table tr:hover td {
     margin: 0.35rem 0 !important;
     order: 3 !important;
     min-width: unset !important;
+    flex: 0 0 38px !important;
     height: 38px !important;
+    min-height: 38px !important;
+    max-height: 38px !important;
   }
 
   .brand-chip {
