@@ -98,10 +98,14 @@ async function connectToWhatsApp() {
         browser: Browsers.ubuntu('Chrome'),
         markOnlineOnConnect: true,
         syncFullHistory: false,
-        connectTimeoutMs: 120000,
+        connectTimeoutMs: 60000,
         defaultQueryTimeoutMs: 60000,
-        keepAliveIntervalMs: 25000,
-        emitOwnEvents: false
+        keepAliveIntervalMs: 15000,
+        emitOwnEvents: false,
+        getMessage: async (key) => {
+            return undefined;
+        },
+        shouldIgnoreJid: (jid) => false
     });
 
     const originalSendMessage = sock.sendMessage;
@@ -183,10 +187,18 @@ async function connectToWhatsApp() {
         }
 
         if (connection === 'close') {
-            const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
-            console.log('Conexión cerrada. Reconectando:', shouldReconnect);
+            const statusCode = lastDisconnect?.error?.output?.statusCode;
+            const errorTag = lastDisconnect?.error?.node?.content?.[0]?.tag || '';
+            const isReplaced = errorTag === 'conflict' || lastDisconnect?.error?.message?.includes('conflict');
+            const shouldReconnect = statusCode !== DisconnectReason.loggedOut && !isReplaced;
+            
+            console.log(`Conexión cerrada. Status: ${statusCode}, Error: ${lastDisconnect?.error?.message || 'None'}. Reconectando: ${shouldReconnect}`);
             if (shouldReconnect) {
-                setTimeout(connectToWhatsApp, 2000);
+                setTimeout(connectToWhatsApp, 3000);
+            } else if (isReplaced) {
+                console.log('⚠️ Conflicto detectado: Otra sesión abrió este WhatsApp o se reemplazó el stream. Esperando 10s antes de reintentar...');
+                isReady = false;
+                setTimeout(connectToWhatsApp, 10000);
             } else {
                 console.log('Sesión cerrada manualmente. Borra la carpeta baileys_auth para escanear de nuevo.');
                 isReady = false;
@@ -209,6 +221,8 @@ async function connectToWhatsApp() {
         const hasMedia = !!(msg.message.imageMessage || msg.message.videoMessage || msg.message.documentMessage || msg.message.audioMessage || msg.message.stickerMessage);
         
         if (!text && !hasMedia) return;
+        
+        console.log(`📩 [Mensaje recibido de ${remoteJid}]: "${text}" (hasMedia: ${hasMedia})`);
         
         try {
         const isGroup = remoteJid.endsWith('@g.us');
