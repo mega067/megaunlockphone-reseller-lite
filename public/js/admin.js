@@ -240,8 +240,10 @@ async function loadAdminData() {
              </div>
           </td>
           <td style="text-align: right; vertical-align: middle;">
-            ${u.role !== 'admin' ? `
-              <div style="display: flex; gap: 5px; justify-content: flex-end;">
+              <div style="display: flex; gap: 5px; justify-content: flex-end; align-items: center;">
+                ${!u.linkedBot && u.phone && u.phone !== '-' ? `
+                  <button type="button" class="btn btn-sm btn-notify-user-bot" data-id="${u.id}" data-name="${escapeHtml(u.username)}" title="Enviar mensaje de WhatsApp para vincular bot" style="background: rgba(37, 211, 102, 0.15); color: #25D366; border: 1px solid rgba(37, 211, 102, 0.35); padding: 6px;"><i data-lucide="message-circle" style="width:16px;height:16px;"></i></button>
+                ` : ''}
                 <button type="button" class="btn btn-sm btn-recharge-user" data-id="${u.id}" title="Añadir Saldo" style="background: rgba(34,211,238,0.1); color: #22d3ee; padding: 6px;"><i data-lucide="plus" style="width:16px;height:16px;"></i></button>
                 <button type="button" class="btn btn-sm btn-deduct-user" data-id="${u.id}" title="Quitar Saldo" style="background: rgba(244,63,94,0.1); color: #f43f5e; padding: 6px;"><i data-lucide="minus" style="width:16px;height:16px;"></i></button>
                 <button type="button" class="btn btn-sm btn-delete-user" data-id="${u.id}" title="Eliminar Usuario" style="background: rgba(239,68,68,0.1); color: #ef4444; padding: 6px;"><i data-lucide="trash-2" style="width:16px;height:16px;"></i></button>
@@ -253,6 +255,34 @@ async function loadAdminData() {
       });
       
       lucide.createIcons();
+
+      // Bind Notify Unlinked User (Individual)
+      document.querySelectorAll('.btn-notify-user-bot').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const userId = e.currentTarget.dataset.id;
+          const username = e.currentTarget.dataset.name;
+          if (!confirm(`¿Deseas enviar un recordatorio por WhatsApp a "${username}" para que vincule su cuenta con el Bot?`)) return;
+
+          try {
+            const res = await fetch('/api/admin/notify-unlinked-bot', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+              body: JSON.stringify({ userId })
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+              if (window.showToast) window.showToast(`Mensaje enviado a ${username}.`, 'success');
+              else alert(data.message);
+            } else {
+              if (window.showToast) window.showToast(data.error || 'Error al enviar invitación', 'error');
+              else alert(data.error || 'Error');
+            }
+          } catch (err) {
+            alert('Error de conexión');
+          }
+        });
+      });
+
 
       // Bind Actions
       document.querySelectorAll('.role-select').forEach(select => {
@@ -392,11 +422,47 @@ async function loadAdminData() {
           }
         });
       });
+
+      // Bulk Notify Unlinked Users
+      const btnNotifyUnlinkedAll = document.getElementById('btnNotifyUnlinkedAll');
+      if (btnNotifyUnlinkedAll) {
+        btnNotifyUnlinkedAll.onclick = async () => {
+          if (!confirm('¿Deseas enviar una invitación por WhatsApp a TODOS los usuarios registrados que aún no tienen el Bot vinculado?')) return;
+          
+          btnNotifyUnlinkedAll.setAttribute('disabled', 'true');
+          const originalText = btnNotifyUnlinkedAll.innerHTML;
+          btnNotifyUnlinkedAll.innerHTML = '<i data-lucide="loader-2" class="icon-spin"></i> Enviando...';
+          lucide.createIcons();
+
+          try {
+            const res = await fetch('/api/admin/notify-unlinked-bot', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+              body: JSON.stringify({})
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+              if (window.showToast) window.showToast(data.message || `Invitaciones enviadas.`, 'success', 'Bot Notificaciones');
+              else alert(data.message);
+            } else {
+              if (window.showToast) window.showToast(data.error || 'Error al enviar notificaciones.', 'error');
+              else alert(data.error || 'Error');
+            }
+          } catch (err) {
+            alert('Error de conexión con el servidor.');
+          } finally {
+            btnNotifyUnlinkedAll.removeAttribute('disabled');
+            btnNotifyUnlinkedAll.innerHTML = originalText;
+            lucide.createIcons();
+          }
+        };
+      }
     }
   } catch (e) {
     console.error('Failed to load admin data', e);
   }
 }
+
 
 // --- ADMIN SUB-TABS LOGIC ---
 const btnAdminTabUsers = document.getElementById('btnAdminTabUsers');

@@ -44,5 +44,6 @@ router.post('/admin/service-warnings', requireAuth, requireAdmin, adminControlle
 
 router.post('/admin/disable-imei', requireAuth, requireAdmin, adminController.toggleDisableImei);
 router.post('/admin/refund', requireAuth, requireAdmin, adminController.adminRefund);
+router.post('/admin/notify-unlinked-bot', requireAuth, requireAdmin, adminController.notifyUnlinkedBot);
 
 module.exports = router;

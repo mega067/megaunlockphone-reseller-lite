@@ -565,3 +565,68 @@ exports.adminRefund = (req, res) => {
     return res.status(400).json({ error: result.error || 'Error al procesar el reembolso.' });
   }
 };
+
+/**
+ * Enviar invitación / recordatorio por WhatsApp a usuarios que no tienen bot vinculado
+ */
+exports.notifyUnlinkedBot = (req, res) => {
+  const { userId } = req.body || {};
+  const users = readDB('users.json') || [];
+  const wUsers = readDB('whatsapp_users.json') || {};
+
+  const botNumberDisplay = '+52 783 147 5482';
+  const botLink = 'https://wa.me/527831475482?text=hola';
+
+  let targets = [];
+
+  if (userId) {
+    const user = users.find(u => String(u.id) === String(userId));
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+    const isLinked = Object.keys(wUsers).some(key => String(wUsers[key]) === String(user.id));
+    if (isLinked) return res.status(400).json({ error: 'Este usuario ya tiene el bot vinculado.' });
+    if (!user.phone) return res.status(400).json({ error: 'El usuario no tiene un teléfono registrado.' });
+    targets.push(user);
+  } else {
+    // Todos los usuarios sin bot vinculado que tengan teléfono registrado
+    targets = users.filter(u => {
+      if (u.role === 'admin') return false;
+      if (!u.phone) return false;
+      const isLinked = Object.keys(wUsers).some(key => String(wUsers[key]) === String(u.id));
+      return !isLinked;
+    });
+  }
+
+  if (targets.length === 0) {
+    return res.json({ success: true, count: 0, message: 'No hay usuarios pendientes sin bot vinculado con número de teléfono registrado.' });
+  }
+
+  let queuedCount = 0;
+  for (const user of targets) {
+    let cleanPhone = String(user.phone).replace(/\D/g, '');
+    if (cleanPhone.length === 10) cleanPhone = '52' + cleanPhone;
+    if (cleanPhone.length < 10) continue;
+
+    const message = `🤖 *¡Hola ${user.username}! Notificación de MegaUnlockPhone*\n\n` +
+      `Detectamos que tu cuenta aún *no está vinculada* con nuestro Bot Oficial de WhatsApp.\n\n` +
+      `⚡ *Beneficios de vincular tu cuenta:*\n` +
+      `• Notificaciones en tiempo real cuando tus pedidos se completen o rechacen.\n` +
+      `• Consulta de saldo y estatus de órdenes al instante.\n` +
+      `• Seguridad y rescate de cuenta 24/7.\n\n` +
+      `📲 *¿Cómo vincularte en 30 segundos?*\n` +
+      `1. Abre nuestro chat aquí: ${botLink}\n` +
+      `2. Envía la palabra: *hola*\n` +
+      `3. Escribe tu usuario: *${user.username}*\n` +
+      `4. Escribe tu contraseña de acceso y ¡listo!\n\n` +
+      `_Equipo de MegaUnlockPhone._`;
+
+    enqueueWhatsApp('direct', message, user.id, { phoneId: `${cleanPhone}@s.whatsapp.net` });
+    queuedCount++;
+  }
+
+  return res.json({
+    success: true,
+    count: queuedCount,
+    message: `Se enviaron ${queuedCount} invitaciones para vincular el bot de WhatsApp.`
+  });
+};
+

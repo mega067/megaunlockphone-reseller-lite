@@ -437,14 +437,19 @@
           
           <!-- TAB: USUARIOS -->
           <div id="adminTabUsersContent">
-            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05);">
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05); flex-wrap: wrap; gap: 12px;">
               <div>
                 <h3 style="margin: 0; font-size: 0.9rem; color: var(--text-secondary);">Bolsa de Ganancias Admin</h3>
                 <span id="adminProfitDisplay" style="font-size: 1.5rem; font-weight: 700; color: #10b981; font-family: 'Fira Code', monospace;">$0.00 MXN</span>
               </div>
-              <button type="button" class="btn btn-primary btn-small" id="btnCreateUserFormToggle">
-                <i data-lucide="user-plus"></i> Crear Nuevo Reseller
-              </button>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button type="button" class="btn btn-secondary btn-small" id="btnNotifyUnlinkedAll" style="background: rgba(37, 211, 102, 0.12); border-color: rgba(37, 211, 102, 0.35); color: #25D366;" title="Enviar recordatorio por WhatsApp a todos los usuarios que no han vinculado el Bot">
+                  <i data-lucide="message-circle"></i> Notificar a Sin Bot
+                </button>
+                <button type="button" class="btn btn-primary btn-small" id="btnCreateUserFormToggle">
+                  <i data-lucide="user-plus"></i> Crear Nuevo Reseller
+                </button>
+              </div>
             </div>
 
             <!-- Create User Form (Hidden by default) -->
@@ -1648,7 +1653,7 @@
   <script src="js/products.js?v=4" defer></script>
   <script src="js/orders.js?v=3" defer></script>
   <script src="js/warnings.js?v=2" defer></script>
-  <script src="js/admin.js?v=2" defer></script>
+  <script src="js/admin.js?v=3" defer></script>
     <div class="modal-overlay hidden" id="globalLoadingOverlay" style="z-index: 100000; flex-direction: column; text-align: center;">
       <div class="icon-spin" style="color: #3b82f6; margin-bottom: 1rem;">
         <i data-lucide="refresh-cw" style="width: 64px; height: 64px;"></i>
