@@ -534,12 +534,57 @@ const importServiceSelect = document.getElementById('importServiceSelect');
 const importTypeSelect = document.getElementById('importTypeSelect');
 const importImeiInput = document.getElementById('importImei');
 
+let importServiceTomSelect = null;
+
 function populateImportServices() {
   if (!importServiceSelect) return;
-  importServiceSelect.innerHTML = '<option value="">Selecciona el servicio...</option>';
   if (!Array.isArray(productsList)) return;
-  
-  // Ordenar alfabéticamente
+
+  // Si TomSelect ya existe y productsList no cambió, solo resetear selección
+  if (importServiceTomSelect) {
+    importServiceTomSelect.clear(true);
+    return;
+  }
+
+  // Si ya tenemos la librería TomSelect disponible, usarla con maxOptions para rendimiento instantáneo
+  if (typeof TomSelect !== 'undefined') {
+    // Preparar opciones ordenadas
+    const options = productsList.map(p => ({
+      value: String(p.serviceid),
+      text: `[${p.serviceType === 'SERVER' ? 'SERVER' : 'IMEI'}] ${p.service}`,
+      type: p.serviceType === 'SERVER' ? 'SERVER' : 'IMEI',
+      name: p.service,
+      cost: (p.rawItem && p.rawItem._REAL_COST) ? p.rawItem._REAL_COST : (p.credit || 0)
+    })).sort((a,b) => (a.name || '').localeCompare(b.name || ''));
+
+    importServiceSelect.innerHTML = '<option value="">Escribe o busca un servicio...</option>';
+    
+    try {
+      importServiceTomSelect = new TomSelect(importServiceSelect, {
+        valueField: 'value',
+        labelField: 'text',
+        searchField: ['text', 'value'],
+        options: options,
+        create: false,
+        maxOptions: 60, // Limita renderizado en DOM para velocidad instantánea sin lag
+        dropdownParent: 'body',
+        placeholder: 'Escribe para buscar entre miles de servicios...',
+        onChange: function(val) {
+          const item = options.find(o => o.value === String(val));
+          if (item && importTypeSelect) {
+            importTypeSelect.value = item.type;
+          }
+        }
+      });
+      return;
+    } catch(e) {
+      console.warn('Error inicializando TomSelect en importServiceSelect, fallback a nativo:', e);
+    }
+  }
+
+  // Fallback si no está TomSelect: llenar select con fragmento
+  importServiceSelect.innerHTML = '<option value="">Selecciona el servicio...</option>';
+  const fragment = document.createDocumentFragment();
   const sorted = [...productsList].sort((a,b) => (a.service || '').localeCompare(b.service || ''));
   sorted.forEach(p => {
     const opt = document.createElement('option');
@@ -548,8 +593,9 @@ function populateImportServices() {
     opt.dataset.name = p.service;
     opt.dataset.cost = (p.rawItem && p.rawItem._REAL_COST) ? p.rawItem._REAL_COST : (p.credit || 0);
     opt.textContent = `[${p.serviceType || 'SRV'}] ${p.service}`;
-    importServiceSelect.appendChild(opt);
+    fragment.appendChild(opt);
   });
+  importServiceSelect.appendChild(fragment);
 }
 
 if (importServiceSelect && importTypeSelect) {
@@ -567,12 +613,15 @@ if (btnImportOrder) {
       if (typeof showToast === 'function') showToast('Debes iniciar sesión para importar pedidos', 'error');
       return;
     }
-    populateImportServices();
     if (formImportOrder) formImportOrder.reset();
+    if (importServiceTomSelect) importServiceTomSelect.clear(true);
     if (importOrderModal) {
       importOrderModal.classList.remove('hidden');
       if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
-      setTimeout(() => importOrderIdInput?.focus(), 100);
+      setTimeout(() => {
+        populateImportServices();
+        importOrderIdInput?.focus();
+      }, 50);
     }
   });
 }
@@ -597,9 +646,9 @@ if (formImportOrder) {
       return;
     }
 
-    const selectedOpt = importServiceSelect.selectedOptions[0];
-    const serviceName = selectedOpt ? selectedOpt.dataset.name : 'Importado';
-    const defaultCost = selectedOpt ? parseFloat(selectedOpt.dataset.cost || 0) : 0;
+    const foundProd = Array.isArray(productsList) ? productsList.find(p => String(p.serviceid) === String(serviceId)) : null;
+    const serviceName = foundProd ? foundProd.service : (importServiceSelect.selectedOptions[0]?.dataset.name || 'Importado');
+    const defaultCost = foundProd ? ((foundProd.rawItem && foundProd.rawItem._REAL_COST) ? parseFloat(foundProd.rawItem._REAL_COST) : parseFloat(foundProd.credit || 0)) : 0;
 
     const btnSubmit = document.getElementById('btnSubmitImportOrder');
     const originalText = btnSubmit.innerHTML;
