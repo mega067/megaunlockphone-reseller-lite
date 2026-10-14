@@ -524,85 +524,134 @@ btnSyncHistory.addEventListener('click', async () => {
   await autoSyncHistory(false);
 });
 
-// Modal y Lógica de Importación de Pedidos para todos los usuarios autenticados
+// Modal y Lógica de Importación de Pedidos por ID (Rápido y Automático)
 const importOrderModal = document.getElementById('importOrderModal');
 const btnCloseImportOrderModal = document.getElementById('btnCloseImportOrderModal');
 const btnCancelImportOrder = document.getElementById('btnCancelImportOrder');
 const formImportOrder = document.getElementById('formImportOrder');
 const importOrderIdInput = document.getElementById('importOrderId');
-const importServiceSelect = document.getElementById('importServiceSelect');
-const importTypeSelect = document.getElementById('importTypeSelect');
-const importImeiInput = document.getElementById('importImei');
+const btnInspectOrder = document.getElementById('btnInspectOrder');
+const importOrderPreviewCard = document.getElementById('importOrderPreviewCard');
+const previewOrderType = document.getElementById('previewOrderType');
+const previewOrderStatusBadge = document.getElementById('previewOrderStatusBadge');
+const previewServiceName = document.getElementById('previewServiceName');
+const previewOrderImei = document.getElementById('previewOrderImei');
+const previewOrderReply = document.getElementById('previewOrderReply');
 
-let importServiceTomSelect = null;
+let inspectedOrderData = null;
 
-function populateImportServices() {
-  if (!importServiceSelect) return;
-  if (!Array.isArray(productsList)) return;
+async function queryRemoteOrder(orderId) {
+  if (!orderId) return null;
+  
+  // Intento 1: SERVER order, si no responde, Intento 2: IMEI order (automático en backend)
+  const res = await fetch('/api/orders/bulk-status', {
+    method: 'POST',
+    headers: { 'X-Server-Id': currentServerId, 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+    body: JSON.stringify({ items: [{ id: orderId, type: 'SERVER' }] })
+  });
 
-  // Si TomSelect ya existe y productsList no cambió, solo resetear selección
-  if (importServiceTomSelect) {
-    importServiceTomSelect.clear(true);
+  const data = await res.json();
+  if (res.ok && data.SUCCESS && data.SUCCESS.length > 0) {
+    const item = data.SUCCESS[0];
+    const raw = item.raw || item.DATA || item.data || {};
+    
+    // Si la respuesta es desconocida o error, retornamos objeto con flag
+    if (item.status === 'unknown' || !raw.SERVICEID && !raw.serviceid && !raw.SERVICENAME && !raw.servicename) {
+      return null;
+    }
+
+    const sId = raw.SERVICEID || raw.serviceid || raw.serviceId || '';
+    let sName = raw.SERVICENAME || raw.servicename || raw.serviceName || '';
+    let cost = 0;
+
+    // Si el nombre no vino en el objeto raw, buscarlo en nuestro catálogo cargado
+    if (Array.isArray(productsList) && sId) {
+      const match = productsList.find(p => String(p.serviceid) === String(sId));
+      if (match) {
+        if (!sName) sName = match.service;
+        cost = (match.rawItem && match.rawItem._REAL_COST) ? parseFloat(match.rawItem._REAL_COST) : parseFloat(match.credit || 0);
+      }
+    }
+    if (!sName) sName = `Servicio #${sId || 'Digital'}`;
+
+    return {
+      orderId: orderId,
+      serviceId: sId || '1',
+      serviceName: sName,
+      status: item.status || 'pending',
+      statusText: item.statusText || raw.REPLY || raw.REJECT_REASON || 'Registrado',
+      imei: raw.IMEI || raw.imei || raw.REFERENCEID || raw.QTY || 'N/A',
+      serviceType: (raw.IMEI && raw.IMEI.length >= 14 && /^\d+$/.test(raw.IMEI)) ? 'IMEI' : 'SERVER',
+      cost: cost,
+      raw: raw
+    };
+  }
+  return null;
+}
+
+async function handleInspectOrder() {
+  const orderId = importOrderIdInput.value.trim();
+  if (!orderId) {
+    if (typeof showToast === 'function') showToast('Ingresa el ID del pedido para consultar', 'warning');
     return;
   }
 
-  // Si ya tenemos la librería TomSelect disponible, usarla con maxOptions para rendimiento instantáneo
-  if (typeof TomSelect !== 'undefined') {
-    // Preparar opciones ordenadas
-    const options = productsList.map(p => ({
-      value: String(p.serviceid),
-      text: `[${p.serviceType === 'SERVER' ? 'SERVER' : 'IMEI'}] ${p.service}`,
-      type: p.serviceType === 'SERVER' ? 'SERVER' : 'IMEI',
-      name: p.service,
-      cost: (p.rawItem && p.rawItem._REAL_COST) ? p.rawItem._REAL_COST : (p.credit || 0)
-    })).sort((a,b) => (a.name || '').localeCompare(b.name || ''));
+  const originalInspectHtml = btnInspectOrder.innerHTML;
+  btnInspectOrder.setAttribute('disabled', 'true');
+  btnInspectOrder.innerHTML = '<span>Buscando...</span>';
 
-    importServiceSelect.innerHTML = '<option value="">Escribe o busca un servicio...</option>';
-    
-    try {
-      importServiceTomSelect = new TomSelect(importServiceSelect, {
-        valueField: 'value',
-        labelField: 'text',
-        searchField: ['text', 'value'],
-        options: options,
-        create: false,
-        maxOptions: 60, // Limita renderizado en DOM para velocidad instantánea sin lag
-        dropdownParent: 'body',
-        placeholder: 'Escribe para buscar entre miles de servicios...',
-        onChange: function(val) {
-          const item = options.find(o => o.value === String(val));
-          if (item && importTypeSelect) {
-            importTypeSelect.value = item.type;
-          }
-        }
-      });
-      return;
-    } catch(e) {
-      console.warn('Error inicializando TomSelect en importServiceSelect, fallback a nativo:', e);
-    }
+  if (importOrderPreviewCard) {
+    importOrderPreviewCard.classList.remove('hidden');
+    previewOrderStatusBadge.textContent = 'Consultando...';
+    previewOrderStatusBadge.className = 'status-badge status-pending';
+    previewServiceName.textContent = 'Conectando con el servidor remoto...';
+    previewOrderImei.innerHTML = '<strong>IMEI / Ref:</strong> Consultando...';
+    previewOrderReply.textContent = 'Espere un momento...';
   }
 
-  // Fallback si no está TomSelect: llenar select con fragmento
-  importServiceSelect.innerHTML = '<option value="">Selecciona el servicio...</option>';
-  const fragment = document.createDocumentFragment();
-  const sorted = [...productsList].sort((a,b) => (a.service || '').localeCompare(b.service || ''));
-  sorted.forEach(p => {
-    const opt = document.createElement('option');
-    opt.value = p.serviceid;
-    opt.dataset.type = p.serviceType === 'SERVER' ? 'SERVER' : 'IMEI';
-    opt.dataset.name = p.service;
-    opt.dataset.cost = (p.rawItem && p.rawItem._REAL_COST) ? p.rawItem._REAL_COST : (p.credit || 0);
-    opt.textContent = `[${p.serviceType || 'SRV'}] ${p.service}`;
-    fragment.appendChild(opt);
-  });
-  importServiceSelect.appendChild(fragment);
+  try {
+    const found = await queryRemoteOrder(orderId);
+    if (!found) {
+      inspectedOrderData = null;
+      if (importOrderPreviewCard) {
+        previewOrderType.textContent = '[NO ENCONTRADO]';
+        previewOrderStatusBadge.textContent = 'Inválido';
+        previewOrderStatusBadge.className = 'status-badge status-failed';
+        previewServiceName.textContent = 'No se encontró ningún pedido con este ID';
+        previewOrderImei.innerHTML = '<strong>Resultado:</strong> El servidor remoto no reconoce el ID o no pertenece a este servidor.';
+        previewOrderReply.textContent = 'Verifica que el ID sea correcto y que corresponda al Servidor activo.';
+      }
+      if (typeof showToast === 'function') showToast('Pedido no encontrado en el servidor', 'error');
+    } else {
+      inspectedOrderData = found;
+      if (importOrderPreviewCard) {
+        previewOrderType.textContent = `[${found.serviceType}]`;
+        previewOrderStatusBadge.textContent = found.status === 'success' ? 'Completado' : (found.status === 'failed' ? 'Rechazado' : 'En proceso');
+        previewOrderStatusBadge.className = `status-badge status-${found.status}`;
+        previewServiceName.textContent = found.serviceName;
+        previewOrderImei.innerHTML = `<strong>IMEI / Referencia:</strong> ${escapeHtml(found.imei)}`;
+        previewOrderReply.textContent = found.statusText;
+      }
+      if (typeof showToast === 'function') showToast('¡Pedido localizado con éxito!', 'success');
+    }
+  } catch (e) {
+    if (typeof showToast === 'function') showToast('Error al consultar el servidor remoto', 'error');
+  } finally {
+    btnInspectOrder.removeAttribute('disabled');
+    btnInspectOrder.innerHTML = originalInspectHtml;
+    if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+  }
 }
 
-if (importServiceSelect && importTypeSelect) {
-  importServiceSelect.addEventListener('change', () => {
-    const selectedOpt = importServiceSelect.selectedOptions[0];
-    if (selectedOpt && selectedOpt.dataset.type) {
-      importTypeSelect.value = selectedOpt.dataset.type;
+if (btnInspectOrder) {
+  btnInspectOrder.addEventListener('click', handleInspectOrder);
+}
+
+if (importOrderIdInput) {
+  importOrderIdInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleInspectOrder();
     }
   });
 }
@@ -614,14 +663,12 @@ if (btnImportOrder) {
       return;
     }
     if (formImportOrder) formImportOrder.reset();
-    if (importServiceTomSelect) importServiceTomSelect.clear(true);
+    inspectedOrderData = null;
+    if (importOrderPreviewCard) importOrderPreviewCard.classList.add('hidden');
     if (importOrderModal) {
       importOrderModal.classList.remove('hidden');
       if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
-      setTimeout(() => {
-        populateImportServices();
-        importOrderIdInput?.focus();
-      }, 50);
+      setTimeout(() => importOrderIdInput?.focus(), 50);
     }
   });
 }
@@ -637,89 +684,70 @@ if (formImportOrder) {
   formImportOrder.addEventListener('submit', async (e) => {
     e.preventDefault();
     const orderId = importOrderIdInput.value.trim();
-    const serviceId = importServiceSelect.value;
-    const type = importTypeSelect.value || 'SERVER';
-    let imei = importImeiInput.value.trim();
 
-    if (!orderId || !serviceId) {
-      if (typeof showToast === 'function') showToast('Ingresa el ID del pedido y selecciona un servicio', 'error');
+    if (!orderId) {
+      if (typeof showToast === 'function') showToast('Ingresa el ID del pedido', 'error');
       return;
     }
-
-    const foundProd = Array.isArray(productsList) ? productsList.find(p => String(p.serviceid) === String(serviceId)) : null;
-    const serviceName = foundProd ? foundProd.service : (importServiceSelect.selectedOptions[0]?.dataset.name || 'Importado');
-    const defaultCost = foundProd ? ((foundProd.rawItem && foundProd.rawItem._REAL_COST) ? parseFloat(foundProd.rawItem._REAL_COST) : parseFloat(foundProd.credit || 0)) : 0;
 
     const btnSubmit = document.getElementById('btnSubmitImportOrder');
     const originalText = btnSubmit.innerHTML;
     btnSubmit.setAttribute('disabled', 'true');
-    btnSubmit.innerHTML = '<span>Consultando...</span>';
+    btnSubmit.innerHTML = '<span>Verificando e Importando...</span>';
 
     try {
-      const res = await fetch('/api/orders/bulk-status', {
+      // Si el usuario aún no le dio a consultar, consultarlo en caliente
+      let orderToImport = inspectedOrderData;
+      if (!orderToImport || String(orderToImport.orderId) !== String(orderId)) {
+        orderToImport = await queryRemoteOrder(orderId);
+      }
+
+      if (!orderToImport) {
+        if (typeof showToast === 'function') showToast('No se puede importar: ID no encontrado en el servidor', 'error');
+        if (importOrderPreviewCard) {
+          importOrderPreviewCard.classList.remove('hidden');
+          previewOrderType.textContent = '[NO ENCONTRADO]';
+          previewOrderStatusBadge.textContent = 'Inválido';
+          previewOrderStatusBadge.className = 'status-badge status-failed';
+          previewServiceName.textContent = 'ID de pedido inexistente o inválido';
+          previewOrderImei.innerHTML = '<strong>Error:</strong> No se pudo verificar en el servidor remoto.';
+          previewOrderReply.textContent = 'Revisa el número de ID.';
+        }
+        return;
+      }
+
+      const importPayload = {
+        orderId: orderToImport.orderId,
+        serviceId: orderToImport.serviceId,
+        serviceName: orderToImport.serviceName,
+        imei: orderToImport.imei,
+        status: orderToImport.status,
+        statusText: orderToImport.statusText,
+        serverId: currentServerId,
+        serviceType: orderToImport.serviceType,
+        cost: orderToImport.cost
+      };
+
+      const addRes = await fetch('/api/history/add', {
         method: 'POST',
         headers: { 'X-Server-Id': currentServerId, 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-        body: JSON.stringify({ items: [{ id: orderId, type: type }] })
+        body: JSON.stringify(importPayload)
       });
+      const addData = await addRes.json();
       
-      const data = await res.json();
-      
-      if (res.ok && data.SUCCESS && data.SUCCESS.length > 0) {
-        const apiOrder = data.SUCCESS[0].raw || data.SUCCESS[0].DATA || data.SUCCESS[0].data || data.SUCCESS[0];
-        
-        if (!apiOrder) {
-          if (typeof showToast === 'function') showToast('El servidor no devolvió datos válidos para este pedido.', 'error');
-          return;
-        }
-
-        const statusVal = String(apiOrder.STATUS || apiOrder.status || '');
-        let statusStr = 'pending';
-        if (statusVal === '4' || statusVal.toLowerCase() === 'completed' || statusVal.toLowerCase() === 'success') statusStr = 'success';
-        else if (statusVal === '3' || statusVal.toLowerCase() === 'failed' || statusVal.toLowerCase() === 'rejected' || statusVal.toLowerCase() === 'canceled') statusStr = 'failed';
-
-        const apiServiceId = apiOrder.SERVICEID || apiOrder.serviceid || apiOrder.serviceId || serviceId;
-        const apiServiceName = apiOrder.SERVICENAME || apiOrder.servicename || apiOrder.serviceName || serviceName;
-        const apiImei = apiOrder.IMEI || apiOrder.imei || apiOrder.REFERENCEID || apiOrder.QTY || imei || 'N/A';
-
-        const importPayload = {
-          orderId: orderId,
-          serviceId: apiServiceId,
-          serviceName: apiServiceName,
-          imei: apiImei,
-          status: statusStr,
-          statusText: apiOrder.REPLY || apiOrder.REJECT_REASON || apiOrder.CODE || apiOrder.MESSAGE || apiOrder.statusText || 'Importado exitosamente',
-          serverId: currentServerId,
-          serviceType: type,
-          cost: defaultCost
-        };
-
-        const addRes = await fetch('/api/history/add', {
-          method: 'POST',
-          headers: { 'X-Server-Id': currentServerId, 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-          body: JSON.stringify(importPayload)
-        });
-        const addData = await addRes.json();
-        
-        if (addRes.ok) {
-          if (typeof showToast === 'function') {
-            showToast('¡Pedido #' + orderId + ' importado con éxito a tu historial!', 'success');
-          } else {
-            alert('¡Pedido importado con éxito!');
-          }
-          if (importOrderModal) importOrderModal.classList.add('hidden');
-          fetchOrderHistory(); 
+      if (addRes.ok) {
+        if (typeof showToast === 'function') {
+          showToast('¡Pedido #' + orderId + ' importado con éxito a tu historial!', 'success');
         } else {
-          if (typeof showToast === 'function') {
-            showToast(addData.error || 'Error al importar', 'error');
-          } else {
-            alert('Error al importar: ' + (addData.error || 'Desconocido'));
-          }
+          alert('¡Pedido importado con éxito!');
         }
+        if (importOrderModal) importOrderModal.classList.add('hidden');
+        fetchOrderHistory(); 
       } else {
         if (typeof showToast === 'function') {
-          showToast('No se encontró el pedido en el servidor o ID no válido.', 'error');
+          showToast(addData.error || 'Error al importar', 'error');
         } else {
-          alert('No se encontró el pedido o hubo un error al consultarlo.');
+          alert('Error al importar: ' + (addData.error || 'Desconocido'));
         }
       }
     } catch (err) {
