@@ -100,3 +100,5 @@ sequenceDiagram
 1. **Atribución de Wallet Atómica:** Los balances residen en `users.json` / SQLite y se auditan antes de enviar payloads a proveedores (`latamgsm.com` y `unlockerfast.com.mx`).
 2. **Auto-Reembolso (`processRefund`):** Si una orden en proceso es cancelada o rechazada, el poller o actualización manual devuelve el crédito cobrado con el flag `isRefunded = true`.
 3. **Rescate sin Bot:** En caso de caída de WhatsApp, `/api/verify-account` permite autenticación y rescate de cuentas sin bloquear a los resellers.
+4. **Importación Segura de Pedidos (`/api/history/add`):** Permite a usuarios y resellers importar órdenes legítimas generadas en el servidor remoto asignándolas estrictamente a su cuenta (`userId`), sin permitir sobrescribir órdenes ajenas.
+5. **Restricción de Tickets Manuales:** El generador de comprobantes manuales (`btnCustomTicket`) queda reservado con permiso exclusivo de administrador para evitar falsificación de recibos por clientes regulares.
