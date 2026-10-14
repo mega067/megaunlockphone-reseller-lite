@@ -268,18 +268,26 @@ DigitalPass es un portal especializado que convive en el mismo backend sin reque
 
 ---
 
-## 7. Bot de WhatsApp (Baileys) y Colas de Notificaciones
+## 7. Motor de WhatsApp y Cola Centralizada (`whatsappEngine.js` & `whatsappBot.js`)
 
-El bot de WhatsApp (`whatsappBot.js`) opera de forma autónoma con las siguientes protecciones:
+El subsistema de WhatsApp opera como un motor autónomo con endpoints API protegidos y control estricto de ritmos y tiempos:
 
-1. **Gestión de Candado de Instancia Única (`bot.lock`):**
+1. **Gestión de Candado de Instancia Única (`bot.lock` Process-Aware):**
    - Para evitar que múltiples procesos compitan por las credenciales de sesión en `baileys_auth/` (lo que causaría desconexión inmediata), el bot registra su PID en `bot.lock`.
-   - Utiliza detección activa (`process.kill(pid, 0)`). Si el proceso previo se cerró forzosamente, el archivo se recicla automáticamente sin requerir intervención manual.
-2. **Cola de Envíos con Rate Limiting (`whatsappQueue.js`):**
-   - Todos los pedidos recibidos o completados se encolan en `queue.json`.
-   - El despachador añade pausas controladas (1-2 segundos) entre mensajes para proteger la línea de WhatsApp de sanciones o bloqueos por spam.
-3. **Manejo de Respuestas de Órdenes:**
-   - Detecta si el mensaje es directo al usuario o reporte general a un grupo de administradores (`adminGroupId`).
+   - Utiliza detección activa (`process.kill(pid, 0)`). Si el proceso previo se cerró forzosamente, el candado se recicla automáticamente sin requerir intervención manual.
+
+2. **Motor Central de Delays y Rate Limiting (`src/whatsappEngine.js`):**
+   - Centraliza el control de pausas (`minDelayMs: 1200`, `maxDelayMs: 2000`) para evitar bloqueos por spam o sobrecarga de sockets.
+   - Sincroniza la zona horaria unificada (`America/Mexico_City`) mediante `getEngineTimestamp()`, asegurando que las alertas de pedidos y comprobantes bancarios reflejen la hora real de México.
+   - Reintentos exponenciales automáticos (hasta 3 intentos) para paquetes caídos o timeouts de red.
+
+3. **Endpoints de Monitoreo y Sincronización del Motor (`/api/bot/*`):**
+   - **`GET /api/bot/time`**: Retorna la hora del servidor en formato ISO y la hora oficial formateada en Ciudad de México para sincronización de clientes y logs.
+   - **`POST /api/bot/queue-status`**: Verifica el número de mensajes pendientes en cola de despacho (protegido por `BOT_SECRET`).
+   - **`POST /api/bot/search`**, **`/catalog`**, **`/order`**: Endpoints para ejecución remota de pedidos y consultas desde el bot sin código disperso.
+
+4. **Prevención del fallo "Esperando mensaje" (Waiting for this message):**
+   - Emite actualizaciones de presencia (`sendPresenceUpdate('available')` y `sendPresenceUpdate('composing')`) antes de transmitir datos para asegurar el intercambio previo de llaves de cifrado en Baileys.
 
 ---
 

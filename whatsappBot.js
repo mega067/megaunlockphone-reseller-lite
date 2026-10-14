@@ -103,7 +103,8 @@ async function connectToWhatsApp() {
     });
 
     const originalSendMessage = sock.sendMessage;
-    
+    const { ENGINE_CONFIG, randomThrottleDelay, getEngineTimestamp } = require('./src/whatsappEngine');
+
     // Message Queue System to prevent "Esperando mensaje" due to rate limiting
     let isSending = false;
     const messageQueue = [];
@@ -124,12 +125,12 @@ async function connectToWhatsApp() {
                     await sock.sendPresenceUpdate('composing', jid);
                 } catch (e) {}
 
-                // Throttle: esperar entre 1.2s y 2.0s para evitar detección y buffering de WhatsApp
-                await new Promise(r => setTimeout(r, 1200 + Math.random() * 800)); 
+                // Throttle unificado controlado por el motor de WhatsApp
+                await randomThrottleDelay(); 
                 
                 if (content && typeof content.text === 'string' && content.text.includes('❌')) {
                     if (!content.text.includes('Soporte: https://wa.me/')) {
-                        content.text += '\n\n🎧 Soporte: https://wa.me/522216936720';
+                        content.text += `\n\n🎧 Soporte: ${ENGINE_CONFIG.supportUrl}`;
                     }
                 }
 
@@ -280,10 +281,11 @@ setInterval(async () => {
             const item = queue.shift();
             fs.writeFileSync(QUEUE_FILE, JSON.stringify(queue, null, 2));
             
+            const { randomThrottleDelay } = require('./src/whatsappEngine');
             if (item.type === 'group') {
                 if (wsettings.adminGroupId) {
                     await sock.sendMessage(wsettings.adminGroupId, { text: item.message });
-                    await new Promise(r => setTimeout(r, 1500));
+                    await randomThrottleDelay();
                 }
             } else if (item.type === 'private') {
                 let wusersLocal = readDB(WHATSAPP_USERS_FILE) || {};
@@ -291,7 +293,7 @@ setInterval(async () => {
                 for (const phoneId of phoneIds) {
                     try {
                         await sock.sendMessage(phoneId, { text: item.message });
-                        await new Promise(r => setTimeout(r, 1500));
+                        await randomThrottleDelay();
                     } catch (e) {
                         console.error(`[QUEUE] Error sending private message to ${phoneId}:`, e);
                     }
@@ -323,7 +325,7 @@ setInterval(async () => {
                             // If neither exists or we couldn't verify, just try sending to the original
                             await sock.sendMessage(targetJid, { text: item.message });
                         }
-                        await new Promise(r => setTimeout(r, 1500));
+                        await randomThrottleDelay();
                     } catch (err) {
                         console.log(`[QUEUE] Send failed:`, err);
                     }

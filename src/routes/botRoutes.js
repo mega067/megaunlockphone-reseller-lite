@@ -37,4 +37,30 @@ router.post('/saldo', botController.getSaldo);
 router.post('/add_money', botController.addMoney);
 router.post('/service_info_direct', botController.getServiceInfoDirect); // Direct service info endpoint
 
+// WhatsApp Engine APIs
+router.get('/time', (req, res) => {
+  const { getEngineTimestamp, ENGINE_CONFIG } = require('../whatsappEngine');
+  res.json({
+    success: true,
+    serverIso: new Date().toISOString(),
+    formattedTime: getEngineTimestamp(),
+    timeZone: ENGINE_CONFIG.timeZone
+  });
+});
+
+router.post('/queue-status', requireBotSecretOnly, (req, res) => {
+  const fs = require('fs');
+  const path = require('path');
+  const queueFile = path.join(__dirname, '..', '..', 'queue.json');
+  let pending = 0;
+  try {
+    if (fs.existsSync(queueFile)) {
+      const q = JSON.parse(fs.readFileSync(queueFile, 'utf8'));
+      pending = Array.isArray(q) ? q.length : 0;
+    }
+  } catch (e) {}
+  res.json({ success: true, pendingMessages: pending });
+});
+
 module.exports = router;
+
