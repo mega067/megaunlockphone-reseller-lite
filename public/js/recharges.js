@@ -41,41 +41,71 @@ function updateRechargesSummary() {
   const statAvailable = document.getElementById('rechargeStatAvailable');
   if (!statDeposited || !statSpent || !statAvailable) return;
 
-  // 1. Total Ingresado (Suma de recargas exitosas de este usuario/servidor)
-  let totalDeposited = 0;
-  if (Array.isArray(rechargesHistory)) {
-    totalDeposited = rechargesHistory.reduce((acc, r) => acc + (parseFloat(r.amount) || 0), 0);
-  }
+  const authRole = localStorage.getItem('dhru_role');
 
-  // 2. Total Gastado (Suma de costo de órdenes en historial no rechazadas y que no sean garantías $0)
-  let totalSpent = 0;
-  if (typeof orderHistory !== 'undefined' && Array.isArray(orderHistory)) {
-    totalSpent = orderHistory.reduce((acc, o) => {
-      // Excluir órdenes rechazadas y órdenes marcadas como reembolso o garantía
-      if (o.status === 'failed' || o.isRefunded || o.isImported) return acc;
-      const c = parseFloat(o.costCharged !== undefined ? o.costCharged : (o.costInCredits || o.price || 0)) || 0;
-      return acc + c;
-    }, 0);
-  }
+  if (authRole === 'admin') {
+    // Para la cuenta del Administrador:
+    // Las matemáticas son directas del servidor API (DHRU / Servidor Remoto).
+    const directApiLiquidity = window.adminAccountMetrics?.credit !== undefined 
+      ? window.adminAccountMetrics.credit 
+      : (typeof globalApiCreditRaw !== 'undefined' ? globalApiCreditRaw : 0);
+    const assignedToUsers = window.adminAccountMetrics?.assigned !== undefined ? window.adminAccountMetrics.assigned : 0;
+    const availableApiLiquidity = window.adminAccountMetrics?.available !== undefined ? window.adminAccountMetrics.available : directApiLiquidity;
 
-  // 3. Saldo Disponible (Crédito actual en billetera)
-  let currentAvailable = 0;
-  if (typeof globalApiCreditRaw !== 'undefined' && !isNaN(globalApiCreditRaw)) {
-    currentAvailable = globalApiCreditRaw;
+    // Cambiar etiquetas dinámicamente para que reflejen la realidad operativa del servidor
+    const lblDeposited = statDeposited.previousElementSibling;
+    const lblSpent = statSpent.previousElementSibling;
+    const lblAvailable = statAvailable.previousElementSibling;
+    if (lblDeposited) lblDeposited.textContent = 'API Servidor (Real)';
+    if (lblSpent) lblSpent.textContent = 'Créditos Cedidos';
+    if (lblAvailable) lblAvailable.textContent = 'Liquidez Libre';
+
+    statDeposited.textContent = `$${directApiLiquidity.toFixed(2)} MXN`;
+    statSpent.textContent = `$${assignedToUsers.toFixed(2)} MXN`;
+    statAvailable.textContent = `$${availableApiLiquidity.toFixed(2)} MXN`;
   } else {
-    // Si no está cargado globalApiCreditRaw, calcular por diferencia lógica o leer del badge
-    const badgeText = document.getElementById('creditsBalanceText')?.textContent || '';
-    const match = badgeText.match(/\$?([0-9]+(?:\.[0-9]+)?)/);
-    if (match) {
-      currentAvailable = parseFloat(match[1]) || 0;
-    } else {
-      currentAvailable = Math.max(0, totalDeposited - totalSpent);
-    }
-  }
+    // Para usuarios Resellers / Clientes:
+    const lblDeposited = statDeposited.previousElementSibling;
+    const lblSpent = statSpent.previousElementSibling;
+    const lblAvailable = statAvailable.previousElementSibling;
+    if (lblDeposited) lblDeposited.textContent = 'Total Ingresado';
+    if (lblSpent) lblSpent.textContent = 'Total Gastado';
+    if (lblAvailable) lblAvailable.textContent = 'Disponible';
 
-  statDeposited.textContent = `$${totalDeposited.toFixed(2)} MXN`;
-  statSpent.textContent = `$${totalSpent.toFixed(2)} MXN`;
-  statAvailable.textContent = `$${currentAvailable.toFixed(2)} MXN`;
+    // 1. Total Ingresado (Suma de recargas exitosas de este usuario)
+    let totalDeposited = 0;
+    if (Array.isArray(rechargesHistory)) {
+      totalDeposited = rechargesHistory.reduce((acc, r) => acc + (parseFloat(r.amount) || 0), 0);
+    }
+
+    // 2. Total Gastado (Suma de órdenes no rechazadas y que no sean garantías $0)
+    let totalSpent = 0;
+    if (typeof orderHistory !== 'undefined' && Array.isArray(orderHistory)) {
+      totalSpent = orderHistory.reduce((acc, o) => {
+        if (o.status === 'failed' || o.isRefunded || o.isImported) return acc;
+        const c = parseFloat(o.costCharged !== undefined ? o.costCharged : (o.costInCredits || o.price || 0)) || 0;
+        return acc + c;
+      }, 0);
+    }
+
+    // 3. Saldo Disponible en billetera
+    let currentAvailable = 0;
+    if (typeof globalApiCreditRaw !== 'undefined' && !isNaN(globalApiCreditRaw)) {
+      currentAvailable = globalApiCreditRaw;
+    } else {
+      const badgeText = document.getElementById('creditsBalanceText')?.textContent || '';
+      const match = badgeText.match(/\$?([0-9]+(?:\.[0-9]+)?)/);
+      if (match) {
+        currentAvailable = parseFloat(match[1]) || 0;
+      } else {
+        currentAvailable = Math.max(0, totalDeposited - totalSpent);
+      }
+    }
+
+    statDeposited.textContent = `$${totalDeposited.toFixed(2)} MXN`;
+    statSpent.textContent = `$${totalSpent.toFixed(2)} MXN`;
+    statAvailable.textContent = `$${currentAvailable.toFixed(2)} MXN`;
+  }
 
   if (typeof lucide !== 'undefined' && lucide.createIcons) {
     lucide.createIcons();

@@ -343,6 +343,38 @@ function checkPersistedSession() {
     if (ssc) ssc.classList.remove('hidden');
     
     if (btnLoginTop) btnLoginTop.classList.add('hidden');
+
+    // Impersonation Banner Logic
+    const impersonationBanner = document.getElementById('impersonationBanner');
+    const impersonatedUserLabel = document.getElementById('impersonatedUserLabel');
+    const btnExitImpersonation = document.getElementById('btnExitImpersonation');
+    const impersonatorBackupRaw = localStorage.getItem('admin_impersonator_backup');
+
+    if (impersonatorBackupRaw && impersonationBanner && impersonatedUserLabel) {
+      impersonatedUserLabel.textContent = authUsername || 'Usuario';
+      impersonationBanner.classList.remove('hidden');
+
+      if (btnExitImpersonation && !btnExitImpersonation.dataset.bound) {
+        btnExitImpersonation.dataset.bound = 'true';
+        btnExitImpersonation.addEventListener('click', () => {
+          try {
+            const backup = JSON.parse(impersonatorBackupRaw);
+            localStorage.setItem('dhru_token', backup.token);
+            localStorage.setItem('dhru_role', backup.role);
+            localStorage.setItem('dhru_username', backup.username);
+            localStorage.setItem('dhru_uid', backup.uid);
+            localStorage.removeItem('admin_impersonator_backup');
+            window.location.reload();
+          } catch (e) {
+            console.error('Error restaurando sesión de admin:', e);
+            localStorage.removeItem('admin_impersonator_backup');
+            window.location.reload();
+          }
+        });
+      }
+    } else if (impersonationBanner) {
+      impersonationBanner.classList.add('hidden');
+    }
   } else {
     // Unauthenticated state (No session / Session dropped)
     if (btnLoginTop) btnLoginTop.classList.remove('hidden');
@@ -415,6 +447,11 @@ async function updateAccountCredits() {
         if (info.IS_ADMIN) {
           const assigned = parseFloat(info.ASSIGNED || '0').toFixed(2);
           const available = parseFloat(info.AVAILABLE || '0').toFixed(2);
+          window.adminAccountMetrics = {
+            credit: rawCredits,
+            assigned: parseFloat(assigned),
+            available: parseFloat(available)
+          };
           creditsBalanceText.innerHTML = `
             <div style="display: flex; gap: 12px; font-size: 0.8rem; text-align: left; align-items: center;">
               <div style="display: flex; flex-direction: column;">
@@ -434,6 +471,7 @@ async function updateAccountCredits() {
             </div>
           `;
         } else {
+          window.adminAccountMetrics = null;
           creditsBalanceText.textContent = `Créditos: $${rawCredits.toFixed(2)} MXN`;
         }
         if (typeof updateRechargesSummary === 'function') {

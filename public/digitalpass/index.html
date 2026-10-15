@@ -34,6 +34,17 @@
   </div>
 
   <main class="app-container">
+    <!-- Impersonation Notice Banner -->
+    <div id="impersonationBanner" class="hidden" style="background: linear-gradient(90deg, #7c3aed, #2563eb); color: white; padding: 10px 18px; border-radius: 10px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 15px rgba(124, 58, 237, 0.35); border: 1px solid rgba(255, 255, 255, 0.2);">
+      <div style="display: flex; align-items: center; gap: 10px; font-size: 0.9rem; font-weight: 500;">
+        <span style="background: rgba(255, 255, 255, 0.2); padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; text-transform: uppercase;">Modo Inspección</span>
+        <span>Estás navegando en la cuenta de: <strong id="impersonatedUserLabel" style="color: #facc15; font-size: 1rem;">-</strong></span>
+      </div>
+      <button type="button" id="btnExitImpersonation" class="btn btn-sm" style="background: #ffffff; color: #1e1b4b; font-weight: 700; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+        <i data-lucide="log-out" style="width: 15px; height: 15px; color: #4338ca;"></i> Volver a mi cuenta Admin
+      </button>
+    </div>
+
     <!-- Header -->
     <header class="app-header">
       <div class="logo-area">

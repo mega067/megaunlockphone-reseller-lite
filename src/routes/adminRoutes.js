@@ -7,6 +7,7 @@ router.get('/users', requireAuth, requireAdmin, adminController.getUsers);
 router.post('/users', requireAuth, requireAdmin, adminController.createUser);
 router.put('/users/:id', requireAuth, requireAdmin, adminController.updateUser);
 router.delete('/users/:id', requireAuth, requireAdmin, adminController.deleteUser);
+router.post('/users/:id/impersonate', requireAuth, requireAdmin, adminController.impersonateUser);
 
 router.put('/users/:id/password', requireAuth, adminController.changePassword);
 

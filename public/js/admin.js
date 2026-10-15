@@ -242,6 +242,7 @@ async function loadAdminData() {
           <td style="text-align: right; vertical-align: middle;">
             ${u.role !== 'admin' ? `
               <div style="display: flex; gap: 5px; justify-content: flex-end; align-items: center;">
+                <button type="button" class="btn btn-sm btn-impersonate-user" data-id="${u.id}" data-name="${escapeHtml(u.username)}" title="Entrar a cuenta de ${escapeHtml(u.username)} (Inspeccionar saldo, pedidos, historial)" style="background: rgba(139, 92, 246, 0.15); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.35); padding: 6px;"><i data-lucide="user-check" style="width:16px;height:16px;"></i></button>
                 ${!u.linkedBot && u.phone && u.phone !== '-' ? `
                   <button type="button" class="btn btn-sm btn-notify-user-bot" data-id="${u.id}" data-name="${escapeHtml(u.username)}" title="Enviar mensaje de WhatsApp para vincular bot" style="background: rgba(37, 211, 102, 0.15); color: #25D366; border: 1px solid rgba(37, 211, 102, 0.35); padding: 6px;"><i data-lucide="message-circle" style="width:16px;height:16px;"></i></button>
                 ` : ''}
@@ -420,6 +421,53 @@ async function loadAdminData() {
             });
             loadAdminData();
             updateAccountCredits();
+          }
+        });
+      });
+
+      // Impersonate User (Entrar a cuenta de usuario sin cerrar sesión)
+      document.querySelectorAll('.btn-impersonate-user').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const id = e.currentTarget.dataset.id;
+          const uname = e.currentTarget.dataset.name;
+          if (!confirm(`¿Deseas entrar a la cuenta de "${uname}" para revisar su saldo, pedidos e historial?\n\nPodrás regresar a tu cuenta Admin en cualquier momento con un solo clic.`)) {
+            return;
+          }
+
+          try {
+            const res = await fetch(`/api/users/${id}/impersonate`, {
+              method: 'POST',
+              headers: { 
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+              }
+            });
+            const data = await res.json();
+            if (!res.ok || !data.token) {
+              alert(data.error || 'Error al entrar a la cuenta del usuario.');
+              return;
+            }
+
+            // Guardar credenciales de retorno del Admin
+            const adminBackup = {
+              token: authToken,
+              role: authRole,
+              username: authUsername,
+              uid: authUserId
+            };
+            localStorage.setItem('admin_impersonator_backup', JSON.stringify(adminBackup));
+
+            // Establecer nueva sesión del usuario objetivo
+            localStorage.setItem('dhru_token', data.token);
+            localStorage.setItem('dhru_role', data.user.role || 'reseller');
+            localStorage.setItem('dhru_username', data.user.username);
+            localStorage.setItem('dhru_uid', data.user.id);
+
+            // Redirigir al inicio del dashboard con recarga limpia
+            window.location.reload();
+          } catch (err) {
+            console.error('Error al impersonar usuario:', err);
+            alert('Error al conectar con el servidor.');
           }
         });
       });

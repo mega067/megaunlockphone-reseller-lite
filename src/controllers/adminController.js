@@ -146,6 +146,29 @@ exports.deleteUser = (req, res) => {
   res.json({ success: true });
 };
 
+exports.impersonateUser = (req, res) => {
+  const targetUserId = String(req.params.id);
+  const users = readDB('users.json') || [];
+  const targetUser = users.find(u => String(u.id) === targetUserId);
+
+  if (!targetUser) {
+    return res.status(404).json({ error: 'Usuario no encontrado' });
+  }
+
+  const { generateToken } = require('../auth');
+  const token = generateToken(targetUser);
+
+  res.json({
+    success: true,
+    token: token,
+    user: {
+      id: targetUser.id,
+      username: targetUser.username,
+      role: targetUser.role || 'reseller'
+    }
+  });
+};
+
 exports.getStats = (req, res) => {
   const settings = readDB('settings.json') || {};
   res.json({ profitBalance: settings.adminProfitBalance || 0 });
