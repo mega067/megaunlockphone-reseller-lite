@@ -1131,18 +1131,50 @@ h1, h2, h3, h4 { color: var(--text-primary); font-family: var(--font-display); f
 
 @media (max-width: 768px) {
   .order-stats-summary-grid {
-    grid-template-columns: 1fr;
-    gap: 10px;
-    padding: 1rem;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 6px !important;
+    padding: 0.5rem 0.5rem !important;
+  }
+  .order-stat-box {
+    padding: 0.5rem 0.4rem !important;
+    border-radius: 8px !important;
+  }
+  .stat-box-num {
+    font-size: 1.05rem !important;
+    gap: 2px !important;
+  }
+  .stat-box-num small {
+    font-size: 0.72rem !important;
+  }
+  .stat-box-bar {
+    width: 95% !important;
+    height: 4px !important;
+    margin: 3px 0 2px 0 !important;
+  }
+  .stat-box-footer {
+    width: 95% !important;
+    justify-content: center !important;
+  }
+  .stat-box-desc {
+    display: none !important; /* Hide long description on mobile to keep single row compact */
+  }
+  .stat-box-pct {
+    font-size: 0.68rem !important;
+    padding: 1px 4px !important;
   }
   .history-status-pills {
     width: 100%;
     overflow-x: auto;
     justify-content: space-between;
+    padding: 2px !important;
+  }
+  .status-pill {
+    padding: 4px 8px !important;
+    font-size: 0.72rem !important;
   }
   .history-filters-bar {
-    padding: 0.85rem;
-    gap: 0.75rem;
+    padding: 0.65rem !important;
+    gap: 0.5rem !important;
   }
 }
 
@@ -1669,21 +1701,89 @@ h1, h2, h3, h4 { color: var(--text-primary); font-family: var(--font-display); f
     bottom: 80px !important; /* Above WhatsApp button */
   }
 
-  /* Tables force scroll with smooth momentum */
+  /* Tables force scroll with smooth momentum and compact mobile sizing */
   .products-list-wrapper {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     border-radius: 8px;
     box-shadow: inset -8px 0 8px -8px rgba(0,0,0,0.5);
+    margin: 0 -0.25rem;
   }
   .data-table {
-    min-width: 820px;
+    min-width: 680px; /* Reduced so columns don't stretch too far on mobile */
+  }
+  .reseller-history-table th {
+    padding: 0.6rem 0.65rem !important;
+    font-size: 0.7rem !important;
+  }
+  .reseller-history-table td {
+    padding: 0.6rem 0.65rem !important;
+    font-size: 0.8rem !important;
+  }
+  .order-card-details {
+    padding: 0.6rem 0.4rem !important;
+  }
+  .details-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+  .btn-expand-row {
+    width: 22px !important;
+    height: 22px !important;
+    font-size: 0.85rem !important;
   }
   
   /* Card padding reduction */
   .card {
     padding: 0.85rem;
     border-radius: 12px;
+  }
+
+  /* Recharge Split Layout & Server Cards Mobile Fix */
+  .recharge-split-layout {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+  .recharge-server-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+  .recharge-server-grid .server-card {
+    padding: 8px 10px !important;
+    min-height: auto !important;
+  }
+  .server-card-top {
+    gap: 6px !important;
+    margin-bottom: 4px !important;
+  }
+  .server-icon {
+    font-size: 1.2rem !important;
+  }
+  .server-name {
+    font-size: 0.82rem !important;
+  }
+  .server-sub {
+    font-size: 0.65rem !important;
+  }
+  .server-min-badge {
+    font-size: 0.65rem !important;
+    padding: 2px 6px !important;
+  }
+  .hot-badge-tag {
+    font-size: 0.55rem !important;
+    padding: 2px 5px !important;
+  }
+  .recharge-step-banner {
+    padding: 4px 6px !important;
+    gap: 4px !important;
+  }
+  .step-pill {
+    padding: 4px 8px !important;
+    font-size: 0.74rem !important;
+    gap: 4px !important;
+  }
+  .recharge-step-box {
+    padding: 0.85rem !important;
   }
   
   /* Dashboard Tabs */
