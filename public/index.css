@@ -2192,11 +2192,8 @@ h1, h2, h3, h4 { color: var(--text-primary); font-family: var(--font-display); f
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-}
-@media (max-width: 480px) {
-  .recharge-server-grid {
-    grid-template-columns: 1fr;
-  }
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .recharge-server-grid .server-card {
@@ -2645,5 +2642,187 @@ h1, h2, h3, h4 { color: var(--text-primary); font-family: var(--font-display); f
   font-family: var(--font-sans);
   letter-spacing: -0.02em;
   white-space: nowrap;
+}
+
+/* ========================================================
+   CRITICAL MOBILE OVERRIDES (RECHARGES & RESPONSIVE VIEWPORT)
+   ======================================================== */
+@media (max-width: 768px) {
+  #rechargeSection {
+    margin-top: 10px !important;
+    padding: 0.75rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+  }
+  #rechargeSection .card-header {
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    gap: 8px !important;
+    margin-bottom: 0.85rem !important;
+    padding-bottom: 0.65rem !important;
+  }
+  #rechargeSection .card-header h2 {
+    font-size: 1.05rem !important;
+  }
+  #rechargeSection .card-body {
+    padding: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .recharge-split-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 1rem !important;
+    box-sizing: border-box !important;
+  }
+  .recharge-form-col,
+  .recharge-history-col {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .recharge-step-banner {
+    display: flex !important;
+    flex-direction: row !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 4px 6px !important;
+    gap: 4px !important;
+  }
+  .step-pill {
+    padding: 4px 6px !important;
+    font-size: 0.72rem !important;
+    white-space: nowrap !important;
+    flex: 1 !important;
+    justify-content: center !important;
+  }
+  .step-divider {
+    display: none !important;
+  }
+  .recharge-step-box {
+    padding: 0.85rem 0.75rem !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  /* Server selector: 2 compact columns that never break container */
+  .recharge-server-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .recharge-server-grid .server-card {
+    min-width: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 8px 8px !important;
+    border-radius: 10px !important;
+  }
+  .server-card-top {
+    gap: 6px !important;
+    margin-bottom: 4px !important;
+  }
+  .server-icon {
+    font-size: 1.25rem !important;
+  }
+  .server-name {
+    font-size: 0.82rem !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+  .server-sub {
+    font-size: 0.62rem !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+  .server-min-badge {
+    font-size: 0.62rem !important;
+    padding: 2px 4px !important;
+  }
+  .hot-badge-tag {
+    font-size: 0.55rem !important;
+    padding: 1px 4px !important;
+  }
+  .recharge-input-wrap {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .recharge-number-input {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    font-size: 1.05rem !important;
+    padding: 10px 12px 10px 32px !important;
+  }
+  .quick-amounts-bar {
+    gap: 4px !important;
+    margin-top: 6px !important;
+  }
+  .quick-chip {
+    padding: 4px 7px !important;
+    font-size: 0.72rem !important;
+    flex: 1 1 auto !important;
+    text-align: center !important;
+  }
+  .recharge-bank-select {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    font-size: 0.88rem !important;
+    padding: 10px 12px !important;
+  }
+  .btn-recharge-submit {
+    padding: 11px !important;
+    font-size: 0.92rem !important;
+  }
+
+  /* History Summary Cards in Single Row or 2x2 Clean Grid */
+  .recharge-summary-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 6px !important;
+    margin-bottom: 0.75rem !important;
+  }
+  .recharge-stat-card {
+    padding: 6px 8px !important;
+    gap: 6px !important;
+  }
+  .recharge-stat-card .stat-card-icon {
+    width: 28px !important;
+    height: 28px !important;
+  }
+  .recharge-stat-card .stat-card-label {
+    font-size: 0.62rem !important;
+  }
+  .recharge-stat-card .stat-card-value {
+    font-size: 0.88rem !important;
+  }
+
+  /* Table readability on mobile */
+  .recharges-compact-table-wrap {
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  .compact-table {
+    min-width: 480px !important;
+  }
+  .compact-table th,
+  .compact-table td {
+    padding: 6px 8px !important;
+    font-size: 0.75rem !important;
+  }
+}
+
+/* Even narrower screens (< 360px) */
+@media (max-width: 360px) {
+  .recharge-server-grid {
+    grid-template-columns: 1fr !important;
+  }
 }
 

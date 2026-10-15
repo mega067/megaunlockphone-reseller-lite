@@ -801,30 +801,35 @@
         
         <div id="rechargeStep1">
           <div class="form-group" style="margin-bottom: 20px;">
-            <label for="rechargeServer" style="font-size: 0.95rem; font-weight: 600; color: #e2e8f0;">Servidor (¿Dónde quieres el saldo?)</label>
+            <label for="rechargeServer" style="font-size: 0.95rem; font-weight: 600; color: #e2e8f0; display: block; margin-bottom: 8px;">Servidor (¿Dónde quieres el saldo?)</label>
             <input type="hidden" id="rechargeServer" value="1">
-            <div id="rechargeServerCards" style="display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px; scroll-snap-type: x mandatory;">
+            <div id="rechargeServerCards" class="recharge-server-grid">
               
-              <div class="server-card active" data-id="1" style="display: flex; flex-direction: column; min-width: 250px; flex: 1; padding: 15px; border-radius: 12px; cursor: pointer; scroll-snap-align: center; position: relative; transition: all 0.2s ease;">
-                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
-                  <span style="font-size: 1.8rem;">⚡</span>
-                  <strong style="color: #60a5fa; font-size: 1.1rem; text-shadow: 0 0 10px rgba(96,165,250,0.4);">MEGA-SERVER</strong>
+              <div class="server-card active" data-id="1">
+                <div class="server-card-top">
+                  <span class="server-icon">⚡</span>
+                  <div>
+                    <strong class="server-name" style="color: #60a5fa;">MEGA-SERVER</strong>
+                    <span class="server-sub">Desbloqueos IMEI</span>
+                  </div>
                 </div>
-                <p style="color: #94a3b8; font-size: 0.8rem; margin: 0;">Servicios de desbloqueo IMEI internacionales</p>
-                <div style="margin-top: 10px; font-size: 0.85rem; color: #10b981; font-weight: 600;">Min: $50 MXN</div>
+                <div class="server-min-badge">Mínimo: $50 MXN</div>
               </div>
 
-              <div class="server-card" data-id="3" style="display: flex; flex-direction: column; min-width: 250px; flex: 1; padding: 15px; border-radius: 12px; cursor: pointer; scroll-snap-align: center; position: relative; transition: all 0.2s ease;">
-                <div style="position: absolute; top: 0px; right: 0px; z-index: 10; pointer-events: none; background: linear-gradient(90deg, #ef4444, #f97316); color: white; font-size: 0.7rem; font-weight: bold; padding: 4px 10px; border-radius: 0 12px 0 12px; box-shadow: 0 2px 8px rgba(239,68,68,0.5);">🔥 HOT</div>
-                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
-                  <span style="font-size: 1.8rem;">🔱</span>
-                  <strong style="color: #a78bfa; font-size: 1.1rem; text-shadow: 0 0 10px rgba(167,139,250,0.4);">OMEGA-SERVER</strong>
+              <div class="server-card" data-id="3">
+                <div class="hot-badge-tag">🔥 HOT</div>
+                <div class="server-card-top">
+                  <span class="server-icon">🔱</span>
+                  <div>
+                    <strong class="server-name" style="color: #c084fc;">OMEGA-SERVER</strong>
+                    <span class="server-sub">Exclusivos & Tools</span>
+                  </div>
                 </div>
-                <p style="color: #94a3b8; font-size: 0.8rem; margin: 0;">Servicios exclusivos y especiales</p>
-                <div style="margin-top: 10px; font-size: 0.85rem; color: #10b981; font-weight: 600;">Min: $100 MXN</div>
+                <div class="server-min-badge">Mínimo: $100 MXN</div>
               </div>
               
             </div>
+          </div>
             
             <div style="margin-top: 15px; padding: 12px 15px; border-radius: 10px; background: linear-gradient(90deg, rgba(245,158,11,0.1), rgba(245,158,11,0.05)); border-left: 4px solid #f59e0b; box-shadow: inset 0 0 20px rgba(245,158,11,0.05);">
               <p style="color: #fcd34d; font-size: 0.85rem; margin: 0; display: flex; align-items: flex-start; gap: 8px; line-height: 1.4;">
