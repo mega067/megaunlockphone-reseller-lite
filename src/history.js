@@ -105,6 +105,45 @@ module.exports = function(app, deps) {
     return res.json({ success: true });
   });
 
+  // Eliminar un solo pedido del historial (Exclusivo para administradores)
+  app.delete('/api/history/item/:id', requireAuth, (req, res) => {
+    const user = req.user;
+    if (user.role !== 'admin') {
+      return res.status(403).json({ error: 'Solo los administradores pueden eliminar pedidos individuales del historial.' });
+    }
+
+    const targetId = req.params.id;
+    if (!targetId) {
+      return res.status(400).json({ error: 'ID de pedido requerido.' });
+    }
+
+    let history = readDB('history.json') || [];
+    const initialLen = history.length;
+    // Filtrar por id de transacción (id) o por orderId
+    history = history.filter(h => String(h.id) !== String(targetId) && String(h.orderId) !== String(targetId));
+
+    if (history.length === initialLen) {
+      // También intentar eliminar de SQLite por si ya fue migrado
+      try {
+        const sqliteDb = require('./database');
+        const stmt = sqliteDb.prepare('DELETE FROM OrdersHistory WHERE id = ? OR orderId = ?');
+        stmt.run(targetId, targetId);
+      } catch (e) {}
+    }
+
+    writeDB('history.json', history);
+    
+    try {
+      const sqliteDb = require('./database');
+      const stmt = sqliteDb.prepare('DELETE FROM OrdersHistory WHERE id = ? OR orderId = ?');
+      stmt.run(targetId, targetId);
+    } catch (e) {}
+
+    const { incrementHistoryVersion } = require('./cacheManager');
+    incrementHistoryVersion();
+    return res.json({ success: true, message: 'Pedido eliminado correctamente del historial.' });
+  });
+
   app.put('/api/history', requireAuth, (req, res) => {
     const { updatedOrders } = req.body;
     if (!updatedOrders || !Array.isArray(updatedOrders)) return res.status(400).json({ error: 'Missing updatedOrders' });

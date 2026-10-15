@@ -871,6 +871,7 @@ function renderOrderHistory() {
                 ${item.status === 'success' ? `<button type="button" class="btn btn-sm btn-ticket" style="background: rgba(0,240,255,0.1); color: #00f0ff; border: 1px solid rgba(0,240,255,0.3); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 0.3rem; font-weight: bold;"><i data-lucide="image" style="width: 14px; height: 14px;"></i> Generar Ticket</button>` : ''}
                 ${authRole === 'admin' && !item.isRefunded && item.status !== 'success' ? `<button type="button" class="btn btn-sm btn-refund" style="background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 0.3rem; font-weight: bold;" data-orderid="${item.orderId}" data-serverid="${item.serverId}"><i data-lucide="undo-2" style="width: 14px; height: 14px;"></i> Reembolsar Cliente</button>` : ''}
                 ${item.isRefunded ? `<span style="background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: bold; display: flex; align-items: center; gap: 0.3rem;"><i data-lucide="check-circle" style="width: 14px; height: 14px;"></i> Dinero Reembolsado</span>` : ''}
+                ${authRole === 'admin' ? `<button type="button" class="btn btn-sm btn-delete-single-order" style="background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.4); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 0.3rem; font-weight: bold;" data-id="${item.id}" data-orderid="${item.orderId || ''}"><i data-lucide="trash-2" style="width: 14px; height: 14px;"></i> Eliminar</button>` : ''}
               </div>
             </div>
             <pre class="detail-val-pre">${colorizeServerResponse(item.statusText || item.msg || 'N/A')}</pre>
@@ -980,6 +981,52 @@ function renderOrderHistory() {
           alert('Error de conexión');
           btnRefund.disabled = false;
           btnRefund.innerHTML = 'Reintentar Reembolso';
+        }
+      });
+    }
+
+    // Delete Single Order Button Event Listener (Admin Only)
+    const btnDeleteSingle = trDetails.querySelector('.btn-delete-single-order');
+    if (btnDeleteSingle) {
+      btnDeleteSingle.addEventListener('click', async () => {
+        const orderIdentifier = item.orderId || item.id;
+        const confirmMsg = `¿Eliminar la orden #${orderIdentifier} (${item.serviceName || 'Servicio'}) solo de tu historial?\n\nEsta acción quitará el registro del historial sin alterar créditos ni las demás órdenes.`;
+        if (!confirm(confirmMsg)) return;
+
+        btnDeleteSingle.disabled = true;
+        btnDeleteSingle.innerHTML = 'Eliminando...';
+
+        try {
+          const targetId = encodeURIComponent(item.id || item.orderId);
+          const res = await fetch(`/api/history/item/${targetId}`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + authToken,
+              'X-Server-Id': currentServerId
+            }
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            if (typeof showToast === 'function') {
+              showToast(`Orden #${orderIdentifier} eliminada del historial.`, 'success');
+            } else {
+              alert('Orden eliminada correctamente.');
+            }
+            // Eliminar localmente de orderHistory y re-renderizar
+            orderHistory = orderHistory.filter(h => h.id !== item.id && String(h.orderId) !== String(item.orderId));
+            renderOrderHistory();
+          } else {
+            alert(data.error || 'Error al eliminar la orden');
+            btnDeleteSingle.disabled = false;
+            btnDeleteSingle.innerHTML = '<i data-lucide="trash-2" style="width: 14px; height: 14px;"></i> Eliminar';
+            if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+          }
+        } catch (err) {
+          alert('Error de conexión al eliminar la orden');
+          btnDeleteSingle.disabled = false;
+          btnDeleteSingle.innerHTML = '<i data-lucide="trash-2" style="width: 14px; height: 14px;"></i> Eliminar';
+          if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
         }
       });
     }
