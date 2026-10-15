@@ -543,7 +543,7 @@ let inspectedOrderData = null;
 async function queryRemoteOrder(orderId) {
   if (!orderId) return null;
   
-  // Intento 1: SERVER order, si no responde, Intento 2: IMEI order (automático en backend)
+  // Realizar consulta enviando el ID (el backend prueba getimeiorder, getserverorder y getfileorder)
   const res = await fetch('/api/orders/bulk-status', {
     method: 'POST',
     headers: { 'X-Server-Id': currentServerId, 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
@@ -555,33 +555,49 @@ async function queryRemoteOrder(orderId) {
     const item = data.SUCCESS[0];
     const raw = item.raw || item.DATA || item.data || {};
     
-    // Si la respuesta es desconocida o error, retornamos objeto con flag
-    if (item.status === 'unknown' || !raw.SERVICEID && !raw.serviceid && !raw.SERVICENAME && !raw.servicename) {
-      return null;
+    // Si el backend devolvió status unknown o error explícito
+    if (item.status === 'unknown' || item.status === 'error') {
+      return {
+        notFound: true,
+        errorText: item.statusText || 'Pedido no encontrado en el servidor'
+      };
     }
 
-    const sId = raw.SERVICEID || raw.serviceid || raw.serviceId || '';
-    let sName = raw.SERVICENAME || raw.servicename || raw.serviceName || '';
+    const sId = raw.SERVICEID || raw.serviceid || raw.serviceId || raw.ID || raw.id || '';
+    let sName = raw.SERVICENAME || raw.servicename || raw.serviceName || raw.NAME || '';
     let cost = 0;
 
-    // Si el nombre no vino en el objeto raw, buscarlo en nuestro catálogo cargado
-    if (Array.isArray(productsList) && sId) {
-      const match = productsList.find(p => String(p.serviceid) === String(sId));
-      if (match) {
-        if (!sName) sName = match.service;
-        cost = (match.rawItem && match.rawItem._REAL_COST) ? parseFloat(match.rawItem._REAL_COST) : parseFloat(match.credit || 0);
+    // Si el nombre no vino en el objeto raw, buscarlo en nuestro catálogo de productos
+    if (Array.isArray(productsList) && productsList.length > 0) {
+      if (sId) {
+        const match = productsList.find(p => String(p.serviceid) === String(sId));
+        if (match) {
+          if (!sName) sName = match.service;
+          cost = (match.rawItem && match.rawItem._REAL_COST) ? parseFloat(match.rawItem._REAL_COST) : parseFloat(match.credit || 0);
+        }
+      }
+      // O si vino el precio en el raw (ej. PRICE)
+      if (!cost && raw.PRICE) {
+        cost = parseFloat(raw.PRICE) || 0;
       }
     }
-    if (!sName) sName = `Servicio #${sId || 'Digital'}`;
+    
+    if (!sName) {
+      sName = sId ? `Servicio #${sId}` : `Pedido #${orderId}`;
+    }
+
+    // Extraer identificador: IMEI, Username, Cuenta, Referencia o Cantidad
+    const imeiVal = raw.IMEI || raw.imei || raw.USERNAME || raw.username || raw.ACCOUNT || raw.REFERENCEID || raw.QTY || 'N/A';
+    const detectedType = item.serviceType || (raw.IMEI && String(raw.IMEI).length >= 14 && /^\d+$/.test(raw.IMEI) ? 'IMEI' : 'SERVER');
 
     return {
       orderId: orderId,
       serviceId: sId || '1',
       serviceName: sName,
       status: item.status || 'pending',
-      statusText: item.statusText || raw.REPLY || raw.REJECT_REASON || 'Registrado',
-      imei: raw.IMEI || raw.imei || raw.REFERENCEID || raw.QTY || 'N/A',
-      serviceType: (raw.IMEI && raw.IMEI.length >= 14 && /^\d+$/.test(raw.IMEI)) ? 'IMEI' : 'SERVER',
+      statusText: item.statusText || raw.CODE || raw.REPLY || raw.REJECT_REASON || 'Registrado',
+      imei: imeiVal,
+      serviceType: detectedType,
       cost: cost,
       raw: raw
     };
@@ -611,17 +627,18 @@ async function handleInspectOrder() {
 
   try {
     const found = await queryRemoteOrder(orderId);
-    if (!found) {
+    if (!found || found.notFound) {
       inspectedOrderData = null;
+      const reason = (found && found.errorText) ? found.errorText : 'El servidor remoto no reconoce el ID o no pertenece al servidor seleccionado.';
       if (importOrderPreviewCard) {
         previewOrderType.textContent = '[NO ENCONTRADO]';
         previewOrderStatusBadge.textContent = 'Inválido';
         previewOrderStatusBadge.className = 'status-badge status-failed';
-        previewServiceName.textContent = 'No se encontró ningún pedido con este ID';
-        previewOrderImei.innerHTML = '<strong>Resultado:</strong> El servidor remoto no reconoce el ID o no pertenece a este servidor.';
-        previewOrderReply.textContent = 'Verifica que el ID sea correcto y que corresponda al Servidor activo.';
+        previewServiceName.textContent = 'No se encontró el pedido';
+        previewOrderImei.innerHTML = `<strong>Respuesta Servidor:</strong> ${escapeHtml(reason)}`;
+        previewOrderReply.textContent = 'Verifica que el ID sea correcto y que corresponda al Servidor activo (MEGA, ALPHA u OMEGA).';
       }
-      if (typeof showToast === 'function') showToast('Pedido no encontrado en el servidor', 'error');
+      if (typeof showToast === 'function') showToast(reason, 'error');
     } else {
       inspectedOrderData = found;
       if (importOrderPreviewCard) {
@@ -702,16 +719,17 @@ if (formImportOrder) {
         orderToImport = await queryRemoteOrder(orderId);
       }
 
-      if (!orderToImport) {
-        if (typeof showToast === 'function') showToast('No se puede importar: ID no encontrado en el servidor', 'error');
+      if (!orderToImport || orderToImport.notFound) {
+        const errorReason = (orderToImport && orderToImport.errorText) ? orderToImport.errorText : 'ID no encontrado en el servidor';
+        if (typeof showToast === 'function') showToast(errorReason, 'error');
         if (importOrderPreviewCard) {
           importOrderPreviewCard.classList.remove('hidden');
           previewOrderType.textContent = '[NO ENCONTRADO]';
           previewOrderStatusBadge.textContent = 'Inválido';
           previewOrderStatusBadge.className = 'status-badge status-failed';
           previewServiceName.textContent = 'ID de pedido inexistente o inválido';
-          previewOrderImei.innerHTML = '<strong>Error:</strong> No se pudo verificar en el servidor remoto.';
-          previewOrderReply.textContent = 'Revisa el número de ID.';
+          previewOrderImei.innerHTML = `<strong>Error:</strong> ${escapeHtml(errorReason)}`;
+          previewOrderReply.textContent = 'Revisa el número de ID o cambia de servidor.';
         }
         return;
       }
