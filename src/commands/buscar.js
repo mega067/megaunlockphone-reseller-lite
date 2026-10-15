@@ -88,13 +88,38 @@ async function buscar(context) {
 
 async function executeSearch(sId, query, sock, msg, remoteJid, isGroup, linkedUser) {
     try {
-        const res = await axios.post('https://megaunlockphone-panel.alwaysdata.net/api/bot/search', {
-            botSecret: 'MEGA_BOT_SECRET_2026',
-            userId: linkedUser,
-            serverId: sId,
-            query: query
-        });
-        const results = res.data.results;
+        const http = require('http');
+        const https = require('https');
+        const ipv4Agent = new https.Agent({ family: 4 });
+
+        // Intentar primero vía API interna o endpoint AlwaysData con timeout de 8 segundos
+        let results = null;
+        try {
+            const res = await axios.post('https://megaunlockphone-panel.alwaysdata.net/api/bot/search', {
+                botSecret: 'MEGA_BOT_SECRET_2026',
+                userId: linkedUser,
+                serverId: sId,
+                query: query
+            }, {
+                timeout: 8000,
+                httpsAgent: ipv4Agent
+            });
+            results = res.data?.results;
+        } catch (apiErr) {
+            console.warn('[SEARCH] External API call failed, falling back to local database search:', apiErr.message);
+            // Fallback directo a base de datos / cache local para no dejar colgado al usuario
+            const botController = require('../controllers/botController');
+            const mockReq = {
+                body: { query, userId: linkedUser, serverId: sId },
+                headers: { 'x-server-id': sId }
+            };
+            const mockRes = {
+                status: () => mockRes,
+                json: (data) => { results = data.results || []; }
+            };
+            await botController.searchProducts(mockReq, mockRes);
+        }
+
         if (!results || results.length === 0) {
             await sock.sendMessage(remoteJid, { text: `🔎 No se encontraron servicios para "${query}" en el Servidor ${sId === '1' ? '1️⃣ MEGA' : (sId === '3' ? '3️⃣ OMEGA' : sId)}.` });
         } else {
@@ -109,7 +134,8 @@ async function executeSearch(sId, query, sock, msg, remoteJid, isGroup, linkedUs
             await sock.sendMessage(remoteJid, { text: msgTxt });
         }
     } catch (e) {
-        await sock.sendMessage(remoteJid, { text: '❌ Error al buscar servicios. Intenta más tarde.' });
+        console.error('[SEARCH] Final catch error:', e.message);
+        await sock.sendMessage(remoteJid, { text: '❌ Error al buscar servicios. Intenta con otra palabra clave.' });
     }
 }
 

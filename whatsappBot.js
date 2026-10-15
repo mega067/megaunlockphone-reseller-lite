@@ -1,4 +1,4 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, makeCacheableSignalKeyStore, DisconnectReason, Browsers, proto } = require('@whiskeysockets/baileys');
 const qrcode = require('qrcode-terminal');
 const fs = require('fs');
 const path = require('path');
@@ -6,42 +6,63 @@ const axios = require('axios');
 const http = require('http');
 const https = require('https');
 
-// Single-Instance File Lock (Process-aware + Heartbeat)
+// Single-Instance File Lock (Process & Host-Aware + Persistent Heartbeat)
+// Avoids concurrent instances fighting across different AlwaysData processes/containers
+const os = require('os');
 const lockFile = path.join(__dirname, 'bot.lock');
+const myHost = os.hostname();
+const myPid = process.pid;
+
 try {
     if (fs.existsSync(lockFile)) {
         let isAlive = false;
         try {
-            const oldPid = parseInt(fs.readFileSync(lockFile, 'utf8').trim(), 10);
-            if (!isNaN(oldPid) && oldPid > 0) {
-                // Check if process is actually running
-                process.kill(oldPid, 0);
-                isAlive = true;
+            const rawLock = fs.readFileSync(lockFile, 'utf8').trim();
+            let lockData = { pid: 0, host: myHost, time: 0 };
+            if (rawLock.startsWith('{')) {
+                lockData = JSON.parse(rawLock);
+            } else {
+                lockData.pid = parseInt(rawLock, 10);
+            }
+
+            // Si está en el mismo host podemos verificar directamente si el PID está vivo
+            if (lockData.host === myHost && lockData.pid > 0) {
+                try {
+                    process.kill(lockData.pid, 0);
+                    isAlive = true;
+                } catch (e) {
+                    isAlive = false; // El PID ya no corre en este sistema operativo
+                }
+            } else {
+                // Si proviene de otro host o contenedor, checar timestamp del heartbeat (activo si < 45 seg)
+                const fileStats = fs.statSync(lockFile);
+                if (Date.now() - fileStats.mtimeMs < 45000) {
+                    isAlive = true;
+                }
+            }
+
+            if (isAlive) {
+                console.error(`⚠️ Otra instancia del bot ya está activa en [${lockData.host || 'local'}] PID: ${lockData.pid}. Abortando inicio redundante.`);
+                process.exit(0);
+            } else {
+                try { fs.unlinkSync(lockFile); } catch (e) {}
             }
         } catch (e) {
-            // process.kill throws if PID doesn't exist (ESRCH), meaning old process is dead
-            isAlive = false;
-        }
-
-        const stats = fs.statSync(lockFile);
-        if (isAlive && (Date.now() - stats.mtimeMs < 60000)) {
-            console.error('⚠️ Otra instancia del bot ya está corriendo (PID activo). Saliendo para evitar corrupción de BD.');
-            process.exit(0);
-        } else {
-            // Stale lock file from killed/crashed process
-            try { fs.unlinkSync(lockFile); } catch (e) {}
+            try { fs.unlinkSync(lockFile); } catch (err) {}
         }
     }
-    fs.writeFileSync(lockFile, process.pid.toString());
+
+    fs.writeFileSync(lockFile, JSON.stringify({ pid: myPid, host: myHost, startedAt: new Date().toISOString() }));
+    // Heartbeat cada 10 segundos
     setInterval(() => {
         try { fs.utimesSync(lockFile, new Date(), new Date()); } catch (e) {}
-    }, 15000);
+    }, 10000);
 
     const cleanupLock = () => {
         try {
             if (fs.existsSync(lockFile)) {
-                const curPid = parseInt(fs.readFileSync(lockFile, 'utf8').trim(), 10);
-                if (curPid === process.pid) fs.unlinkSync(lockFile);
+                const raw = fs.readFileSync(lockFile, 'utf8').trim();
+                if (raw.includes(String(myPid))) fs.unlinkSync(lockFile);
             }
         } catch (e) {}
     };
@@ -57,15 +78,13 @@ axios.defaults.httpsAgent = new https.Agent({ family: 4 });
 
 process.on('uncaughtException', (err) => {
     console.error('Uncaught Exception:', err.message);
-    if (err.message === 'Timed Out' || err.message.includes('socket') || err.message.includes('connection')) {
+    // Solo forzar salida si es error de memoria crítica o descriptor corrupto
+    if (err.message && (err.message.includes('out of memory') || err.message.includes('EBADF'))) {
         process.exit(1);
     }
 });
 process.on('unhandledRejection', (reason, promise) => {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-    if (reason && reason.message === 'Timed Out') {
-        process.exit(1);
-    }
 });
 
 const DATA_DIR = path.join(__dirname, 'data');
@@ -89,14 +108,23 @@ let setPriceSessions = {};
 let sock = null;
 let isReady = false;
 
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 10;
+
 async function connectToWhatsApp() {
     const { state, saveCreds } = await useMultiFileAuthState(path.join(__dirname, 'baileys_auth'));
     
-    // Cache de mensajes en memoria para responder al mecanismo de reintento de claves de WhatsApp (evita "Esperando mensaje")
+    // Cache de claves de cifrado Signal con TTL para evitar lentitud y "Esperando mensaje"
+    const keyStore = makeCacheableSignalKeyStore(state.keys);
+    
+    // Cache de mensajes en memoria (LRU) para responder a reintentos de cifrado de WhatsApp
     const msgRetryCache = new Map();
 
     sock = makeWASocket({
-        auth: state,
+        auth: {
+            creds: state.creds,
+            keys: keyStore
+        },
         printQRInTerminal: false,
         browser: Browsers.ubuntu('Chrome'),
         markOnlineOnConnect: true,
@@ -109,7 +137,8 @@ async function connectToWhatsApp() {
             if (key && key.id && msgRetryCache.has(key.id)) {
                 return msgRetryCache.get(key.id);
             }
-            return undefined;
+            // Devolver mensaje mínimo si no se encuentra en el caché para desbloquear la sesión
+            return proto.Message.fromObject({});
         },
         shouldIgnoreJid: (jid) => false
     });
@@ -131,7 +160,7 @@ async function connectToWhatsApp() {
             item.retries = item.retries || 0;
 
             try {
-                // Sincronizar presencia y estado para negociar claves de cifrado activas
+                // Sincronizar presencia y estado para forzar intercambio de llaves Signal
                 try {
                     await sock.sendPresenceUpdate('available');
                     await sock.sendPresenceUpdate('composing', jid);
@@ -153,8 +182,8 @@ async function connectToWhatsApp() {
 
                 if (result && result.key && result.key.id && result.message) {
                     msgRetryCache.set(result.key.id, result.message);
-                    // Mantener tamaño de caché controlado
-                    if (msgRetryCache.size > 500) {
+                    // Mantener tamaño de caché controlado (máx 1000 mensajes para bajo consumo RAM)
+                    if (msgRetryCache.size > 1000) {
                         const firstKey = msgRetryCache.keys().next().value;
                         msgRetryCache.delete(firstKey);
                     }
@@ -205,22 +234,33 @@ async function connectToWhatsApp() {
             const statusCode = lastDisconnect?.error?.output?.statusCode;
             const errorTag = lastDisconnect?.error?.node?.content?.[0]?.tag || '';
             const isReplaced = errorTag === 'conflict' || lastDisconnect?.error?.message?.includes('conflict');
-            const shouldReconnect = statusCode !== DisconnectReason.loggedOut && !isReplaced;
+            const isLoggedOut = statusCode === DisconnectReason.loggedOut;
             
-            console.log(`Conexión cerrada. Status: ${statusCode}, Error: ${lastDisconnect?.error?.message || 'None'}. Reconectando: ${shouldReconnect}`);
-            if (shouldReconnect) {
-                setTimeout(connectToWhatsApp, 3000);
-            } else if (isReplaced) {
-                console.log('⚠️ Conflicto detectado: Otra sesión abrió este WhatsApp o se reemplazó el stream. Esperando 10s antes de reintentar...');
+            console.log(`Conexión cerrada. Status: ${statusCode}, Error: ${lastDisconnect?.error?.message || 'None'}`);
+            
+            if (isLoggedOut) {
+                console.log('⚠️ Sesión cerrada desde el teléfono. Borra la carpeta baileys_auth para escanear de nuevo.');
                 isReady = false;
-                setTimeout(connectToWhatsApp, 10000);
+                return;
+            }
+
+            reconnectAttempts++;
+            // Backoff exponencial con tope de 30 segundos
+            const backoffMs = Math.min(30000, 2000 * Math.pow(1.5, reconnectAttempts));
+
+            if (isReplaced) {
+                console.log(`⚠️ Conflicto de sesión en el socket (otra conexión activa). Esperando ${Math.round(backoffMs/1000)}s antes de reintentar sin tumbar sesión...`);
+                isReady = false;
+                setTimeout(connectToWhatsApp, backoffMs);
             } else {
-                console.log('Sesión cerrada manualmente. Borra la carpeta baileys_auth para escanear de nuevo.');
+                console.log(`Reconectando socket (intento #${reconnectAttempts}) en ${Math.round(backoffMs/1000)}s...`);
                 isReady = false;
+                setTimeout(connectToWhatsApp, backoffMs);
             }
         } else if (connection === 'open') {
             console.log('✅ Bot de WhatsApp (Baileys) conectado y listo!');
             isReady = true;
+            reconnectAttempts = 0; // Reset counter on successful connection
         }
     });
 
