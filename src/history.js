@@ -43,6 +43,9 @@ module.exports = function(app, deps) {
     // Si es un usuario normal, verificar que no intente sobreescribir una orden que no le pertenece
     const existingIdx = history.findIndex(o => String(o.orderId) === String(orderId) && (o.serverId || '1') === serverId);
     
+    const isImported = req.body.isImported !== false;
+    const defaultServiceName = `Pedido Importado / Garantía (ID: ${orderId})`;
+
     if (existingIdx !== -1) {
       if (user.role !== 'admin' && String(history[existingIdx].userId) !== String(user.id)) {
         return res.status(403).json({ error: 'Esta orden ya se encuentra registrada en el historial de otro usuario.' });
@@ -51,13 +54,15 @@ module.exports = function(app, deps) {
       history[existingIdx] = {
         ...history[existingIdx],
         serviceId: serviceId || history[existingIdx].serviceId,
-        serviceName: serviceName || history[existingIdx].serviceName,
+        serviceName: serviceName || history[existingIdx].serviceName || defaultServiceName,
         serviceType: serviceType || history[existingIdx].serviceType,
         imei: (imei && imei !== 'N/A') ? imei : history[existingIdx].imei,
-        costCharged: (user.role === 'admin' && cost !== undefined) ? Number(cost) : history[existingIdx].costCharged,
-        realCost: (user.role === 'admin' && cost !== undefined) ? Number(cost) : history[existingIdx].realCost,
+        costCharged: (user.role === 'admin' && cost !== undefined) ? Number(cost) : (history[existingIdx].costCharged || 0),
+        realCost: (user.role === 'admin' && cost !== undefined) ? Number(cost) : (history[existingIdx].realCost || 0),
         status: status || history[existingIdx].status,
         msg: statusText || history[existingIdx].msg,
+        isImported: isImported,
+        notes: req.body.notes || history[existingIdx].notes || 'Garantía / Pedido Importado',
         date: history[existingIdx].date || new Date().toISOString()
       };
     } else {
@@ -68,15 +73,17 @@ module.exports = function(app, deps) {
         username: user.username,
         date: new Date().toISOString(),
         serviceId: serviceId || 'N/A',
-        serviceName: serviceName || `Pedido Importado (ID: ${orderId})`,
+        serviceName: serviceName || defaultServiceName,
         serviceType: serviceType || 'IMEI',
         imei: imei || 'N/A',
-        costCharged: Number(cost || 0),
-        realCost: Number(cost || 0),
+        costCharged: (user.role === 'admin' && cost) ? Number(cost) : 0,
+        realCost: (user.role === 'admin' && cost) ? Number(cost) : 0,
         profit: 0,
         orderId: String(orderId),
         status: status || 'success',
-        msg: statusText || 'Importado desde servidor'
+        msg: statusText || 'Importado desde servidor (Garantía)',
+        isImported: isImported,
+        notes: req.body.notes || 'Garantía / Pedido Importado'
       });
     }
 

@@ -744,7 +744,17 @@ function renderOrderHistory() {
     trHeader.className = 'history-row-header-click';
     trHeader.setAttribute('data-target-id', `details_row_${item.id}`);
 
-    // Determine category (IMEI, SERVER, REMOTE)
+    const isWarranty = Boolean(
+      item.isImported || 
+      (item.serviceName && (item.serviceName.toLowerCase().includes('garant') || item.serviceName.toLowerCase().includes('importad'))) ||
+      (item.notes && item.notes.toLowerCase().includes('garant'))
+    );
+
+    if (isWarranty) {
+      trHeader.classList.add('history-row-imported');
+    }
+
+    // Determine category (IMEI, SERVER, REMOTE, GARANTÍA)
     let category = item.serviceType;
     if (!category) {
       const matchingProduct = productsList.find(p => String(p.serviceid) === String(item.serviceId));
@@ -756,7 +766,10 @@ function renderOrderHistory() {
     }
 
     let categoryClass = 'badge-category-imei';
-    if (category === 'SERVER') {
+    if (isWarranty) {
+      categoryClass = 'badge-category-imported';
+      category = 'GARANTÍA';
+    } else if (category === 'SERVER') {
       categoryClass = 'badge-category-server';
     } else if (category === 'REMOTE') {
       categoryClass = 'badge-category-remote';
@@ -804,11 +817,15 @@ function renderOrderHistory() {
     }
 
     // Display CODE result matching screenshot under CODIGO column
-    // First strip HTML for the summary view so we don't render literal <div> tags
     let rawString = String(item.statusText || item.msg || '');
     let strippedText = rawString.replace(/<br\s*\/?>/gi, ' ').replace(/<\/div>/gi, ' ').replace(/<[^>]*>?/gm, '').replace(/\s+/g, ' ').trim();
     let displayCodeContent = strippedText;
     if (displayCodeContent.length > 35) displayCodeContent = displayCodeContent.substring(0, 35) + '...';
+
+    const costValue = parseFloat(item.costCharged || item.costInCredits || 0);
+    const costDisplay = isWarranty 
+      ? `<span class="badge-zero-cost" title="Pedido de Garantía (No descuenta saldo)">$0.00 <span style="font-size: 0.65rem; opacity: 0.8;">(GARANTÍA)</span></span>`
+      : `<strong class="order-cost-val" style="color: #34d399;">$${costValue.toFixed(2)}</strong>`;
 
     trHeader.innerHTML = `
       <td>
@@ -818,7 +835,10 @@ function renderOrderHistory() {
         </span>
       </td>
       <td>
-        <strong>${escapeHtml(item.serviceName || item.service || 'Servicio')}</strong> 
+        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+          <strong>${escapeHtml(item.serviceName || item.service || 'Servicio')}</strong>
+          ${isWarranty ? `<span class="badge-warranty-tag"><i data-lucide="shield-check" style="width: 10px; height: 10px;"></i> GARANTÍA</span>` : ''}
+        </div>
         <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">ID: ${escapeHtml(item.serviceId || 'N/A')}</div>
       </td>
       ${authRole === 'admin' ? `
@@ -830,10 +850,10 @@ function renderOrderHistory() {
       <td>${displayImeiNum}</td>
       <td><span class="${statusClass}">${statusLabel}</span></td>
       <td><div style="font-family: 'Fira Code', monospace; font-size:0.8rem; color:#94a3b8; max-width:280px; display:inline-block; white-space:pre-wrap; word-break:break-word; background: rgba(0,0,0,0.4); padding: 0.3rem 0.6rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">${escapeHtml(displayCodeContent)}</div></td>
-      <td><strong class="order-cost-val" style="color: #34d399;">$${parseFloat(item.costCharged || item.costInCredits || 0).toFixed(2)}</strong></td>
+      <td>${costDisplay}</td>
       ${authRole === 'admin' ? `
       <td>
-        <strong style="color: #10b981;">+$${parseFloat(item.profit || 0).toFixed(2)}</strong>
+        <strong style="color: ${isWarranty ? '#94a3b8' : '#10b981'};">${isWarranty ? '$0.00' : '+$' + parseFloat(item.profit || 0).toFixed(2)}</strong>
       </td>
       ` : ''}
     `;
@@ -845,10 +865,19 @@ function renderOrderHistory() {
     trDetails.innerHTML = `
       <td colspan="${colspanCount}" class="history-detail-cell">
         <div class="order-card-details" style="padding: 1rem 0; overflow-y: auto;">
+          ${isWarranty ? `
+          <div style="margin-bottom: 0.85rem; padding: 0.6rem 0.85rem; border-radius: 8px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 8px; color: #fbbf24; font-size: 0.82rem; font-weight: 700;">
+              <i data-lucide="shield-alert" style="width: 16px; height: 16px;"></i>
+              <span>PEDIDO DE GARANTÍA / REEMPLAZO</span>
+            </div>
+            <span style="font-size: 0.75rem; color: #94a3b8;">No afecta tu balance de créditos ($0.00 MXN descontados).</span>
+          </div>
+          ` : ''}
           <div class="details-grid">
             <div class="details-col">
               <span class="detail-label">PEDIDO DESDE</span>
-              <strong class="detail-val">API</strong>
+              <strong class="detail-val">${isWarranty ? 'GARANTÍA / IMPORTADO' : 'API'}</strong>
             </div>
             <div class="details-col">
               <span class="detail-label">DIRECCIÓN IP</span>
@@ -1031,6 +1060,10 @@ function renderOrderHistory() {
       });
     }
   });
+
+  if (typeof lucide !== 'undefined' && lucide.createIcons) {
+    lucide.createIcons();
+  }
 }
 
 function addOrderToHistory(orderRecord) {

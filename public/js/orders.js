@@ -766,21 +766,23 @@ if (formImportOrder) {
         return;
       }
 
-      // Tomar el nombre del input si el usuario lo confirmó o editó
+      // Tomar el nombre del input si el usuario lo confirmó o editó, o el nombre detectado
       const finalServiceName = (importOrderServiceNameInput && importOrderServiceNameInput.value.trim()) 
         ? importOrderServiceNameInput.value.trim() 
-        : orderToImport.serviceName;
+        : (orderToImport.serviceName || `Pedido Importado / Garantía (ID: ${orderToImport.orderId})`);
 
       const importPayload = {
         orderId: orderToImport.orderId,
-        serviceId: orderToImport.serviceId,
+        serviceId: orderToImport.serviceId || 'N/A',
         serviceName: finalServiceName,
         imei: orderToImport.imei,
         status: orderToImport.status,
         statusText: orderToImport.statusText,
         serverId: currentServerId,
         serviceType: orderToImport.serviceType,
-        cost: orderToImport.cost
+        cost: 0, // No genera costo en balance ni descuenta saldo (garantía)
+        isImported: true,
+        notes: 'Garantía / Pedido Importado'
       };
 
       const addRes = await fetch('/api/history/add', {

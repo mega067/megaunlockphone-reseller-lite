@@ -1160,6 +1160,57 @@ h1, h2, h3, h4 { color: var(--text-primary); font-family: var(--font-display); f
   font-weight: 700;
 }
 
+/* Imported / Warranty Orders */
+.badge-category-imported {
+  background: linear-gradient(135deg, rgba(234, 179, 8, 0.15), rgba(249, 115, 22, 0.15));
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  padding: 3px 9px;
+  border-radius: var(--radius-full);
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.badge-warranty-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px dashed rgba(245, 158, 11, 0.5);
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.badge-zero-cost {
+  color: #38bdf8 !important;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(56, 189, 248, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+}
+
+.history-row-imported {
+  background: rgba(245, 158, 11, 0.02) !important;
+  border-left: 3px solid #f59e0b !important;
+}
+
+.history-row-imported:hover {
+  background: rgba(245, 158, 11, 0.06) !important;
+}
+
 /* History Details Drawer */
 .history-detail-cell {
   padding: 0 !important;
