@@ -1426,8 +1426,8 @@
 
   <!-- Modal de Importar Pedido con UI/UX Pro Max: Rápido y Automático por ID -->
   <div class="modal-overlay hidden" id="importOrderModal" style="z-index: 10000;">
-    <div class="modal-card" style="max-width: 460px; width: 95%; background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.6); overflow: hidden;">
-      <div class="modal-header" style="padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, rgba(34,211,238,0.1), transparent);">
+    <div class="modal-card" style="max-width: 480px; width: 95%; max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.6);">
+      <div class="modal-header" style="padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, rgba(34,211,238,0.1), transparent); flex-shrink: 0;">
         <h2 style="font-size: 1.25rem; font-weight: 700; color: #22d3ee; display: flex; align-items: center; gap: 0.6rem; margin: 0;">
           <i data-lucide="download-cloud" style="width: 22px; height: 22px;"></i>
           Importar Pedido a tu Historial
@@ -1471,7 +1471,7 @@
           </div>
 
           <p id="previewOrderImei" style="font-size: 0.8rem; color: var(--text-muted); margin: 0 0 0.5rem 0; word-break: break-all;"><strong>IMEI / Ref:</strong> -</p>
-          <div style="background: rgba(0,0,0,0.45); padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);">
+          <div style="background: rgba(0,0,0,0.45); padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06); max-height: 120px; overflow-y: auto;">
             <span style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; display: block; margin-bottom: 0.25rem;">Respuesta del Servidor / Código</span>
             <p id="previewOrderReply" style="font-size: 0.82rem; color: #34d399; margin: 0; font-family: monospace; word-break: break-all; white-space: pre-wrap;">-</p>
           </div>
