@@ -417,22 +417,31 @@
           <div class="order-stat-box stat-box-success" data-filter="success" title="Filtrar pedidos exitosos">
             <div class="stat-box-content">
               <span class="stat-box-num"><span id="orderStatSuccessCount">0</span> <small id="orderStatSuccessTotal">/ 0</small></span>
-              <div class="stat-box-bar"><div class="stat-bar-fill bar-fill-success"></div></div>
-              <span class="stat-box-desc">Los pedidos se procesan con éxito</span>
+              <div class="stat-box-bar"><div class="stat-bar-fill bar-fill-success" id="orderStatSuccessBar"></div></div>
+              <div class="stat-box-footer">
+                <span class="stat-box-desc">Los pedidos se procesan con éxito</span>
+                <span class="stat-box-pct" id="orderStatSuccessPct">0%</span>
+              </div>
             </div>
           </div>
           <div class="order-stat-box stat-box-pending" data-filter="pending" title="Filtrar pedidos en proceso">
             <div class="stat-box-content">
               <span class="stat-box-num"><span id="orderStatPendingCount">0</span> <small id="orderStatPendingTotal">/ 0</small></span>
-              <div class="stat-box-bar"><div class="stat-bar-fill bar-fill-pending"></div></div>
-              <span class="stat-box-desc">Pedidos en proceso</span>
+              <div class="stat-box-bar"><div class="stat-bar-fill bar-fill-pending" id="orderStatPendingBar"></div></div>
+              <div class="stat-box-footer">
+                <span class="stat-box-desc">Pedidos en proceso</span>
+                <span class="stat-box-pct" id="orderStatPendingPct">0%</span>
+              </div>
             </div>
           </div>
           <div class="order-stat-box stat-box-failed" data-filter="failed" title="Filtrar pedidos fallidos">
             <div class="stat-box-content">
               <span class="stat-box-num"><span id="orderStatFailedCount">0</span> <small id="orderStatFailedTotal">/ 0</small></span>
-              <div class="stat-box-bar"><div class="stat-bar-fill bar-fill-failed"></div></div>
-              <span class="stat-box-desc">El proceso de pedidos falla</span>
+              <div class="stat-box-bar"><div class="stat-bar-fill bar-fill-failed" id="orderStatFailedBar"></div></div>
+              <div class="stat-box-footer">
+                <span class="stat-box-desc">El proceso de pedidos falla</span>
+                <span class="stat-box-pct" id="orderStatFailedPct">0%</span>
+              </div>
             </div>
           </div>
         </div>

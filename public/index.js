@@ -746,12 +746,34 @@ function renderOrderHistory() {
   const statFailedCountEl = document.getElementById('orderStatFailedCount');
   const statFailedTotalEl = document.getElementById('orderStatFailedTotal');
 
+  const statSuccessBar = document.getElementById('orderStatSuccessBar');
+  const statPendingBar = document.getElementById('orderStatPendingBar');
+  const statFailedBar = document.getElementById('orderStatFailedBar');
+
+  const statSuccessPct = document.getElementById('orderStatSuccessPct');
+  const statPendingPct = document.getElementById('orderStatPendingPct');
+  const statFailedPct = document.getElementById('orderStatFailedPct');
+
+  const pctSuccess = totalOrdersCount > 0 ? ((successCount / totalOrdersCount) * 100).toFixed(1) : '0';
+  const pctPending = totalOrdersCount > 0 ? ((pendingCount / totalOrdersCount) * 100).toFixed(1) : '0';
+  const pctFailed = totalOrdersCount > 0 ? ((failedCount / totalOrdersCount) * 100).toFixed(1) : '0';
+
   if (statSuccessCountEl) statSuccessCountEl.textContent = successCount;
   if (statSuccessTotalEl) statSuccessTotalEl.textContent = `/ ${totalOrdersCount}`;
   if (statPendingCountEl) statPendingCountEl.textContent = pendingCount;
   if (statPendingTotalEl) statPendingTotalEl.textContent = `/ ${totalOrdersCount}`;
   if (statFailedCountEl) statFailedCountEl.textContent = failedCount;
   if (statFailedTotalEl) statFailedTotalEl.textContent = `/ ${totalOrdersCount}`;
+
+  // Pintar ancho proporcional de la barra según el porcentaje
+  if (statSuccessBar) statSuccessBar.style.width = `${pctSuccess}%`;
+  if (statPendingBar) statPendingBar.style.width = `${pctPending}%`;
+  if (statFailedBar) statFailedBar.style.width = `${pctFailed}%`;
+
+  // Mostrar porcentaje numérico en chip
+  if (statSuccessPct) statSuccessPct.textContent = `${pctSuccess}%`;
+  if (statPendingPct) statPendingPct.textContent = `${pctPending}%`;
+  if (statFailedPct) statFailedPct.textContent = `${pctFailed}%`;
 
   const limit = parseInt(historyLimitFilter.value) || 10;
   const query = historySearchInput.value.toLowerCase().trim();
