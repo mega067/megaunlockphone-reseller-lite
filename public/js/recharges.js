@@ -35,12 +35,62 @@ async function fetchRecharges() {
   }
 }
 
+function updateRechargesSummary() {
+  const statDeposited = document.getElementById('rechargeStatDeposited');
+  const statSpent = document.getElementById('rechargeStatSpent');
+  const statAvailable = document.getElementById('rechargeStatAvailable');
+  if (!statDeposited || !statSpent || !statAvailable) return;
+
+  // 1. Total Ingresado (Suma de recargas exitosas de este usuario/servidor)
+  let totalDeposited = 0;
+  if (Array.isArray(rechargesHistory)) {
+    totalDeposited = rechargesHistory.reduce((acc, r) => acc + (parseFloat(r.amount) || 0), 0);
+  }
+
+  // 2. Total Gastado (Suma de costo de órdenes en historial no rechazadas y que no sean garantías $0)
+  let totalSpent = 0;
+  if (typeof orderHistory !== 'undefined' && Array.isArray(orderHistory)) {
+    totalSpent = orderHistory.reduce((acc, o) => {
+      // Excluir órdenes rechazadas y órdenes marcadas como reembolso o garantía
+      if (o.status === 'failed' || o.isRefunded || o.isImported) return acc;
+      const c = parseFloat(o.costCharged !== undefined ? o.costCharged : (o.costInCredits || o.price || 0)) || 0;
+      return acc + c;
+    }, 0);
+  }
+
+  // 3. Saldo Disponible (Crédito actual en billetera)
+  let currentAvailable = 0;
+  if (typeof globalApiCreditRaw !== 'undefined' && !isNaN(globalApiCreditRaw)) {
+    currentAvailable = globalApiCreditRaw;
+  } else {
+    // Si no está cargado globalApiCreditRaw, calcular por diferencia lógica o leer del badge
+    const badgeText = document.getElementById('creditsBalanceText')?.textContent || '';
+    const match = badgeText.match(/\$?([0-9]+(?:\.[0-9]+)?)/);
+    if (match) {
+      currentAvailable = parseFloat(match[1]) || 0;
+    } else {
+      currentAvailable = Math.max(0, totalDeposited - totalSpent);
+    }
+  }
+
+  statDeposited.textContent = `$${totalDeposited.toFixed(2)} MXN`;
+  statSpent.textContent = `$${totalSpent.toFixed(2)} MXN`;
+  statAvailable.textContent = `$${currentAvailable.toFixed(2)} MXN`;
+
+  if (typeof lucide !== 'undefined' && lucide.createIcons) {
+    lucide.createIcons();
+  }
+}
+
 function renderRecharges() {
   if (!rechargesBody) return;
   const authRole = localStorage.getItem('dhru_role');
   rechargesBody.innerHTML = '';
-  rechargesCount.textContent = rechargesHistory.length;
+  if (rechargesCount) rechargesCount.textContent = rechargesHistory.length;
   
+  // Actualizar tarjetas de métricas (Ingresado, Gastado, Disponible)
+  updateRechargesSummary();
+
   if (authRole === 'admin') {
     document.querySelectorAll('.admin-col-recharge').forEach(e => e.classList.remove('hidden'));
   }

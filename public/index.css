@@ -2220,3 +2220,98 @@ h1, h2, h3, h4 { color: var(--text-primary); font-family: var(--font-display); f
   letter-spacing: 0.02em;
 }
 
+/* Recharges Financial Summary Cards */
+.recharge-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 640px) {
+  .recharge-summary-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+
+.recharge-stat-card {
+  padding: 0.75rem 0.9rem;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.recharge-stat-card:hover {
+  transform: translateY(-2px);
+}
+
+.stat-card-deposited {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(6, 78, 59, 0.2));
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.1);
+}
+
+.stat-card-spent {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(153, 27, 27, 0.2));
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.1);
+}
+
+.stat-card-available {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(3, 105, 161, 0.2));
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  box-shadow: 0 4px 15px rgba(56, 189, 248, 0.1);
+}
+
+.stat-card-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stat-card-deposited .stat-card-icon {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+}
+
+.stat-card-spent .stat-card-icon {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+.stat-card-available .stat-card-icon {
+  background: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+}
+
+.stat-card-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.stat-card-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.stat-card-value {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #ffffff;
+  font-family: var(--font-sans);
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+

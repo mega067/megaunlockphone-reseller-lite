@@ -865,6 +865,38 @@
             </button>
           </div>
         </div>
+
+        <!-- Balance Summary Cards: Ingresado, Gastado, Disponible -->
+        <div class="recharge-summary-grid" style="margin: 15px 0;">
+          <div class="recharge-stat-card stat-card-deposited">
+            <div class="stat-card-icon">
+              <i data-lucide="arrow-down-left" style="width: 18px; height: 18px;"></i>
+            </div>
+            <div class="stat-card-info">
+              <span class="stat-card-label">Total Ingresado</span>
+              <span class="stat-card-value" id="rechargeStatDeposited">$0.00</span>
+            </div>
+          </div>
+          <div class="recharge-stat-card stat-card-spent">
+            <div class="stat-card-icon">
+              <i data-lucide="arrow-up-right" style="width: 18px; height: 18px;"></i>
+            </div>
+            <div class="stat-card-info">
+              <span class="stat-card-label">Total Gastado</span>
+              <span class="stat-card-value" id="rechargeStatSpent">$0.00</span>
+            </div>
+          </div>
+          <div class="recharge-stat-card stat-card-available">
+            <div class="stat-card-icon">
+              <i data-lucide="wallet" style="width: 18px; height: 18px;"></i>
+            </div>
+            <div class="stat-card-info">
+              <span class="stat-card-label">Disponible</span>
+              <span class="stat-card-value" id="rechargeStatAvailable">$0.00</span>
+            </div>
+          </div>
+        </div>
+
         <div class="products-list-wrapper">
           <table class="data-table">
             <thead>

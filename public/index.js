@@ -436,6 +436,9 @@ async function updateAccountCredits() {
         } else {
           creditsBalanceText.textContent = `Créditos: $${rawCredits.toFixed(2)} MXN`;
         }
+        if (typeof updateRechargesSummary === 'function') {
+          updateRechargesSummary();
+        }
       }
     } else if (res.status === 401) {
       // Session expired or logged out from server
