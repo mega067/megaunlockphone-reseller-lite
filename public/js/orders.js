@@ -535,7 +535,6 @@ const importOrderPreviewCard = document.getElementById('importOrderPreviewCard')
 const previewOrderType = document.getElementById('previewOrderType');
 const previewOrderStatusBadge = document.getElementById('previewOrderStatusBadge');
 const previewServiceName = document.getElementById('previewServiceName');
-const importOrderServiceNameInput = document.getElementById('importOrderServiceNameInput');
 const previewOrderImei = document.getElementById('previewOrderImei');
 const previewOrderReply = document.getElementById('previewOrderReply');
 
@@ -544,91 +543,69 @@ let inspectedOrderData = null;
 async function queryRemoteOrder(orderId) {
   if (!orderId) return null;
   
-  // Realizar consulta enviando el ID (el backend prueba getimeiorder, getserverorder y getfileorder)
-  const res = await fetch('/api/orders/bulk-status', {
-    method: 'POST',
-    headers: { 'X-Server-Id': currentServerId, 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-    body: JSON.stringify({ items: [{ id: orderId, type: 'SERVER' }] })
-  });
+  // Realizar consulta enviando el ID con un timeout de 12 segundos para evitar que se quede 'Consultando...'
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 12000);
 
-  const data = await res.json();
-  if (res.ok && data.SUCCESS && data.SUCCESS.length > 0) {
-    const item = data.SUCCESS[0];
-    const raw = item.raw || item.DATA || item.data || {};
-    
-    // Si el backend devolvió status unknown o error explícito
-    if (item.status === 'unknown' || item.status === 'error') {
+  try {
+    const res = await fetch('/api/orders/bulk-status', {
+      method: 'POST',
+      headers: { 'X-Server-Id': currentServerId, 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+      body: JSON.stringify({ items: [{ id: orderId, type: 'SERVER' }] }),
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
+    const data = await res.json();
+    if (res.ok && data.SUCCESS && data.SUCCESS.length > 0) {
+      const item = data.SUCCESS[0];
+      const raw = item.raw || item.DATA || item.data || {};
+      
+      // Si el backend devolvió status unknown o error explícito
+      if (item.status === 'unknown' || item.status === 'error') {
+        return {
+          notFound: true,
+          errorText: item.statusText || 'Pedido no encontrado en el servidor'
+        };
+      }
+
+      let sId = raw.SERVICEID || raw.serviceid || raw.serviceId || raw.ID || raw.id || '';
+      let sName = `Importación / Garantía #${orderId}`;
+      let cost = 0;
+
+      const replyStr = String(item.statusText || raw.CODE || raw.REPLY || '');
+
+      // Extraer identificador: IMEI, Username, Cuenta, Referencia o Cantidad
+      let imeiVal = raw.IMEI || raw.imei || raw.USERNAME || raw.username || raw.ACCOUNT || raw.REFERENCEID || raw.QTY || '';
+      if (!imeiVal || imeiVal === 'N/A') {
+        const refMatch = replyStr.match(/referencia:\s*([0-9a-zA-Z_\-]+)/i);
+        if (refMatch) imeiVal = refMatch[1].trim();
+      }
+      if (!imeiVal) imeiVal = 'N/A';
+
+      const detectedType = item.serviceType || (raw.IMEI && String(raw.IMEI).length >= 14 && /^\d+$/.test(raw.IMEI) ? 'IMEI' : 'SERVER');
+
       return {
-        notFound: true,
-        errorText: item.statusText || 'Pedido no encontrado en el servidor'
+        orderId: orderId,
+        serviceId: sId || '1',
+        serviceName: sName,
+        status: item.status || 'pending',
+        statusText: item.statusText || raw.CODE || raw.REPLY || raw.REJECT_REASON || 'Registrado',
+        imei: imeiVal,
+        serviceType: detectedType,
+        cost: 0,
+        raw: raw
       };
     }
-
-    let sId = raw.SERVICEID || raw.serviceid || raw.serviceId || raw.ID || raw.id || '';
-    let sName = raw.SERVICENAME || raw.servicename || raw.serviceName || raw.NAME || '';
-    let cost = 0;
-
-    // Si el nombre no vino en el objeto raw, buscarlo en nuestro catálogo de productos
-    if (Array.isArray(productsList) && productsList.length > 0) {
-      if (sId) {
-        const match = productsList.find(p => String(p.serviceid) === String(sId));
-        if (match) {
-          if (!sName) sName = match.service;
-          cost = (match.rawItem && match.rawItem._REAL_COST) ? parseFloat(match.rawItem._REAL_COST) : parseFloat(match.credit || 0);
-        }
-      }
+  } catch (err) {
+    clearTimeout(timeoutId);
+    if (err.name === 'AbortError') {
+      return {
+        notFound: true,
+        errorText: 'Tiempo de espera agotado al consultar el servidor remoto. Intenta de nuevo o verifica el servidor.'
+      };
     }
-
-    // Si no vino el nombre del servicio, intentar deducirlo de la respuesta o código
-    // Ej: "Carrier: BAIT ... Monto: $50.00" -> "Recarga BAIT $50"
-    const replyStr = String(item.statusText || raw.CODE || raw.REPLY || '');
-    if (!sName || sName.startsWith('Pedido #') || sName.startsWith('Servicio #')) {
-      const carrierMatch = replyStr.match(/carrier:\s*([a-zA-Z0-9_\-\s]+?)(?=\s+referencia|\s+monto|\s+folio|$)/i);
-      const montoMatch = replyStr.match(/monto:\s*\$?([0-9]+(?:\.[0-9]+)?)/i);
-      if (carrierMatch && montoMatch) {
-        const cName = carrierMatch[1].trim();
-        const mVal = parseFloat(montoMatch[1]) || 0;
-        const cleanMVal = Number.isInteger(mVal) ? String(mVal) : String(mVal);
-        sName = `Recarga ${cName} $${cleanMVal}`;
-        if (!cost) cost = mVal;
-        
-        // Buscar coincidencia exacta o por palabras clave en productsList cargado
-        if (Array.isArray(productsList) && productsList.length > 0) {
-          const pMatch = productsList.find(p => p.service && p.service.toLowerCase().includes(cName.toLowerCase()) && p.service.includes(cleanMVal));
-          if (pMatch) {
-            sName = pMatch.service;
-            if (pMatch.serviceid) sId = String(pMatch.serviceid);
-            if (pMatch.credit) cost = parseFloat(pMatch.credit);
-          }
-        }
-      }
-    }
-
-    if (!sName) {
-      sName = sId ? `Servicio #${sId}` : `Pedido #${orderId}`;
-    }
-
-    // Extraer identificador: IMEI, Username, Cuenta, Referencia o Cantidad
-    let imeiVal = raw.IMEI || raw.imei || raw.USERNAME || raw.username || raw.ACCOUNT || raw.REFERENCEID || raw.QTY || '';
-    if (!imeiVal || imeiVal === 'N/A') {
-      const refMatch = replyStr.match(/referencia:\s*([0-9a-zA-Z_\-]+)/i);
-      if (refMatch) imeiVal = refMatch[1].trim();
-    }
-    if (!imeiVal) imeiVal = 'N/A';
-
-    const detectedType = item.serviceType || (raw.IMEI && String(raw.IMEI).length >= 14 && /^\d+$/.test(raw.IMEI) ? 'IMEI' : 'SERVER');
-
-    return {
-      orderId: orderId,
-      serviceId: sId || '1',
-      serviceName: sName,
-      status: item.status || 'pending',
-      statusText: item.statusText || raw.CODE || raw.REPLY || raw.REJECT_REASON || 'Registrado',
-      imei: imeiVal,
-      serviceType: detectedType,
-      cost: cost,
-      raw: raw
-    };
+    throw err;
   }
   return null;
 }
@@ -648,10 +625,9 @@ async function handleInspectOrder() {
     importOrderPreviewCard.classList.remove('hidden');
     previewOrderStatusBadge.textContent = 'Consultando...';
     previewOrderStatusBadge.className = 'status-badge status-pending';
-    if (previewServiceName) previewServiceName.textContent = 'Conectando con el servidor remoto...';
-    if (importOrderServiceNameInput) importOrderServiceNameInput.value = 'Buscando servicio...';
+    if (previewServiceName) previewServiceName.textContent = `Importación / Garantía #${orderId}`;
     previewOrderImei.innerHTML = '<strong>IMEI / Ref:</strong> Consultando...';
-    previewOrderReply.textContent = 'Espere un momento...';
+    previewOrderReply.textContent = 'Conectando con el servidor remoto...';
   }
 
   try {
@@ -664,7 +640,6 @@ async function handleInspectOrder() {
         previewOrderStatusBadge.textContent = 'Inválido';
         previewOrderStatusBadge.className = 'status-badge status-failed';
         if (previewServiceName) previewServiceName.textContent = 'No se encontró el pedido';
-        if (importOrderServiceNameInput) importOrderServiceNameInput.value = '';
         previewOrderImei.innerHTML = `<strong>Respuesta Servidor:</strong> ${escapeHtml(reason)}`;
         previewOrderReply.textContent = 'Verifica que el ID sea correcto y que corresponda al Servidor activo (MEGA, ALPHA u OMEGA).';
       }
@@ -676,7 +651,6 @@ async function handleInspectOrder() {
         previewOrderStatusBadge.textContent = found.status === 'success' ? 'Completado' : (found.status === 'failed' ? 'Rechazado' : 'En proceso');
         previewOrderStatusBadge.className = `status-badge status-${found.status}`;
         if (previewServiceName) previewServiceName.textContent = found.serviceName;
-        if (importOrderServiceNameInput) importOrderServiceNameInput.value = found.serviceName;
         previewOrderImei.innerHTML = `<strong>IMEI / Referencia:</strong> ${escapeHtml(found.imei)}`;
         previewOrderReply.textContent = found.statusText;
       }
@@ -759,17 +733,15 @@ if (formImportOrder) {
           previewOrderStatusBadge.textContent = 'Inválido';
           previewOrderStatusBadge.className = 'status-badge status-failed';
           if (previewServiceName) previewServiceName.textContent = 'ID de pedido inexistente o inválido';
-          if (importOrderServiceNameInput) importOrderServiceNameInput.value = '';
           previewOrderImei.innerHTML = `<strong>Error:</strong> ${escapeHtml(errorReason)}`;
           previewOrderReply.textContent = 'Revisa el número de ID o cambia de servidor.';
         }
         return;
       }
 
-      // Tomar el nombre del input si el usuario lo confirmó o editó, o el nombre detectado
-      const finalServiceName = (importOrderServiceNameInput && importOrderServiceNameInput.value.trim()) 
-        ? importOrderServiceNameInput.value.trim() 
-        : (orderToImport.serviceName || `Pedido Importado / Garantía (ID: ${orderToImport.orderId})`);
+      const finalServiceName = (orderToImport && orderToImport.serviceName) 
+        ? orderToImport.serviceName 
+        : `Importación / Garantía #${orderId}`;
 
       const importPayload = {
         orderId: orderToImport.orderId,
