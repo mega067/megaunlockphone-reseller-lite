@@ -19,7 +19,9 @@ module.exports = function(app, deps) {
 
   app.get('/api/recharges', requireAuth, (req, res) => {
     const recharges = readDB('recharges.json') || [];
-    const userRecharges = recharges.filter(r => r.userId === req.user.id).sort((a,b) => new Date(b.date) - new Date(a.date));
+    const userRecharges = recharges
+      .filter(r => String(r.userId) === String(req.user.id))
+      .sort((a,b) => new Date(b.date) - new Date(a.date));
     res.json(userRecharges);
   });
 

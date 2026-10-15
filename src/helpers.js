@@ -194,6 +194,35 @@ function processRefund(order) {
   };
 }
 
+function logRecharge(userId, username, amount, type = 'MANUAL_ADMIN', adminUsername = 'Admin', serverId = '1', extra = {}) {
+  const { readDB, writeDB } = require('./db');
+  const numAmount = parseFloat(amount);
+  if (isNaN(numAmount) || numAmount === 0) return null;
+
+  const recharges = readDB('recharges.json') || [];
+  const entry = {
+    id: "rec_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
+    date: new Date().toISOString(),
+    userId: userId,
+    username: username || ('User #' + userId),
+    amount: Math.abs(numAmount),
+    isDeduction: numAmount < 0,
+    serverId: String(serverId || '1'),
+    type: type, // 'MANUAL_ADMIN', 'MANUAL_BOT', 'SPEI', etc.
+    adminUsername: adminUsername || 'Admin',
+    processedBy: adminUsername || 'Admin',
+    trackingNumber: extra.trackingNumber || (type === 'MANUAL_ADMIN' ? 'Ajuste de Saldo (Panel)' : (type === 'MANUAL_BOT' ? 'Ajuste WhatsApp' : 'N/A')),
+    senderBankName: extra.senderBankName || '',
+    receiverBankName: extra.receiverBankName || '',
+    note: extra.note || (numAmount > 0 ? 'Saldo asignado por Administrador' : 'Saldo descontado por Administrador')
+  };
+
+  recharges.unshift(entry);
+  if (recharges.length > 500) recharges.pop();
+  writeDB('recharges.json', recharges);
+  return entry;
+}
+
 module.exports = {
   getServerDisplayName,
   getServerId,
@@ -204,5 +233,6 @@ module.exports = {
   setUserCredit,
   callGsmThemeApi,
   buildTargetUrl,
-  processRefund
+  processRefund,
+  logRecharge
 };

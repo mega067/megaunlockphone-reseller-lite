@@ -1,10 +1,9 @@
 const axios = require('axios');
 const https = require('https');
 const { readDB, writeDB } = require('../db');
-const { getServerId, getServerSettings, callGsmThemeApi, getServerDisplayName, calculateMarkup, calculateGroupMarkup } = require('../helpers');
+const { getServerId, getServerSettings, callGsmThemeApi, getServerDisplayName, calculateMarkup, calculateGroupMarkup, logRecharge } = require('../helpers');
 const { catalogCache, incrementCatalogVersion } = require('../cacheManager');
 const { enqueueWhatsApp } = require('../whatsappQueue');
-const { logRecharge } = require('../history'); // Assuming logRecharge is exported, though it might need to be imported properly
 
 const ipv4Agent = new https.Agent({ family: 4 });
 

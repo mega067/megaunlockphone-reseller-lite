@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { exec, spawn } = require('child_process');
 const { readDB, writeDB, DATA_DIR } = require('../db');
-const { getServerId, getServerDisplayName, getUserCredit, setUserCredit } = require('../helpers');
+const { getServerId, getServerDisplayName, getUserCredit, setUserCredit, logRecharge } = require('../helpers');
 const { incrementCatalogVersion } = require('../cacheManager');
 const { enqueueWhatsApp, enqueueWhatsAppAdmin } = require('../whatsappQueue');
 const { createAutoBackup } = require('./orderController');
@@ -85,6 +85,14 @@ exports.createUser = (req, res) => {
   };
   users.push(newUser);
   writeDB('users.json', users);
+
+  if (parseFloat(credits) > 0) {
+    const adminUsername = req.user ? req.user.username : 'Admin';
+    logRecharge(newUser.id, newUser.username, parseFloat(credits), 'MANUAL_ADMIN', adminUsername, '1', {
+      note: 'Saldo inicial asignado al crear usuario'
+    });
+  }
+
   createAutoBackup('Nuevo_Usuario');
   incrementCatalogVersion();
   res.json(newUser);
@@ -104,9 +112,16 @@ exports.updateUser = (req, res) => {
     if (parseFloat(credits) !== oldCredit) {
       const isAdd = parseFloat(credits) > oldCredit;
       const amount = Math.abs(parseFloat(credits) - oldCredit);
+      const signedDelta = parseFloat(credits) - oldCredit;
       const settingsDb = readDB('settings.json') || {};
       const exRate = parseFloat(settingsDb.exchangeRate || 17.6);
       const usdEq = (amount / exRate).toFixed(3);
+      const adminUsername = req.user ? req.user.username : 'Admin';
+
+      // Registrar en el historial de recargas (recharges.json)
+      logRecharge(user.id, user.username, signedDelta, 'MANUAL_ADMIN', adminUsername, serverId, {
+        note: isAdd ? `Saldo asignado desde Panel Admin (${getServerDisplayName(serverId)})` : `Saldo descontado desde Panel Admin (${getServerDisplayName(serverId)})`
+      });
       
       const resMsg = `💰 *${isAdd ? 'RECARGA EXITOSA' : 'SALDO DESCONTADO'}*\n\n📥 Tu saldo ha sido actualizado correctamente\n\n💳 Método: Ajuste de Panel\n💵 Monto: $${amount.toFixed(2)} MXN\n💱 Equivalente USD: $${usdEq} USD\n💱 Tipo de cambio: ${exRate} MXN por USD\n✅ Saldo acreditado: $${amount.toFixed(2)} MXN\n📉 Saldo anterior: $${oldCredit.toFixed(2)} MXN\n📈 Saldo actual: $${parseFloat(credits).toFixed(2)} MXN\n\n━━━━━━━━━━━━━━\n🌐 MegaUnlockPhone`;
       enqueueWhatsApp('private', resMsg, user.id);

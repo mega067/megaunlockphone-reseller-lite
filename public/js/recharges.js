@@ -12,10 +12,18 @@ function escapeHtml(unsafe) {
   return String(unsafe).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-function formatType(type) {
-  if (type === 'SPEI' || type === 'SPEI / Banxico') return '<span style="color:#10b981;">SPEI / Banco</span>';
-  if (type === 'MANUAL_ADMIN') return '<span style="color:#8b5cf6;">Manual (Admin)</span>';
-  if (type === 'MANUAL_BOT') return '<span style="color:#3b82f6;">Bot WhatsApp</span>';
+function formatType(type, isDeduction) {
+  if (type === 'SPEI' || type === 'SPEI / Banxico') return '<span style="color:#10b981; font-weight:600;">⚡ SPEI / Banco</span>';
+  if (type === 'MANUAL_ADMIN') {
+    return isDeduction 
+      ? '<span style="color:#f87171; font-weight:600;">📉 Ajuste Admin (Deducción)</span>'
+      : '<span style="color:#8b5cf6; font-weight:600;">👑 Asignado por Admin</span>';
+  }
+  if (type === 'MANUAL_BOT') {
+    return isDeduction
+      ? '<span style="color:#f87171; font-weight:600;">🤖 Deducción Bot</span>'
+      : '<span style="color:#38bdf8; font-weight:600;">🤖 Asignado por Bot</span>';
+  }
   return escapeHtml(type);
 }
 
@@ -62,10 +70,13 @@ function updateRechargesSummary() {
     }
   }
 
-  // Cálculos de montos globales (todas las recargas y todos los pedidos no rechazados)
+  // Cálculos de montos globales (recargas netas y todos los pedidos no rechazados)
   let totalDeposited = 0;
   if (Array.isArray(rechargesHistory)) {
-    totalDeposited = rechargesHistory.reduce((acc, r) => acc + (parseFloat(r.amount) || 0), 0);
+    totalDeposited = rechargesHistory.reduce((acc, r) => {
+      const val = parseFloat(r.amount) || 0;
+      return (r.isDeduction || val < 0) ? acc - Math.abs(val) : acc + Math.abs(val);
+    }, 0);
   }
 
   let totalSpentGlobal = 0;
@@ -169,13 +180,17 @@ function renderRecharges() {
     const tr = document.createElement('tr');
     const displayServer = item.serverId === '3' ? 'OMEGA' : (item.serverId === '2' ? 'ALPHA' : 'MEGA');
     const colorServer = item.serverId === '3' ? '#f59e0b' : (item.serverId === '2' ? '#3b82f6' : '#ec4899');
+    const isDed = item.isDeduction || parseFloat(item.amount) < 0;
+    const amountVal = Math.abs(parseFloat(item.amount) || 0);
+    const amountColor = isDed ? '#f87171' : '#10b981';
+    const amountPrefix = isDed ? '-$' : '+$';
     
     tr.innerHTML = `
       <td>${new Date(item.date).toLocaleString()}</td>
       ${authRole === 'admin' ? `<td style="color:#a78bfa; font-weight:bold;">${escapeHtml(item.username)}</td>` : ''}
-      <td style="color:#10b981; font-weight:bold;">$${parseFloat(item.amount).toFixed(2)} MXN</td>
-      <td>${formatType(item.type || item.method)}${item.trackingNumber ? `<br><small style="color:var(--text-muted);font-size:0.75rem;">Rastreo: ${escapeHtml(item.trackingNumber)}</small>` : ''}${item.senderBankName && item.receiverBankName ? `<br><small style="color:var(--text-muted);font-size:0.70rem; white-space:nowrap;">${escapeHtml(item.senderBankName)} ➔ ${escapeHtml(item.receiverBankName)}</small>` : ''}</td>
-      <td>${escapeHtml(item.adminUsername || 'Sistema')}</td>
+      <td style="color:${amountColor}; font-weight:bold; white-space:nowrap;">${amountPrefix}${amountVal.toFixed(2)} MXN</td>
+      <td>${formatType(item.type || item.method, isDed)}${item.trackingNumber ? `<br><small style="color:var(--text-muted);font-size:0.75rem;">${escapeHtml(item.trackingNumber)}</small>` : ''}${item.senderBankName && item.receiverBankName ? `<br><small style="color:var(--text-muted);font-size:0.70rem; white-space:nowrap;">${escapeHtml(item.senderBankName)} ➔ ${escapeHtml(item.receiverBankName)}</small>` : ''}</td>
+      <td>${escapeHtml(item.adminUsername || item.processedBy || 'Sistema')}</td>
       <td><span style="color:${colorServer}; font-weight:bold;">${displayServer}</span></td>
     `;
     rechargesBody.appendChild(tr);
