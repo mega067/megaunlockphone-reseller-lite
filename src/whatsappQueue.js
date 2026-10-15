@@ -9,6 +9,7 @@ module.exports = {
   enqueueWhatsAppAdmin: engine.enqueueWhatsAppAdmin,
   getEngineTimestamp: engine.getEngineTimestamp,
   ENGINE_CONFIG: engine.ENGINE_CONFIG,
-  randomThrottleDelay: engine.randomThrottleDelay
+  randomThrottleDelay: engine.randomThrottleDelay,
+  callBotApi: engine.callBotApi
 };
 

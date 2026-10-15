@@ -111,10 +111,28 @@ async function pedir(context) {
                         payload.custom_fields = { [session.customField]: session.imei };
                     }
                     
-                    const res = await axios.post('https://megaunlockphone-panel.alwaysdata.net/api/bot/order', payload);
+                    const { callBotApi } = require('../whatsappEngine');
+                    let orderRes = null;
+                    try {
+                        const res = await callBotApi('order', payload, 25000);
+                        orderRes = res.data;
+                    } catch (apiErr) {
+                        console.warn('[PEDIR] External order call failed, attempting local orderController fallback:', apiErr.message);
+                        const orderController = require('../controllers/orderController');
+                        const mockReq = {
+                            body: payload,
+                            user: { id: linkedUserId },
+                            headers: { 'x-server-id': session.serverId }
+                        };
+                        const mockRes = {
+                            status: () => mockRes,
+                            json: (data) => { orderRes = data; }
+                        };
+                        await orderController.processOrder(mockReq, mockRes);
+                    }
                     
-                    if (res.data.error || res.data.ERROR) {
-                        let errStr = res.data.error || res.data.ERROR;
+                    if (orderRes && (orderRes.error || orderRes.ERROR)) {
+                        let errStr = orderRes.error || orderRes.ERROR;
                         if (typeof errStr === 'object') errStr = JSON.stringify(errStr);
                         await sock.sendMessage(remoteJid, { text: `❌ Error al procesar tu pedido:\n${errStr}` });
                     }
@@ -191,13 +209,35 @@ async function pedir(context) {
 
 async function processPedirStep1(session, serviceId, remoteJid, linkedUserId, textValue, sock) {
     try {
-        const res = await axios.post('https://megaunlockphone-panel.alwaysdata.net/api/bot/service_info', {
-            botSecret: 'MEGA_BOT_SECRET_2026',
-            userId: linkedUserId,
-            serverId: session.serverId,
-            serviceid: serviceId
-        });
-        const sInfo = res.data;
+        const { callBotApi } = require('../whatsappEngine');
+        let sInfo = null;
+        try {
+            const res = await callBotApi('service_info', {
+                userId: linkedUserId,
+                serverId: session.serverId,
+                serviceid: serviceId
+            }, 8000);
+            sInfo = res.data;
+        } catch (apiErr) {
+            console.warn('[PEDIR] External service_info failed, falling back to local controller:', apiErr.message);
+            const botController = require('../controllers/botController');
+            const mockReq = {
+                body: { userId: linkedUserId, serverId: session.serverId, serviceid: serviceId },
+                headers: { 'x-server-id': session.serverId }
+            };
+            const mockRes = {
+                status: () => mockRes,
+                json: (data) => { sInfo = data; }
+            };
+            await botController.getServiceInfo(mockReq, mockRes);
+        }
+
+        if (!sInfo || sInfo.error) {
+            delete require('../sessionManager').orderSessions[remoteJid];
+            await sock.sendMessage(remoteJid, { text: `❌ El servicio #${serviceId} no existe o no está disponible en este servidor.` });
+            return;
+        }
+
         session.serviceId = sInfo.id;
         session.serviceName = sInfo.name;
         session.price = parseFloat(sInfo.price) || 0;

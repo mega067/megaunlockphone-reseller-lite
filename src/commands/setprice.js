@@ -1,4 +1,10 @@
-const axios = require('axios');
+const { callBotApi } = require('../whatsappEngine');
+let botController = null;
+try {
+    botController = require('../controllers/botController');
+} catch (e) {
+    // In standalone runner if controller cannot load
+}
 
 async function setprice(context) {
     const { sock, msg, remoteJid, firstWord, args, text, sessionManager } = context;
@@ -30,11 +36,19 @@ async function setprice(context) {
             
             await sock.sendMessage(remoteJid, { text: '⏳ Obteniendo categorías...' });
             try {
-                const res = await axios.post('https://megaunlockphone-panel.alwaysdata.net/api/bot/groups', {
-                    botSecret: 'MEGA_BOT_SECRET_2026',
-                    serverId: sId
-                });
-                const groups = res.data.groups;
+                let groups = null;
+                const res = await callBotApi('groups', { serverId: sId }, 8000);
+                if (res && res.data && res.data.groups) {
+                    groups = res.data.groups;
+                } else if (botController && botController.getGroups) {
+                    await new Promise(resolve => {
+                        botController.getGroups({ body: { serverId: sId } }, {
+                            status: () => ({ json: (d) => { groups = d.groups; resolve(); } }),
+                            json: (d) => { groups = d.groups; resolve(); }
+                        }).catch(() => resolve());
+                    });
+                }
+
                 if (!groups || groups.length === 0) {
                     await sock.sendMessage(remoteJid, { text: '❌ No hay categorías en este servidor.' });
                     sessionManager.clearSession(remoteJid);
@@ -61,12 +75,22 @@ async function setprice(context) {
             
             await sock.sendMessage(remoteJid, { text: `⏳ Obteniendo productos de *${groupName}*...` });
             try {
-                const res = await axios.post('https://megaunlockphone-panel.alwaysdata.net/api/bot/products', {
-                    botSecret: 'MEGA_BOT_SECRET_2026',
+                let products = null;
+                const res = await callBotApi('products', {
                     serverId: session.serverId,
                     groupName: groupName
-                });
-                const products = res.data.products;
+                }, 10000);
+                if (res && res.data && res.data.products) {
+                    products = res.data.products;
+                } else if (botController && botController.getProductsByGroup) {
+                    await new Promise(resolve => {
+                        botController.getProductsByGroup({ body: { serverId: session.serverId, groupName } }, {
+                            status: () => ({ json: (d) => { products = d.products; resolve(); } }),
+                            json: (d) => { products = d.products; resolve(); }
+                        }).catch(() => resolve());
+                    });
+                }
+
                 if (!products || products.length === 0) {
                     await sock.sendMessage(remoteJid, { text: '❌ No hay productos en esta categoría.' });
                     sessionManager.clearSession(remoteJid);
@@ -111,16 +135,33 @@ async function setprice(context) {
                     
                     await sock.sendMessage(remoteJid, { text: '⏳ Guardando precio...' });
                     try {
-                        const res = await axios.post('https://megaunlockphone-panel.alwaysdata.net/api/bot/setprice', {
-                            botSecret: 'MEGA_BOT_SECRET_2026',
+                        let resData = null;
+                        const res = await callBotApi('setprice', {
                             serverId: session.serverId,
                             serviceid: p.id,
                             resellerPrice: rp,
                             clientPrice: cp
-                        });
+                        }, 8000);
+                        if (res && res.data) {
+                            resData = res.data;
+                        } else if (botController && botController.setPrice) {
+                            await new Promise(resolve => {
+                                botController.setPrice({
+                                    body: {
+                                        serverId: session.serverId,
+                                        serviceid: p.id,
+                                        resellerPrice: rp,
+                                        clientPrice: cp
+                                    }
+                                }, {
+                                    status: () => ({ json: (d) => { resData = d; resolve(); } }),
+                                    json: (d) => { resData = d; resolve(); }
+                                }).catch(() => resolve());
+                            });
+                        }
                         
-                        if (res.data.error) {
-                            await sock.sendMessage(remoteJid, { text: `❌ Error: ${res.data.error}` });
+                        if (resData && resData.error) {
+                            await sock.sendMessage(remoteJid, { text: `❌ Error: ${resData.error}` });
                             return true;
                         }
                         
@@ -165,16 +206,33 @@ async function setprice(context) {
                 
                 await sock.sendMessage(remoteJid, { text: '⏳ Guardando precio...' });
                 try {
-                    const res = await axios.post('https://megaunlockphone-panel.alwaysdata.net/api/bot/setprice', {
-                        botSecret: 'MEGA_BOT_SECRET_2026',
+                    let resData = null;
+                    const res = await callBotApi('setprice', {
                         serverId: session.serverId,
                         serviceid: session.productId,
                         resellerPrice: rp,
                         clientPrice: cp
-                    });
+                    }, 8000);
+                    if (res && res.data) {
+                        resData = res.data;
+                    } else if (botController && botController.setPrice) {
+                        await new Promise(resolve => {
+                            botController.setPrice({
+                                body: {
+                                    serverId: session.serverId,
+                                    serviceid: session.productId,
+                                    resellerPrice: rp,
+                                    clientPrice: cp
+                                }
+                            }, {
+                                status: () => ({ json: (d) => { resData = d; resolve(); } }),
+                                json: (d) => { resData = d; resolve(); }
+                            }).catch(() => resolve());
+                        });
+                    }
                     
-                    if (res.data.error) {
-                        await sock.sendMessage(remoteJid, { text: `❌ Error: ${res.data.error}` });
+                    if (resData && resData.error) {
+                        await sock.sendMessage(remoteJid, { text: `❌ Error: ${resData.error}` });
                     } else {
                         await sock.sendMessage(remoteJid, { text: '✅ Precio actualizado correctamente.' });
                     }
@@ -213,12 +271,21 @@ async function setprice(context) {
             
             await sock.sendMessage(remoteJid, { text: `⏳ Obteniendo información del producto...` });
             try {
-                const res = await axios.post('https://megaunlockphone-panel.alwaysdata.net/api/bot/products', {
-                    botSecret: 'MEGA_BOT_SECRET_2026',
+                let products = null;
+                const res = await callBotApi('products', {
                     serverId: sId,
                     productId: pId
-                });
-                const products = res.data.products;
+                }, 10000);
+                if (res && res.data && res.data.products) {
+                    products = res.data.products;
+                } else if (botController && botController.getProductsByGroup) {
+                    await new Promise(resolve => {
+                        botController.getProductsByGroup({ body: { serverId: sId, productId: pId } }, {
+                            status: () => ({ json: (d) => { products = d.products; resolve(); } }),
+                            json: (d) => { products = d.products; resolve(); }
+                        }).catch(() => resolve());
+                    });
+                }
                 if (!products || products.length === 0) {
                     await sock.sendMessage(remoteJid, { text: '❌ No se encontró el producto o el ID es inválido.' });
                     sessionManager.clearSession(remoteJid);

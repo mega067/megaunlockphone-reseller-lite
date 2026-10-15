@@ -23,27 +23,41 @@ async function saldo(context) {
             let saldoText = `✨ *Bóvedas Administrativas*\n\n`;
             
             try {
-                const res = await axios.post('https://megaunlockphone-panel.alwaysdata.net/api/bot/saldo', {
-                    botSecret: 'MEGA_BOT_SECRET_2026',
-                    userId: linkedUserId
-                });
-                
-                const bals = res.data.balances;
-                for (let sId of ['1', '2', '3']) {
-                    const serverName = serverNames[sId] || `Servidor ${sId}`;
-                    if (bals[sId].error) {
-                        saldoText += `🏢 *${serverName}:* ${bals[sId].error}\n\n`;
-                    } else {
-                        saldoText += `🏢 *${serverName}*\n`;
-                        saldoText += `🟢 REAL: $${bals[sId].real.toFixed(2)}\n`;
-                        saldoText += `🟣 CEDIDO: $${bals[sId].cedido.toFixed(2)}\n`;
-                        saldoText += `🔵 DISP: $${bals[sId].disp.toFixed(2)}\n\n`;
-                    }
+                const { callBotApi } = require('../whatsappEngine');
+                let bals = null;
+                try {
+                    const res = await callBotApi('saldo', { userId: linkedUserId }, 8000);
+                    bals = res.data?.balances;
+                } catch (apiErr) {
+                    // Fallback directo a controlador local
+                    const botController = require('../controllers/botController');
+                    const mockReq = { body: { userId: linkedUserId, botSecret: 'MEGA_BOT_SECRET_2026' } };
+                    const mockRes = {
+                        status: () => mockRes,
+                        json: (data) => { bals = data.balances; }
+                    };
+                    await botController.getSaldo(mockReq, mockRes);
                 }
-                await sock.sendMessage(remoteJid, { text: saldoText.trim() });
+                
+                if (bals) {
+                    for (let sId of ['1', '2', '3']) {
+                        const serverName = serverNames[sId] || `Servidor ${sId}`;
+                        if (bals[sId] && bals[sId].error) {
+                            saldoText += `🏢 *${serverName}:* ${bals[sId].error}\n\n`;
+                        } else if (bals[sId]) {
+                            saldoText += `🏢 *${serverName}*\n`;
+                            saldoText += `🟢 REAL: $${(bals[sId].real || 0).toFixed(2)}\n`;
+                            saldoText += `🟣 CEDIDO: $${(bals[sId].cedido || 0).toFixed(2)}\n`;
+                            saldoText += `🔵 DISP: $${(bals[sId].disp || 0).toFixed(2)}\n\n`;
+                        }
+                    }
+                    await sock.sendMessage(remoteJid, { text: saldoText.trim() });
+                } else {
+                    await sock.sendMessage(remoteJid, { text: '⚠️ No se pudieron obtener los balances en este momento. Intenta de nuevo en unos segundos.' });
+                }
             } catch (e) {
                 const errMsg = e.response ? `HTTP ${e.response.status}: ${JSON.stringify(e.response.data)}` : e.message;
-                await sock.sendMessage(remoteJid, { text: `❌ Error de diagnóstico interno: ${errMsg}` });
+                await sock.sendMessage(remoteJid, { text: `❌ Error al consultar bóvedas: ${errMsg}` });
             }
         } else {
             let saldoText = `✨ *¡Hola, ${user.username}!* Aquí tienes tu saldo actual:\n\n`;

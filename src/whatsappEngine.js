@@ -118,10 +118,40 @@ function randomThrottleDelay(min = ENGINE_CONFIG.minDelayMs, max = ENGINE_CONFIG
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+/**
+ * Centralized Bot API Caller with IPv4, Timeout & Resilience
+ * Executes API requests to AlwaysData backend or fallback gracefully
+ */
+const axios = require('axios');
+const http = require('http');
+const https = require('https');
+const ipv4Agent = new https.Agent({ family: 4, keepAlive: true });
+
+async function callBotApi(endpoint, payload, timeoutMs = 9000) {
+  const url = endpoint.startsWith('http') 
+    ? endpoint 
+    : `https://megaunlockphone-panel.alwaysdata.net/api/bot/${endpoint.replace(/^\//, '')}`;
+  
+  const fullPayload = {
+    botSecret: process.env.BOT_SECRET || 'MEGA_BOT_SECRET_2026',
+    ...payload
+  };
+
+  return await axios.post(url, fullPayload, {
+    timeout: timeoutMs,
+    httpsAgent: ipv4Agent,
+    headers: {
+      'Content-Type': 'application/json',
+      'User-Agent': 'MegaUnlockPhone-Bot-Engine/2.0'
+    }
+  });
+}
+
 module.exports = {
   ENGINE_CONFIG,
   getEngineTimestamp,
   enqueueWhatsApp,
   enqueueWhatsAppAdmin,
-  randomThrottleDelay
+  randomThrottleDelay,
+  callBotApi
 };

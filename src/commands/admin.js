@@ -73,12 +73,20 @@ async function admin(context) {
             
             let serverDisp = 'Desconocido';
             try {
-                const axios = require('axios');
-                const res = await axios.post('https://megaunlockphone-panel.alwaysdata.net/api/bot/saldo', {
-                    botSecret: 'MEGA_BOT_SECRET_2026',
-                    userId: linkedUserId
-                });
-                const bals = res.data.balances;
+                const { callBotApi } = require('../whatsappEngine');
+                let bals = null;
+                try {
+                    const res = await callBotApi('saldo', { userId: linkedUserId }, 8000);
+                    bals = res.data?.balances;
+                } catch (e) {
+                    const botController = require('../controllers/botController');
+                    const mockReq = { body: { userId: linkedUserId, botSecret: 'MEGA_BOT_SECRET_2026' } };
+                    const mockRes = {
+                        status: () => mockRes,
+                        json: (data) => { bals = data.balances; }
+                    };
+                    await botController.getSaldo(mockReq, mockRes);
+                }
                 if (bals && bals[sId] && !bals[sId].error) {
                     serverDisp = `$${bals[sId].disp.toFixed(2)} MXN`;
                 }
@@ -118,26 +126,43 @@ async function admin(context) {
             const ans = text.trim().toLowerCase();
             if (ans === 'si' || ans === 'sí') {
                 try {
-                    const axios = require('axios');
+                    const { callBotApi } = require('../whatsappEngine');
                     let finalAmount = session.amount;
                     if (session.type === 'remove') {
                         finalAmount = -Math.abs(session.amount);
                     }
-                    const res = await axios.post('https://megaunlockphone-panel.alwaysdata.net/api/bot/add_money', {
+                    
+                    let resData = null;
+                    const addPayload = {
                         adminId: linkedUserId,
                         resellerId: session.resellerId,
                         serverId: session.serverId,
-                        amount: finalAmount,
-                        botSecret: 'MEGA_BOT_SECRET_2026'
-                    });
+                        amount: finalAmount
+                    };
+
+                    try {
+                        const res = await callBotApi('add_money', addPayload, 10000);
+                        resData = res.data;
+                    } catch (apiErr) {
+                        console.warn('[ADMIN] External add_money failed, falling back to local botController:', apiErr.message);
+                        const botController = require('../controllers/botController');
+                        const mockReq = { body: { ...addPayload, botSecret: 'MEGA_BOT_SECRET_2026' } };
+                        const mockRes = {
+                            status: () => mockRes,
+                            json: (data) => { resData = data; }
+                        };
+                        await botController.addMoney(mockReq, mockRes);
+                    }
                     
-                    if (res.data.error) {
-                        await sock.sendMessage(remoteJid, { text: `❌ Error: ${res.data.error}` });
+                    if (resData && resData.error) {
+                        await sock.sendMessage(remoteJid, { text: `❌ Error: ${resData.error}` });
+                    } else if (resData && resData.newBalance !== undefined) {
+                        await sock.sendMessage(remoteJid, { text: `✅ Operación exitosa.\nNuevo saldo de ${session.resellerName} en Servidor ${session.serverId}: $${parseFloat(resData.newBalance).toFixed(2)} MXN` });
                     } else {
-                        await sock.sendMessage(remoteJid, { text: `✅ Operación exitosa.\nNuevo saldo de ${session.resellerName} en Servidor ${session.serverId}: $${res.data.newBalance.toFixed(2)} MXN` });
+                        await sock.sendMessage(remoteJid, { text: '⚠️ La operación se completó pero no se confirmó el balance. Verifica con /saldo.' });
                     }
                 } catch (e) {
-                    await sock.sendMessage(remoteJid, { text: '❌ Ocurrió un error al procesar el saldo. ' + e.message });
+                    await sock.sendMessage(remoteJid, { text: '❌ Ocurrió un error al procesar el saldo: ' + e.message });
                 }
                 delete sessionManager.addMoneySessions[remoteJid];
             } else if (ans === 'no') {
