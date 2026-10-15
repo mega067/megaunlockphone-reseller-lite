@@ -724,16 +724,61 @@ function renderOrderHistory() {
     return safeText;
   }
   
+  // Compute overall counters for the order status summary boxes (always relative to full orderHistory)
+  const totalOrdersCount = Array.isArray(orderHistory) ? orderHistory.length : 0;
+  let successCount = 0;
+  let pendingCount = 0;
+  let failedCount = 0;
+
+  if (Array.isArray(orderHistory)) {
+    orderHistory.forEach(item => {
+      const st = String(item.status || '').toLowerCase();
+      if (st === 'success') successCount++;
+      else if (st === 'pending' || st === 'processing' || st === 'in_process') pendingCount++;
+      else if (st === 'failed' || st === 'rejected' || st === 'error') failedCount++;
+    });
+  }
+
+  const statSuccessCountEl = document.getElementById('orderStatSuccessCount');
+  const statSuccessTotalEl = document.getElementById('orderStatSuccessTotal');
+  const statPendingCountEl = document.getElementById('orderStatPendingCount');
+  const statPendingTotalEl = document.getElementById('orderStatPendingTotal');
+  const statFailedCountEl = document.getElementById('orderStatFailedCount');
+  const statFailedTotalEl = document.getElementById('orderStatFailedTotal');
+
+  if (statSuccessCountEl) statSuccessCountEl.textContent = successCount;
+  if (statSuccessTotalEl) statSuccessTotalEl.textContent = `/ ${totalOrdersCount}`;
+  if (statPendingCountEl) statPendingCountEl.textContent = pendingCount;
+  if (statPendingTotalEl) statPendingTotalEl.textContent = `/ ${totalOrdersCount}`;
+  if (statFailedCountEl) statFailedCountEl.textContent = failedCount;
+  if (statFailedTotalEl) statFailedTotalEl.textContent = `/ ${totalOrdersCount}`;
+
   const limit = parseInt(historyLimitFilter.value) || 10;
   const query = historySearchInput.value.toLowerCase().trim();
+  const currentStatusFilter = window.historyStatusFilter || 'all';
 
   let filteredHistory = [...orderHistory];
 
+  // Filter by status if selected
+  if (currentStatusFilter !== 'all') {
+    filteredHistory = filteredHistory.filter(item => {
+      const st = String(item.status || '').toLowerCase();
+      if (currentStatusFilter === 'success') return st === 'success';
+      if (currentStatusFilter === 'pending') return st === 'pending' || st === 'processing' || st === 'in_process';
+      if (currentStatusFilter === 'failed') return st === 'failed' || st === 'rejected' || st === 'error';
+      return true;
+    });
+  }
+
+  // Filter by search query (Service, IMEI, OrderID, Username)
   if (query) {
     filteredHistory = filteredHistory.filter(item => {
-      return item.serviceId.toString().toLowerCase().includes(query) ||
-             item.serviceName.toLowerCase().includes(query) ||
-             item.imei.toLowerCase().includes(query);
+      const sId = String(item.serviceId || '').toLowerCase();
+      const sName = String(item.serviceName || item.service || '').toLowerCase();
+      const imei = String(item.imei || '').toLowerCase();
+      const oId = String(item.orderId || '').toLowerCase();
+      const uName = String(item.username || '').toLowerCase();
+      return sId.includes(query) || sName.includes(query) || imei.includes(query) || oId.includes(query) || uName.includes(query);
     });
   }
 
@@ -1123,6 +1168,46 @@ function addOrderToHistory(orderRecord) {
 // Hook history limit and search filter listeners
 historyLimitFilter.addEventListener('change', renderOrderHistory);
 historySearchInput.addEventListener('input', renderOrderHistory);
+
+// Status Quick Filter Pills click events
+document.querySelectorAll('#historyStatusPills .status-pill').forEach(pill => {
+  pill.addEventListener('click', (e) => {
+    document.querySelectorAll('#historyStatusPills .status-pill').forEach(p => p.classList.remove('active'));
+    e.currentTarget.classList.add('active');
+    window.historyStatusFilter = e.currentTarget.dataset.status || 'all';
+
+    // Sync box outline
+    document.querySelectorAll('.order-stat-box').forEach(b => {
+      b.classList.toggle('active-filter', b.dataset.filter === window.historyStatusFilter);
+    });
+
+    renderOrderHistory();
+  });
+});
+
+// Order Stat Boxes click events (Exitosos, En Proceso, Fallidos)
+document.querySelectorAll('.order-stat-box').forEach(box => {
+  box.addEventListener('click', (e) => {
+    const filter = e.currentTarget.dataset.filter;
+    if (window.historyStatusFilter === filter) {
+      window.historyStatusFilter = 'all';
+    } else {
+      window.historyStatusFilter = filter;
+    }
+
+    // Sync pills
+    document.querySelectorAll('#historyStatusPills .status-pill').forEach(p => {
+      p.classList.toggle('active', (p.dataset.status || 'all') === window.historyStatusFilter);
+    });
+
+    // Sync boxes
+    document.querySelectorAll('.order-stat-box').forEach(b => {
+      b.classList.toggle('active-filter', b.dataset.filter === window.historyStatusFilter);
+    });
+
+    renderOrderHistory();
+  });
+});
 
 // ============================================
 // DEBUG API CALLS LOGGING LOGIC

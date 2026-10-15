@@ -412,6 +412,31 @@
           </div>
         </div>
 
+        <!-- Order Status Summary Metrics (Exitosos, En Proceso, Fallidos) -->
+        <div class="order-stats-summary-grid">
+          <div class="order-stat-box stat-box-success" data-filter="success" title="Filtrar pedidos exitosos">
+            <div class="stat-box-content">
+              <span class="stat-box-num"><span id="orderStatSuccessCount">0</span> <small id="orderStatSuccessTotal">/ 0</small></span>
+              <div class="stat-box-bar"><div class="stat-bar-fill bar-fill-success"></div></div>
+              <span class="stat-box-desc">Los pedidos se procesan con éxito</span>
+            </div>
+          </div>
+          <div class="order-stat-box stat-box-pending" data-filter="pending" title="Filtrar pedidos en proceso">
+            <div class="stat-box-content">
+              <span class="stat-box-num"><span id="orderStatPendingCount">0</span> <small id="orderStatPendingTotal">/ 0</small></span>
+              <div class="stat-box-bar"><div class="stat-bar-fill bar-fill-pending"></div></div>
+              <span class="stat-box-desc">Pedidos en proceso</span>
+            </div>
+          </div>
+          <div class="order-stat-box stat-box-failed" data-filter="failed" title="Filtrar pedidos fallidos">
+            <div class="stat-box-content">
+              <span class="stat-box-num"><span id="orderStatFailedCount">0</span> <small id="orderStatFailedTotal">/ 0</small></span>
+              <div class="stat-box-bar"><div class="stat-bar-fill bar-fill-failed"></div></div>
+              <span class="stat-box-desc">El proceso de pedidos falla</span>
+            </div>
+          </div>
+        </div>
+
         <!-- Filters for history -->
         <div class="history-filters-bar">
           <div class="history-filter-item">
@@ -423,10 +448,17 @@
               <option value="100">100 filas</option>
             </select>
           </div>
+          <!-- Status Quick Filter Pills -->
+          <div class="history-status-pills" id="historyStatusPills">
+            <button type="button" class="status-pill active" data-status="all">Todos</button>
+            <button type="button" class="status-pill pill-success" data-status="success">Exitosos</button>
+            <button type="button" class="status-pill pill-pending" data-status="pending">En Proceso</button>
+            <button type="button" class="status-pill pill-failed" data-status="failed">Rechazados</button>
+          </div>
           <div class="history-search-item">
             <div class="search-box">
               <i data-lucide="search"></i>
-              <input type="text" id="historySearchInput" placeholder="Búsqueda rápida por ID, IMEI o Servicio...">
+              <input type="text" id="historySearchInput" placeholder="Búsqueda rápida por ID, IMEI, Usuario o Servicio...">
             </div>
           </div>
         </div>
