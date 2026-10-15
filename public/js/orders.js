@@ -535,6 +535,7 @@ const importOrderPreviewCard = document.getElementById('importOrderPreviewCard')
 const previewOrderType = document.getElementById('previewOrderType');
 const previewOrderStatusBadge = document.getElementById('previewOrderStatusBadge');
 const previewServiceName = document.getElementById('previewServiceName');
+const importOrderServiceNameInput = document.getElementById('importOrderServiceNameInput');
 const previewOrderImei = document.getElementById('previewOrderImei');
 const previewOrderReply = document.getElementById('previewOrderReply');
 
@@ -563,7 +564,7 @@ async function queryRemoteOrder(orderId) {
       };
     }
 
-    const sId = raw.SERVICEID || raw.serviceid || raw.serviceId || raw.ID || raw.id || '';
+    let sId = raw.SERVICEID || raw.serviceid || raw.serviceId || raw.ID || raw.id || '';
     let sName = raw.SERVICENAME || raw.servicename || raw.serviceName || raw.NAME || '';
     let cost = 0;
 
@@ -576,18 +577,45 @@ async function queryRemoteOrder(orderId) {
           cost = (match.rawItem && match.rawItem._REAL_COST) ? parseFloat(match.rawItem._REAL_COST) : parseFloat(match.credit || 0);
         }
       }
-      // O si vino el precio en el raw (ej. PRICE)
-      if (!cost && raw.PRICE) {
-        cost = parseFloat(raw.PRICE) || 0;
+    }
+
+    // Si no vino el nombre del servicio, intentar deducirlo de la respuesta o código
+    // Ej: "Carrier: BAIT ... Monto: $50.00" -> "Recarga BAIT $50"
+    const replyStr = String(item.statusText || raw.CODE || raw.REPLY || '');
+    if (!sName || sName.startsWith('Pedido #') || sName.startsWith('Servicio #')) {
+      const carrierMatch = replyStr.match(/carrier:\s*([a-zA-Z0-9_\-\s]+?)(?=\s+referencia|\s+monto|\s+folio|$)/i);
+      const montoMatch = replyStr.match(/monto:\s*\$?([0-9]+(?:\.[0-9]+)?)/i);
+      if (carrierMatch && montoMatch) {
+        const cName = carrierMatch[1].trim();
+        const mVal = parseFloat(montoMatch[1]) || 0;
+        const cleanMVal = Number.isInteger(mVal) ? String(mVal) : String(mVal);
+        sName = `Recarga ${cName} $${cleanMVal}`;
+        if (!cost) cost = mVal;
+        
+        // Buscar coincidencia exacta o por palabras clave en productsList cargado
+        if (Array.isArray(productsList) && productsList.length > 0) {
+          const pMatch = productsList.find(p => p.service && p.service.toLowerCase().includes(cName.toLowerCase()) && p.service.includes(cleanMVal));
+          if (pMatch) {
+            sName = pMatch.service;
+            if (pMatch.serviceid) sId = String(pMatch.serviceid);
+            if (pMatch.credit) cost = parseFloat(pMatch.credit);
+          }
+        }
       }
     }
-    
+
     if (!sName) {
       sName = sId ? `Servicio #${sId}` : `Pedido #${orderId}`;
     }
 
     // Extraer identificador: IMEI, Username, Cuenta, Referencia o Cantidad
-    const imeiVal = raw.IMEI || raw.imei || raw.USERNAME || raw.username || raw.ACCOUNT || raw.REFERENCEID || raw.QTY || 'N/A';
+    let imeiVal = raw.IMEI || raw.imei || raw.USERNAME || raw.username || raw.ACCOUNT || raw.REFERENCEID || raw.QTY || '';
+    if (!imeiVal || imeiVal === 'N/A') {
+      const refMatch = replyStr.match(/referencia:\s*([0-9a-zA-Z_\-]+)/i);
+      if (refMatch) imeiVal = refMatch[1].trim();
+    }
+    if (!imeiVal) imeiVal = 'N/A';
+
     const detectedType = item.serviceType || (raw.IMEI && String(raw.IMEI).length >= 14 && /^\d+$/.test(raw.IMEI) ? 'IMEI' : 'SERVER');
 
     return {
@@ -620,7 +648,8 @@ async function handleInspectOrder() {
     importOrderPreviewCard.classList.remove('hidden');
     previewOrderStatusBadge.textContent = 'Consultando...';
     previewOrderStatusBadge.className = 'status-badge status-pending';
-    previewServiceName.textContent = 'Conectando con el servidor remoto...';
+    if (previewServiceName) previewServiceName.textContent = 'Conectando con el servidor remoto...';
+    if (importOrderServiceNameInput) importOrderServiceNameInput.value = 'Buscando servicio...';
     previewOrderImei.innerHTML = '<strong>IMEI / Ref:</strong> Consultando...';
     previewOrderReply.textContent = 'Espere un momento...';
   }
@@ -634,7 +663,8 @@ async function handleInspectOrder() {
         previewOrderType.textContent = '[NO ENCONTRADO]';
         previewOrderStatusBadge.textContent = 'Inválido';
         previewOrderStatusBadge.className = 'status-badge status-failed';
-        previewServiceName.textContent = 'No se encontró el pedido';
+        if (previewServiceName) previewServiceName.textContent = 'No se encontró el pedido';
+        if (importOrderServiceNameInput) importOrderServiceNameInput.value = '';
         previewOrderImei.innerHTML = `<strong>Respuesta Servidor:</strong> ${escapeHtml(reason)}`;
         previewOrderReply.textContent = 'Verifica que el ID sea correcto y que corresponda al Servidor activo (MEGA, ALPHA u OMEGA).';
       }
@@ -645,7 +675,8 @@ async function handleInspectOrder() {
         previewOrderType.textContent = `[${found.serviceType}]`;
         previewOrderStatusBadge.textContent = found.status === 'success' ? 'Completado' : (found.status === 'failed' ? 'Rechazado' : 'En proceso');
         previewOrderStatusBadge.className = `status-badge status-${found.status}`;
-        previewServiceName.textContent = found.serviceName;
+        if (previewServiceName) previewServiceName.textContent = found.serviceName;
+        if (importOrderServiceNameInput) importOrderServiceNameInput.value = found.serviceName;
         previewOrderImei.innerHTML = `<strong>IMEI / Referencia:</strong> ${escapeHtml(found.imei)}`;
         previewOrderReply.textContent = found.statusText;
       }
@@ -727,17 +758,23 @@ if (formImportOrder) {
           previewOrderType.textContent = '[NO ENCONTRADO]';
           previewOrderStatusBadge.textContent = 'Inválido';
           previewOrderStatusBadge.className = 'status-badge status-failed';
-          previewServiceName.textContent = 'ID de pedido inexistente o inválido';
+          if (previewServiceName) previewServiceName.textContent = 'ID de pedido inexistente o inválido';
+          if (importOrderServiceNameInput) importOrderServiceNameInput.value = '';
           previewOrderImei.innerHTML = `<strong>Error:</strong> ${escapeHtml(errorReason)}`;
           previewOrderReply.textContent = 'Revisa el número de ID o cambia de servidor.';
         }
         return;
       }
 
+      // Tomar el nombre del input si el usuario lo confirmó o editó
+      const finalServiceName = (importOrderServiceNameInput && importOrderServiceNameInput.value.trim()) 
+        ? importOrderServiceNameInput.value.trim() 
+        : orderToImport.serviceName;
+
       const importPayload = {
         orderId: orderToImport.orderId,
         serviceId: orderToImport.serviceId,
-        serviceName: orderToImport.serviceName,
+        serviceName: finalServiceName,
         imei: orderToImport.imei,
         status: orderToImport.status,
         statusText: orderToImport.statusText,
