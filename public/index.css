@@ -2223,14 +2223,14 @@ h1, h2, h3, h4 { color: var(--text-primary); font-family: var(--font-display); f
 /* Recharges Financial Summary Cards */
 .recharge-summary-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 10px;
   margin-bottom: 1rem;
 }
 
 @media (max-width: 640px) {
   .recharge-summary-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
     gap: 8px;
   }
 }
@@ -2266,6 +2266,12 @@ h1, h2, h3, h4 { color: var(--text-primary); font-family: var(--font-display); f
   box-shadow: 0 4px 15px rgba(56, 189, 248, 0.1);
 }
 
+.stat-card-global {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.12), rgba(88, 28, 135, 0.2));
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  box-shadow: 0 4px 15px rgba(168, 85, 247, 0.1);
+}
+
 .stat-card-icon {
   width: 36px;
   height: 36px;
@@ -2289,6 +2295,11 @@ h1, h2, h3, h4 { color: var(--text-primary); font-family: var(--font-display); f
 .stat-card-available .stat-card-icon {
   background: rgba(56, 189, 248, 0.2);
   color: #38bdf8;
+}
+
+.stat-card-global .stat-card-icon {
+  background: rgba(168, 85, 247, 0.2);
+  color: #c084fc;
 }
 
 .stat-card-info {

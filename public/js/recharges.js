@@ -41,28 +41,56 @@ function updateRechargesSummary() {
   const statAvailable = document.getElementById('rechargeStatAvailable');
   if (!statDeposited || !statSpent || !statAvailable) return;
 
-  const authRole = localStorage.getItem('dhru_role');
+  const statGlobal = document.getElementById('rechargeStatGlobal');
+  const statGlobalLabel = document.getElementById('rechargeStatGlobalLabel');
+  const cardGlobal = document.getElementById('rechargeCardGlobal');
+
+  // Cálculos de montos globales (todas las recargas y todos los pedidos no rechazados)
+  let totalDeposited = 0;
+  if (Array.isArray(rechargesHistory)) {
+    totalDeposited = rechargesHistory.reduce((acc, r) => acc + (parseFloat(r.amount) || 0), 0);
+  }
+
+  let totalSpentGlobal = 0;
+  if (typeof orderHistory !== 'undefined' && Array.isArray(orderHistory)) {
+    totalSpentGlobal = orderHistory.reduce((acc, o) => {
+      if (o.status === 'failed' || o.isRefunded || o.isImported) return acc;
+      const c = parseFloat(o.costCharged !== undefined ? o.costCharged : (o.costInCredits || o.price || 0)) || 0;
+      return acc + c;
+    }, 0);
+  }
 
   if (authRole === 'admin') {
     // Para la cuenta del Administrador:
-    // Las matemáticas son directas del servidor API (DHRU / Servidor Remoto).
+    // 1. Dinero real disponible en la API remota (DHRU)
     const directApiLiquidity = window.adminAccountMetrics?.credit !== undefined 
       ? window.adminAccountMetrics.credit 
       : (typeof globalApiCreditRaw !== 'undefined' ? globalApiCreditRaw : 0);
     const assignedToUsers = window.adminAccountMetrics?.assigned !== undefined ? window.adminAccountMetrics.assigned : 0;
     const availableApiLiquidity = window.adminAccountMetrics?.available !== undefined ? window.adminAccountMetrics.available : directApiLiquidity;
 
-    // Cambiar etiquetas dinámicamente para que reflejen la realidad operativa del servidor
+    // Etiquetas específicas de control del Admin:
+    // Card 1: Total de dinero agregado / recargado a la plataforma (Ingresado)
+    // Card 2: Saldo Real en la API Servidor (Liquidez DHRU)
+    // Card 3: Saldo Disponible Libre (API - Asignado a revendedores)
+    // Card 4: Dinero Gastado Global en pedidos despachados
     const lblDeposited = statDeposited.previousElementSibling;
     const lblSpent = statSpent.previousElementSibling;
     const lblAvailable = statAvailable.previousElementSibling;
-    if (lblDeposited) lblDeposited.textContent = 'API Servidor (Real)';
-    if (lblSpent) lblSpent.textContent = 'Créditos Cedidos';
+
+    if (lblDeposited) lblDeposited.textContent = 'Total Ingresado';
+    if (lblSpent) lblSpent.textContent = 'API Servidor (Real)';
     if (lblAvailable) lblAvailable.textContent = 'Liquidez Libre';
 
-    statDeposited.textContent = `$${directApiLiquidity.toFixed(2)} MXN`;
-    statSpent.textContent = `$${assignedToUsers.toFixed(2)} MXN`;
+    statDeposited.textContent = `$${totalDeposited.toFixed(2)} MXN`;
+    statSpent.textContent = `$${directApiLiquidity.toFixed(2)} MXN`;
     statAvailable.textContent = `$${availableApiLiquidity.toFixed(2)} MXN`;
+
+    if (cardGlobal && statGlobal) {
+      cardGlobal.classList.remove('hidden');
+      if (statGlobalLabel) statGlobalLabel.textContent = 'Gastado Global';
+      statGlobal.textContent = `$${totalSpentGlobal.toFixed(2)} MXN`;
+    }
   } else {
     // Para usuarios Resellers / Clientes:
     const lblDeposited = statDeposited.previousElementSibling;
@@ -71,22 +99,6 @@ function updateRechargesSummary() {
     if (lblDeposited) lblDeposited.textContent = 'Total Ingresado';
     if (lblSpent) lblSpent.textContent = 'Total Gastado';
     if (lblAvailable) lblAvailable.textContent = 'Disponible';
-
-    // 1. Total Ingresado (Suma de recargas exitosas de este usuario)
-    let totalDeposited = 0;
-    if (Array.isArray(rechargesHistory)) {
-      totalDeposited = rechargesHistory.reduce((acc, r) => acc + (parseFloat(r.amount) || 0), 0);
-    }
-
-    // 2. Total Gastado (Suma de órdenes no rechazadas y que no sean garantías $0)
-    let totalSpent = 0;
-    if (typeof orderHistory !== 'undefined' && Array.isArray(orderHistory)) {
-      totalSpent = orderHistory.reduce((acc, o) => {
-        if (o.status === 'failed' || o.isRefunded || o.isImported) return acc;
-        const c = parseFloat(o.costCharged !== undefined ? o.costCharged : (o.costInCredits || o.price || 0)) || 0;
-        return acc + c;
-      }, 0);
-    }
 
     // 3. Saldo Disponible en billetera
     let currentAvailable = 0;
@@ -98,13 +110,17 @@ function updateRechargesSummary() {
       if (match) {
         currentAvailable = parseFloat(match[1]) || 0;
       } else {
-        currentAvailable = Math.max(0, totalDeposited - totalSpent);
+        currentAvailable = Math.max(0, totalDeposited - totalSpentGlobal);
       }
     }
 
     statDeposited.textContent = `$${totalDeposited.toFixed(2)} MXN`;
-    statSpent.textContent = `$${totalSpent.toFixed(2)} MXN`;
+    statSpent.textContent = `$${totalSpentGlobal.toFixed(2)} MXN`;
     statAvailable.textContent = `$${currentAvailable.toFixed(2)} MXN`;
+
+    if (cardGlobal) {
+      cardGlobal.classList.add('hidden');
+    }
   }
 
   if (typeof lucide !== 'undefined' && lucide.createIcons) {
