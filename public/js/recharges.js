@@ -44,6 +44,23 @@ function updateRechargesSummary() {
   const statGlobal = document.getElementById('rechargeStatGlobal');
   const statGlobalLabel = document.getElementById('rechargeStatGlobalLabel');
   const cardGlobal = document.getElementById('rechargeCardGlobal');
+  const authRole = localStorage.getItem('dhru_role');
+
+  // Si rechargesHistory aún está vacío y hay sesión, disparar fetchRecharges()
+  if ((!rechargesHistory || rechargesHistory.length === 0) && localStorage.getItem('dhru_token') && !window._fetchingRechargesAuto) {
+    window._fetchingRechargesAuto = true;
+    if (typeof fetchRecharges === 'function') {
+      fetchRecharges().finally(() => { window._fetchingRechargesAuto = false; });
+    }
+  }
+
+  // Si orderHistory aún está vacío y hay sesión, disparar fetchOrderHistory()
+  if ((typeof orderHistory === 'undefined' || !orderHistory || orderHistory.length === 0) && localStorage.getItem('dhru_token') && !window._fetchingOrdersAuto) {
+    window._fetchingOrdersAuto = true;
+    if (typeof fetchOrderHistory === 'function') {
+      fetchOrderHistory().finally(() => { window._fetchingOrdersAuto = false; });
+    }
+  }
 
   // Cálculos de montos globales (todas las recargas y todos los pedidos no rechazados)
   let totalDeposited = 0;

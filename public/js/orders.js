@@ -13,6 +13,9 @@ async function fetchOrderHistory() {
     if (res.ok) {
       orderHistory = await res.json();
       renderOrderHistory();
+      if (typeof updateRechargesSummary === 'function') {
+        updateRechargesSummary();
+      }
 
       const hasPending = Array.isArray(orderHistory) && orderHistory.some(o => o.status === 'pending' && o.orderId && o.orderId !== 'Error');
       if (hasPending) {

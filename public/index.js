@@ -336,6 +336,7 @@ function checkPersistedSession() {
     syncProducts(false); // Utilizar caché instantánea en recargas para máxima velocidad
     updateAccountCredits();
     fetchOrderHistory();
+    if (typeof fetchRecharges === 'function') fetchRecharges();
     if (window.MegaApp && window.MegaApp.Ticket) window.MegaApp.Ticket.fetchTicketConfig();
     
     document.getElementById('creditsBadgeContainer').classList.remove('hidden');
