@@ -196,9 +196,21 @@ exports.getSettings = (req, res) => {
     exchangeRate: settings.exchangeRate || 17.60,
     creditCushion: settings.creditCushion || 0
   };
-  if (settings.server1) safeSettings.server1 = { ...settings.server1 };
-  if (settings.server2) safeSettings.server2 = { ...settings.server2 };
-  if (settings.server3) safeSettings.server3 = { ...settings.server3 };
+
+  // Mask API access key for security when returning settings, but include endpoint, name, username, and status
+  const sanitizeServer = (srv) => {
+    if (!srv) return undefined;
+    const copy = { ...srv };
+    if (copy.apiaccesskey) {
+      const len = copy.apiaccesskey.length;
+      copy.apiaccesskeyMasked = len > 8 ? `${copy.apiaccesskey.substring(0, 4)}...${copy.apiaccesskey.substring(len - 4)}` : '••••••••';
+    }
+    return copy;
+  };
+
+  if (settings.server1) safeSettings.server1 = sanitizeServer(settings.server1);
+  if (settings.server2) safeSettings.server2 = sanitizeServer(settings.server2);
+  if (settings.server3) safeSettings.server3 = sanitizeServer(settings.server3);
   if (settings.global) safeSettings.global = { ...settings.global };
 
   res.json(safeSettings);
@@ -208,29 +220,50 @@ exports.updateSettings = (req, res) => {
   const { server1, server2, server3, exchangeRate, creditCushion } = req.body;
   const settings = readDB('settings.json') || {};
   
-  const applyTiers = (target, source) => {
+  const applyServerConfig = (target, source) => {
+    if (!source || typeof source !== 'object') return;
+    
+    // Tiers and Markups
     target.resellerTier1 = parseFloat(source.resellerTier1) || 0;
     target.resellerTier2 = parseFloat(source.resellerTier2) || 0;
     target.resellerTier3 = parseFloat(source.resellerTier3) || 0;
     target.clientTier1 = parseFloat(source.clientTier1) || 0;
     target.clientTier2 = parseFloat(source.clientTier2) || 0;
     target.clientTier3 = parseFloat(source.clientTier3) || 0;
-    // Keep backward compatibility
     target.resellerMarkup = target.resellerTier1;
     target.clientMarkup = target.clientTier1;
+
+    // Server Endpoints & Credentials (Admin management)
+    if (source.name !== undefined && typeof source.name === 'string') {
+      target.name = source.name.trim();
+    }
+    if (source.endpoint !== undefined && typeof source.endpoint === 'string' && source.endpoint.trim() !== '') {
+      let ep = source.endpoint.trim();
+      if (!ep.endsWith('/')) ep += '/';
+      target.endpoint = ep;
+    }
+    if (source.username !== undefined && typeof source.username === 'string' && source.username.trim() !== '') {
+      target.username = source.username.trim();
+    }
+    if (source.apiaccesskey !== undefined && typeof source.apiaccesskey === 'string' && source.apiaccesskey.trim() !== '' && !source.apiaccesskey.includes('...')) {
+      target.apiaccesskey = source.apiaccesskey.trim();
+    }
+    if (source.enabled !== undefined) {
+      target.enabled = Boolean(source.enabled);
+    }
   };
 
   if (server1) {
     settings.server1 = settings.server1 || {};
-    applyTiers(settings.server1, server1);
+    applyServerConfig(settings.server1, server1);
   }
   if (server2) {
     settings.server2 = settings.server2 || {};
-    applyTiers(settings.server2, server2);
+    applyServerConfig(settings.server2, server2);
   }
   if (server3) {
     settings.server3 = settings.server3 || {};
-    applyTiers(settings.server3, server3);
+    applyServerConfig(settings.server3, server3);
   }
   if (req.body.global) {
     settings.global = settings.global || {};
@@ -242,9 +275,10 @@ exports.updateSettings = (req, res) => {
   if (creditCushion !== undefined) {
     settings.creditCushion = parseFloat(creditCushion) || 0;
   }
+
   writeDB('settings.json', settings);
   incrementCatalogVersion();
-  res.json(settings);
+  res.json({ success: true, message: 'Configuración actualizada correctamente.' });
 };
 
 exports.getGroupMarkups = (req, res) => {
@@ -391,11 +425,16 @@ exports.getAutoBackups = (req, res) => {
 };
 
 exports.downloadAutoBackup = (req, res) => {
-  const filename = req.params.filename;
-  if (!filename.startsWith('autobackup_') || !filename.endsWith('.json')) {
-    return res.status(400).json({ error: 'Archivo inválido.' });
+  const rawFilename = req.params.filename;
+  // Security: Prevent path traversal (e.g., ../ or encoded path characters)
+  const filename = path.basename(String(rawFilename || ''));
+  if (!filename.startsWith('autobackup_') || !filename.endsWith('.json') || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+    return res.status(400).json({ error: 'Archivo inválido o intento de acceso denegado.' });
   }
-  const filepath = path.join(BACKUP_DIR, filename);
+  const filepath = path.resolve(BACKUP_DIR, filename);
+  if (!filepath.startsWith(path.resolve(BACKUP_DIR))) {
+    return res.status(403).json({ error: 'Acceso no autorizado al archivo.' });
+  }
   if (!fs.existsSync(filepath)) {
     return res.status(404).json({ error: 'Respaldo no encontrado.' });
   }

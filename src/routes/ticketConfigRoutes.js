@@ -35,11 +35,22 @@ module.exports = (context) => {
       try {
         const match = logoBase64.match(/^data:image\/([A-Za-z-+\/]+);base64,(.+)$/);
         if (match && match.length === 3) {
-          let ext = match[1].toLowerCase() === 'png' ? '.png' : (match[1].toLowerCase() === 'webp' ? '.webp' : '.jpg');
+          const mime = match[1].toLowerCase();
+          let ext = mime.includes('png') ? '.png' : (mime.includes('webp') ? '.webp' : (mime.includes('jpeg') || mime.includes('jpg') ? '.jpg' : null));
+          if (!ext) {
+            return res.status(400).json({ error: 'Formato de imagen no permitido. Solo se acepta PNG, WEBP o JPG.' });
+          }
           const buffer = Buffer.from(match[2], 'base64');
-          const logoDir = path.join(__dirname, '../../data/logos');
+          if (buffer.length > 5 * 1024 * 1024) {
+            return res.status(400).json({ error: 'El archivo excede el tamaño máximo permitido (5MB).' });
+          }
+          const safeUserId = String(req.user.id).replace(/[^a-zA-Z0-9_-]/g, '');
+          const logoDir = path.resolve(__dirname, '../../data/logos');
           if (!fs.existsSync(logoDir)) fs.mkdirSync(logoDir, { recursive: true });
-          const logoPath = path.join(logoDir, `${req.user.id}${ext}`);
+          const logoPath = path.resolve(logoDir, `${safeUserId}${ext}`);
+          if (!logoPath.startsWith(logoDir)) {
+            return res.status(403).json({ error: 'Ruta no permitida.' });
+          }
           fs.writeFileSync(logoPath, buffer);
           logoExt = ext;
         }

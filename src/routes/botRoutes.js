@@ -33,9 +33,9 @@ router.post('/products', requireBotSecretOnly, botController.getProductsByGroup)
 router.post('/setprice', requireBotSecretOnly, botController.setPrice);
 router.post('/service_info', requireBotSecret, botController.getServiceInfo);
 router.post('/order', requireBotSecret, orderController.processOrder);
-router.post('/saldo', botController.getSaldo);
-router.post('/add_money', botController.addMoney);
-router.post('/service_info_direct', botController.getServiceInfoDirect); // Direct service info endpoint
+router.post('/saldo', requireBotSecretOnly, botController.getSaldo);
+router.post('/add_money', requireBotSecretOnly, botController.addMoney);
+router.post('/service_info_direct', requireBotSecretOnly, botController.getServiceInfoDirect); // Direct service info endpoint
 
 // WhatsApp Engine APIs
 router.get('/time', (req, res) => {

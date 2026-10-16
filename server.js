@@ -106,15 +106,50 @@ app.get('/api/kill', requireAuth, requireAdmin, (req, res) => {
 app.get('/api/proxy-image', async (req, res) => {
   try {
     const { url } = req.query;
-    if (!url) return res.status(400).send('No URL provided');
+    if (!url || typeof url !== 'string') return res.status(400).send('No URL provided');
     
+    // Security: Validate URL format and prevent SSRF to localhost or internal network
+    let parsed;
+    try {
+      parsed = new URL(url);
+    } catch (e) {
+      return res.status(400).send('Invalid URL format');
+    }
+
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      return res.status(400).send('Only HTTP and HTTPS protocols are allowed');
+    }
+
+    const host = parsed.hostname.toLowerCase();
+    const isPrivate = host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === '::1' ||
+      host === '0.0.0.0' ||
+      host === '169.254.169.254' || // AWS/cloud metadata
+      host.startsWith('10.') ||
+      host.startsWith('192.168.') ||
+      host.match(/^172\.(1[6-9]|2[0-9]|3[0-1])\./) ||
+      host.endsWith('.internal') ||
+      host.endsWith('.local');
+
+    if (isPrivate) {
+      return res.status(403).send('Access to internal network addresses is forbidden');
+    }
+
     const response = await axios({
       method: 'get',
-      url: url,
-      responseType: 'stream'
+      url: parsed.href,
+      responseType: 'stream',
+      timeout: 10000,
+      maxContentLength: 10 * 1024 * 1024 // Max 10MB
     });
     
-    res.set('Content-Type', response.headers['content-type']);
+    const contentType = response.headers['content-type'] || 'image/jpeg';
+    if (!contentType.startsWith('image/')) {
+      return res.status(400).send('Only image content types are permitted');
+    }
+
+    res.set('Content-Type', contentType);
     res.set('Cache-Control', 'public, max-age=31536000');
     response.data.pipe(res);
   } catch (error) {

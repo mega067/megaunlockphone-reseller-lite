@@ -8,8 +8,13 @@ const btnSyncRecharges = document.getElementById('btnSyncRecharges');
 let rechargesHistory = [];
 
 function escapeHtml(unsafe) {
-  if (!unsafe) return '';
-  return String(unsafe).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  if (unsafe === null || unsafe === undefined) return '';
+  return String(unsafe)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function formatType(type, isDeduction) {

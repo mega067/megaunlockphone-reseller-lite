@@ -17,6 +17,20 @@ async function loadAdminData() {
         if (inputClientTier1) inputClientTier1.value = parseFloat(currentSet.clientTier1 || currentSet.clientMarkup || 0).toFixed(2);
         if (inputClientTier2) inputClientTier2.value = parseFloat(currentSet.clientTier2 || currentSet.clientMarkup || 0).toFixed(2);
         if (inputClientTier3) inputClientTier3.value = parseFloat(currentSet.clientTier3 || 0).toFixed(2);
+        
+        const inputServerName = document.getElementById('inputServerName');
+        if (inputServerName) inputServerName.value = currentSet.name || '';
+        const inputServerEndpoint = document.getElementById('inputServerEndpoint');
+        if (inputServerEndpoint) inputServerEndpoint.value = currentSet.endpoint || '';
+        const inputServerUsername = document.getElementById('inputServerUsername');
+        if (inputServerUsername) inputServerUsername.value = currentSet.username || '';
+        const inputServerApiKey = document.getElementById('inputServerApiKey');
+        if (inputServerApiKey) {
+          inputServerApiKey.value = '';
+          inputServerApiKey.placeholder = currentSet.apiaccesskeyMasked ? `Actual: ${currentSet.apiaccesskeyMasked} (dejar vacío para mantener)` : 'API Access Key';
+        }
+        const inputServerEnabled = document.getElementById('inputServerEnabled');
+        if (inputServerEnabled) inputServerEnabled.checked = currentSet.enabled !== false;
       }
       const inputExchangeRate = document.getElementById('inputExchangeRate');
       if (inputExchangeRate) {
@@ -925,6 +939,18 @@ if (adminSettingsForm) {
         clientTier2: parseFloat(clientTier2),
         clientTier3: parseFloat(clientTier3)
       };
+
+      const inputServerName = document.getElementById('inputServerName');
+      const inputServerEndpoint = document.getElementById('inputServerEndpoint');
+      const inputServerUsername = document.getElementById('inputServerUsername');
+      const inputServerApiKey = document.getElementById('inputServerApiKey');
+      const inputServerEnabled = document.getElementById('inputServerEnabled');
+
+      if (inputServerName && inputServerName.value.trim()) tiersObj.name = inputServerName.value.trim();
+      if (inputServerEndpoint && inputServerEndpoint.value.trim()) tiersObj.endpoint = inputServerEndpoint.value.trim();
+      if (inputServerUsername && inputServerUsername.value.trim()) tiersObj.username = inputServerUsername.value.trim();
+      if (inputServerApiKey && inputServerApiKey.value.trim()) tiersObj.apiaccesskey = inputServerApiKey.value.trim();
+      if (inputServerEnabled) tiersObj.enabled = inputServerEnabled.checked;
 
       if (currentServerId === '3') {
         payload.server3 = tiersObj;

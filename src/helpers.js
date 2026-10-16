@@ -19,7 +19,7 @@ function getServerSettings(settings, serverId) {
     s = settings.server3 || {};
     s.endpoint = s.endpoint || "https://www.unlockerfast.com.mx/";
     s.username = s.username || "MegaUnlockPhone";
-    s.apiaccesskey = s.apiaccesskey || "QXU-2HD-MAR-PKM-PAD-RFP-XK5-5ME";
+    s.apiaccesskey = s.apiaccesskey || "5RL-UD9-FQ7-311-H4S-NBK-SB2-9DB";
   } else if (serverId === '2') {
     s = settings.server2 || {};
     s.endpoint = s.endpoint || "https://popi-gsm.com/public/";

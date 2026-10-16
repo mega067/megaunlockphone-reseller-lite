@@ -675,8 +675,14 @@ function showError(message) {
 
 // HTML sanitization helper
 function escapeHtml(unsafe) {
-  if (window.AppUtils) return window.AppUtils.escapeHtml(unsafe);
-  return String(unsafe).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  if (unsafe === null || unsafe === undefined) return '';
+  if (window.AppUtils && typeof window.AppUtils.escapeHtml === 'function') return window.AppUtils.escapeHtml(unsafe);
+  return String(unsafe)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 // ============================================
