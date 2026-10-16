@@ -1628,6 +1628,12 @@ function openPurchaseModal(serviceId) {
     imeiLabel.innerHTML = `<span style="font-size: 1.2rem; color: #ef4444; font-weight: 900; background: rgba(239, 68, 68, 0.1); padding: 4px 8px; border-radius: 4px; display: inline-block;">⚠️ ${customName} *</span>`;
     imeiInput.placeholder = '👉 ¡ATENCIÓN! INGRESA ' + customName.toUpperCase() + ' AQUÍ 👈';
     imeiInput.style.border = '2px solid #ef4444';
+  } else if (raw && raw.SERVICETYPE === 'IMEI' && (!raw.CUSTOM || !raw.CUSTOM.isalpha)) {
+    // Upstream Dhru Fusion requires a numeric 15-digit IMEI for pure IMEI services
+    imeiLabel.innerHTML = `<span style="font-size: 1rem; color: #3b82f6; font-weight: 700;">📱 IMEI del Dispositivo (15 dígitos numéricos) *</span>`;
+    imeiInput.placeholder = 'Ingresa el IMEI de 15 dígitos (Ej. 353014...)';
+    imeiInput.setAttribute('minlength', '15');
+    imeiInput.setAttribute('maxlength', '15');
   }
   
   // Apply Advanced validations if any
