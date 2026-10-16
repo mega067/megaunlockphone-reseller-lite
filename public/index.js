@@ -1629,11 +1629,11 @@ function openPurchaseModal(serviceId) {
     imeiInput.placeholder = '👉 ¡ATENCIÓN! INGRESA ' + customName.toUpperCase() + ' AQUÍ 👈';
     imeiInput.style.border = '2px solid #ef4444';
   } else if (raw && raw.SERVICETYPE === 'IMEI' && (!raw.CUSTOM || !raw.CUSTOM.isalpha)) {
-    // Upstream Dhru Fusion requires a numeric 15-digit IMEI for pure IMEI services
-    imeiLabel.innerHTML = `<span style="font-size: 1rem; color: #3b82f6; font-weight: 700;">📱 IMEI del Dispositivo (15 dígitos numéricos) *</span>`;
-    imeiInput.placeholder = 'Ingresa el IMEI de 15 dígitos (Ej. 353014...)';
-    imeiInput.setAttribute('minlength', '15');
-    imeiInput.setAttribute('maxlength', '15');
+    // Upstream Dhru Fusion requires IMEI for this service. Warn clearly without hard-blocking other services.
+    imeiLabel.innerHTML = `<span style="font-size: 0.95rem; color: #3b82f6; font-weight: 700;">📱 IMEI del Dispositivo *</span> <small style="display:block; color:#f59e0b; font-size:0.75rem; font-weight:600; margin-top:2px;">⚠️ Este servicio procesa por IMEI (no por Serial). Ingresa el IMEI del equipo.</small>`;
+    imeiInput.placeholder = 'Ingresa el IMEI del equipo (Ej. 353014...)';
+    imeiInput.removeAttribute('minlength');
+    imeiInput.removeAttribute('maxlength');
   }
   
   // Apply Advanced validations if any
