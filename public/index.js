@@ -1328,7 +1328,16 @@ function openPurchaseModal(serviceId) {
   const product = productsList.find(p => p.serviceid.toString() === serviceId.toString());
   if (!product) return;
 
-  if (product.rawItem._NO_PRICE || parseFloat(product.credit) <= 0) {
+  const isFreeAllowed = !!(product.rawItem && (product.rawItem._ALLOW_FREE || product.rawItem._IS_FREE));
+  const hasCustomPrice = product.rawItem && (product.rawItem._CUSTOM_RESELLER !== undefined || product.rawItem._CUSTOM_CLIENT !== undefined);
+  const creditVal = parseFloat(product.credit) || 0;
+  
+  if (product.rawItem._NO_PRICE && !isFreeAllowed && !hasCustomPrice) {
+    alert('Este servicio requiere confirmación de precio previa. Por favor haz clic en "Consultar" para contactar a soporte.');
+    return;
+  }
+
+  if (creditVal <= 0 && !isFreeAllowed && !hasCustomPrice) {
     alert('Este servicio requiere confirmación de precio previa. Por favor haz clic en "Consultar" para contactar a soporte.');
     return;
   }
