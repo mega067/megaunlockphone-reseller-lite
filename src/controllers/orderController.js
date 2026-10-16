@@ -293,13 +293,23 @@ exports.processOrder = async (req, res) => {
         : ['IMEI_ONLY', 'BOTH', 'SN_ONLY'];
 
       const combinations = [];
+      // Only try secondary action if the provider or service actually supports it
+      const shouldTrySecondary = (serviceType === 'SERVER' || serviceType === 'server');
+      
       for (const mode of paramModes) {
         combinations.push({ action: primaryAction, xml: customXmlBase64, mode });
-        combinations.push({ action: secondaryAction, xml: customXmlBase64, mode });
-        combinations.push({ action: primaryAction, xml: customXmlRaw, mode });
-        combinations.push({ action: secondaryAction, xml: customXmlRaw, mode });
+        if (customXmlRaw !== customXmlBase64) {
+          combinations.push({ action: primaryAction, xml: customXmlRaw, mode });
+        }
+        if (shouldTrySecondary) {
+          combinations.push({ action: secondaryAction, xml: customXmlBase64, mode });
+          if (customXmlRaw !== customXmlBase64) {
+            combinations.push({ action: secondaryAction, xml: customXmlRaw, mode });
+          }
+        }
       }
 
+      const allErrorsCollected = [];
       for (const combo of combinations) {
         responseData = await sendDhruRequest(combo.action, combo.xml, combo.mode);
         
@@ -314,6 +324,9 @@ exports.processOrder = async (req, res) => {
           } else if (typeof responseData.ERROR[0] === 'string') {
             errorMsg = responseData.ERROR[0];
           }
+          if (errorMsg && !allErrorsCollected.includes(errorMsg)) {
+            allErrorsCollected.push(errorMsg);
+          }
           
           // Stop immediately only for critical auth/account errors, but retry other combinations for validation/action/IMEI format errors
           if (errorMsg.includes('Authentication Failed') || errorMsg.includes('Account Suspended') || errorMsg.includes('not authorized')) {
@@ -323,10 +336,12 @@ exports.processOrder = async (req, res) => {
       }
 
       if (responseData && responseData.ERROR && responseData.ERROR.length > 0) {
+        const meaningfulErrors = allErrorsCollected.filter(e => !e.includes('Command Not Found'));
+        const chosenError = meaningfulErrors.length > 0 ? meaningfulErrors.join(' | ') : (allErrorsCollected[0] || 'Error desconocido');
         if (typeof responseData.ERROR[0] === 'object') {
-           responseData.ERROR[0].MESSAGE = `Todos los intentos (Base64/Raw, IMEI/Server) fallaron. Original: ` + (responseData.ERROR[0].MESSAGE || responseData.ERROR[0].Error || '');
+           responseData.ERROR[0].MESSAGE = `Dhru Error: ` + chosenError;
         } else if (typeof responseData.ERROR[0] === 'string') {
-           responseData.ERROR[0] = `Todos los intentos (Base64/Raw, IMEI/Server) fallaron. Original: ` + responseData.ERROR[0];
+           responseData.ERROR[0] = `Dhru Error: ` + chosenError;
         }
       }
 
