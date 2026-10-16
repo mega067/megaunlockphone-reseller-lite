@@ -23,6 +23,29 @@ exports.toggleService = (req, res) => {
   res.json({ success: true, disabled });
 };
 
+exports.toggleAllowFree = (req, res) => {
+  const { serviceid, allowed } = req.body;
+  const serverId = getServerId(req);
+  if (!serviceid) return res.status(400).json({ error: 'Falta serviceid' });
+
+  const allowedDb = readDB('allowed_free_services.json') || {};
+  const serverKey = 'server' + serverId;
+  if (!allowedDb[serverKey]) allowedDb[serverKey] = [];
+
+  const sid = serviceid.toString();
+  if (allowed) {
+    if (!allowedDb[serverKey].includes(sid)) {
+      allowedDb[serverKey].push(sid);
+    }
+  } else {
+    allowedDb[serverKey] = allowedDb[serverKey].filter(id => id !== sid);
+  }
+
+  writeDB('allowed_free_services.json', allowedDb);
+  incrementCatalogVersion();
+  res.json({ success: true, allowedFree: allowed });
+};
+
 exports.setProductPrice = (req, res) => {
   const { serviceid, resellerPrice, clientPrice, bulk } = req.body;
   const serverId = getServerId(req);

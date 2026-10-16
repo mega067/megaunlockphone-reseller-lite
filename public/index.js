@@ -1724,9 +1724,23 @@ orderForm.addEventListener('submit', async (e) => {
     }
     imeiDataString = imei;
   } else {
-    // Generate a unique 15-digit dummy IMEI: Date.now() (13 digits) + 2 random digits
-    const randomSuffix = Math.floor(Math.random() * 90 + 10).toString();
-    imei = Date.now().toString() + randomSuffix;
+    // Generate a valid 15-digit Luhn IMEI with a standard TAC (Apple iPhone 35301409)
+    const tac = '35301409';
+    let body = tac;
+    while (body.length < 14) {
+      body += Math.floor(Math.random() * 10).toString();
+    }
+    let luhnSum = 0;
+    for (let i = 0; i < 14; i++) {
+      let digit = parseInt(body.charAt(i), 10);
+      if (i % 2 === 1) {
+        digit *= 2;
+        if (digit > 9) digit -= 9;
+      }
+      luhnSum += digit;
+    }
+    const checkDigit = (10 - (luhnSum % 10)) % 10;
+    imei = body + checkDigit;
     imeiDataString = 'N/A';
   }
 

@@ -223,6 +223,44 @@ function logRecharge(userId, username, amount, type = 'MANUAL_ADMIN', adminUsern
   return entry;
 }
 
+function computeLuhnCheckDigit(digits14) {
+  let sum = 0;
+  for (let i = 0; i < 14; i++) {
+    let digit = parseInt(digits14.charAt(i), 10);
+    if (i % 2 === 1) {
+      digit *= 2;
+      if (digit > 9) digit -= 9;
+    }
+    sum += digit;
+  }
+  return (10 - (sum % 10)) % 10;
+}
+
+function generateValidLuhnImei() {
+  const tac = '35301409'; // Valid TAC prefix (Apple iPhone)
+  let body = tac;
+  while (body.length < 14) {
+    body += Math.floor(Math.random() * 10).toString();
+  }
+  const check = computeLuhnCheckDigit(body);
+  return body + check;
+}
+
+function isValidLuhnImei(str) {
+  if (!str || !/^\d{15}$/.test(String(str).trim())) return false;
+  const s = String(str).trim();
+  let sum = 0;
+  for (let i = 0; i < 15; i++) {
+    let digit = parseInt(s.charAt(i), 10);
+    if (i % 2 === 1) {
+      digit *= 2;
+      if (digit > 9) digit -= 9;
+    }
+    sum += digit;
+  }
+  return sum % 10 === 0;
+}
+
 module.exports = {
   getServerDisplayName,
   getServerId,
@@ -234,5 +272,8 @@ module.exports = {
   callGsmThemeApi,
   buildTargetUrl,
   processRefund,
-  logRecharge
+  logRecharge,
+  computeLuhnCheckDigit,
+  generateValidLuhnImei,
+  isValidLuhnImei
 };

@@ -546,8 +546,11 @@ function renderProductCards(items) {
   } catch (e) {}
   
   items.forEach(p => {
-    const noPrice = p.rawItem._NO_PRICE || (parseFloat(p.credit) <= 0);
-    const priceText = formatPrice(p.credit);
+    const isFreeAllowed = !!p.rawItem._ALLOW_FREE;
+    const hasCustomPrice = p.rawItem._CUSTOM_RESELLER !== undefined || p.rawItem._CUSTOM_CLIENT !== undefined;
+    const creditVal = parseFloat(p.credit) || 0;
+    const noPrice = p.rawItem._NO_PRICE && !isFreeAllowed && !hasCustomPrice;
+    const priceText = (isFreeAllowed && creditVal === 0) ? '<span style="color: #10b981; font-weight: bold;">Gratis ($0.00 MXN)</span>' : formatPrice(p.credit);
     
     let adminPricesHtml = '';
     let adminCustomPriceHtml = '';
@@ -565,11 +568,22 @@ function renderProductCards(items) {
         </button>
       `;
 
+      let allowFreeBtnHtml = '';
+      if (realCostNum <= 0) {
+        const isFreeAllowed = !!p.rawItem._ALLOW_FREE;
+        allowFreeBtnHtml = `
+          <button type="button" class="btn btn-secondary btn-toggle-allow-free" data-id="${escapeHtml(p.serviceid)}" data-allowed="${isFreeAllowed ? 'true' : 'false'}" style="margin-top: 6px; width: 100%; border: 1px dashed ${isFreeAllowed ? '#10b981' : '#f59e0b'}; color: ${isFreeAllowed ? '#10b981' : '#f59e0b'}; font-size: 0.75rem; padding: 6px;">
+            <i data-lucide="${isFreeAllowed ? 'check-circle' : 'gift'}" style="width: 14px;"></i> ${isFreeAllowed ? 'GRATUITO ACTIVADO (PERMITIDO)' : 'ACTIVAR COMPRA GRATUITA'}
+          </button>
+        `;
+      }
+
       adminPricesHtml = `
         <div style="font-size: 0.8rem; margin-top: 5px; background: rgba(0,0,0,0.2); padding: 5px; border-radius: 4px;">
           <div style="color: #10b981; margin-bottom: 2px;">Costo API: <strong>${realCostDisplay}</strong></div>
           <div style="color: #c4b5fd;">Precio Cliente: <strong>${clientPriceDisplay}</strong></div>
           ${toggleBtnHtml}
+          ${allowFreeBtnHtml}
         </div>
       `;
       
@@ -856,6 +870,34 @@ function renderProductCards(items) {
         } else {
           const errText = await res.text();
           alert(`Error al cambiar el estado del servicio: ${errText}`);
+        }
+      } catch (err) {
+        alert('Error de conexión.');
+      }
+    });
+  });
+
+  document.querySelectorAll('.btn-toggle-allow-free').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const serviceId = btn.getAttribute('data-id');
+      const isAllowed = btn.getAttribute('data-allowed') === 'true';
+      const newStatus = !isAllowed;
+      if (!confirm(`¿Deseas ${newStatus ? 'PERMITIR' : 'BLOQUEAR'} la compra de este servicio sin costo API ($0.00)?`)) return;
+
+      try {
+        const res = await fetch('/api/admin/toggle-allow-free', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Server-Id': currentServerId, 'Authorization': `Bearer ${authToken}` },
+          body: JSON.stringify({ serviceid: serviceId, allowed: newStatus })
+        });
+
+        if (res.ok) {
+          alert(`Servicio ${newStatus ? 'habilitado para compras gratuitas' : 'deshabilitado para compras gratuitas'}.`);
+          if (window.clearFrontendCatalogCache) window.clearFrontendCatalogCache();
+          await syncProducts(false);
+        } else {
+          const errText = await res.text();
+          alert(`Error al cambiar estado de servicio gratuito: ${errText}`);
         }
       } catch (err) {
         alert('Error de conexión.');

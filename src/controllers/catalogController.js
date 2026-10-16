@@ -182,6 +182,8 @@ exports.getProducts = async (req, res) => {
       const serverDisabledImei = allDisabledImei['server' + serverId] || [];
       const disabledDb = readDB('disabled_services.json') || {};
       const disabledServicesForServer = disabledDb['server' + serverId] || [];
+      const allowedFreeDb = readDB('allowed_free_services.json') || {};
+      const allowedFreeForServer = allowedFreeDb['server' + serverId] || [];
       
       const allCustomGroups = readDB('custom_groups.json') || {};
       const serverCustomGroups = allCustomGroups['server' + serverId] || {};
@@ -216,6 +218,10 @@ exports.getProducts = async (req, res) => {
           
           if (disabledServicesForServer.includes(String(realServiceId))) {
              service._DISABLED = true;
+          }
+
+          if (allowedFreeForServer.includes(String(realServiceId))) {
+             service._ALLOW_FREE = true;
           }
           
           if (serverDisabledImei.includes(String(realServiceId))) {
@@ -288,6 +294,10 @@ exports.getProducts = async (req, res) => {
             let cMarkup = calculateGroupMarkup(resellerCost, activeGroupMarkup, true, settings);
             if (cMarkup === null) cMarkup = calculateMarkup(resellerCost, clientTier1, clientTier2, clientTier3);
             clientPrice = Math.ceil(resellerCost + cMarkup);
+          } else if (service._ALLOW_FREE) {
+            isNoPrice = false;
+            resellerCost = 0;
+            clientPrice = 0;
           } else {
             isNoPrice = true;
             resellerCost = 0;
@@ -297,11 +307,14 @@ exports.getProducts = async (req, res) => {
           if (!isNoPrice) {
             // Enforce minimum price (must be at least API cost)
             if (isNaN(resellerCost) || (realCredit > 0 && resellerCost < realCredit)) resellerCost = Math.ceil(realCredit);
-            if (isNaN(clientPrice) || clientPrice < resellerCost) clientPrice = resellerCost;
+            if (isNaN(clientPrice) || (clientPrice < resellerCost && resellerCost > 0)) clientPrice = resellerCost;
           }
 
-          // NEVER mark as free - all products require real payment or inquiry
-          delete service._IS_FREE;
+          if (service._ALLOW_FREE) {
+            service._IS_FREE = true;
+          } else {
+            delete service._IS_FREE;
+          }
           service._NO_PRICE = isNoPrice;
           service._RESELLER_COST = resellerCost.toString();
           service._CLIENT_PRICE = clientPrice.toString();

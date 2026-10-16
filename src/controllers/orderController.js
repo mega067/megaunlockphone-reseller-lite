@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const { readDB, writeDB, DATA_DIR } = require('../db');
-const { getServerId, getServerSettings, getUserCredit, setUserCredit, callGsmThemeApi, getServerDisplayName, calculateMarkup, calculateGroupMarkup, processRefund } = require('../helpers');
+const { getServerId, getServerSettings, getUserCredit, setUserCredit, callGsmThemeApi, getServerDisplayName, calculateMarkup, calculateGroupMarkup, processRefund, generateValidLuhnImei, isValidLuhnImei } = require('../helpers');
 const { catalogCache, incrementHistoryVersion } = require('../cacheManager');
 const { enqueueWhatsApp, enqueueWhatsAppAdmin } = require('../whatsappQueue');
 const { fetchBulkOrdersStatus } = require('../syncService');
@@ -44,7 +44,7 @@ function createAutoBackup(reason) {
 exports.processOrder = async (req, res) => {
   const { serviceid, imei, custom_fields, serviceType, serviceName, qnt = 1 } = req.body;
   
-  let finalImei = imei;
+  let finalImei = imei ? String(imei).trim() : '';
   if (custom_fields && typeof custom_fields === 'object') {
     const targetKeys = ['numero', 'referencia', 'telefono', 'linea', 'celular', 'phone', 'number', 'ref', 'playerid', 'id'];
     const customKeys = Object.keys(custom_fields);
@@ -53,11 +53,16 @@ exports.processOrder = async (req, res) => {
       const val = String(custom_fields[keyToCopy]).trim();
       const isDummyImei = !finalImei || 
                           finalImei === '111111111111111' || 
-                          (finalImei.length >= 13 && /^\d+$/.test(finalImei));
+                          (finalImei.length >= 13 && /^\d+$/.test(finalImei) && !isValidLuhnImei(finalImei));
       if (isDummyImei && val.length <= 15) {
         finalImei = val;
       }
     }
+  }
+
+  // If finalImei is empty or a non-Luhn dummy, generate a valid 15-digit Luhn IMEI
+  if (!finalImei || finalImei === '111111111111111' || (finalImei.length === 15 && !isValidLuhnImei(finalImei) && /^\d+$/.test(finalImei) && finalImei.startsWith('17'))) {
+    finalImei = generateValidLuhnImei();
   }
 
   const quantity = Math.max(1, parseInt(qnt) || 1);
@@ -113,6 +118,14 @@ exports.processOrder = async (req, res) => {
   const serverUserCustomPrices = allUserCustomPrices['server' + serverId] || {};
   const allGroupMarkups = readDB('group_markups.json') || {};
   const serverGroupMarkups = allGroupMarkups['server' + serverId] || {};
+  const allowedFreeDb = readDB('allowed_free_services.json') || {};
+  const allowedFreeList = allowedFreeDb['server' + serverId] || [];
+  const isAllowedFree = allowedFreeList.includes(String(serviceid));
+
+  // If upstream cost is 0, only allow purchase if either custom price exists or allowed_free is enabled
+  if (realCost === 0 && !customPrices[serviceid] && !isAllowedFree) {
+    return res.status(400).json({ error: 'Este servicio requiere asignación de precio manual o activación por el administrador antes de comprar.' });
+  }
   const groupMarkupObj = serviceGroupKey ? serverGroupMarkups[serviceGroupKey] : null;
   
   let resellerCost;
@@ -233,7 +246,8 @@ exports.processOrder = async (req, res) => {
         notesXml = '<NOTES>' + notes.trim() + '</NOTES>';
       }
 
-      const baseParameters = '<ID>' + serviceid + '</ID><IMEI>' + (finalImei && finalImei.trim() !== '' ? finalImei : '111111111111111') + '</IMEI>' + (quantity > 1 || serviceType === 'SERVER' || serviceType === 'server' ? '<QNT>' + quantity + '</QNT>' : '');
+      const resolvedImei = finalImei && finalImei.trim() !== '' ? finalImei.trim() : generateValidLuhnImei();
+      const baseParameters = '<ID>' + serviceid + '</ID><IMEI>' + resolvedImei + '</IMEI>' + (quantity > 1 || serviceType === 'SERVER' || serviceType === 'server' ? '<QNT>' + quantity + '</QNT>' : '');
 
       let primaryAction = (serviceType === 'SERVER' || serviceType === 'server') ? 'placeserverorder' : 'placeimeiorder';
       let secondaryAction = primaryAction === 'placeserverorder' ? 'placeimeiorder' : 'placeserverorder';
