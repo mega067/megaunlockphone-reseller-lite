@@ -247,13 +247,29 @@ exports.processOrder = async (req, res) => {
       }
 
       const resolvedImei = finalImei && finalImei.trim() !== '' ? finalImei.trim() : generateValidLuhnImei();
-      const baseParameters = '<ID>' + serviceid + '</ID><IMEI>' + resolvedImei + '</IMEI>' + (quantity > 1 || serviceType === 'SERVER' || serviceType === 'server' ? '<QNT>' + quantity + '</QNT>' : '');
+      const isAlphaSerial = /[a-zA-Z]/.test(resolvedImei) || resolvedImei.length < 15;
+      
+      const buildBaseParams = (mode) => {
+        let tag = '';
+        if (mode === 'IMEI_ONLY') {
+          tag = '<IMEI>' + resolvedImei + '</IMEI>';
+        } else if (mode === 'SN_ONLY') {
+          tag = '<SN>' + resolvedImei + '</SN>';
+        } else if (mode === 'SERIAL_ONLY') {
+          tag = '<SERIAL>' + resolvedImei + '</SERIAL>';
+        } else {
+          // BOTH (IMEI + SN/SERIAL)
+          tag = '<IMEI>' + resolvedImei + '</IMEI><SN>' + resolvedImei + '</SN><SERIAL>' + resolvedImei + '</SERIAL>';
+        }
+        return '<ID>' + serviceid + '</ID>' + tag + (quantity > 1 || serviceType === 'SERVER' || serviceType === 'server' ? '<QNT>' + quantity + '</QNT>' : '');
+      };
 
       let primaryAction = (serviceType === 'SERVER' || serviceType === 'server') ? 'placeserverorder' : 'placeimeiorder';
       let secondaryAction = primaryAction === 'placeserverorder' ? 'placeimeiorder' : 'placeserverorder';
 
-      const sendDhruRequest = async (currentAction, currentCustomXml) => {
-        const xmlParameters = `<PARAMETERS>${baseParameters}${currentCustomXml}${notesXml}</PARAMETERS>`;
+      const sendDhruRequest = async (currentAction, currentCustomXml, paramMode) => {
+        const baseParams = buildBaseParams(paramMode);
+        const xmlParameters = `<PARAMETERS>${baseParams}${currentCustomXml}${notesXml}</PARAMETERS>`;
         const params = new URLSearchParams();
         params.append('username', username);
         params.append('apiaccesskey', apiaccesskey);
@@ -271,15 +287,21 @@ exports.processOrder = async (req, res) => {
         return response.data;
       };
 
-      const combinations = [
-        { action: primaryAction, xml: customXmlBase64 },
-        { action: secondaryAction, xml: customXmlBase64 },
-        { action: primaryAction, xml: customXmlRaw },
-        { action: secondaryAction, xml: customXmlRaw }
-      ];
+      // If resolvedImei contains letters (e.g. Apple Serial 'FFMYJN6EHFLR'), prioritize SN and BOTH tags!
+      const paramModes = isAlphaSerial 
+        ? ['SN_ONLY', 'BOTH', 'IMEI_ONLY', 'SERIAL_ONLY']
+        : ['IMEI_ONLY', 'BOTH', 'SN_ONLY'];
+
+      const combinations = [];
+      for (const mode of paramModes) {
+        combinations.push({ action: primaryAction, xml: customXmlBase64, mode });
+        combinations.push({ action: secondaryAction, xml: customXmlBase64, mode });
+        combinations.push({ action: primaryAction, xml: customXmlRaw, mode });
+        combinations.push({ action: secondaryAction, xml: customXmlRaw, mode });
+      }
 
       for (const combo of combinations) {
-        responseData = await sendDhruRequest(combo.action, combo.xml);
+        responseData = await sendDhruRequest(combo.action, combo.xml, combo.mode);
         
         if (responseData && responseData.SUCCESS) {
           break;
@@ -293,7 +315,8 @@ exports.processOrder = async (req, res) => {
             errorMsg = responseData.ERROR[0];
           }
           
-          if (errorMsg !== 'Invalid Action' && errorMsg !== 'Command Not Found') {
+          // Stop immediately only for critical auth/account errors, but retry other combinations for validation/action/IMEI format errors
+          if (errorMsg.includes('Authentication Failed') || errorMsg.includes('Account Suspended') || errorMsg.includes('not authorized')) {
             break;
           }
         }
