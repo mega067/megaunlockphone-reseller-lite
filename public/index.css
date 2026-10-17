@@ -854,10 +854,63 @@ h1, h2, h3, h4 { color: var(--text-primary); font-family: var(--font-display); f
   color: white;
 }
 
+.ticket-footer {
+  margin-top: 1rem;
+  width: 100%;
+}
+
 .ticket-footer-text {
   color: #94a3b8;
   font-size: 0.85rem;
   margin-bottom: 0.5rem;
+}
+
+.ticket-footer-meta {
+  margin-top: 1.25rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.ticket-reseller-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  max-width: 100%;
+  line-height: 1.4;
+}
+
+.ticket-reseller-tag .reseller-brand {
+  font-weight: 700;
+  color: #f1f5f9;
+  letter-spacing: 0.02em;
+}
+
+.ticket-reseller-tag .reseller-badge {
+  font-family: 'Fira Code', monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  background: rgba(56, 189, 248, 0.15);
+  border-radius: 4px;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #38bdf8;
+  white-space: nowrap;
+}
+
+.ticket-powered-tag {
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.35);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .ticket-phone {
@@ -897,6 +950,102 @@ h1, h2, h3, h4 { color: var(--text-primary); font-family: var(--font-display); f
   word-wrap: break-word;
   margin: 0;
 }
+
+/* ========================================================
+   ESTILOS DE PLANTILLAS DE TICKET (THEMES / TEMPLATES)
+======================================================== */
+/* 1. Minimalista Moderno */
+.ticket-card.template-minimal {
+  background-color: #0b0f19 !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6) !important;
+}
+.ticket-card.template-minimal .ticket-title {
+  color: #f8fafc !important;
+  font-weight: 700 !important;
+}
+.ticket-card.template-minimal .ticket-subtitle {
+  color: #94a3b8 !important;
+}
+.ticket-card.template-minimal .ticket-box {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+.ticket-card.template-minimal .ticket-box::before,
+.ticket-card.template-minimal .ticket-box::after {
+  display: none !important;
+}
+.ticket-card.template-minimal .ticket-label {
+  color: #94a3b8 !important;
+}
+.ticket-card.template-minimal .ticket-price-pill {
+  border-color: #38bdf8 !important;
+  color: #38bdf8 !important;
+}
+
+/* 2. Tarjeta VIP Gold */
+.ticket-card.template-vip {
+  background: radial-gradient(circle at top, #1e1b18 0%, #0d0c0a 100%) !important;
+  border: 2px solid #eab308 !important;
+  box-shadow: 0 0 35px rgba(234, 179, 8, 0.25) !important;
+}
+.ticket-card.template-vip .ticket-title {
+  color: #facc15 !important;
+  text-shadow: 0 0 12px rgba(250, 204, 21, 0.3) !important;
+}
+.ticket-card.template-vip .ticket-subtitle {
+  color: #fef08a !important;
+}
+.ticket-card.template-vip .ticket-box {
+  background: rgba(234, 179, 8, 0.08) !important;
+  border: 1px solid rgba(234, 179, 8, 0.3) !important;
+}
+.ticket-card.template-vip .ticket-box::before {
+  background-color: #eab308 !important;
+}
+.ticket-card.template-vip .ticket-box::after {
+  background-color: #ca8a04 !important;
+}
+.ticket-card.template-vip .ticket-label {
+  color: #facc15 !important;
+}
+.ticket-card.template-vip .ticket-price-pill {
+  border-color: #eab308 !important;
+  color: #fef08a !important;
+  background: rgba(234, 179, 8, 0.1) !important;
+}
+
+/* 3. Cyberpunk Neon */
+.ticket-card.template-cyberpunk {
+  background: linear-gradient(180deg, #180924 0%, #090212 100%) !important;
+  border: 2px solid #ec4899 !important;
+  box-shadow: 0 0 35px rgba(236, 72, 153, 0.3) !important;
+}
+.ticket-card.template-cyberpunk .ticket-title {
+  color: #f43f5e !important;
+  text-shadow: 0 0 12px rgba(244, 63, 94, 0.4) !important;
+}
+.ticket-card.template-cyberpunk .ticket-subtitle {
+  color: #38bdf8 !important;
+}
+.ticket-card.template-cyberpunk .ticket-box {
+  background: linear-gradient(135deg, rgba(236,72,153,0.15) 0%, rgba(56,189,248,0.15) 100%) !important;
+  border: 1px solid rgba(236, 72, 153, 0.4) !important;
+}
+.ticket-card.template-cyberpunk .ticket-box::before {
+  background-color: #f43f5e !important;
+}
+.ticket-card.template-cyberpunk .ticket-box::after {
+  background-color: #38bdf8 !important;
+}
+.ticket-card.template-cyberpunk .ticket-label {
+  color: #f43f5e !important;
+}
+.ticket-card.template-cyberpunk .ticket-price-pill {
+  border-color: #ec4899 !important;
+  color: #f472b6 !important;
+}
+
 
 /* ========================================================
    ORDER HISTORY & DATA TABLES (UI/UX PRO MAX FINTECH)

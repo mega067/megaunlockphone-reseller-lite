@@ -46,6 +46,20 @@ router.get('/me', requireAuth, (req, res) => {
   const users = readDB('users.json') || [];
   const user = users.find(u => u.id === req.user.id);
   if (!user) return res.status(404).json({ error: 'User not found' });
+  
+  const wUsers = readDB('whatsapp_users.json') || {};
+  let isLinkedToBot = false;
+  for (const [jid, uid] of Object.entries(wUsers)) {
+    if (String(uid) === String(user.id)) {
+      isLinkedToBot = true;
+      break;
+    }
+  }
+
+  const ticketConfigs = readDB('ticket_configs.json') || {};
+  const userTicketConfig = ticketConfigs[user.id] || {};
+  const logoExt = userTicketConfig.logoExt || '';
+
   res.json({ 
     username: user.username, 
     role: user.role, 
@@ -54,9 +68,12 @@ router.get('/me', requireAuth, (req, res) => {
     phone: user.phone || '',
     email: user.email || '',
     createdAt: user.createdAt || '',
+    isLinkedToBot,
+    logoUrl: logoExt ? `/logos/${user.id}${logoExt}` : '',
     weakPassword: isWeakPassword(user.password) 
   });
 });
+
 
 const fs = require('fs');
 const path = require('path');

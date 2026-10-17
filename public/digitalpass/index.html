@@ -1140,12 +1140,15 @@
         </div>
         
         <div class="input-group">
-          <label>Formato del Ticket</label>
+          <label>Plantilla y Formato del Ticket</label>
           <div class="input-wrapper">
             <select id="ticketFormatType" class="custom-field-input" style="width:100%; padding-left:1rem;">
               <option value="raw" selected>Crudo (Texto Original / Completo)</option>
               <option value="parsed">Inteligente (Usuario y Contraseña)</option>
               <option value="streaming">Streaming (Plantilla de Cuentas)</option>
+              <option value="minimal">Minimalista Moderno (Diseño Limpio)</option>
+              <option value="vip">Tarjeta VIP Gold (Premium)</option>
+              <option value="cyberpunk">Cyberpunk Neon (Resaltado)</option>
             </select>
           </div>
         </div>
@@ -1225,9 +1228,9 @@
           </i>
           <span id="ticketWaText">+52 2216936720</span>
         </div>
-        <div style="margin-top: 1rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.75rem; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;">
-          <span id="ticketResellerId" style="font-family: monospace;">---</span>
-          <span style="font-size: 0.65rem; color: rgba(255,255,255,0.3);">Powered by MegaUnlockPhone</span>
+        <div class="ticket-footer-meta">
+          <div id="ticketResellerId" class="ticket-reseller-tag">---</div>
+          <span class="ticket-powered-tag">Powered by MegaUnlockPhone</span>
         </div>
       </div>
     </div>
@@ -1329,8 +1332,15 @@
       <div class="modal-body" style="padding: 1.25rem;">
         <!-- TAB 1: INFORMACIÓN GENERAL -->
         <div class="profile-tab-pane active" id="tabProfileOverview">
-          <div class="profile-hero-banner">
-            <div class="profile-avatar-circle" id="profileAvatarLetter">U</div>
+          <div class="profile-hero-banner" style="position: relative;">
+            <div style="position: relative; display: inline-block;">
+              <div class="profile-avatar-circle" id="profileAvatarLetter">U</div>
+              <img id="profileAvatarImg" src="" alt="Avatar" style="display: none; width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 2px solid #38bdf8; box-shadow: 0 0 16px rgba(14, 165, 233, 0.4);">
+              <label for="inputProfilePhoto" title="Subir / Cambiar Foto de Perfil y Logo de Tickets" style="position: absolute; bottom: -4px; right: -4px; background: #0ea5e9; border: 2px solid #0f172a; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; box-shadow: 0 2px 6px rgba(0,0,0,0.5);">
+                <i data-lucide="camera" style="width: 12px; height: 12px;"></i>
+              </label>
+              <input type="file" id="inputProfilePhoto" accept="image/png,image/jpeg,image/webp" style="display: none;">
+            </div>
             <div class="profile-hero-info">
               <h3 class="profile-hero-username">
                 <span id="profileUsername">-</span>
@@ -1340,6 +1350,7 @@
                 <span style="font-size: 0.72rem; color: #10b981; background: rgba(16, 185, 129, 0.15); padding: 3px 8px; border-radius: 999px; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
                   <i data-lucide="check-circle-2" style="width: 11px; height: 11px;"></i> Cuenta Activa
                 </span>
+                <span id="profilePhotoStatus" style="font-size: 0.7rem; color: #94a3b8; display: none;"></span>
               </div>
             </div>
           </div>

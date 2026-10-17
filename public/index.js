@@ -333,6 +333,18 @@ function checkPersistedSession() {
     btnRechargeBalance.classList.remove('hidden'); // Shown for EVERYONE now
     btnWhatsappBot.classList.remove('hidden');
     
+    // Check WhatsApp bot link status for the button
+    if (authToken) {
+      fetch('/api/me', { headers: { 'Authorization': `Bearer ${authToken}` } })
+        .then(r => r.ok ? r.json() : null)
+        .then(meData => {
+          if (meData && typeof updateBotButtonStatus === 'function') {
+            updateBotButtonStatus(Boolean(meData.isLinkedToBot));
+          }
+        })
+        .catch(() => {});
+    }
+    
     syncProducts(false); // Utilizar caché instantánea en recargas para máxima velocidad
     updateAccountCredits();
     fetchOrderHistory();
@@ -962,12 +974,22 @@ function renderOrderHistory() {
     let rawString = String(item.statusText || item.msg || '');
     let strippedText = rawString.replace(/<br\s*\/?>/gi, ' ').replace(/<\/div>/gi, ' ').replace(/<[^>]*>?/gm, '').replace(/\s+/g, ' ').trim();
     let displayCodeContent = strippedText;
-    if (displayCodeContent.length > 35) displayCodeContent = displayCodeContent.substring(0, 35) + '...';
-
     const costValue = parseFloat(item.costCharged || item.costInCredits || 0);
-    const costDisplay = isWarranty 
-      ? `<span class="badge-zero-cost" title="Pedido de Garantía (No descuenta saldo)">$0.00 <span style="font-size: 0.65rem; opacity: 0.8;">(GARANTÍA)</span></span>`
-      : `<strong class="order-cost-val" style="color: #34d399;">$${costValue.toFixed(2)}</strong>`;
+    const isRefundedOrder = Boolean(item.isRefunded || item.status === 'failed' || item.status === 'rejected');
+    
+    let costDisplay = '';
+    if (isWarranty) {
+      costDisplay = `<span class="badge-zero-cost" title="Pedido de Garantía (No descuenta saldo)">$0.00 <span style="font-size: 0.65rem; opacity: 0.8;">(GARANTÍA)</span></span>`;
+    } else if (isRefundedOrder) {
+      costDisplay = `
+        <div style="display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2;">
+          <strong class="order-cost-val" style="color: #ef4444; text-decoration: line-through; opacity: 0.85; font-size: 0.95rem;">$${costValue.toFixed(2)}</strong>
+          <span style="color: #10b981; font-size: 0.68rem; font-weight: 700; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 4px; padding: 1px 4px; margin-top: 2px;">REEMBOLSADO</span>
+        </div>
+      `;
+    } else {
+      costDisplay = `<strong class="order-cost-val" style="color: #34d399;">$${costValue.toFixed(2)}</strong>`;
+    }
 
     trHeader.innerHTML = `
       <td style="white-space: nowrap;">
@@ -2043,9 +2065,9 @@ function applyTicketSettings() {
       const uId = (currentTicketData && currentTicketData.userId) || authUserId || localStorage.getItem('dhru_uid') || '';
       const brand = customTicketSettings.nombre || 'MegaUnlockPhone';
       if (uId) {
-        resellerNode.innerHTML = `<span>${escapeHtml(brand)}</span> <span style="opacity: 0.8; font-size: 0.7rem; font-family: 'Fira Code', monospace; margin-left: 6px; padding: 1px 5px; background: rgba(56, 189, 248, 0.15); border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8;">ID: ${escapeHtml(uId)}</span>`;
+        resellerNode.innerHTML = `<span class="reseller-brand">${escapeHtml(brand)}</span><span class="reseller-badge">ID: ${escapeHtml(uId)}</span>`;
       } else {
-        resellerNode.textContent = brand;
+        resellerNode.innerHTML = `<span class="reseller-brand">${escapeHtml(brand)}</span>`;
       }
     }
   }
@@ -2167,7 +2189,7 @@ btnGenerateTicketFinal.addEventListener('click', async () => {
     if (resellerNode) {
       const uId = currentTicketData.userId || authUserId || localStorage.getItem('dhru_uid') || 'N/A';
       const brand = customTicketSettings.nombre || (authRole === 'admin' ? 'ADMINISTRADOR' : 'MegaUnlockPhone');
-      resellerNode.innerHTML = `<span>${escapeHtml(brand)}</span> <span style="opacity: 0.85; font-size: 0.72rem; font-family: 'Fira Code', monospace; margin-left: 6px; padding: 1px 6px; background: rgba(56, 189, 248, 0.15); border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8;">Reseller ID: ${escapeHtml(uId)}</span>`;
+      resellerNode.innerHTML = `<span class="reseller-brand">${escapeHtml(brand)}</span><span class="reseller-badge">ID: ${escapeHtml(uId)}</span>`;
     }
 
     const price = ticketClientPrice.value.trim();
@@ -2180,6 +2202,13 @@ btnGenerateTicketFinal.addEventListener('click', async () => {
 
     // Format Type logic
     const formatType = ticketFormatType.value;
+    const ticketTemplateEl = document.getElementById('ticketTemplate');
+    if (ticketTemplateEl) {
+      ticketTemplateEl.classList.remove('template-minimal', 'template-vip', 'template-cyberpunk');
+      if (formatType === 'minimal') ticketTemplateEl.classList.add('template-minimal');
+      else if (formatType === 'vip') ticketTemplateEl.classList.add('template-vip');
+      else if (formatType === 'cyberpunk') ticketTemplateEl.classList.add('template-cyberpunk');
+    }
 
     // Save selection to remember for next time for this product
     if (currentTicketData) {
@@ -2202,7 +2231,7 @@ btnGenerateTicketFinal.addEventListener('click', async () => {
     ticketRawTextVal.textContent = cleanedRawText;
     const ticketStreamingBox = document.getElementById('ticketStreamingBox');
 
-    if (formatType === 'raw') {
+    if (formatType === 'raw' || formatType === 'minimal' || formatType === 'vip' || formatType === 'cyberpunk') {
       ticketParsedBox.classList.add('hidden');
       if (ticketStreamingBox) ticketStreamingBox.classList.add('hidden');
       ticketRawBox.classList.remove('hidden');
@@ -2445,7 +2474,9 @@ if (btnGenerateCustomTicket) {
       
       const resellerNode = document.getElementById('ticketResellerId');
       if (resellerNode && !customTicketSettings.nombre) {
-        resellerNode.textContent = authRole === 'admin' ? 'Atendido por: ADMIN' : `Reseller ID: ${authUserId || 'N/A'}`;
+        const brand = authRole === 'admin' ? 'ADMINISTRADOR' : 'MegaUnlockPhone';
+        const uid = authUserId || 'N/A';
+        resellerNode.innerHTML = `<span class="reseller-brand">${brand}</span><span class="reseller-badge">ID: ${escapeHtml(uid)}</span>`;
       }
 
       const price = customTicketPrice.value.trim();
@@ -2573,6 +2604,33 @@ function updateRechargeServerInfo() {
   `;
 }
 rechargeServerSelect.addEventListener('change', updateRechargeServerInfo);
+
+// Función global para actualizar estado visual de vinculación del botón Bot WhatsApp
+window.updateBotButtonStatus = function(isLinked) {
+  if (!btnWhatsappBot) return;
+  if (isLinked) {
+    btnWhatsappBot.innerHTML = `
+      <i data-lucide="message-circle" style="width: 14px; height: 14px;"></i>
+      <span style="font-weight: 700;">BOT</span>
+      <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 6px #22c55e;" title="Cuenta Vinculada con Bot WhatsApp"></span>
+    `;
+    btnWhatsappBot.style.background = 'rgba(34, 197, 94, 0.18)';
+    btnWhatsappBot.style.borderColor = 'rgba(34, 197, 94, 0.45)';
+    btnWhatsappBot.style.color = '#4ade80';
+    btnWhatsappBot.title = 'Bot de WhatsApp: Vinculado ✅';
+  } else {
+    btnWhatsappBot.innerHTML = `
+      <i data-lucide="message-circle" style="width: 14px; height: 14px;"></i>
+      <span style="font-weight: 700;">BOT</span>
+      <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #f59e0b; box-shadow: 0 0 6px #f59e0b;" title="Cuenta No Vinculada"></span>
+    `;
+    btnWhatsappBot.style.background = 'rgba(245, 158, 11, 0.15)';
+    btnWhatsappBot.style.borderColor = 'rgba(245, 158, 11, 0.4)';
+    btnWhatsappBot.style.color = '#fbbf24';
+    btnWhatsappBot.title = 'Bot de WhatsApp: Sin Vincular (Clic para vincular)';
+  }
+  if (window.lucide) window.lucide.createIcons();
+};
 
 if (btnWhatsappBot) {
   btnWhatsappBot.addEventListener('click', () => {

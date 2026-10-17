@@ -495,6 +495,23 @@ async function loadFullUserProfile() {
       if (profileCreditsDisplay && typeof data.credits !== 'undefined') {
         profileCreditsDisplay.textContent = `$${parseFloat(data.credits || 0).toFixed(2)} MXN`;
       }
+
+      // Avatar & Logo Sync
+      const avatarImg = document.getElementById('profileAvatarImg');
+      const avatarLetter = document.getElementById('profileAvatarLetter');
+      if (data.logoUrl && avatarImg && avatarLetter) {
+        avatarImg.src = `${data.logoUrl}?t=${Date.now()}`;
+        avatarImg.style.display = 'block';
+        avatarLetter.style.display = 'none';
+      } else if (avatarImg && avatarLetter) {
+        avatarImg.style.display = 'none';
+        avatarLetter.style.display = 'flex';
+      }
+
+      // Update WhatsApp Bot button indicator
+      if (typeof updateBotButtonStatus === 'function') {
+        updateBotButtonStatus(Boolean(data.isLinkedToBot));
+      }
     }
   } catch (e) {
     console.warn('No se pudo cargar detalles adicionales del perfil:', e);
@@ -576,12 +593,115 @@ if (btnSaveNewPhone) {
         alert('¡WhatsApp actualizado con éxito!');
         document.getElementById('inputCurrentPasswordPhone').value = '';
         inputNewPhone.value = '';
+        loadFullUserProfile();
       } else {
         const err = await res.json();
         alert('Error: ' + err.error);
       }
     } catch (err) {
       alert('Error de conexión.');
+    }
+  });
+}
+
+// Subida segura de Foto de Perfil y Logo con compresión en Canvas
+const inputProfilePhoto = document.getElementById('inputProfilePhoto');
+if (inputProfilePhoto) {
+  inputProfilePhoto.addEventListener('change', async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.match(/^image\/(png|jpeg|jpg|webp)$/i)) {
+      alert('Formato de imagen inválido. Solo se admiten archivos PNG, JPG o WEBP.');
+      inputProfilePhoto.value = '';
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('La imagen original no debe exceder 5 MB.');
+      inputProfilePhoto.value = '';
+      return;
+    }
+
+    const photoStatus = document.getElementById('profilePhotoStatus');
+    if (photoStatus) {
+      photoStatus.textContent = 'Comprimiendo imagen...';
+      photoStatus.style.display = 'inline-block';
+      photoStatus.style.color = '#38bdf8';
+    }
+
+    try {
+      const compressedBase64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const maxDim = 400;
+            let w = img.width;
+            let h = img.height;
+            if (w > h) {
+              if (w > maxDim) { h = Math.round((h * maxDim) / w); w = maxDim; }
+            } else {
+              if (h > maxDim) { w = Math.round((w * maxDim) / h); h = maxDim; }
+            }
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL('image/jpeg', 0.85));
+          };
+          img.onerror = reject;
+          img.src = evt.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      if (photoStatus) photoStatus.textContent = 'Guardando foto y logo...';
+
+      const saveRes = await fetch('/api/ticket_config', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify({ logoBase64: compressedBase64 })
+      });
+
+      if (!saveRes.ok) {
+        const errJson = await saveRes.json();
+        throw new Error(errJson.error || 'Error al guardar');
+      }
+
+      // Actualizar vista previa instantánea
+      const avatarImg = document.getElementById('profileAvatarImg');
+      const avatarLetter = document.getElementById('profileAvatarLetter');
+      if (avatarImg && avatarLetter) {
+        avatarImg.src = compressedBase64;
+        avatarImg.style.display = 'block';
+        avatarLetter.style.display = 'none';
+      }
+      const ticketDynamicLogo = document.getElementById('ticketDynamicLogo');
+      if (ticketDynamicLogo) {
+        ticketDynamicLogo.src = compressedBase64;
+      }
+      const configLogoPreview = document.getElementById('configLogoPreview');
+      if (configLogoPreview) {
+        configLogoPreview.src = compressedBase64;
+      }
+
+      if (photoStatus) {
+        photoStatus.textContent = '¡Foto y Logo actualizados!';
+        photoStatus.style.color = '#10b981';
+        setTimeout(() => { photoStatus.style.display = 'none'; }, 3000);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error al actualizar imagen: ' + err.message);
+      if (photoStatus) photoStatus.style.display = 'none';
+    } finally {
+      inputProfilePhoto.value = '';
     }
   });
 }
