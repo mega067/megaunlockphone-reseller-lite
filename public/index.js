@@ -972,8 +972,11 @@ function renderOrderHistory() {
 
     // Display CODE result matching screenshot under CODIGO column
     let rawString = String(item.statusText || item.msg || '');
-    let strippedText = rawString.replace(/<br\s*\/?>/gi, ' ').replace(/<\/div>/gi, ' ').replace(/<[^>]*>?/gm, '').replace(/\s+/g, ' ').trim();
     let displayCodeContent = strippedText;
+    if (displayCodeContent.length > 55) {
+      displayCodeContent = displayCodeContent.substring(0, 52) + '...';
+    }
+
     const costValue = parseFloat(item.costCharged || item.costInCredits || 0);
     const isRefundedOrder = Boolean(item.isRefunded || item.status === 'failed' || item.status === 'rejected');
     
@@ -1014,7 +1017,11 @@ function renderOrderHistory() {
       <td><span class="status-badge ${categoryClass}">${category}</span></td>
       <td>${displayImeiNum}</td>
       <td><span class="${statusClass}">${statusLabel}</span></td>
-      <td><div style="font-family: 'Fira Code', monospace; font-size:0.8rem; color:#94a3b8; max-width:280px; display:inline-block; white-space:pre-wrap; word-break:break-word; background: rgba(0,0,0,0.4); padding: 0.3rem 0.6rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">${escapeHtml(displayCodeContent)}</div></td>
+      <td>
+        <div title="${escapeHtml(strippedText)}" style="font-family: 'Fira Code', monospace; font-size: 0.76rem; color: #94a3b8; max-width: 220px; max-height: 44px; overflow: hidden; text-overflow: ellipsis; white-space: normal; line-height: 1.3; background: rgba(0,0,0,0.4); padding: 0.35rem 0.55rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.06); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+          ${escapeHtml(displayCodeContent)}
+        </div>
+      </td>
       <td>${costDisplay}</td>
       ${authRole === 'admin' ? `
       <td>
@@ -2231,30 +2238,85 @@ btnGenerateTicketFinal.addEventListener('click', async () => {
     ticketRawTextVal.textContent = cleanedRawText;
     const ticketStreamingBox = document.getElementById('ticketStreamingBox');
 
-    if (formatType === 'raw' || formatType === 'minimal' || formatType === 'vip' || formatType === 'cyberpunk') {
+    // Helper: Extraer pares Clave: Valor de las respuestas de las APIs
+    function parseKeyValuesFromText(text) {
+      const items = [];
+      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+      
+      for (const line of lines) {
+        // Detectar si la línea tiene formato "Clave: Valor" o "Clave = Valor" o "Clave - Valor"
+        const separatorIdx = line.indexOf(':');
+        if (separatorIdx > 0 && separatorIdx < 45) {
+          const k = line.substring(0, separatorIdx).trim();
+          const v = line.substring(separatorIdx + 1).trim();
+          if (k && v) {
+            items.push({ key: k, value: v });
+            continue;
+          }
+        }
+        
+        // Detectar si la clave y el valor están en líneas consecutivas (ej: "Usuario" en línea 1 y "correo@gmail.com" en línea 2)
+        // Se manejará en el loop si no coincide con separador
+        items.push({ raw: line });
+      }
+      return items;
+    }
+
+    if (formatType === 'raw') {
       ticketParsedBox.classList.add('hidden');
       if (ticketStreamingBox) ticketStreamingBox.classList.add('hidden');
       ticketRawBox.classList.remove('hidden');
-    } else if (formatType === 'streaming') {
+    } else if (formatType === 'license' || formatType === 'recharge' || formatType === 'streaming' || formatType === 'smart') {
+      // Plantillas estructuradas de Acomodo de API
       ticketParsedBox.classList.add('hidden');
       ticketRawBox.classList.add('hidden');
       if (ticketStreamingBox) {
         ticketStreamingBox.classList.remove('hidden');
+        const boxTitle = ticketStreamingBox.querySelector('.ticket-box-title');
+        if (boxTitle) {
+          if (formatType === 'license') boxTitle.textContent = 'DETALLES DE ACTIVACIÓN / LICENCIA';
+          else if (formatType === 'recharge') boxTitle.textContent = 'COMPROBANTE DE RECARGA / TRANSACCIÓN';
+          else if (formatType === 'streaming') boxTitle.textContent = 'DETALLES DE LA CUENTA STREAMING';
+          else boxTitle.textContent = 'DETALLES DEL SERVICIO';
+        }
+
         const container = document.getElementById('streamingFieldsContainer');
         container.innerHTML = '';
-        const lines = cleanedRawText.split('\n').map(l => l.trim()).filter(l => l);
+        
+        const lines = cleanedRawText.split('\n').map(l => l.trim()).filter(Boolean);
         let html = '';
+        let handledKeys = new Set();
+        let remainingNotes = [];
+
+        // Modo 1: Formato con dos puntos (Clave: Valor) como en UnlockTool y Recargas
+        const hasColonPairs = lines.some(l => l.includes(': ') || (l.indexOf(':') > 2 && l.indexOf(':') < 35));
         
-        // Heuristic: Does it look like a streaming response with title?
-        // It usually has 'Usuario' and 'Contraseña' as standalone lines.
-        const hasUsuario = lines.some(l => l.toLowerCase() === 'usuario' || l.toLowerCase() === 'email' || l.toLowerCase() === 'correo');
-        const hasContra = lines.some(l => l.toLowerCase() === 'contraseña' || l.toLowerCase() === 'password' || l.toLowerCase() === 'pass' || l.toLowerCase() === 'pin');
-        
-        if (hasUsuario && hasContra) {
+        if (hasColonPairs || formatType === 'license' || formatType === 'recharge') {
+          lines.forEach(line => {
+            const colonPos = line.indexOf(':');
+            if (colonPos > 0 && colonPos < 40) {
+              const k = line.substring(0, colonPos).trim();
+              const v = line.substring(colonPos + 1).trim();
+              if (v) {
+                html += `
+                  <div class="ticket-field">
+                    <span class="ticket-label">${escapeHtml(k)}:</span>
+                    <span class="ticket-value" style="overflow-wrap: break-word; word-break: normal; white-space: normal;">${escapeHtml(v)}</span>
+                  </div>
+                `;
+                return;
+              }
+            } else if (line.toLowerCase().startsWith('unlocktool') || line.toLowerCase().startsWith('licencia') || line.toLowerCase().startsWith('paquete')) {
+              html += `<div style="text-align: center; color: var(--accent); font-weight: bold; margin-bottom: 0.6rem; border-bottom: 1px dashed rgba(255,255,255,0.15); padding-bottom: 0.5rem; font-size: 1.05rem;">${escapeHtml(line)}</div>`;
+              return;
+            }
+            remainingNotes.push(line);
+          });
+        } else {
+          // Heurística de líneas alternas (ej. Streaming o Cuentas con "Usuario" y en la siguiente línea el correo)
           let i = 0;
-          // 1. Title (anything before 'usuario')
           let titleLines = [];
-          while(i < lines.length && !['usuario', 'email', 'correo', 'contraseña', 'password', 'pass', 'pin'].includes(lines[i].toLowerCase())) {
+          while (i < lines.length && !['usuario', 'email', 'correo', 'contraseña', 'password', 'pass', 'pin', 'perfil'].includes(lines[i].toLowerCase())) {
             titleLines.push(lines[i]);
             i++;
           }
@@ -2262,12 +2324,11 @@ btnGenerateTicketFinal.addEventListener('click', async () => {
             html += `<div style="text-align: center; color: var(--accent); font-weight: bold; margin-bottom: 0.5rem; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 0.5rem;">${escapeHtml(titleLines.join(' '))}</div>`;
           }
           
-          // 2. Extract pairs
-          while(i < lines.length) {
+          while (i < lines.length) {
             const currentLine = lines[i];
             const lower = currentLine.toLowerCase();
             
-            if (['usuario', 'email', 'correo', 'contraseña', 'password', 'pass', 'pin', 'perfil'].includes(lower)) {
+            if (['usuario', 'email', 'correo', 'contraseña', 'password', 'pass', 'pin', 'perfil', 'vigencia', 'duracion'].includes(lower)) {
               const key = currentLine;
               const val = lines[i+1] || '';
               html += `
@@ -2278,66 +2339,38 @@ btnGenerateTicketFinal.addEventListener('click', async () => {
               `;
               i += 2;
             } else {
-              // If it's something else, it's a note or footer
-              const remaining = lines.slice(i).join('\n');
-              html += `
-                <div style="margin-top: 0.5rem; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 0.5rem; display: flex; flex-direction: column; gap: 4px;">
-                  <span class="ticket-label" style="width: 100%; text-align: left;">Nota:</span>
-                  <span class="ticket-value" style="width: 100%; text-align: left; white-space: pre-wrap; overflow-wrap: break-word; word-break: normal; font-size: 0.85rem; color: #10b981;">${escapeHtml(remaining)}</span>
-                </div>
-              `;
+              remainingNotes.push(lines.slice(i).join('\n'));
               break;
             }
           }
-        } else {
-          // Fallback generic parsing
-          for(let i=0; i<lines.length; i+=2) {
-            const key = lines[i];
-            let val = lines[i+1] || '';
-            const lowerKey = key.toLowerCase();
-            
-            if (lowerKey.includes('condicion') || lowerKey.includes('nota') || lowerKey.includes('regla') || !val) {
-               val = lines.slice(i+1).join('\n');
-               html += `
-                 <div style="margin-top: 0.5rem; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 0.5rem; display: flex; flex-direction: column; gap: 4px;">
-                   <span class="ticket-label" style="width: 100%; text-align: left;">${escapeHtml(key)}:</span>
-                   <span class="ticket-value" style="width: 100%; text-align: left; white-space: pre-wrap; overflow-wrap: break-word; word-break: normal; font-size: 0.85rem;">${escapeHtml(val)}</span>
-                 </div>
-               `;
-               break;
-            } else if (val.length < 40 && key.length < 40) {
-              html += `
-                <div class="ticket-field">
-                  <span class="ticket-label">${escapeHtml(key)}:</span>
-                  <span class="ticket-value" style="overflow-wrap: break-word; word-break: normal; white-space: normal;">${escapeHtml(val)}</span>
-                </div>
-              `;
-            } else {
-              html += `
-                <div style="margin-top: 0.5rem; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 0.5rem; display: flex; flex-direction: column; gap: 4px;">
-                  <span class="ticket-label" style="width: 100%; text-align: left;">${escapeHtml(key)}:</span>
-                  <span class="ticket-value" style="width: 100%; text-align: left; white-space: pre-wrap; overflow-wrap: break-word; word-break: normal; font-size: 0.85rem;">${escapeHtml(val)}</span>
-                </div>
-              `;
-            }
-          }
         }
+
+        if (remainingNotes.length > 0) {
+          html += `
+            <div style="margin-top: 0.5rem; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 0.5rem; display: flex; flex-direction: column; gap: 4px;">
+              <span class="ticket-label" style="width: 100%; text-align: left;">Información Adicional:</span>
+              <span class="ticket-value" style="width: 100%; text-align: left; white-space: pre-wrap; overflow-wrap: break-word; word-break: normal; font-size: 0.85rem; color: #10b981;">${escapeHtml(remainingNotes.join('\n'))}</span>
+            </div>
+          `;
+        }
+
         container.innerHTML = html;
       }
     } else {
+      // Formato 'parsed' clásico (USER & PASS)
       ticketParsedBox.classList.remove('hidden');
       if (ticketStreamingBox) ticketStreamingBox.classList.add('hidden');
       
-      // Show raw box if it actually contains text
-      if (ticketRawTextVal.textContent.trim()) {
-         ticketRawBox.classList.remove('hidden');
-      } else {
-         ticketRawBox.classList.add('hidden');
-      }
       // Parse Credentials
       const creds = parseCredentials(currentTicketData.statusText);
       ticketUserVal.textContent = creds.user;
       ticketPassVal.textContent = creds.pass;
+
+      if (ticketRawTextVal.textContent.trim()) {
+        ticketRawBox.classList.remove('hidden');
+      } else {
+        ticketRawBox.classList.add('hidden');
+      }
     }
 
     // Bring template to view momentarily

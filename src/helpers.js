@@ -172,20 +172,34 @@ function processRefund(order) {
     writeDB('users.json', users);
   }
 
+  const refundTimestamp = new Date().toISOString();
+
   // Update order in history.json
   const targetOrderId = String(order.orderId || order.id);
   const historyIdx = history.findIndex(h => String(h.orderId || h.id) === targetOrderId && String(h.serverId || '1') === serverId);
   if (historyIdx !== -1) {
     history[historyIdx].isRefunded = true;
-    history[historyIdx].refundDate = new Date().toISOString();
+    history[historyIdx].refundDate = refundTimestamp;
     history[historyIdx].refundAmount = amountToRefund;
   }
   order.isRefunded = true;
-  order.refundDate = new Date().toISOString();
+  order.refundDate = refundTimestamp;
   order.refundAmount = amountToRefund;
 
   writeDB('history.json', history);
   incrementHistoryVersion();
+
+  // Sincronizar en SQLite si existe la tabla OrdersHistory
+  try {
+    const sqliteDb = require('./database');
+    if (sqliteDb && typeof sqliteDb.prepare === 'function') {
+      const stmt = sqliteDb.prepare('UPDATE OrdersHistory SET status = ?, statusText = ?, data = ? WHERE orderId = ?');
+      const dataPayload = JSON.stringify({ isRefunded: true, refundDate: refundTimestamp, refundAmount: amountToRefund });
+      stmt.run('rejected', order.statusText || 'Rechazado y Reembolsado', dataPayload, targetOrderId);
+    }
+  } catch(e) {
+    // Si la tabla no está disponible o falla SQLite, history.json ya está blindado
+  }
 
   return {
     success: true,
