@@ -53,6 +53,8 @@ exports.processOrder = async (req, res) => {
       const val = String(custom_fields[keyToCopy]).trim();
       const isDummyImei = !finalImei || 
                           finalImei === '111111111111111' || 
+                          finalImei.startsWith('35301409') ||
+                          finalImei.startsWith('17') ||
                           (finalImei.length >= 13 && /^\d+$/.test(finalImei) && !isValidLuhnImei(finalImei));
       if (isDummyImei && val.length <= 15) {
         finalImei = val;
@@ -60,7 +62,7 @@ exports.processOrder = async (req, res) => {
     }
   }
 
-  // If finalImei is empty or a non-Luhn dummy, generate a valid 15-digit Luhn IMEI
+  // If finalImei is empty or a non-Luhn dummy, generate a valid 15-digit Luhn IMEI only if no custom identifier exists
   if (!finalImei || finalImei === '111111111111111' || (finalImei.length === 15 && !isValidLuhnImei(finalImei) && /^\d+$/.test(finalImei) && finalImei.startsWith('17'))) {
     finalImei = generateValidLuhnImei();
   }

@@ -393,6 +393,10 @@ function checkPersistedSession() {
     if (btnLoginTop) btnLoginTop.classList.remove('hidden');
     btnLogout.classList.add('hidden');
     btnAdminManage.classList.add('hidden');
+    if (typeof btnAdminCoupons !== 'undefined' && btnAdminCoupons) btnAdminCoupons.classList.add('hidden');
+    if (typeof btnCustomTicket !== 'undefined' && btnCustomTicket) btnCustomTicket.classList.add('hidden');
+    if (typeof btnImportOrder !== 'undefined' && btnImportOrder) btnImportOrder.classList.add('hidden');
+    if (typeof btnBulkSavePrices !== 'undefined' && btnBulkSavePrices) btnBulkSavePrices.classList.add('hidden');
     btnRechargeBalance.classList.add('hidden');
     btnWhatsappBot.classList.add('hidden');
     btnUserProfile.classList.add('hidden');
@@ -408,6 +412,12 @@ function checkPersistedSession() {
     // Switch to catalog view by default
     loginView.classList.add('hidden');
     dashboardView.classList.remove('hidden');
+    if (historySection) historySection.classList.add('hidden');
+    if (adminSection) adminSection.classList.add('hidden');
+    if (productsSection) productsSection.classList.remove('hidden');
+    if (tabCatalog) tabCatalog.classList.add('active');
+    if (tabHistory) tabHistory.classList.remove('active');
+    if (tabAdmin) tabAdmin.classList.remove('active');
     
     syncProducts(false); // Fetch products as guest
   }
@@ -1825,8 +1835,14 @@ orderForm.addEventListener('submit', async (e) => {
   // The user either typed an IMEI or checked the box to auto-generate
   const needsImei = !imeiAutoGenerate.checked;
   let imei = '';
-  let imeiDataString = '';
-  
+  const custom_fields = {};
+  document.querySelectorAll('.custom-field-input').forEach(input => {
+    const name = input.getAttribute('data-fieldname');
+    if (name) {
+      custom_fields[name] = input.value.trim();
+    }
+  });
+
   // If the whole group is hidden (meaning requires_imei was explicitly 0), or if the box is checked
   if (needsImei && !imeiInputGroup.classList.contains('hidden')) {
     imei = imeiInput.value.trim();
@@ -1844,38 +1860,41 @@ orderForm.addEventListener('submit', async (e) => {
     }
     imeiDataString = imei;
   } else {
-    // Generate a valid 15-digit Luhn IMEI with a standard TAC (Apple iPhone 35301409)
-    const tac = '35301409';
-    let body = tac;
-    while (body.length < 14) {
-      body += Math.floor(Math.random() * 10).toString();
-    }
-    let luhnSum = 0;
-    for (let i = 0; i < 14; i++) {
-      let digit = parseInt(body.charAt(i), 10);
-      if (i % 2 === 1) {
-        digit *= 2;
-        if (digit > 9) digit -= 9;
+    // If a custom field provides a phone number, reference, or user ID, use it directly as IMEI/reference!
+    const targetFieldKeys = ['numero', 'referencia', 'telefono', 'linea', 'celular', 'phone', 'number', 'ref', 'playerid', 'id'];
+    const customKeys = Object.keys(custom_fields);
+    const matchedKey = customKeys.find(k => targetFieldKeys.includes(k.toLowerCase().replace(/[^a-z0-9]/g, '')));
+    const matchedVal = matchedKey ? String(custom_fields[matchedKey]).trim() : '';
+
+    if (matchedVal && matchedVal.length <= 15) {
+      imei = matchedVal;
+      imeiDataString = matchedVal;
+    } else {
+      // Generate a valid 15-digit Luhn IMEI with a standard TAC (Apple iPhone 35301409)
+      const tac = '35301409';
+      let body = tac;
+      while (body.length < 14) {
+        body += Math.floor(Math.random() * 10).toString();
       }
-      luhnSum += digit;
+      let luhnSum = 0;
+      for (let i = 0; i < 14; i++) {
+        let digit = parseInt(body.charAt(i), 10);
+        if (i % 2 === 1) {
+          digit *= 2;
+          if (digit > 9) digit -= 9;
+        }
+        luhnSum += digit;
+      }
+      const checkDigit = (10 - (luhnSum % 10)) % 10;
+      imei = body + checkDigit;
+      imeiDataString = 'N/A';
     }
-    const checkDigit = (10 - (luhnSum % 10)) % 10;
-    imei = body + checkDigit;
-    imeiDataString = 'N/A';
   }
 
   if (!authToken) {
     alert('Faltan sesión del portal. Inicia sesión nuevamente.');
     return;
   }
-
-  const custom_fields = {};
-  document.querySelectorAll('.custom-field-input').forEach(input => {
-    const name = input.getAttribute('data-fieldname');
-    if (name) {
-      custom_fields[name] = input.value.trim();
-    }
-  });
 
   const btnConfirm = document.getElementById('btnConfirmOrder');
   const originalText = btnConfirm.querySelector('span').textContent;
