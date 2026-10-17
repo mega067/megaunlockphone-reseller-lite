@@ -851,29 +851,26 @@ function renderOrderHistory() {
 
   historyCount.textContent = filteredHistory.length;
 
-  const colspanCount = authRole === 'admin' ? 9 : 7;
+  const colspanCount = authRole === 'admin' ? 7 : 6;
   const theadTr = document.querySelector('.reseller-history-table thead tr');
   if (theadTr) {
     if (authRole === 'admin') {
       theadTr.innerHTML = `
-        <th>ID</th>
-        <th>SERVICIO</th>
+        <th style="min-width: 130px;">ORDEN</th>
+        <th style="min-width: 220px;">SERVICIO / CATEGORÍA</th>
         <th>USUARIO</th>
-        <th>CATEGORÍA</th>
         <th>DETALLES / IMEI</th>
         <th>ESTADO</th>
-        <th>CÓDIGO</th>
-        <th>COSTO</th>
-        <th>GANANCIA</th>
+        <th style="min-width: 170px;">RESULTADO / CÓDIGO</th>
+        <th>COSTO / MARGEN</th>
       `;
     } else {
       theadTr.innerHTML = `
-        <th>ID</th>
-        <th>SERVICIO</th>
-        <th>CATEGORÍA</th>
+        <th style="min-width: 130px;">ORDEN</th>
+        <th style="min-width: 220px;">SERVICIO / CATEGORÍA</th>
         <th>DETALLES / IMEI</th>
         <th>ESTADO</th>
-        <th>CÓDIGO</th>
+        <th style="min-width: 170px;">RESULTADO / CÓDIGO</th>
         <th>COSTO</th>
       `;
     }
@@ -997,38 +994,52 @@ function renderOrderHistory() {
 
     trHeader.innerHTML = `
       <td style="white-space: nowrap;">
-        <button type="button" class="btn-expand-row" title="Clic para expandir">+</button>
-        <span class="product-id" title="ID de Orden: Clic en la fila para expandir detalles" style="font-weight: bold; color: ${item.orderId ? 'var(--text-primary)' : 'var(--text-muted)'};">
-          ${item.orderId ? escapeHtml(item.orderId) : '[Sin ID]'}
-        </span>
-        <span class="expand-hint-badge" title="Clic en la fila para ver detalles"><i data-lucide="chevron-down" style="width: 11px; height: 11px;"></i> Detalle</span>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <button type="button" class="btn-expand-row" title="Clic para expandir">+</button>
+          <div>
+            <div class="product-id" title="ID de Orden: Clic para expandir detalles" style="font-weight: 700; font-size: 0.85rem; color: ${item.orderId ? 'var(--text-primary)' : 'var(--text-muted)'};">
+              ${item.orderId ? escapeHtml(item.orderId) : '[Sin ID]'}
+            </div>
+            <span class="expand-hint-badge" title="Clic en la fila para ver detalles" style="margin-left: 0; margin-top: 2px;"><i data-lucide="chevron-down" style="width: 10px; height: 10px;"></i> Detalle</span>
+          </div>
+        </div>
       </td>
       <td>
-        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-          <strong>${escapeHtml(item.serviceName || item.service || 'Servicio')}</strong>
-          ${isWarranty ? `<span class="badge-warranty-tag"><i data-lucide="shield-check" style="width: 10px; height: 10px;"></i> GARANTÍA</span>` : ''}
+        <div style="display: flex; flex-direction: column; gap: 3px; max-width: 250px;">
+          <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+            <strong style="font-size: 0.86rem; color: var(--text-primary); line-height: 1.3;">${escapeHtml(item.serviceName || item.service || 'Servicio')}</strong>
+            ${isWarranty ? `<span class="badge-warranty-tag" style="font-size: 0.65rem; padding: 1px 5px;"><i data-lucide="shield-check" style="width: 9px; height: 9px;"></i> GARANTÍA</span>` : ''}
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+            <span class="status-badge ${categoryClass}" style="padding: 0.12rem 0.45rem; font-size: 0.64rem; font-weight: 700; border-radius: 4px;">${category}</span>
+            <span style="font-size: 0.72rem; color: var(--text-muted);">ID: ${escapeHtml(item.serviceId || 'N/A')}</span>
+          </div>
         </div>
-        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">ID: ${escapeHtml(item.serviceId || 'N/A')}</div>
       </td>
       ${authRole === 'admin' ? `
       <td>
-        <div style="font-size: 0.85rem; color: #a78bfa; font-weight: 600;">${escapeHtml(item.username || 'N/A')}</div>
+        <div style="font-size: 0.82rem; color: #a78bfa; font-weight: 600;">${escapeHtml(item.username || 'N/A')}</div>
       </td>
       ` : ''}
-      <td><span class="status-badge ${categoryClass}">${category}</span></td>
       <td>${displayImeiNum}</td>
       <td><span class="${statusClass}">${statusLabel}</span></td>
       <td>
-        <div title="${escapeHtml(strippedText)}" style="font-family: 'Fira Code', monospace; font-size: 0.76rem; color: #94a3b8; max-width: 220px; max-height: 44px; overflow: hidden; text-overflow: ellipsis; white-space: normal; line-height: 1.3; background: rgba(0,0,0,0.4); padding: 0.35rem 0.55rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.06); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+        <div title="${escapeHtml(strippedText)}" style="font-family: 'Fira Code', monospace; font-size: 0.74rem; color: #94a3b8; max-width: 180px; max-height: 38px; overflow: hidden; text-overflow: ellipsis; white-space: normal; line-height: 1.25; background: rgba(0,0,0,0.35); padding: 0.3rem 0.5rem; border-radius: 5px; border: 1px solid rgba(255,255,255,0.06); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
           ${escapeHtml(displayCodeContent)}
         </div>
       </td>
-      <td>${costDisplay}</td>
-      ${authRole === 'admin' ? `
       <td>
-        <strong style="color: ${isWarranty ? '#94a3b8' : '#10b981'};">${isWarranty ? '$0.00' : '+$' + parseFloat(item.profit || 0).toFixed(2)}</strong>
+        ${authRole === 'admin' ? `
+        <div style="display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2;">
+          ${costDisplay}
+          <span style="font-size: 0.7rem; color: ${isWarranty ? '#94a3b8' : '#10b981'}; font-weight: 600; margin-top: 2px;">
+            ${isWarranty ? 'Margen: $0.00' : 'Gan: +$' + parseFloat(item.profit || 0).toFixed(2)}
+          </span>
+        </div>
+        ` : `
+        ${costDisplay}
+        `}
       </td>
-      ` : ''}
     `;
 
     // Expandable details sub-row

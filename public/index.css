@@ -1422,10 +1422,10 @@ h1, h2, h3, h4 { color: var(--text-primary); font-family: var(--font-display); f
   background: rgba(8, 14, 26, 0.85) !important;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  padding: 0.95rem 1.1rem;
-  font-size: 0.76rem;
+  padding: 0.7rem 0.8rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: #94a3b8;
   border-bottom: 2px solid rgba(56, 189, 248, 0.2);
@@ -1433,8 +1433,8 @@ h1, h2, h3, h4 { color: var(--text-primary); font-family: var(--font-display); f
 }
 
 .reseller-history-table td {
-  padding: 1rem 1.1rem;
-  font-size: 0.9rem;
+  padding: 0.65rem 0.8rem;
+  font-size: 0.85rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   vertical-align: middle;
   transition: background 0.2s ease;
