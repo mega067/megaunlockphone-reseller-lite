@@ -2262,12 +2262,12 @@ btnGenerateTicketFinal.addEventListener('click', async () => {
       return items;
     }
 
-    if (formatType === 'raw') {
+    if (formatType === 'raw' || formatType === 'minimal' || formatType === 'vip' || formatType === 'cyberpunk') {
       ticketParsedBox.classList.add('hidden');
       if (ticketStreamingBox) ticketStreamingBox.classList.add('hidden');
       ticketRawBox.classList.remove('hidden');
-    } else if (formatType === 'license' || formatType === 'recharge' || formatType === 'streaming' || formatType === 'smart') {
-      // Plantillas estructuradas de Acomodo de API
+    } else if (formatType === 'license' || formatType === 'recharge' || formatType === 'streaming' || formatType === 'checker' || formatType === 'smart') {
+      // Plantillas estructuradas de Acomodo de API basadas en las respuestas reales del servidor
       ticketParsedBox.classList.add('hidden');
       ticketRawBox.classList.add('hidden');
       if (ticketStreamingBox) {
@@ -2277,43 +2277,94 @@ btnGenerateTicketFinal.addEventListener('click', async () => {
           if (formatType === 'license') boxTitle.textContent = 'DETALLES DE ACTIVACIÓN / LICENCIA';
           else if (formatType === 'recharge') boxTitle.textContent = 'COMPROBANTE DE RECARGA / TRANSACCIÓN';
           else if (formatType === 'streaming') boxTitle.textContent = 'DETALLES DE LA CUENTA STREAMING';
+          else if (formatType === 'checker') boxTitle.textContent = 'REPORTE Y DIAGNÓSTICO DEL DISPOSITIVO';
           else boxTitle.textContent = 'DETALLES DEL SERVICIO';
         }
 
         const container = document.getElementById('streamingFieldsContainer');
         container.innerHTML = '';
         
-        const lines = cleanedRawText.split('\n').map(l => l.trim()).filter(Boolean);
         let html = '';
-        let handledKeys = new Set();
-        let remainingNotes = [];
+        const lines = cleanedRawText.split('\n').map(l => l.trim()).filter(Boolean);
+        const remainingNotes = [];
 
-        // Modo 1: Formato con dos puntos (Clave: Valor) como en UnlockTool y Recargas
-        const hasColonPairs = lines.some(l => l.includes(': ') || (l.indexOf(':') > 2 && l.indexOf(':') < 35));
-        
-        if (hasColonPairs || formatType === 'license' || formatType === 'recharge') {
+        // CASO 1: Formato especial de rentas: "12=✨toolrent54@gmail.com✨980064✨" o "Rentmart10✅KDJT4377"
+        if (cleanedRawText.includes('✨') || (cleanedRawText.includes('✅') && !cleanedRawText.includes('\n'))) {
+          const parts = cleanedRawText.split(/[✨✅=]+/).map(s => s.trim()).filter(Boolean);
+          if (parts.length >= 2) {
+            const userPart = parts.find(p => p.includes('@')) || parts[0];
+            const passPart = parts.find(p => p !== userPart && p.length > 3) || parts[1];
+            html += `
+              <div class="ticket-field">
+                <span class="ticket-label">Usuario / Login:</span>
+                <span class="ticket-value" style="color: #38bdf8;">${escapeHtml(userPart)}</span>
+              </div>
+              <div class="ticket-field">
+                <span class="ticket-label">Contraseña:</span>
+                <span class="ticket-value" style="color: #f43f5e; font-weight: bold;">${escapeHtml(passPart)}</span>
+              </div>
+            `;
+            container.innerHTML = html;
+            return;
+          }
+        }
+
+        // CASO 2: Enlace directo (PDF de Actas de Nacimiento o QR Mediafire)
+        const isOnlyUrl = lines.length === 1 && (lines[0].startsWith('http://') || lines[0].startsWith('https://'));
+        if (isOnlyUrl) {
+          const url = lines[0];
+          html += `
+            <div style="text-align: center; padding: 0.5rem 0;">
+              <span class="ticket-label" style="display: block; margin-bottom: 0.5rem; text-align: center;">DOCUMENTO / ENLACE GENERADO:</span>
+              <a href="${escapeHtml(url)}" target="_blank" style="color: #38bdf8; font-family: monospace; word-break: break-all; text-decoration: underline; font-size: 0.85rem;">${escapeHtml(url)}</a>
+            </div>
+          `;
+          container.innerHTML = html;
+          return;
+        }
+
+        // CASO 3: Formato Clave: Valor (UnlockTool, Recargas, Free Fire, Chequeos GSX/T-Mobile)
+        const hasColonLines = lines.filter(l => {
+          const c = l.indexOf(':');
+          return c > 0 && c < 45 && !l.startsWith('http:') && !l.startsWith('https:');
+        });
+
+        if (hasColonLines.length >= 2 || formatType === 'license' || formatType === 'recharge' || formatType === 'checker') {
           lines.forEach(line => {
             const colonPos = line.indexOf(':');
-            if (colonPos > 0 && colonPos < 40) {
+            const isHttp = line.startsWith('http:') || line.startsWith('https:');
+
+            if (colonPos > 0 && colonPos < 45 && !isHttp) {
               const k = line.substring(0, colonPos).trim();
               const v = line.substring(colonPos + 1).trim();
               if (v) {
+                // Coloración de valor según semántica
+                let valColor = '#f8fafc';
+                const lowerV = v.toLowerCase();
+                if (lowerV.includes('success') || lowerV.includes('exitosa') || lowerV.includes('clean') || lowerV.includes('unlocked') || lowerV.includes('yes') || lowerV.includes('paid')) {
+                  valColor = '#34d399';
+                } else if (lowerV.includes('locked') || lowerV.includes('rejected') || lowerV.includes('expired') || lowerV.includes('no') || lowerV.includes('on')) {
+                  valColor = '#f87171';
+                } else if (lowerV.includes('@')) {
+                  valColor = '#38bdf8';
+                }
+
                 html += `
                   <div class="ticket-field">
                     <span class="ticket-label">${escapeHtml(k)}:</span>
-                    <span class="ticket-value" style="overflow-wrap: break-word; word-break: normal; white-space: normal;">${escapeHtml(v)}</span>
+                    <span class="ticket-value" style="color: ${valColor}; overflow-wrap: break-word; word-break: normal; white-space: normal;">${escapeHtml(v)}</span>
                   </div>
                 `;
                 return;
               }
-            } else if (line.toLowerCase().startsWith('unlocktool') || line.toLowerCase().startsWith('licencia') || line.toLowerCase().startsWith('paquete')) {
+            } else if (line.toLowerCase().startsWith('unlocktool') || line.toLowerCase().startsWith('licencia') || line.toLowerCase().startsWith('paquete') || line.toLowerCase().startsWith('product:')) {
               html += `<div style="text-align: center; color: var(--accent); font-weight: bold; margin-bottom: 0.6rem; border-bottom: 1px dashed rgba(255,255,255,0.15); padding-bottom: 0.5rem; font-size: 1.05rem;">${escapeHtml(line)}</div>`;
               return;
             }
             remainingNotes.push(line);
           });
         } else {
-          // Heurística de líneas alternas (ej. Streaming o Cuentas con "Usuario" y en la siguiente línea el correo)
+          // CASO 4: Formato Streaming / Cuentas con bloques y líneas alternas
           let i = 0;
           let titleLines = [];
           while (i < lines.length && !['usuario', 'email', 'correo', 'contraseña', 'password', 'pass', 'pin', 'perfil'].includes(lines[i].toLowerCase())) {
@@ -2328,13 +2379,13 @@ btnGenerateTicketFinal.addEventListener('click', async () => {
             const currentLine = lines[i];
             const lower = currentLine.toLowerCase();
             
-            if (['usuario', 'email', 'correo', 'contraseña', 'password', 'pass', 'pin', 'perfil', 'vigencia', 'duracion'].includes(lower)) {
+            if (['usuario', 'email', 'correo', 'contraseña', 'password', 'pass', 'pin', 'perfil', 'garantía', 'garantia', 'vigencia', 'duracion'].includes(lower)) {
               const key = currentLine;
               const val = lines[i+1] || '';
               html += `
                 <div class="ticket-field">
                   <span class="ticket-label">${escapeHtml(key)}:</span>
-                  <span class="ticket-value" style="overflow-wrap: break-word; word-break: normal; white-space: normal;">${escapeHtml(val)}</span>
+                  <span class="ticket-value" style="overflow-wrap: break-word; word-break: normal; white-space: normal; color: ${lower.includes('correo') || lower.includes('usuario') || lower.includes('email') ? '#38bdf8' : '#f8fafc'};">${escapeHtml(val)}</span>
                 </div>
               `;
               i += 2;
