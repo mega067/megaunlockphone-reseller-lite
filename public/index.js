@@ -715,17 +715,11 @@ function renderOrderHistory() {
 
     let safeText = escapeHtml(cleaned);
     
-    // Match Key: Value pattern and wrap in spans for coloring (exclude http/https)
-    safeText = safeText.replace(/^([a-zA-Z0-9_ \-\.]+):\s*(.*)$/gm, (match, p1, p2) => {
-      if (p1.toLowerCase() === 'http' || p1.toLowerCase() === 'https') {
-        return match; 
-      }
-      return `<span style="color: var(--secondary-color); font-weight: 600;">${p1}:</span> <span style="color: #10b981;">${p2}</span>`;
-    });
-
-    // Detect URLs (including Dhru split 'https: //', www, and common TLDs) and make them clickable
-    const urlRegex = /(https?:\s*\/\/[^\s<]+|https?:\/\/[^\s<]+|www\.[a-zA-Z0-9-]+\.[^\s<]+|(?:[a-zA-Z0-9-]+\.)+(?:com|net|org|mx|io|app|dev)(?:\/[^\s<]*)?)/gi;
-    safeText = safeText.replace(urlRegex, (matched) => {
+    // Detect URLs (including Dhru split 'https: //', www, and common TLDs) and make them clickable (ignoring email addresses)
+    const urlRegex = /(https?:\s*\/\/[^\s<]+|https?:\/\/[^\s<]+|www\.[a-zA-Z0-9-]+\.[^\s<]+|(?<![@a-zA-Z0-9._%+-])(?:[a-zA-Z0-9-]+\.)+(?:com|net|org|mx|io|app|dev)(?:\/[^\s<]*)?)/gi;
+    safeText = safeText.replace(urlRegex, (matched, p1, offset, fullStr) => {
+      const beforeChar = offset > 0 ? fullStr[offset - 1] : '';
+      if (beforeChar === '@') return matched;
       let trailing = '';
       const trailMatch = matched.match(/[.,;:)]+$/);
       if (trailMatch) {
@@ -735,6 +729,29 @@ function renderOrderHistory() {
       let cleanHref = matched.replace(/\s+/g, '');
       if (!/^https?:\/\//i.test(cleanHref)) cleanHref = 'https://' + cleanHref;
       return `<a href="${cleanHref}" target="_blank" rel="noopener noreferrer" class="auto-detected-link" style="color: #00f0ff; text-decoration: underline; word-break: break-all; font-weight: 600;"><i data-lucide="external-link" style="width: 12px; height: 12px; display: inline-block; vertical-align: middle; margin-right: 3px;"></i>${matched}</a>${trailing}`;
+    });
+
+    // Match Key: Value pattern and wrap in spans for coloring (exclude http/https)
+    safeText = safeText.replace(/^([a-zA-Z0-9_ \-\.]+):\s*(.*)$/gm, (match, p1, p2) => {
+      if (p1.toLowerCase() === 'http' || p1.toLowerCase() === 'https') {
+        return match; 
+      }
+      const lowerP1 = p1.toLowerCase();
+      let valColor = '#34d399'; // default emerald
+      if (lowerP1.includes('status') || lowerP1.includes('estado')) {
+        if (/activat|success|exito|complet|aprob/i.test(p2)) valColor = '#10b981';
+        else if (/reject|fail|error|rechaz/i.test(p2)) valColor = '#ef4444';
+        else valColor = '#f59e0b';
+      } else if (lowerP1.includes('user') || lowerP1.includes('usuario')) {
+        valColor = '#38bdf8'; // sky blue
+      } else if (lowerP1.includes('email') || lowerP1.includes('correo')) {
+        valColor = '#a78bfa'; // violet purple
+      } else if (lowerP1.includes('pass') || lowerP1.includes('contra') || lowerP1.includes('pin') || lowerP1.includes('code')) {
+        valColor = '#f43f5e'; // rose/pink
+      } else if (lowerP1.includes('date') || lowerP1.includes('fecha') || lowerP1.includes('time')) {
+        valColor = '#cbd5e1'; // light slate
+      }
+      return `<span style="color: #f59e0b; font-weight: 700;">${p1}:</span> <span style="color: ${valColor}; font-weight: 600;">${p2}</span>`;
     });
 
     return safeText;
@@ -1092,6 +1109,19 @@ function renderOrderHistory() {
         btnTicket.addEventListener('click', () => {
           currentTicketData = item;
           ticketClientPrice.value = '';
+
+          // Remember user's preferred template for this specific service / product
+          const serviceKey = String(item.serviceId || item.serviceName || item.service || 'default').trim();
+          let savedTemplates = {};
+          try {
+            savedTemplates = JSON.parse(localStorage.getItem('dhru_ticket_templates') || '{}');
+          } catch(e) {}
+
+          const preferredTemplate = savedTemplates[serviceKey] || 'raw';
+          if (ticketFormatType) {
+            ticketFormatType.value = preferredTemplate;
+          }
+
           ticketModal.classList.remove('hidden');
         });
       }
@@ -2010,11 +2040,12 @@ function applyTicketSettings() {
     
     const resellerNode = document.getElementById('ticketResellerId');
     if (resellerNode) {
-      if (customTicketSettings.nombre) {
-        resellerNode.textContent = customTicketSettings.nombre;
+      const uId = (currentTicketData && currentTicketData.userId) || authUserId || localStorage.getItem('dhru_uid') || '';
+      const brand = customTicketSettings.nombre || 'MegaUnlockPhone';
+      if (uId) {
+        resellerNode.innerHTML = `<span>${escapeHtml(brand)}</span> <span style="opacity: 0.8; font-size: 0.7rem; font-family: 'Fira Code', monospace; margin-left: 6px; padding: 1px 5px; background: rgba(56, 189, 248, 0.15); border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8;">ID: ${escapeHtml(uId)}</span>`;
       } else {
-        // Default if they don't have a custom name
-        resellerNode.textContent = 'MegaUnlockPhone';
+        resellerNode.textContent = brand;
       }
     }
   }
@@ -2133,10 +2164,10 @@ btnGenerateTicketFinal.addEventListener('click', async () => {
     }
     
     const resellerNode = document.getElementById('ticketResellerId');
-    if (resellerNode && !customTicketSettings.nombre) {
-      // Fallback to authUserId for old tickets that didn't save userId
-      const uId = currentTicketData.userId || authUserId || 'N/A';
-      resellerNode.textContent = authRole === 'admin' ? 'Atendido por: ADMIN' : `Reseller ID: ${uId}`;
+    if (resellerNode) {
+      const uId = currentTicketData.userId || authUserId || localStorage.getItem('dhru_uid') || 'N/A';
+      const brand = customTicketSettings.nombre || (authRole === 'admin' ? 'ADMINISTRADOR' : 'MegaUnlockPhone');
+      resellerNode.innerHTML = `<span>${escapeHtml(brand)}</span> <span style="opacity: 0.85; font-size: 0.72rem; font-family: 'Fira Code', monospace; margin-left: 6px; padding: 1px 6px; background: rgba(56, 189, 248, 0.15); border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8;">Reseller ID: ${escapeHtml(uId)}</span>`;
     }
 
     const price = ticketClientPrice.value.trim();
@@ -2149,6 +2180,17 @@ btnGenerateTicketFinal.addEventListener('click', async () => {
 
     // Format Type logic
     const formatType = ticketFormatType.value;
+
+    // Save selection to remember for next time for this product
+    if (currentTicketData) {
+      const serviceKey = String(currentTicketData.serviceId || currentTicketData.serviceName || currentTicketData.service || 'default').trim();
+      try {
+        const savedTemplates = JSON.parse(localStorage.getItem('dhru_ticket_templates') || '{}');
+        savedTemplates[serviceKey] = formatType;
+        localStorage.setItem('dhru_ticket_templates', JSON.stringify(savedTemplates));
+      } catch(e) {}
+    }
+
     let rawText = String(currentTicketData.statusText || '');
     
     let cleanedRawText = rawText.replace(/<br\s*\/?>/gi, '\n')
@@ -2601,10 +2643,22 @@ setInterval(() => {
         if (typeof updateAccountCredits === 'function') {
           updateAccountCredits();
         }
+        if (typeof fetchRecharges === 'function') {
+          fetchRecharges();
+        }
       }
     }).catch(e => {});
   }
-}, 25000); // Polling every 25s for real-time history & catalog sync
+}, 8000); // Smart sync polling every 8s (no F5 needed)
+
+// When tab regains focus or visibility, perform immediate silent sync
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && authToken) {
+    updateAccountCredits();
+    if (typeof fetchOrderHistory === 'function') fetchOrderHistory();
+    if (typeof fetchRecharges === 'function') fetchRecharges();
+  }
+});
 
 async function fetchPublicSettings() {
   try {

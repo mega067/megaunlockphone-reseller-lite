@@ -60,17 +60,11 @@ window.AppUtils = {
     // Use its own escapeHtml
     let safeText = window.AppUtils.escapeHtml(cleaned);
 
-    // Match Key: Value pattern and wrap in spans for coloring (exclude http/https)
-    safeText = safeText.replace(/^([a-zA-Z0-9_ \-\.]+):\s*(.*)$/gm, (match, p1, p2) => {
-      if (p1.toLowerCase() === 'http' || p1.toLowerCase() === 'https') {
-        return match;
-      }
-      return `<span style="color: var(--secondary-color); font-weight: 600;">${p1}:</span> <span style="color: #10b981;">${p2}</span>`;
-    });
-
-    // Detect URLs (including Dhru split 'https: //', www, and common TLDs) and make them clickable
-    const urlRegex = /(https?:\s*\/\/[^\s<]+|https?:\/\/[^\s<]+|www\.[a-zA-Z0-9-]+\.[^\s<]+|(?:[a-zA-Z0-9-]+\.)+(?:com|net|org|mx|io|app|dev)(?:\/[^\s<]*)?)/gi;
-    safeText = safeText.replace(urlRegex, (matched) => {
+    // Detect URLs (including Dhru split 'https: //', www, and common TLDs) and make them clickable (ignoring email addresses)
+    const urlRegex = /(https?:\s*\/\/[^\s<]+|https?:\/\/[^\s<]+|www\.[a-zA-Z0-9-]+\.[^\s<]+|(?<![@a-zA-Z0-9._%+-])(?:[a-zA-Z0-9-]+\.)+(?:com|net|org|mx|io|app|dev)(?:\/[^\s<]*)?)/gi;
+    safeText = safeText.replace(urlRegex, (matched, p1, offset, fullStr) => {
+      const beforeChar = offset > 0 ? fullStr[offset - 1] : '';
+      if (beforeChar === '@') return matched;
       let trailing = '';
       const trailMatch = matched.match(/[.,;:)]+$/);
       if (trailMatch) {
@@ -80,6 +74,29 @@ window.AppUtils = {
       let cleanHref = matched.replace(/\s+/g, '');
       if (!/^https?:\/\//i.test(cleanHref)) cleanHref = 'https://' + cleanHref;
       return `<a href="${cleanHref}" target="_blank" rel="noopener noreferrer" class="auto-detected-link" style="color: #00f0ff; text-decoration: underline; word-break: break-all; font-weight: 600;"><i data-lucide="external-link" style="width: 12px; height: 12px; display: inline-block; vertical-align: middle; margin-right: 3px;"></i>${matched}</a>${trailing}`;
+    });
+
+    // Match Key: Value pattern and wrap in spans for coloring (exclude http/https)
+    safeText = safeText.replace(/^([a-zA-Z0-9_ \-\.]+):\s*(.*)$/gm, (match, p1, p2) => {
+      if (p1.toLowerCase() === 'http' || p1.toLowerCase() === 'https') {
+        return match; 
+      }
+      const lowerP1 = p1.toLowerCase();
+      let valColor = '#34d399'; // default emerald
+      if (lowerP1.includes('status') || lowerP1.includes('estado')) {
+        if (/activat|success|exito|complet|aprob/i.test(p2)) valColor = '#10b981';
+        else if (/reject|fail|error|rechaz/i.test(p2)) valColor = '#ef4444';
+        else valColor = '#f59e0b';
+      } else if (lowerP1.includes('user') || lowerP1.includes('usuario')) {
+        valColor = '#38bdf8'; // sky blue
+      } else if (lowerP1.includes('email') || lowerP1.includes('correo')) {
+        valColor = '#a78bfa'; // violet purple
+      } else if (lowerP1.includes('pass') || lowerP1.includes('contra') || lowerP1.includes('pin') || lowerP1.includes('code')) {
+        valColor = '#f43f5e'; // rose/pink
+      } else if (lowerP1.includes('date') || lowerP1.includes('fecha') || lowerP1.includes('time')) {
+        valColor = '#cbd5e1'; // light slate
+      }
+      return `<span style="color: #f59e0b; font-weight: 700;">${p1}:</span> <span style="color: ${valColor}; font-weight: 600;">${p2}</span>`;
     });
 
     return safeText;
