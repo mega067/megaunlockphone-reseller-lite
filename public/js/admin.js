@@ -200,7 +200,7 @@ async function loadAdminData() {
     const usersRes = await fetch('/api/users', { headers: { 'X-Server-Id': currentServerId, 'Authorization': `Bearer ${authToken}` }});
     if (usersRes.ok) {
       const users = await usersRes.json();
-      usersTableBody.innerHTML = '';
+      window.cachedAdminUsers = users;
       
       // Populate Master History User Filter while we have the users
       const masterUserFilter = document.getElementById('masterHistoryUserFilter');
@@ -211,233 +211,348 @@ async function loadAdminData() {
          });
       }
 
-      users.forEach(u => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${u.id}</td>
-          <td>
-             <div style="display:flex; flex-direction:column; gap:4px;">
-               <strong>${escapeHtml(u.username)}</strong>
-               <div style="font-size: 0.75rem; color: var(--text-muted);">
-                 <div>📞 ${escapeHtml(u.phone || '-')}</div>
-                 <div>✉️ ${escapeHtml(u.email || '-')}</div>
-                 <div style="color: ${u.linkedBot ? '#34d399' : '#f472b6'}">${u.linkedBot ? '🤖 Bot Vinculado' : '🤖 Sin Bot'}</div>
+      function renderFilteredAdminUsers() {
+        if (!usersTableBody) return;
+        const searchInput = document.getElementById('adminUsersSearchInput');
+        const statusFilter = document.getElementById('adminUsersStatusFilter');
+        const roleFilter = document.getElementById('adminUsersRoleFilter');
+        const countBadge = document.getElementById('adminUsersCountBadge');
+
+        const term = (searchInput ? searchInput.value : '').toLowerCase().trim();
+        const statusVal = statusFilter ? statusFilter.value : 'all';
+        const roleVal = roleFilter ? roleFilter.value : 'all';
+
+        const filtered = (window.cachedAdminUsers || []).filter(u => {
+          if (roleVal !== 'all' && (u.role || 'reseller') !== roleVal) return false;
+          const isActive = u.isActive !== false;
+          if (statusVal === 'active' && !isActive) return false;
+          if (statusVal === 'inactive' && isActive) return false;
+
+          if (term) {
+            const idStr = String(u.id || '');
+            const uname = String(u.username || '').toLowerCase();
+            const phone = String(u.phone || '').toLowerCase();
+            const email = String(u.email || '').toLowerCase();
+            if (!idStr.includes(term) && !uname.includes(term) && !phone.includes(term) && !email.includes(term)) {
+              return false;
+            }
+          }
+          return true;
+        });
+
+        if (countBadge) {
+          countBadge.textContent = `${filtered.length} de ${users.length} usuarios`;
+        }
+
+        usersTableBody.innerHTML = '';
+        if (filtered.length === 0) {
+          usersTableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 25px;">No se encontraron usuarios que coincidan con la búsqueda.</td></tr>`;
+          return;
+        }
+
+        filtered.forEach(u => {
+          const isActive = u.isActive !== false;
+          const tr = document.createElement('tr');
+          if (!isActive) {
+            tr.style.opacity = '0.65';
+            tr.style.background = 'rgba(239, 68, 68, 0.04)';
+          }
+          tr.innerHTML = `
+            <td><span style="font-family: monospace; font-size: 0.8rem; color: #a1a1aa;">${u.id}</span></td>
+            <td>
+               <div style="display:flex; flex-direction:column; gap:4px;">
+                 <div style="display: flex; align-items: center; gap: 6px;">
+                   <strong style="color: ${isActive ? 'white' : '#f87171'};">${escapeHtml(u.username)}</strong>
+                   ${!isActive ? `<span style="font-size: 0.65rem; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 1px 5px; border-radius: 4px; font-weight: 700;">INACTIVO</span>` : ''}
+                 </div>
+                 <div style="font-size: 0.75rem; color: var(--text-muted);">
+                   <div>📞 ${escapeHtml(u.phone || '-')}</div>
+                   <div>✉️ ${escapeHtml(u.email || '-')}</div>
+                   <div style="color: ${u.linkedBot ? '#34d399' : '#f472b6'}; font-weight: 600;">${u.linkedBot ? '🤖 Bot Vinculado' : '🤖 Sin Bot'}</div>
+                 </div>
+                 ${u.role === 'admin' ? `<span class="status-badge badge-category-server" style="width:fit-content; font-size:0.7rem; padding: 2px 6px;">ADMIN</span>` : 
+                   `<select class="role-select" data-id="${u.id}" style="width: fit-content; padding: 2px 6px; font-size: 0.7rem; background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.3); color: #c4b5fd; border-radius: 4px; outline: none; cursor: pointer;">
+                      <option value="reseller" ${u.role === 'reseller' || !u.role ? 'selected' : ''}>RESELLER</option>
+                      <option value="colaborador" ${u.role === 'colaborador' ? 'selected' : ''}>COLABORADOR</option>
+                    </select>`
+                 }
+                 <div style="display: flex; align-items: center; gap: 4px;">
+                   <input type="password" class="user-password-field" value="${escapeHtml(u.password || '')}" readonly style="width: 60px; padding: 2px; font-size:0.75rem; border-radius: 4px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: white;">
+                   ${u.role !== 'admin' ? `
+                     <button type="button" class="btn-icon btn-toggle-pwd" title="Mostrar/Ocultar" style="width: 20px; height: 20px; min-width: 20px; display: flex; align-items: center; justify-content: center;"><i data-lucide="eye" style="width: 12px; height: 12px;"></i></button>
+                     <button type="button" class="btn-icon btn-edit-pwd" data-id="${u.id}" title="Cambiar Contraseña" style="width: 20px; height: 20px; min-width: 20px; display: flex; align-items: center; justify-content: center;"><i data-lucide="key" style="width: 12px; height: 12px; color: #facc15;"></i></button>
+                   ` : ''}
+                 </div>
                </div>
-               ${u.role === 'admin' ? `<span class="status-badge badge-category-server" style="width:fit-content; font-size:0.7rem; padding: 2px 6px;">ADMIN</span>` : 
-                 `<select class="role-select" data-id="${u.id}" style="width: fit-content; padding: 2px 6px; font-size: 0.7rem; background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.3); color: #c4b5fd; border-radius: 4px; outline: none; cursor: pointer;">
-                    <option value="reseller" ${u.role === 'reseller' || !u.role ? 'selected' : ''}>RESELLER</option>
-                    <option value="colaborador" ${u.role === 'colaborador' ? 'selected' : ''}>COLABORADOR</option>
-                  </select>`
-               }
-               <div style="display: flex; align-items: center; gap: 4px;">
-                 <input type="password" class="user-password-field" value="${escapeHtml(u.password || '')}" readonly style="width: 60px; padding: 2px; font-size:0.75rem; border-radius: 4px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: white;">
-                 ${u.role !== 'admin' ? `
-                   <button type="button" class="btn-icon btn-toggle-pwd" title="Mostrar/Ocultar" style="width: 20px; height: 20px; min-width: 20px; display: flex; align-items: center; justify-content: center;"><i data-lucide="eye" style="width: 12px; height: 12px;"></i></button>
-                   <button type="button" class="btn-icon btn-edit-pwd" data-id="${u.id}" title="Cambiar Contraseña" style="width: 20px; height: 20px; min-width: 20px; display: flex; align-items: center; justify-content: center;"><i data-lucide="key" style="width: 12px; height: 12px; color: #facc15;"></i></button>
-                 ` : ''}
+            </td>
+            <td style="text-align: center; vertical-align: middle;">
+              ${u.role !== 'admin' ? `
+                <button type="button" class="btn-toggle-active-status" data-id="${u.id}" data-active="${isActive ? 'true' : 'false'}" title="${isActive ? 'Desactivar acceso a este usuario' : 'Activar acceso a este usuario'}" style="background: ${isActive ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)'}; border: 1px solid ${isActive ? 'rgba(34, 197, 94, 0.35)' : 'rgba(239, 68, 68, 0.35)'}; color: ${isActive ? '#4ade80' : '#f87171'}; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s;">
+                  <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: ${isActive ? '#22c55e' : '#ef4444'};"></span>
+                  ${isActive ? 'Activo' : 'Pausado'}
+                </button>
+              ` : '<span style="color: #22c55e; font-size: 0.75rem; font-weight: 700;">🟢 Siempre Activo</span>'}
+            </td>
+            <td>
+              ${u.role !== 'admin' ? `
+                <div style="display: flex; align-items: center; gap: 4px;">
+                  <span style="color:var(--text-secondary);">$</span>
+                  <input type="number" step="0.1" class="user-markup-input" data-id="${u.id}" value="${u.markup !== null && u.markup !== undefined ? u.markup : ''}" placeholder="Global" style="width: 70px; padding: 4px; border-radius: 4px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); color: white;">
+                </div>
+              ` : '-'}
+            </td>
+            <td>
+               <div style="display:flex; flex-direction:column; gap:4px; font-size:0.85rem;">
+                 <div style="display:flex; justify-content:space-between; width: 170px; background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius:4px;"><span style="color:#60a5fa">⚡ MEGA:</span> <strong style="color: #34d399;">$${parseFloat(u.credits1 || 0).toFixed(2)}</strong></div>
+                 <div style="display:flex; justify-content:space-between; width: 170px; background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius:4px;"><span style="color:#f472b6">🛡 ALPHA:</span> <strong style="color: #34d399;">$${parseFloat(u.credits2 || 0).toFixed(2)}</strong></div>
+                 <div style="display:flex; justify-content:space-between; width: 170px; background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius:4px;"><span style="color:#facc15">Ω OMEGA:</span> <strong style="color: #34d399;">$${parseFloat(u.credits3 || 0).toFixed(2)}</strong></div>
                </div>
-             </div>
-          </td>
-          <td>
-            ${u.role !== 'admin' ? `
-              <div style="display: flex; align-items: center; gap: 4px;">
-                <span style="color:var(--text-secondary);">$</span>
-                <input type="number" step="0.1" class="user-markup-input" data-id="${u.id}" value="${u.markup !== null && u.markup !== undefined ? u.markup : ''}" placeholder="Global" style="width: 70px; padding: 4px; border-radius: 4px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); color: white;">
-              </div>
-            ` : '-'}
-          </td>
-          <td>
-             <div style="display:flex; flex-direction:column; gap:4px; font-size:0.85rem;">
-               <div style="display:flex; justify-content:space-between; width: 170px; background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius:4px;"><span style="color:#60a5fa">⚡ MEGA:</span> <strong style="color: #34d399;">$${parseFloat(u.credits1 || 0).toFixed(2)}</strong></div>
-               <div style="display:flex; justify-content:space-between; width: 170px; background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius:4px;"><span style="color:#f472b6">🛡 ALPHA:</span> <strong style="color: #34d399;">$${parseFloat(u.credits2 || 0).toFixed(2)}</strong></div>
-               <div style="display:flex; justify-content:space-between; width: 170px; background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius:4px;"><span style="color:#facc15">Ω OMEGA:</span> <strong style="color: #34d399;">$${parseFloat(u.credits3 || 0).toFixed(2)}</strong></div>
-             </div>
-          </td>
-          <td style="text-align: right; vertical-align: middle;">
-            ${u.role !== 'admin' ? `
-              <div style="display: flex; gap: 5px; justify-content: flex-end; align-items: center;">
-                <button type="button" class="btn btn-sm btn-impersonate-user" data-id="${u.id}" data-name="${escapeHtml(u.username)}" title="Entrar a cuenta de ${escapeHtml(u.username)} (Inspeccionar saldo, pedidos, historial)" style="background: rgba(139, 92, 246, 0.15); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.35); padding: 6px;"><i data-lucide="user-check" style="width:16px;height:16px;"></i></button>
-                ${!u.linkedBot && u.phone && u.phone !== '-' ? `
-                  <button type="button" class="btn btn-sm btn-notify-user-bot" data-id="${u.id}" data-name="${escapeHtml(u.username)}" title="Enviar mensaje de WhatsApp para vincular bot" style="background: rgba(37, 211, 102, 0.15); color: #25D366; border: 1px solid rgba(37, 211, 102, 0.35); padding: 6px;"><i data-lucide="message-circle" style="width:16px;height:16px;"></i></button>
-                ` : ''}
-                <button type="button" class="btn btn-sm btn-recharge-user" data-id="${u.id}" title="Añadir Saldo" style="background: rgba(34,211,238,0.1); color: #22d3ee; padding: 6px;"><i data-lucide="plus" style="width:16px;height:16px;"></i></button>
-                <button type="button" class="btn btn-sm btn-deduct-user" data-id="${u.id}" title="Quitar Saldo" style="background: rgba(244,63,94,0.1); color: #f43f5e; padding: 6px;"><i data-lucide="minus" style="width:16px;height:16px;"></i></button>
-                <button type="button" class="btn btn-sm btn-delete-user" data-id="${u.id}" title="Eliminar Usuario" style="background: rgba(239,68,68,0.1); color: #ef4444; padding: 6px;"><i data-lucide="trash-2" style="width:16px;height:16px;"></i></button>
-              </div>
-            ` : '<span style="color:var(--text-muted); font-size:0.8rem;">Admin</span>'}
-          </td>
-        `;
-        usersTableBody.appendChild(tr);
-      });
-      
-      lucide.createIcons();
+            </td>
+            <td style="text-align: right; vertical-align: middle;">
+              ${u.role !== 'admin' ? `
+                <div style="display: flex; gap: 5px; justify-content: flex-end; align-items: center;">
+                  <button type="button" class="btn btn-sm btn-impersonate-user" data-id="${u.id}" data-name="${escapeHtml(u.username)}" title="Entrar a cuenta de ${escapeHtml(u.username)} (Inspeccionar saldo, pedidos, historial)" style="background: rgba(139, 92, 246, 0.15); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.35); padding: 6px;"><i data-lucide="user-check" style="width:16px;height:16px;"></i></button>
+                  ${!u.linkedBot && u.phone && u.phone !== '-' ? `
+                    <button type="button" class="btn btn-sm btn-notify-user-bot" data-id="${u.id}" data-name="${escapeHtml(u.username)}" title="Enviar mensaje de WhatsApp para vincular bot" style="background: rgba(37, 211, 102, 0.15); color: #25D366; border: 1px solid rgba(37, 211, 102, 0.35); padding: 6px;"><i data-lucide="message-circle" style="width:16px;height:16px;"></i></button>
+                  ` : ''}
+                  <button type="button" class="btn btn-sm btn-recharge-user" data-id="${u.id}" title="Añadir Saldo" style="background: rgba(34,211,238,0.1); color: #22d3ee; padding: 6px;"><i data-lucide="plus" style="width:16px;height:16px;"></i></button>
+                  <button type="button" class="btn btn-sm btn-deduct-user" data-id="${u.id}" title="Quitar Saldo" style="background: rgba(244,63,94,0.1); color: #f43f5e; padding: 6px;"><i data-lucide="minus" style="width:16px;height:16px;"></i></button>
+                  <button type="button" class="btn btn-sm btn-delete-user" data-id="${u.id}" title="Eliminar Usuario" style="background: rgba(239,68,68,0.1); color: #ef4444; padding: 6px;"><i data-lucide="trash-2" style="width:16px;height:16px;"></i></button>
+                </div>
+              ` : '<span style="color:var(--text-muted); font-size:0.8rem;">Admin</span>'}
+            </td>
+          `;
+          usersTableBody.appendChild(tr);
+        });
 
-      // Bind Notify Unlinked User (Individual)
-      document.querySelectorAll('.btn-notify-user-bot').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-          const userId = e.currentTarget.dataset.id;
-          const username = e.currentTarget.dataset.name;
-          if (!confirm(`¿Deseas enviar un recordatorio por WhatsApp a "${username}" para que vincule su cuenta con el Bot?`)) return;
+        lucide.createIcons();
+        bindAdminUserRowEvents();
+      }
 
-          try {
-            const res = await fetch('/api/admin/notify-unlinked-bot', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-              body: JSON.stringify({ userId })
-            });
-            const data = await res.json();
-            if (res.ok && data.success) {
-              if (window.showToast) window.showToast(`Mensaje enviado a ${username}.`, 'success');
-              else alert(data.message);
-            } else {
-              if (window.showToast) window.showToast(data.error || 'Error al enviar invitación', 'error');
-              else alert(data.error || 'Error');
+      function bindAdminUserRowEvents() {
+        // Toggle Active / Deactive user account
+        document.querySelectorAll('.btn-toggle-active-status').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const id = e.currentTarget.dataset.id;
+            const currentActive = e.currentTarget.dataset.active === 'true';
+            const newActive = !currentActive;
+            const actionText = newActive ? 'ACTIVAR' : 'DESACTIVAR';
+            
+            if (!confirm(`¿Estás seguro de que deseas ${actionText} la cuenta de este usuario? ${newActive ? 'Podrá volver a ingresar al panel.' : 'No podrá iniciar sesión hasta que lo reactives.'}`)) {
+              return;
             }
-          } catch (err) {
-            alert('Error de conexión');
-          }
-        });
-      });
 
-
-      // Bind Actions
-      document.querySelectorAll('.role-select').forEach(select => {
-        select.addEventListener('change', async (e) => {
-          const id = e.target.dataset.id;
-          const val = e.target.value;
-          try {
-            const res = await fetch(`/api/users/${id}`, {
-              method: 'PUT',
-              headers: { 'X-Server-Id': currentServerId, 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-              body: JSON.stringify({ role: val })
-            });
-            if(res.ok) {
-              e.target.style.borderColor = '#10b981';
-              setTimeout(() => e.target.style.borderColor = 'rgba(139, 92, 246, 0.3)', 1500);
-            } else {
-              e.target.style.borderColor = '#ef4444';
+            try {
+              const res = await fetch(`/api/users/${id}`, {
+                method: 'PUT',
+                headers: { 'X-Server-Id': currentServerId, 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify({ isActive: newActive })
+              });
+              if (res.ok) {
+                const targetUser = (window.cachedAdminUsers || []).find(u => String(u.id) === String(id));
+                if (targetUser) targetUser.isActive = newActive;
+                renderFilteredAdminUsers();
+                if (window.showToast) window.showToast(`Cuenta ${newActive ? 'activada' : 'desactivada'} correctamente.`, 'success');
+              } else {
+                alert('Error al cambiar estado de la cuenta.');
+              }
+            } catch (err) {
+              console.error(err);
+              alert('Error de conexión.');
             }
-          } catch (err) {
-            console.error(err);
-          }
+          });
         });
-      });
 
-      document.querySelectorAll('.user-markup-input').forEach(input => {
-        input.addEventListener('change', async (e) => {
-          const id = e.target.dataset.id;
-          const val = e.target.value;
-          try {
-            const res = await fetch(`/api/users/${id}`, {
-              method: 'PUT',
-              headers: { 'X-Server-Id': currentServerId, 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-              body: JSON.stringify({ markup: val })
-            });
-            if(res.ok) {
-              e.target.style.borderColor = '#10b981';
-              setTimeout(() => e.target.style.borderColor = 'var(--border-color)', 1500);
-            } else {
-              e.target.style.borderColor = '#ef4444';
+        // Bind Notify Unlinked User (Individual)
+        document.querySelectorAll('.btn-notify-user-bot').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const userId = e.currentTarget.dataset.id;
+            const username = e.currentTarget.dataset.name;
+            if (!confirm(`¿Deseas enviar un recordatorio por WhatsApp a "${username}" para que vincule su cuenta con el Bot?`)) return;
+
+            try {
+              const res = await fetch('/api/admin/notify-unlinked-bot', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify({ userId })
+              });
+              const data = await res.json();
+              if (res.ok && data.success) {
+                if (window.showToast) window.showToast(`Mensaje enviado a ${username}.`, 'success');
+                else alert(data.message);
+              } else {
+                if (window.showToast) window.showToast(data.error || 'Error al enviar invitación', 'error');
+                else alert(data.error || 'Error');
+              }
+            } catch (err) {
+              alert('Error de conexión');
             }
-          } catch (err) {
-            console.error(err);
-          }
+          });
         });
-      });
 
-      // Password Reveal Logic
-      document.querySelectorAll('.btn-toggle-pwd').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          const input = e.currentTarget.previousElementSibling;
-          if (input.type === 'password') {
-            input.type = 'text';
-            e.currentTarget.innerHTML = '<i data-lucide="eye-off" style="width: 14px; height: 14px;"></i>';
-          } else {
-            input.type = 'password';
-            e.currentTarget.innerHTML = '<i data-lucide="eye" style="width: 14px; height: 14px;"></i>';
-          }
-          lucide.createIcons();
+        // Bind Roles
+        document.querySelectorAll('.role-select').forEach(select => {
+          select.addEventListener('change', async (e) => {
+            const id = e.target.dataset.id;
+            const val = e.target.value;
+            try {
+              const res = await fetch(`/api/users/${id}`, {
+                method: 'PUT',
+                headers: { 'X-Server-Id': currentServerId, 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify({ role: val })
+              });
+              if(res.ok) {
+                e.target.style.borderColor = '#10b981';
+                setTimeout(() => e.target.style.borderColor = 'rgba(139, 92, 246, 0.3)', 1500);
+              } else {
+                e.target.style.borderColor = '#ef4444';
+              }
+            } catch (err) {
+              console.error(err);
+            }
+          });
         });
-      });
 
-      // Edit Password Logic
-      document.querySelectorAll('.btn-edit-pwd').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-          const id = e.currentTarget.dataset.id;
-          const newPwd = prompt('Ingresa la nueva contraseña para este usuario (mínimo 4 caracteres):');
-          if (!newPwd) return;
-          if (newPwd.length < 4) return alert('La contraseña es muy corta.');
-          
-          try {
-            const res = await fetch(`/api/users/${id}/password`, {
-              method: 'PUT',
-              headers: { 'X-Server-Id': currentServerId, 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-              body: JSON.stringify({ password: newPwd })
-            });
-            if(res.ok) {
-              alert('Contraseña actualizada con éxito.');
+        // Bind Markups
+        document.querySelectorAll('.user-markup-input').forEach(input => {
+          input.addEventListener('change', async (e) => {
+            const id = e.target.dataset.id;
+            const val = e.target.value;
+            try {
+              const res = await fetch(`/api/users/${id}`, {
+                method: 'PUT',
+                headers: { 'X-Server-Id': currentServerId, 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify({ markup: val })
+              });
+              if(res.ok) {
+                e.target.style.borderColor = '#10b981';
+                setTimeout(() => e.target.style.borderColor = 'var(--border-color)', 1500);
+              } else {
+                e.target.style.borderColor = '#ef4444';
+              }
+            } catch (err) {
+              console.error(err);
+            }
+          });
+        });
+
+        // Password Reveal Logic
+        document.querySelectorAll('.btn-toggle-pwd').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const input = e.currentTarget.previousElementSibling;
+            if (input.type === 'password') {
+              input.type = 'text';
+              e.currentTarget.innerHTML = '<i data-lucide="eye-off" style="width: 14px; height: 14px;"></i>';
+            } else {
+              input.type = 'password';
+              e.currentTarget.innerHTML = '<i data-lucide="eye" style="width: 14px; height: 14px;"></i>';
+            }
+            lucide.createIcons();
+          });
+        });
+
+        // Edit Password Logic
+        document.querySelectorAll('.btn-edit-pwd').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const id = e.currentTarget.dataset.id;
+            const newPwd = prompt('Ingresa la nueva contraseña para este usuario (mínimo 4 caracteres):');
+            if (!newPwd) return;
+            if (newPwd.length < 4) return alert('La contraseña es muy corta.');
+            
+            try {
+              const res = await fetch(`/api/users/${id}/password`, {
+                method: 'PUT',
+                headers: { 'X-Server-Id': currentServerId, 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify({ password: newPwd })
+              });
+              if(res.ok) {
+                alert('Contraseña actualizada con éxito.');
+                loadAdminData();
+              } else {
+                alert('Error al actualizar contraseña.');
+              }
+            } catch (err) {
+              console.error(err);
+            }
+          });
+        });
+
+        // Delete User
+        document.querySelectorAll('.btn-delete-user').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const id = e.currentTarget.dataset.id;
+            if (confirm('¿Eliminar este usuario?')) {
+              await fetch(`/api/users/${id}`, { method: 'DELETE', headers: { 'X-Server-Id': currentServerId, 'Authorization': `Bearer ${authToken}` }});
               loadAdminData();
-            } else {
-              alert('Error al actualizar contraseña.');
             }
-          } catch (err) {
-            console.error(err);
-          }
+          });
         });
-      });
 
-      document.querySelectorAll('.btn-delete-user').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-          const id = e.currentTarget.dataset.id;
-          if (confirm('¿Eliminar este usuario?')) {
-            await fetch(`/api/users/${id}`, { method: 'DELETE', headers: { 'X-Server-Id': currentServerId, 'Authorization': `Bearer ${authToken}` }});
-            loadAdminData();
-          }
+        const serverNames = {'1': '⚡ MEGA-SERVER', '2': '🛡 ALPHA-SERVER', '3': '🔱 OMEGA-SERVER'};
+
+        // Recharge User
+        document.querySelectorAll('.btn-recharge-user').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const id = e.currentTarget.dataset.id;
+            const user = users.find(u => u.id == id);
+            const sName = serverNames[currentServerId];
+            const currentCreds = parseFloat(currentServerId === '1' ? user.credits1 : (currentServerId === '2' ? user.credits2 : user.credits3) || 0);
+            const addAmount = prompt(`Servidor Actual: ${sName}\n¿Cuánto saldo añadir a ${user.username}? (Ingresa cantidad a sumar)`);
+            if (addAmount && !isNaN(parseFloat(addAmount))) {
+              const newCredits = currentCreds + Math.abs(parseFloat(addAmount));
+              await fetch(`/api/users/${id}`, {
+                method: 'PUT',
+                headers: { 'X-Server-Id': currentServerId, 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify({ credits: newCredits })
+              });
+              loadAdminData();
+              updateAccountCredits();
+            }
+          });
         });
-      });
 
-      const serverNames = {'1': '⚡ MEGA-SERVER', '2': '🛡 ALPHA-SERVER', '3': '🔱 OMEGA-SERVER'};
-
-      document.querySelectorAll('.btn-recharge-user').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-          const id = e.currentTarget.dataset.id;
-          const user = users.find(u => u.id == id);
-          const sName = serverNames[currentServerId];
-          const currentCreds = parseFloat(currentServerId === '1' ? user.credits1 : (currentServerId === '2' ? user.credits2 : user.credits3) || 0);
-          const addAmount = prompt(`Servidor Actual: ${sName}\n¿Cuánto saldo añadir a ${user.username}? (Ingresa cantidad a sumar)`);
-          if (addAmount && !isNaN(parseFloat(addAmount))) {
-            const newCredits = currentCreds + Math.abs(parseFloat(addAmount));
-            await fetch(`/api/users/${id}`, {
-              method: 'PUT',
-              headers: { 'X-Server-Id': currentServerId, 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-              body: JSON.stringify({ credits: newCredits })
-            });
-            loadAdminData();
-            updateAccountCredits();
-          }
+        // Deduct User
+        document.querySelectorAll('.btn-deduct-user').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const id = e.currentTarget.dataset.id;
+            const user = users.find(u => u.id == id);
+            const sName = serverNames[currentServerId];
+            const currentCreds = parseFloat(currentServerId === '1' ? user.credits1 : (currentServerId === '2' ? user.credits2 : user.credits3) || 0);
+            const subAmount = prompt(`Servidor Actual: ${sName}\n¿Cuánto saldo QUITAR a ${user.username}? (Ingresa cantidad a restar)`);
+            if (subAmount && !isNaN(parseFloat(subAmount))) {
+              let newCredits = currentCreds - Math.abs(parseFloat(subAmount));
+              if (newCredits < 0) newCredits = 0;
+              await fetch(`/api/users/${id}`, {
+                method: 'PUT',
+                headers: { 'X-Server-Id': currentServerId, 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify({ credits: newCredits })
+              });
+              loadAdminData();
+              updateAccountCredits();
+            }
+          });
         });
-      });
+      }
 
-      document.querySelectorAll('.btn-deduct-user').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-          const id = e.currentTarget.dataset.id;
-          const user = users.find(u => u.id == id);
-          const sName = serverNames[currentServerId];
-          const currentCreds = parseFloat(currentServerId === '1' ? user.credits1 : (currentServerId === '2' ? user.credits2 : user.credits3) || 0);
-          const subAmount = prompt(`Servidor Actual: ${sName}\n¿Cuánto saldo QUITAR a ${user.username}? (Ingresa cantidad a restar)`);
-          if (subAmount && !isNaN(parseFloat(subAmount))) {
-            let newCredits = currentCreds - Math.abs(parseFloat(subAmount));
-            if (newCredits < 0) newCredits = 0;
-            await fetch(`/api/users/${id}`, {
-              method: 'PUT',
-              headers: { 'X-Server-Id': currentServerId, 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-              body: JSON.stringify({ credits: newCredits })
-            });
-            loadAdminData();
-            updateAccountCredits();
-          }
-        });
-      });
+      // Initial render of users
+      renderFilteredAdminUsers();
+
+      // Search and Filter Listeners
+      const adminUsersSearchInput = document.getElementById('adminUsersSearchInput');
+      if (adminUsersSearchInput && !adminUsersSearchInput.dataset.bound) {
+        adminUsersSearchInput.dataset.bound = 'true';
+        adminUsersSearchInput.addEventListener('input', () => renderFilteredAdminUsers());
+      }
+      const adminUsersStatusFilter = document.getElementById('adminUsersStatusFilter');
+      if (adminUsersStatusFilter && !adminUsersStatusFilter.dataset.bound) {
+        adminUsersStatusFilter.dataset.bound = 'true';
+        adminUsersStatusFilter.addEventListener('change', () => renderFilteredAdminUsers());
+      }
+      const adminUsersRoleFilter = document.getElementById('adminUsersRoleFilter');
+      if (adminUsersRoleFilter && !adminUsersRoleFilter.dataset.bound) {
+        adminUsersRoleFilter.dataset.bound = 'true';
+        adminUsersRoleFilter.addEventListener('change', () => renderFilteredAdminUsers());
+      }
 
       // Impersonate User (Entrar a cuenta de usuario sin cerrar sesión)
       document.querySelectorAll('.btn-impersonate-user').forEach(btn => {

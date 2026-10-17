@@ -28,7 +28,11 @@ router.post('/login', loginLimiter, (req, res) => {
   const user = users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
   
   if (!user) {
-    return res.status(401).json({ error: 'Invalid username or password' });
+    return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
+  }
+
+  if (user.isActive === false && user.role !== 'admin') {
+    return res.status(403).json({ error: 'Tu cuenta ha sido desactivada por el administrador. Contacta a soporte para reactivarla.' });
   }
   
   const token = generateToken(user);

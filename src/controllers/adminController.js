@@ -27,6 +27,7 @@ exports.getUsers = (req, res) => {
        id: u.id, 
        username: u.username, 
        role: u.role, 
+       isActive: u.isActive !== false,
        credits: currentCredits, 
        credits1: credits1,
        credits2: credits2,
@@ -143,6 +144,9 @@ exports.updateUser = (req, res) => {
   }
   if (markup !== undefined) {
     user.markup = (markup === '' || markup === null) ? null : parseFloat(markup);
+  }
+  if (req.body.isActive !== undefined && user.role !== 'admin') {
+    user.isActive = Boolean(req.body.isActive);
   }
 
   writeDB('users.json', users);

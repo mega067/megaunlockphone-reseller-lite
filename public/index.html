@@ -537,14 +537,37 @@
               </form>
             </div>
 
+            <!-- Users Filter & Search Toolbar -->
+            <div style="display: flex; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap;">
+              <div style="position: relative; flex: 1; min-width: 220px; max-width: 380px;">
+                <i data-lucide="search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--text-muted); pointer-events: none;"></i>
+                <input type="text" id="adminUsersSearchInput" placeholder="Buscar por usuario, ID, teléfono..." style="width: 100%; padding: 8px 12px 8px 36px; background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 8px; color: white; font-size: 0.85rem; outline: none; transition: border-color 0.2s;">
+              </div>
+              <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                <select id="adminUsersStatusFilter" style="padding: 7px 10px; font-size: 0.8rem; background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 8px; color: white; outline: none; cursor: pointer;">
+                  <option value="all">Todos los Estados</option>
+                  <option value="active">🟢 Solo Activos</option>
+                  <option value="inactive">🔴 Solo Desactivados</option>
+                </select>
+                <select id="adminUsersRoleFilter" style="padding: 7px 10px; font-size: 0.8rem; background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 8px; color: white; outline: none; cursor: pointer;">
+                  <option value="all">Todos los Roles</option>
+                  <option value="reseller">Resellers</option>
+                  <option value="colaborador">Colaboradores</option>
+                  <option value="admin">Admins</option>
+                </select>
+                <span id="adminUsersCountBadge" style="font-size: 0.8rem; font-weight: 600; background: rgba(34, 211, 238, 0.12); color: #22d3ee; border: 1px solid rgba(34, 211, 238, 0.3); border-radius: 6px; padding: 4px 10px; font-family: monospace;">0 usuarios</span>
+              </div>
+            </div>
+
             <!-- Users Table -->
             <div class="table-container">
               <table class="data-table">
                 <thead>
                   <tr>
-                    <th>ID</th>
-                    <th>Usuario</th>
-                    <th>Aumento</th>
+                    <th style="width: 60px;">ID</th>
+                    <th>Usuario & Contacto</th>
+                    <th style="width: 90px; text-align: center;">Estado</th>
+                    <th style="width: 100px;">Aumento</th>
                     <th>Billeteras (Saldo)</th>
                     <th style="text-align: right;">Acciones</th>
                   </tr>
