@@ -165,7 +165,10 @@ function renderRecharges() {
   if (!rechargesBody) return;
   const authRole = localStorage.getItem('dhru_role');
   rechargesBody.innerHTML = '';
-  if (rechargesCount) rechargesCount.textContent = rechargesHistory.length;
+  if (rechargesCount) {
+    const count = rechargesHistory.length;
+    rechargesCount.innerHTML = `<span style="font-weight: 800;">${count}</span> ${count === 1 ? 'registro' : 'registros'}`;
+  }
   
   // Actualizar tarjetas de métricas (Ingresado, Gastado, Disponible)
   updateRechargesSummary();

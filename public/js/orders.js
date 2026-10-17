@@ -409,19 +409,112 @@ btnLogout.addEventListener('click', () => {
   location.reload();
 });
 
-// User Profile Logic
+// User Profile Logic (Modular & Tabs Pro Max)
 const userProfileModal = document.getElementById('userProfileModal');
 const btnCloseProfileModal = document.getElementById('btnCloseProfileModal');
 const profileUsername = document.getElementById('profileUsername');
 const profileRole = document.getElementById('profileRole');
+const profileUserId = document.getElementById('profileUserId');
+const profileEmail = document.getElementById('profileEmail');
+const profilePhoneDisplay = document.getElementById('profilePhoneDisplay');
+const profileCreditsDisplay = document.getElementById('profileCreditsDisplay');
+const profileAvatarLetter = document.getElementById('profileAvatarLetter');
 const inputNewPassword = document.getElementById('inputNewPassword');
 const btnSaveNewPassword = document.getElementById('btnSaveNewPassword');
 
+// Tab switching helper
+function switchProfileTab(targetTabId) {
+  if (!userProfileModal) return;
+  const tabBtns = userProfileModal.querySelectorAll('.profile-tab-btn');
+  const tabPanes = userProfileModal.querySelectorAll('.profile-tab-pane');
+
+  tabBtns.forEach(btn => {
+    if (btn.getAttribute('data-tab') === targetTabId) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+
+  tabPanes.forEach(pane => {
+    if (pane.id === targetTabId) {
+      pane.classList.add('active');
+    } else {
+      pane.classList.remove('active');
+    }
+  });
+
+  if (window.lucide) window.lucide.createIcons();
+}
+
+// Bind click on profile tabs
+if (userProfileModal) {
+  userProfileModal.querySelectorAll('.profile-tab-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const targetTab = btn.getAttribute('data-tab');
+      if (targetTab) switchProfileTab(targetTab);
+    });
+  });
+
+  const btnGoSecurityTab = document.getElementById('btnGoSecurityTab');
+  if (btnGoSecurityTab) {
+    btnGoSecurityTab.addEventListener('click', () => switchProfileTab('tabProfileSecurity'));
+  }
+  const btnGoWhatsAppTab = document.getElementById('btnGoWhatsAppTab');
+  if (btnGoWhatsAppTab) {
+    btnGoWhatsAppTab.addEventListener('click', () => switchProfileTab('tabProfileWhatsApp'));
+  }
+}
+
+async function loadFullUserProfile() {
+  const currentUsername = authUsername || localStorage.getItem('dhru_username') || 'Usuario';
+  const currentRole = (authRole || localStorage.getItem('dhru_role') || 'reseller').toUpperCase();
+  const currentUid = authUserId || localStorage.getItem('dhru_uid') || '-';
+
+  if (profileUsername) profileUsername.textContent = currentUsername;
+  if (profileRole) profileRole.textContent = currentRole;
+  if (profileUserId) profileUserId.textContent = currentUid;
+  if (profileAvatarLetter) profileAvatarLetter.textContent = currentUsername.charAt(0).toUpperCase();
+
+  // Load live balance if available
+  const balanceSpan = document.getElementById('userCredits') || document.getElementById('headerCredits');
+  if (profileCreditsDisplay) {
+    profileCreditsDisplay.textContent = balanceSpan ? balanceSpan.textContent : '$0.00 MXN';
+  }
+
+  // Fetch full details from /api/me
+  try {
+    const res = await fetch('/api/me', {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (profileEmail) profileEmail.textContent = data.email || 'No especificado';
+      if (profilePhoneDisplay) profilePhoneDisplay.textContent = data.phone ? `+${data.phone}` : 'Sin vincular';
+      if (profileUserId && data.uid) profileUserId.textContent = data.uid;
+      if (profileCreditsDisplay && typeof data.credits !== 'undefined') {
+        profileCreditsDisplay.textContent = `$${parseFloat(data.credits || 0).toFixed(2)} MXN`;
+      }
+    }
+  } catch (e) {
+    console.warn('No se pudo cargar detalles adicionales del perfil:', e);
+  }
+
+  if (window.lucide) window.lucide.createIcons();
+}
+
 if (btnUserProfile) {
   btnUserProfile.addEventListener('click', () => {
-    profileUsername.textContent = authUsername;
-    profileRole.textContent = authRole.toUpperCase();
+    switchProfileTab('tabProfileOverview');
     inputNewPassword.value = '';
+    const confirmPwd = document.getElementById('inputConfirmNewPassword');
+    if (confirmPwd) confirmPwd.value = '';
+    const currentPwd1 = document.getElementById('inputCurrentPasswordPwd');
+    if (currentPwd1) currentPwd1.value = '';
+    const currentPwd2 = document.getElementById('inputCurrentPasswordPhone');
+    if (currentPwd2) currentPwd2.value = '';
+
+    loadFullUserProfile();
     userProfileModal.classList.remove('hidden');
   });
 }

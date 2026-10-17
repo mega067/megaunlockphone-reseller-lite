@@ -46,7 +46,16 @@ router.get('/me', requireAuth, (req, res) => {
   const users = readDB('users.json') || [];
   const user = users.find(u => u.id === req.user.id);
   if (!user) return res.status(404).json({ error: 'User not found' });
-  res.json({ username: user.username, role: user.role, credits: user.credits, uid: user.id, weakPassword: isWeakPassword(user.password) });
+  res.json({ 
+    username: user.username, 
+    role: user.role, 
+    credits: user.credits, 
+    uid: user.id, 
+    phone: user.phone || '',
+    email: user.email || '',
+    createdAt: user.createdAt || '',
+    weakPassword: isWeakPassword(user.password) 
+  });
 });
 
 const fs = require('fs');

@@ -1280,24 +1280,32 @@ h1, h2, h3, h4 { color: var(--text-primary); font-family: var(--font-display); f
 
 .reseller-history-table tr.history-row-header-click {
   cursor: pointer;
-  transition: background 0.2s ease, transform 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
 }
 
 .reseller-history-table tr.history-row-header-click:hover {
-  background: rgba(56, 189, 248, 0.04) !important;
+  background: rgba(56, 189, 248, 0.08) !important;
+  box-shadow: inset 3px 0 0 #38bdf8;
+}
+
+.reseller-history-table tr.history-row-header-click.row-expanded {
+  background: rgba(56, 189, 248, 0.05) !important;
+  box-shadow: inset 3px 0 0 #22d3ee;
 }
 
 .reseller-history-table tr.history-row-header-click:hover td:first-child .btn-expand-row {
   transform: scale(1.15);
   border-color: #38bdf8;
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.35);
+  background: rgba(56, 189, 248, 0.25);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
 }
 
 /* Expand Button */
 .btn-expand-row {
-  background: rgba(56, 189, 248, 0.1);
+  background: rgba(56, 189, 248, 0.12);
   color: #38bdf8;
-  border: 1px solid rgba(56, 189, 248, 0.3);
+  border: 1px solid rgba(56, 189, 248, 0.35);
   border-radius: 6px;
   width: 24px;
   height: 24px;
@@ -1310,6 +1318,28 @@ h1, h2, h3, h4 { color: var(--text-primary); font-family: var(--font-display); f
   cursor: pointer;
   transition: all 0.2s ease;
   line-height: 1;
+}
+
+.expand-hint-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.68rem;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+  opacity: 0.8;
+  transition: all 0.2s ease;
+  font-weight: 600;
+}
+
+.reseller-history-table tr.history-row-header-click:hover .expand-hint-badge {
+  opacity: 1;
+  background: rgba(56, 189, 248, 0.2);
+  border-color: #38bdf8;
 }
 
 /* Status Badges Pro Max */
@@ -2438,6 +2468,21 @@ h1, h2, h3, h4 { color: var(--text-primary); font-family: var(--font-display); f
   padding-bottom: 8px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 }
+.history-side-header .header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.history-side-header .header-left .badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+  line-height: 1;
+}
 .recharges-compact-table-wrap {
   overflow-x: auto;
   max-height: 480px;
@@ -2825,4 +2870,178 @@ h1, h2, h3, h4 { color: var(--text-primary); font-family: var(--font-display); f
     grid-template-columns: 1fr !important;
   }
 }
+/* ========================================================
+   MODULAR PROFILE MODAL & TABS DESIGN PRO MAX
+======================================================== */
+.modal-profile-card {
+  max-width: 580px !important;
+  width: 95% !important;
+  border-radius: 18px !important;
+  overflow: hidden;
+  border: 1px solid rgba(56, 189, 248, 0.25) !important;
+  background: linear-gradient(145deg, rgba(15, 23, 42, 0.98) 0%, rgba(9, 14, 26, 0.99) 100%) !important;
+}
 
+.profile-nav-tabs {
+  display: flex;
+  background: rgba(0, 0, 0, 0.35);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 6px 12px 0 12px;
+  gap: 6px;
+  overflow-x: auto;
+}
+
+.profile-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.profile-tab-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.03);
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+}
+
+.profile-tab-btn.active {
+  color: #38bdf8;
+  border-bottom-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.08);
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+}
+
+.profile-tab-pane {
+  display: none;
+  animation: fadeInModal 0.25s ease;
+}
+
+.profile-tab-pane.active {
+  display: block;
+}
+
+.profile-hero-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 1.25rem;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  margin-bottom: 1rem;
+}
+
+.profile-avatar-circle {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0ea5e9, #6366f1);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 800;
+  box-shadow: 0 0 16px rgba(14, 165, 233, 0.4);
+  flex-shrink: 0;
+}
+
+.profile-hero-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-hero-username {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin: 0 0 4px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-badges-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.profile-role-pill {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 3px 9px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+}
+
+.profile-data-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 480px) {
+  .profile-data-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.profile-data-card {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.profile-data-card .data-label {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.profile-data-card .data-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #f1f5f9;
+  word-break: break-all;
+}
+
+.profile-section-box {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 1.15rem;
+}
+
+.profile-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #f1f5f9;
+}

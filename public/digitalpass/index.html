@@ -1295,60 +1295,136 @@
 
 
   <!-- User Profile Modal -->
+  <!-- User Profile Modal (Modular & Tabs Pro Max) -->
   <div class="modal-overlay hidden" id="userProfileModal">
-    <div class="modal-card" style="max-width: 400px; width: 95%;">
+    <div class="modal-card modal-profile-card">
       <div class="modal-header">
         <div style="display: flex; align-items: center; gap: 12px;">
-          <div class="icon-wrapper" style="background: rgba(34, 197, 94, 0.15); color: #4ade80;">
-            <i data-lucide="user"></i>
+          <div class="icon-wrapper" style="background: rgba(14, 165, 233, 0.15); color: #38bdf8;">
+            <i data-lucide="user-check"></i>
           </div>
-          <h2>Mi Perfil</h2>
+          <div>
+            <h2 style="font-size: 1.2rem; margin: 0; line-height: 1.2;">Mi Perfil de Usuario</h2>
+            <p style="font-size: 0.76rem; color: var(--text-muted); margin: 2px 0 0 0;">Gestión de cuenta, seguridad y canales de contacto</p>
+          </div>
         </div>
-        <button type="button" class="btn-icon" id="btnCloseProfileModal">
+        <button type="button" class="btn-icon" id="btnCloseProfileModal" title="Cerrar ventana">
           <i data-lucide="x"></i>
         </button>
       </div>
-      <div class="modal-body" style="display: flex; flex-direction: column; gap: 15px;">
-        <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
-          <p style="margin: 0 0 5px 0; color: var(--text-muted); font-size: 0.85rem;">Nombre de Usuario</p>
-          <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: white;" id="profileUsername">-</p>
-        </div>
-        <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
-          <p style="margin: 0 0 5px 0; color: var(--text-muted); font-size: 0.85rem;">Rol en el Sistema</p>
-          <p style="margin: 0; font-size: 1rem; color: #38bdf8;" id="profileRole">-</p>
-        </div>
-        
-        <h3 style="margin: 10px 0 0 0; font-size: 1rem; color: #facc15; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">Seguridad</h3>
-        <div class="input-group">
-          <label>Contraseña Actual (Requerida)</label>
-          <input type="password" id="inputCurrentPasswordPwd" placeholder="Tu contraseña actual" style="width: 100%; margin-bottom: 8px;">
-          
-          <label>Nueva Contraseña (min. 6 chars y 1 mayúscula)</label>
-          <input type="password" id="inputNewPassword" placeholder="Nueva contraseña segura" style="width: 100%; margin-bottom: 8px;">
-          
-          <label>Confirmar Nueva Contraseña</label>
-          <div style="display: flex; align-items: center; gap: 8px; width: 100%; margin-bottom: 8px;">
-            <input type="password" id="inputConfirmNewPassword" placeholder="Repite la nueva contraseña" style="flex: 1;">
-            <button type="button" class="btn btn-primary" id="btnSaveNewPassword" style="white-space: nowrap;" disabled>Guardar</button>
+
+      <!-- Navigation Tabs -->
+      <div class="profile-nav-tabs">
+        <button type="button" class="profile-tab-btn active" data-tab="tabProfileOverview">
+          <i data-lucide="id-card" style="width: 15px; height: 15px;"></i> Información General
+        </button>
+        <button type="button" class="profile-tab-btn" data-tab="tabProfileSecurity">
+          <i data-lucide="shield" style="width: 15px; height: 15px;"></i> Seguridad y Clave
+        </button>
+        <button type="button" class="profile-tab-btn" data-tab="tabProfileWhatsApp">
+          <i data-lucide="message-square" style="width: 15px; height: 15px;"></i> WhatsApp y Alertas
+        </button>
+      </div>
+
+      <div class="modal-body" style="padding: 1.25rem;">
+        <!-- TAB 1: INFORMACIÓN GENERAL -->
+        <div class="profile-tab-pane active" id="tabProfileOverview">
+          <div class="profile-hero-banner">
+            <div class="profile-avatar-circle" id="profileAvatarLetter">U</div>
+            <div class="profile-hero-info">
+              <h3 class="profile-hero-username">
+                <span id="profileUsername">-</span>
+              </h3>
+              <div class="profile-badges-row">
+                <span class="profile-role-pill" id="profileRole">RESELLER</span>
+                <span style="font-size: 0.72rem; color: #10b981; background: rgba(16, 185, 129, 0.15); padding: 3px 8px; border-radius: 999px; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                  <i data-lucide="check-circle-2" style="width: 11px; height: 11px;"></i> Cuenta Activa
+                </span>
+              </div>
+            </div>
           </div>
-          
-          <ul id="profPwdChecklist" style="list-style: none; padding: 0; margin: 0; font-size: 0.75rem; color: #64748b;">
-            <li id="profChkLength" style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;"><i data-lucide="x-circle" style="width:12px; height:12px; color: #ef4444;"></i> Mínimo 6 caracteres</li>
-            <li id="profChkUpper" style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;"><i data-lucide="x-circle" style="width:12px; height:12px; color: #ef4444;"></i> Al menos 1 mayúscula</li>
-            <li id="profChkSeq" style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;"><i data-lucide="x-circle" style="width:12px; height:12px; color: #ef4444;"></i> Sin repeticiones obvias (111, 123)</li>
-            <li id="profChkMatch" style="display: flex; align-items: center; gap: 4px;"><i data-lucide="x-circle" style="width:12px; height:12px; color: #ef4444;"></i> Las contraseñas coinciden</li>
-          </ul>
+
+          <div class="profile-data-grid">
+            <div class="profile-data-card">
+              <div class="data-label"><i data-lucide="hash" style="width: 13px; height: 13px; color: #38bdf8;"></i> ID de Cliente</div>
+              <div class="data-value" id="profileUserId" style="font-family: 'Fira Code', monospace; color: #a5b4fc;">-</div>
+            </div>
+            <div class="profile-data-card">
+              <div class="data-label"><i data-lucide="mail" style="width: 13px; height: 13px; color: #38bdf8;"></i> Correo Electrónico</div>
+              <div class="data-value" id="profileEmail" style="color: #e2e8f0;">-</div>
+            </div>
+            <div class="profile-data-card">
+              <div class="data-label"><i data-lucide="phone" style="width: 13px; height: 13px; color: #38bdf8;"></i> Teléfono Vinculado</div>
+              <div class="data-value" id="profilePhoneDisplay" style="font-family: 'Fira Code', monospace; color: #34d399;">-</div>
+            </div>
+            <div class="profile-data-card">
+              <div class="data-label"><i data-lucide="wallet" style="width: 13px; height: 13px; color: #38bdf8;"></i> Saldo Disponible</div>
+              <div class="data-value" id="profileCreditsDisplay" style="color: #38bdf8; font-weight: 800;">$0.00 MXN</div>
+            </div>
+          </div>
+
+          <div style="background: rgba(56, 189, 248, 0.05); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 10px; padding: 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 8px; color: #cbd5e1; font-size: 0.8rem;">
+              <i data-lucide="shield-check" style="width: 18px; height: 18px; color: #38bdf8;"></i>
+              <span>¿Necesitas modificar tus datos de acceso o teléfono?</span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" class="btn btn-secondary btn-small" id="btnGoSecurityTab" style="font-size: 0.75rem; padding: 4px 10px;">Cambiar Clave</button>
+              <button type="button" class="btn btn-secondary btn-small" id="btnGoWhatsAppTab" style="font-size: 0.75rem; padding: 4px 10px;">WhatsApp</button>
+            </div>
+          </div>
         </div>
-        
-        <h3 style="margin: 10px 0 0 0; font-size: 1rem; color: #4ade80; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">Actualizar WhatsApp</h3>
-        <div class="input-group">
-          <label>Contraseña Actual (Requerida)</label>
-          <input type="password" id="inputCurrentPasswordPhone" placeholder="Tu contraseña actual" style="width: 100%; margin-bottom: 8px;">
-          
-          <label>Nuevo Número (Ej. 522221234567)</label>
-          <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
-            <input type="text" id="inputNewPhone" placeholder="Escribe tu nuevo número" style="flex: 1;">
-            <button type="button" class="btn btn-primary" id="btnSaveNewPhone" style="white-space: nowrap;">Guardar</button>
+
+        <!-- TAB 2: SEGURIDAD Y CLAVE -->
+        <div class="profile-tab-pane" id="tabProfileSecurity">
+          <div class="profile-section-box">
+            <h4 class="profile-section-title" style="color: #facc15;">
+              <i data-lucide="key-round" style="width: 16px; height: 16px;"></i> Cambiar Contraseña
+            </h4>
+            <div class="input-group">
+              <label>Contraseña Actual (Requerida)</label>
+              <input type="password" id="inputCurrentPasswordPwd" placeholder="Ingresa tu contraseña actual" style="width: 100%; margin-bottom: 10px;">
+              
+              <label>Nueva Contraseña (min. 6 chars y 1 mayúscula)</label>
+              <input type="password" id="inputNewPassword" placeholder="Nueva contraseña segura" style="width: 100%; margin-bottom: 10px;">
+              
+              <label>Confirmar Nueva Contraseña</label>
+              <input type="password" id="inputConfirmNewPassword" placeholder="Repite la nueva contraseña" style="width: 100%; margin-bottom: 12px;">
+              
+              <ul id="profPwdChecklist" style="list-style: none; padding: 10px; margin: 0 0 14px 0; font-size: 0.76rem; color: #94a3b8; background: rgba(0, 0, 0, 0.3); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.05);">
+                <li id="profChkLength" style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;"><i data-lucide="x-circle" style="width:13px; height:13px; color: #ef4444;"></i> Mínimo 6 caracteres</li>
+                <li id="profChkUpper" style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;"><i data-lucide="x-circle" style="width:13px; height:13px; color: #ef4444;"></i> Al menos 1 mayúscula</li>
+                <li id="profChkSeq" style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;"><i data-lucide="x-circle" style="width:13px; height:13px; color: #ef4444;"></i> Sin repeticiones obvias (111, 123)</li>
+                <li id="profChkMatch" style="display: flex; align-items: center; gap: 6px;"><i data-lucide="x-circle" style="width:13px; height:13px; color: #ef4444;"></i> Las contraseñas coinciden</li>
+              </ul>
+
+              <button type="button" class="btn btn-primary" id="btnSaveNewPassword" style="width: 100%; justify-content: center;" disabled>
+                <i data-lucide="lock" style="width: 15px; height: 15px;"></i> Actualizar Contraseña
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 3: WHATSAPP Y NOTIFICACIONES -->
+        <div class="profile-tab-pane" id="tabProfileWhatsApp">
+          <div class="profile-section-box">
+            <h4 class="profile-section-title" style="color: #4ade80;">
+              <i data-lucide="smartphone" style="width: 16px; height: 16px;"></i> Vincular Número de WhatsApp
+            </h4>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0 0 14px 0; line-height: 1.4;">
+              Este número se usa para enviarte notificaciones de tus pedidos completados y para identificarte cuando interactúes con el Bot de WhatsApp de MegaUnlockPhone.
+            </p>
+            <div class="input-group">
+              <label>Contraseña Actual (Para confirmar el cambio)</label>
+              <input type="password" id="inputCurrentPasswordPhone" placeholder="Tu contraseña actual" style="width: 100%; margin-bottom: 10px;">
+              
+              <label>Nuevo Número Telefónico (con código de país, ej. 522221234567)</label>
+              <input type="text" id="inputNewPhone" placeholder="Ej. 522212345678" style="width: 100%; margin-bottom: 14px;">
+              
+              <button type="button" class="btn btn-primary" id="btnSaveNewPhone" style="width: 100%; justify-content: center; background: linear-gradient(90deg, #10b981, #059669);">
+                <i data-lucide="check" style="width: 15px; height: 15px;"></i> Guardar y Vincular WhatsApp
+              </button>
+            </div>
           </div>
         </div>
       </div>

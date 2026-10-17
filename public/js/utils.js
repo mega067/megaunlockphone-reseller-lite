@@ -68,9 +68,19 @@ window.AppUtils = {
       return `<span style="color: var(--secondary-color); font-weight: 600;">${p1}:</span> <span style="color: #10b981;">${p2}</span>`;
     });
 
-    // Detect URLs and make them clickable
-    const urlRegex = /(https?:\/\/[^\s<]+)/g;
-    safeText = safeText.replace(urlRegex, '<a href="$1" target="_blank" style="color: #00f0ff; text-decoration: underline;">$1</a>');
+    // Detect URLs (including Dhru split 'https: //', www, and common TLDs) and make them clickable
+    const urlRegex = /(https?:\s*\/\/[^\s<]+|https?:\/\/[^\s<]+|www\.[a-zA-Z0-9-]+\.[^\s<]+|(?:[a-zA-Z0-9-]+\.)+(?:com|net|org|mx|io|app|dev)(?:\/[^\s<]*)?)/gi;
+    safeText = safeText.replace(urlRegex, (matched) => {
+      let trailing = '';
+      const trailMatch = matched.match(/[.,;:)]+$/);
+      if (trailMatch) {
+        trailing = trailMatch[0];
+        matched = matched.slice(0, -trailing.length);
+      }
+      let cleanHref = matched.replace(/\s+/g, '');
+      if (!/^https?:\/\//i.test(cleanHref)) cleanHref = 'https://' + cleanHref;
+      return `<a href="${cleanHref}" target="_blank" rel="noopener noreferrer" class="auto-detected-link" style="color: #00f0ff; text-decoration: underline; word-break: break-all; font-weight: 600;"><i data-lucide="external-link" style="width: 12px; height: 12px; display: inline-block; vertical-align: middle; margin-right: 3px;"></i>${matched}</a>${trailing}`;
+    });
 
     return safeText;
   },

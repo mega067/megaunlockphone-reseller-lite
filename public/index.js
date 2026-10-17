@@ -723,9 +723,19 @@ function renderOrderHistory() {
       return `<span style="color: var(--secondary-color); font-weight: 600;">${p1}:</span> <span style="color: #10b981;">${p2}</span>`;
     });
 
-    // Detect URLs and make them clickable
-    const urlRegex = /(https?:\/\/[^\s<]+)/g;
-    safeText = safeText.replace(urlRegex, '<a href="$1" target="_blank" style="color: #00f0ff; text-decoration: underline;">$1</a>');
+    // Detect URLs (including Dhru split 'https: //', www, and common TLDs) and make them clickable
+    const urlRegex = /(https?:\s*\/\/[^\s<]+|https?:\/\/[^\s<]+|www\.[a-zA-Z0-9-]+\.[^\s<]+|(?:[a-zA-Z0-9-]+\.)+(?:com|net|org|mx|io|app|dev)(?:\/[^\s<]*)?)/gi;
+    safeText = safeText.replace(urlRegex, (matched) => {
+      let trailing = '';
+      const trailMatch = matched.match(/[.,;:)]+$/);
+      if (trailMatch) {
+        trailing = trailMatch[0];
+        matched = matched.slice(0, -trailing.length);
+      }
+      let cleanHref = matched.replace(/\s+/g, '');
+      if (!/^https?:\/\//i.test(cleanHref)) cleanHref = 'https://' + cleanHref;
+      return `<a href="${cleanHref}" target="_blank" rel="noopener noreferrer" class="auto-detected-link" style="color: #00f0ff; text-decoration: underline; word-break: break-all; font-weight: 600;"><i data-lucide="external-link" style="width: 12px; height: 12px; display: inline-block; vertical-align: middle; margin-right: 3px;"></i>${matched}</a>${trailing}`;
+    });
 
     return safeText;
   }
@@ -943,11 +953,12 @@ function renderOrderHistory() {
       : `<strong class="order-cost-val" style="color: #34d399;">$${costValue.toFixed(2)}</strong>`;
 
     trHeader.innerHTML = `
-      <td>
-        <button type="button" class="btn-expand-row">+</button>
-        <span class="product-id" title="ID de Orden" style="font-weight: bold; color: ${item.orderId ? 'var(--text-primary)' : 'var(--text-muted)'};">
+      <td style="white-space: nowrap;">
+        <button type="button" class="btn-expand-row" title="Clic para expandir">+</button>
+        <span class="product-id" title="ID de Orden: Clic en la fila para expandir detalles" style="font-weight: bold; color: ${item.orderId ? 'var(--text-primary)' : 'var(--text-muted)'};">
           ${item.orderId ? escapeHtml(item.orderId) : '[Sin ID]'}
         </span>
+        <span class="expand-hint-badge" title="Clic en la fila para ver detalles"><i data-lucide="chevron-down" style="width: 11px; height: 11px;"></i> Detalle</span>
       </td>
       <td>
         <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
@@ -1033,23 +1044,41 @@ function renderOrderHistory() {
     // Hook click event
     trHeader.addEventListener('click', (e) => {
       // Expand row on click anywhere
+      if (e.target.closest('a') || e.target.closest('.btn-copy-raw') || e.target.closest('.btn-ticket') || e.target.closest('.btn-refund') || e.target.closest('.btn-delete-single-order')) {
+        return; // Don't collapse if clicking buttons/links
+      }
       
       const detailsRow = document.getElementById(`details_row_${item.id}`);
       const btnExpand = trHeader.querySelector('.btn-expand-row');
+      const hintBadge = trHeader.querySelector('.expand-hint-badge');
       
       const isHidden = detailsRow.classList.contains('hidden');
       if (isHidden) {
         detailsRow.classList.remove('hidden');
-        btnExpand.textContent = '-';
-        btnExpand.style.background = 'var(--status-offline)';
-        btnExpand.style.color = '#fff';
-        btnExpand.style.borderColor = 'var(--status-offline)';
+        trHeader.classList.add('row-expanded');
+        if (btnExpand) {
+          btnExpand.textContent = '-';
+          btnExpand.style.background = 'var(--status-offline)';
+          btnExpand.style.color = '#fff';
+          btnExpand.style.borderColor = 'var(--status-offline)';
+        }
+        if (hintBadge) {
+          hintBadge.innerHTML = `<i data-lucide="chevron-up" style="width: 11px; height: 11px;"></i> Cerrar`;
+          if (window.lucide) window.lucide.createIcons({ root: hintBadge });
+        }
       } else {
         detailsRow.classList.add('hidden');
-        btnExpand.textContent = '+';
-        btnExpand.style.background = 'rgba(34, 211, 238, 0.1)';
-        btnExpand.style.color = '#22d3ee';
-        btnExpand.style.borderColor = 'rgba(34, 211, 238, 0.3)';
+        trHeader.classList.remove('row-expanded');
+        if (btnExpand) {
+          btnExpand.textContent = '+';
+          btnExpand.style.background = 'rgba(34, 211, 238, 0.1)';
+          btnExpand.style.color = '#22d3ee';
+          btnExpand.style.borderColor = 'rgba(34, 211, 238, 0.3)';
+        }
+        if (hintBadge) {
+          hintBadge.innerHTML = `<i data-lucide="chevron-down" style="width: 11px; height: 11px;"></i> Detalle`;
+          if (window.lucide) window.lucide.createIcons({ root: hintBadge });
+        }
       }
     });
 
