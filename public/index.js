@@ -972,6 +972,7 @@ function renderOrderHistory() {
 
     // Display CODE result matching screenshot under CODIGO column
     let rawString = String(item.statusText || item.msg || '');
+    let strippedText = rawString.replace(/<br\s*\/?>/gi, ' ').replace(/<\/div>/gi, ' ').replace(/<[^>]*>?/gm, '').replace(/\s+/g, ' ').trim();
     let displayCodeContent = strippedText;
     if (displayCodeContent.length > 55) {
       displayCodeContent = displayCodeContent.substring(0, 52) + '...';
