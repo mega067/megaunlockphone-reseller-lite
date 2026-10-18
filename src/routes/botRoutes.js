@@ -62,5 +62,35 @@ router.post('/queue-status', requireBotSecretOnly, (req, res) => {
   res.json({ success: true, pendingMessages: pending });
 });
 
+// Diagnóstico directo a proveedores desde el proceso Web (IP http22: 185.31.41.11)
+router.post('/test-dhru', requireBotSecretOnly, async (req, res) => {
+  const { getServerSettings, callGsmThemeApi, buildTargetUrl } = require('../helpers');
+  const serverId = req.body.serverId || req.headers['x-server-id'] || '3';
+  const action = req.body.action || 'accountinfo';
+  const settingsDb = readDB('settings.json');
+  const settings = getServerSettings(settingsDb, serverId);
+
+  if (!settings) return res.status(400).json({ error: 'Configuración no encontrada para servidor ' + serverId });
+
+  const targetUrl = buildTargetUrl(settings.endpoint);
+  try {
+    const apiRes = await callGsmThemeApi(targetUrl, action, req.body.params || {}, settings.username, settings.apiaccesskey);
+    return res.json({
+      success: true,
+      serverId,
+      action,
+      targetUrl,
+      username: settings.username,
+      data: apiRes.data
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      error: err.message,
+      data: err.response?.data || null
+    });
+  }
+});
+
 module.exports = router;
 

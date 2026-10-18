@@ -108,15 +108,29 @@ function setUserCredit(user, serverId, amount) {
   else user.credits_1 = parseFloat(amount);
 }
 
-// GSM Theme API Caller
+// GSM Theme / Dhru Fusion API Caller
 async function callGsmThemeApi(targetUrl, action, parameters, username, apiaccesskey) {
-  const jsonParams = parameters ? Buffer.from(JSON.stringify(parameters)).toString('base64') : '';
+  let paramValue = '';
+  if (typeof parameters === 'string') {
+    paramValue = parameters;
+  } else if (parameters && typeof parameters === 'object') {
+    if (parameters.rawXml) {
+      paramValue = parameters.rawXml;
+    } else if (parameters.ID && !parameters.parameters) {
+      paramValue = `<PARAMETERS><ID>${parameters.ID}</ID></PARAMETERS>`;
+    } else {
+      paramValue = Buffer.from(JSON.stringify(parameters)).toString('base64');
+    }
+  }
+
   const params = new URLSearchParams();
   params.append('username', username);
   params.append('apiaccesskey', apiaccesskey);
   params.append('action', action);
   params.append('requestformat', 'JSON');
-  params.append('parameters', jsonParams);
+  if (paramValue) {
+    params.append('parameters', paramValue);
+  }
 
   const res = await axios.post(targetUrl, params.toString(), {
     headers: { 
