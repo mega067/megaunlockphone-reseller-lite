@@ -267,8 +267,8 @@ module.exports = function(app, deps) {
       writeDB('recharges.json', recharges);
 
       try {
-        const wsettings = readDB('data/whatsapp_settings.json') || {};
-        if (wsettings.enabled) {
+        const wsettings = readDB('whatsapp_settings.json') || {};
+        if (wsettings.enabled !== false) {
           const userPhone = users[userIndex].phone || userId;
           enqueueWhatsApp('private', `✅ Tu recarga de *$${requestedAmount}* mediante SPEI (Rastreo: ${trackingNumber}) ha sido confirmada. Ya tienes el saldo en tu cuenta.`, userPhone);
           

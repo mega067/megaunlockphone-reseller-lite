@@ -1,4 +1,6 @@
 const axios = require('axios');
+const https = require('https');
+const ipv4Agent = new https.Agent({ family: 4, keepAlive: true });
 
 const SERVER_DISPLAY_NAMES = { '1': '⚡ MEGA-SERVER', '2': '🛡 ALPHA-SERVER', '3': '🔱 OMEGA-SERVER' };
 
@@ -115,10 +117,6 @@ async function callGsmThemeApi(targetUrl, action, parameters, username, apiacces
   params.append('action', action);
   params.append('requestformat', 'JSON');
   params.append('parameters', jsonParams);
-
-  const http = require('http');
-  const https = require('https');
-  const ipv4Agent = new https.Agent({ family: 4 });
 
   const res = await axios.post(targetUrl, params.toString(), {
     headers: { 
