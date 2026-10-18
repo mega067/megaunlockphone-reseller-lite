@@ -463,6 +463,53 @@ h1, h2, h3, h4 { color: var(--text-primary); font-family: var(--font-display); f
 .category-tile:hover::before { opacity: 1; }
 .category-tile i, .category-tile svg { font-size: 2.5rem; width: 48px; height: 48px; color: var(--secondary-color); z-index: 2; transition: transform 0.3s ease, color 0.3s ease; }
 .category-tile:hover i, .category-tile:hover svg { transform: scale(1.12); color: var(--primary-color); }
+
+/* Category Icon & Custom Logo Wrapper */
+.category-icon-wrapper {
+  position: relative;
+  z-index: 2;
+  width: 72px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  background: radial-gradient(circle at 50% 35%, rgba(14, 165, 233, 0.18), rgba(15, 23, 42, 0.6));
+  border: 1px solid rgba(14, 165, 233, 0.28);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.12);
+  padding: 10px;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  margin-bottom: 4px;
+}
+
+.category-icon-wrapper.has-custom-logo {
+  background: radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.1), rgba(15, 23, 42, 0.8));
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 8px;
+}
+
+.category-tile:hover .category-icon-wrapper {
+  transform: translateY(-4px) scale(1.06);
+  border-color: #38bdf8;
+  box-shadow: 0 12px 28px rgba(14, 165, 233, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.25);
+  background: radial-gradient(circle at 50% 35%, rgba(14, 165, 233, 0.28), rgba(15, 23, 42, 0.7));
+}
+
+.category-custom-img {
+  width: 100%;
+  height: 100%;
+  max-width: 56px;
+  max-height: 56px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5));
+  transition: transform 0.3s ease, filter 0.3s ease;
+}
+
+.category-tile:hover .category-custom-img {
+  transform: scale(1.08);
+  filter: drop-shadow(0 6px 14px rgba(56, 189, 248, 0.4));
+}
+
 .category-tile h3 { font-size: 1.15rem; color: var(--text-primary); margin: 0; z-index: 2; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; word-break: break-word; overflow-wrap: break-word; line-height: 1.4; padding: 0 10px; }
 .category-tile .category-count { background: rgba(0, 240, 255, 0.1); border: 1px solid rgba(0, 240, 255, 0.25); color: var(--secondary-color); padding: 0.3rem 0.85rem; border-radius: var(--radius-full); font-size: 0.85rem; font-weight: 600; z-index: 2; }
 

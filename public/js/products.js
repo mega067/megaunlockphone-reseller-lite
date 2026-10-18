@@ -471,7 +471,11 @@ function renderProducts(products, stayOnCurrentView = false) {
     let iconHtml = '';
     
     if (customLogo) {
-       iconHtml = `<img src="${escapeHtml(customLogo)}" alt="${escapeHtml(groupName)}" style="width: 48px; height: 48px; object-fit: contain; margin-bottom: 15px;">`;
+       iconHtml = `
+         <div class="category-icon-wrapper has-custom-logo">
+           <img src="${escapeHtml(customLogo)}" alt="${escapeHtml(groupName)}" class="category-custom-img" loading="lazy" onerror="this.parentElement.classList.remove('has-custom-logo'); this.parentElement.innerHTML='<i data-lucide=\\'layers\\'></i>'; if(window.lucide) window.lucide.createIcons();">
+         </div>
+       `;
     } else {
        let icon = 'layers';
        // Normalize group name: remove emojis, convert to lowercase
@@ -491,7 +495,11 @@ function renderProducts(products, stayOnCurrentView = false) {
        else if (gn.includes('tool') || gn.includes('schematic') || gn.includes('wuxinji') || gn.includes('refox')) icon = 'wrench';
        else if (gn.includes('licencia') || gn.includes('activa') || gn.includes('key')) icon = 'key';
        
-       iconHtml = `<i data-lucide="${icon}"></i>`;
+       iconHtml = `
+         <div class="category-icon-wrapper">
+           <i data-lucide="${icon}"></i>
+         </div>
+       `;
     }
     
     let hotBadgeHtml = isHot ? '<span class="hot-badge">🔥 HOT</span>' : '';

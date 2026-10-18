@@ -176,10 +176,22 @@ h1, h2, h3, h4 {
   transform: translateY(-1px) scale(0.98);
 }
 
-.category-card .category-icon {
+.category-card .category-icon,
+.category-tile .category-icon-wrapper {
   background: linear-gradient(135deg, #d3ecfd, #bae2fc) !important;
   border: 1px solid rgba(14, 165, 233, 0.45) !important;
   color: #0284c7 !important;
+}
+
+body.dark-mode .category-tile .category-icon-wrapper {
+  background: radial-gradient(circle at 50% 35%, rgba(14, 165, 233, 0.22), rgba(15, 23, 42, 0.75)) !important;
+  border: 1px solid rgba(14, 165, 233, 0.35) !important;
+  color: #38bdf8 !important;
+}
+
+body.dark-mode .category-tile .category-icon-wrapper.has-custom-logo {
+  background: radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.08), rgba(15, 23, 42, 0.85)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
 }
 
 .category-card .category-name {
