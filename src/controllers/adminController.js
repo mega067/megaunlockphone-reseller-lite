@@ -20,8 +20,10 @@ exports.getUsers = (req, res) => {
      const credits2 = getUserCredit(u, '2');
      const credits3 = getUserCredit(u, '3');
      
-     // Check if bot is linked
-     const linkedBot = Object.keys(wUsers).some(key => wUsers[key] === u.id);
+     // Check if bot is linked (either in WhatsAppLinks table or auto-linked by verified phone)
+     const isExplicitlyLinked = Object.keys(wUsers).some(key => wUsers[key] === u.id);
+     const hasCleanPhone = !!(u.phone && String(u.phone).replace(/\D/g, '').length >= 10);
+     const linkedBot = isExplicitlyLinked || hasCleanPhone;
      
      return { 
        id: u.id, 
@@ -687,18 +689,20 @@ exports.notifyUnlinkedBot = (req, res) => {
     if (cleanPhone.length === 10) cleanPhone = '52' + cleanPhone;
     if (cleanPhone.length < 10) continue;
 
-    const message = `🤖 *¡Hola ${user.username}! Notificación de MegaUnlockPhone*\n\n` +
-      `Detectamos que tu cuenta aún *no está vinculada* con nuestro Bot Oficial de WhatsApp.\n\n` +
-      `⚡ *Beneficios de vincular tu cuenta:*\n` +
-      `• Notificaciones en tiempo real cuando tus pedidos se completen o rechacen.\n` +
-      `• Consulta de saldo y estatus de órdenes al instante.\n` +
-      `• Seguridad y rescate de cuenta 24/7.\n\n` +
-      `📲 *¿Cómo vincularte en 30 segundos?*\n` +
-      `1. Abre nuestro chat aquí: ${botLink}\n` +
-      `2. Envía la palabra: *hola*\n` +
-      `3. Escribe tu usuario: *${user.username}*\n` +
-      `4. Escribe tu contraseña de acceso y ¡listo!\n\n` +
-      `_Equipo de MegaUnlockPhone._`;
+    const message = `✨ *¡Hola, ${user.username}! MegaUnlockPhone Bot 2.0* 🤖✨\n━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+      `Te presentamos el nuevo asistente inteligente de *MegaUnlockPhone*.\n\n` +
+      `🔗 *¡Vinculación Automática Lista!*\n` +
+      `Ya no necesitas ingresar usuario ni contraseña. Tu WhatsApp queda conectado automáticamente a tu cuenta con tu número de teléfono registrado.\n\n` +
+      `⚡ *¿Qué puedes hacer desde este chat?*\n` +
+      `• *saldo* ➔ Consulta tu crédito en servidores al instante.\n` +
+      `• *pedir* ➔ Envía pedidos y servicios 24/7 de forma rápida.\n` +
+      `• *pedidos* ➔ Consulta el estatus de tus órdenes recientes.\n` +
+      `• *recargar* ➔ Notifica y valida tus pagos por SPEI.\n` +
+      `• *ticket <ID>* ➔ Genera recibos con tu ganancia para tus clientes.\n\n` +
+      `🔕 *Control Total de Notificaciones:*\n` +
+      `Si en algún momento no deseas recibir avisos de tus pedidos por WhatsApp, sólo escribe *desactivar* (o *silenciar*). Y para reactivarlos cuando quieras, sólo escribe *activar*.\n\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `_¡Escribe *saldo* o *hola* para comenzar a interactuar!_ 🚀`;
 
     enqueueWhatsApp('direct', message, user.id, { phoneId: `${cleanPhone}@s.whatsapp.net` });
     queuedCount++;
@@ -707,7 +711,7 @@ exports.notifyUnlinkedBot = (req, res) => {
   return res.json({
     success: true,
     count: queuedCount,
-    message: `Se enviaron ${queuedCount} invitaciones para vincular el bot de WhatsApp.`
+    message: `Se enviaron ${queuedCount} mensajes de presentación y vinculación automática.`
   });
 };
 
