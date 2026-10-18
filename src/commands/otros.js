@@ -162,6 +162,41 @@ async function otros(context) {
         return true;
     }
 
+    // COMANDOS DE SILENCIAR / ACTIVAR NOTIFICACIONES (Sin exigir barra '/')
+    const muteTriggers = ['/desactivar', '!desactivar', 'desactivar', '/silenciar', '!silenciar', 'silenciar', '/mutear', '!mutear', 'mutear', '/apagar', '!apagar', 'apagar'];
+    if (muteTriggers.includes(cmd)) {
+        if (!linkedUserId) {
+            await sock.sendMessage(remoteJid, { text: '⚠️ No tienes una cuenta vinculada para gestionar notificaciones.' });
+            return true;
+        }
+
+        wsettings.mutedUsers = wsettings.mutedUsers || {};
+        wsettings.mutedUsers[linkedUserId] = true;
+        writeDB(WHATSAPP_SETTINGS_FILE, wsettings);
+
+        await sock.sendMessage(remoteJid, { 
+            text: '🔕 *Notificaciones Desactivadas*\n━━━━━━━━━━━━━━━━━━━━━━\nYa no recibirás avisos automáticos de pedidos o recargas por este chat.\n\n💡 *¿Quieres volver a recibirlas?*\nEn cualquier momento solo escribe *activar* (o */activar*) y listo.' 
+        });
+        return true;
+    }
+
+    const unmuteTriggers = ['/activar', '!activar', 'activar', '/desmutear', '!desmutear', 'desmutear', '/encender', '!encender', 'encender'];
+    if (unmuteTriggers.includes(cmd)) {
+        if (!linkedUserId) {
+            await sock.sendMessage(remoteJid, { text: '⚠️ No tienes una cuenta vinculada para gestionar notificaciones.' });
+            return true;
+        }
+
+        wsettings.mutedUsers = wsettings.mutedUsers || {};
+        delete wsettings.mutedUsers[linkedUserId];
+        writeDB(WHATSAPP_SETTINGS_FILE, wsettings);
+
+        await sock.sendMessage(remoteJid, { 
+            text: '🔔 *Notificaciones Activadas*\n━━━━━━━━━━━━━━━━━━━━━━\n¡Listo! Recibirás avisos en tiempo real sobre el estado de tus pedidos, compras y recargas en tu WhatsApp.' 
+        });
+        return true;
+    }
+
     if (['/desvincular', '!desvincular', 'desvincular'].includes(cmd)) {
         delete wusers[remoteJid];
         writeDB(WHATSAPP_USERS_FILE, wusers);
@@ -195,25 +230,26 @@ async function otros(context) {
         return true;
     }
 
-        if (['/ayuda', '!ayuda', 'ayuda', '/comandos', '!comandos', 'comandos'].includes(cmd)) {
+    if (['/ayuda', '!ayuda', 'ayuda', '/comandos', '!comandos', 'comandos'].includes(cmd)) {
         let helpText = '🤖 *¡Hola! Soy MegaBOOT, tu asistente personal.*\n\n' +
-        'Aquí tienes mis comandos mágicos. Puedes usarlos paso a paso (escribe el comando) o en una sola línea para ir más rápido:\n\n' +
-        '🔎 *BÚSQUEDA DE SERVICIOS* (Disponibles en el grupo)\n' +
-        '📱 */bus* - Buscar servicios (interactivo)\n' +
-        '📱 */bus1 <modelo>* - Búsqueda rápida (1, 2 o 3)\n\n' +
-        '🛒 *COMPRAS* (Por Mensaje Privado)\n' +
-        '🛒 */pedir* - Hacer un pedido (interactivo)\n' +
-        '🛒 */pedir 1 <ID>* - Pedir directo\n' +
-        '🛒 */pedir 1 <ID> <IMEI>* - Súper rápido\n\n' +
-        '🔐 *MI CUENTA Y HERRAMIENTAS* (Por Mensaje Privado)\n' +
-        '💸 */recargar* - Recarga tu saldo automáticamente 24/7\n' +
-        '🧾 */ticket <ID>* - Generar un recibo para tu cliente\n' +
-        '🛍️ */pedidos* - Ver tus últimos 5 pedidos\n' +
-        '💳 */saldo* - Consultar tu saldo en los servidores\n' +
-        '👤 */perfil* - Ver los datos de tu cuenta\n' +
-        '🎧 */soporte* - Opciones de ayuda\n' +
-        '🔌 */desvincular* - Desconectar tu cuenta\n\n' +
-        '_🔔 ¡Te enviaré un mensajito en cuanto tus pedidos cambien de estado!_';
+        'Aquí tienes mis comandos útiles. ¡Puedes escribirlos con o sin barra (/), como te sea más cómodo!\n\n' +
+        '🔎 *BÚSQUEDA DE SERVICIOS*\n' +
+        '📱 *buscar* (o /bus) - Buscar servicios en catálogo\n' +
+        '📱 *bus1 <modelo>* - Búsqueda rápida en Servidor 1\n\n' +
+        '🛒 *COMPRAS Y PEDIDOS* (Chat Privado)\n' +
+        '🛒 *pedir* (o /pedir) - Hacer un pedido interactivo\n' +
+        '🛒 *pedir 1 <ID> <IMEI>* - Pedido express directo\n' +
+        '🛍️ *pedidos* - Ver tus últimos pedidos\n\n' +
+        '🔐 *MI CUENTA Y AJUSTES* (Chat Privado)\n' +
+        '💳 *saldo* - Consultar tu saldo disponible\n' +
+        '💸 *recargar* - Recargas automáticas 24/7\n' +
+        '🧾 *ticket <ID>* - Generar recibo para tu cliente\n' +
+        '👤 *perfil* - Ver datos de tu cuenta\n' +
+        '🔕 *desactivar* (o silenciar) - Apagar avisos de WhatsApp\n' +
+        '🔔 *activar* - Encender avisos de WhatsApp\n' +
+        '🔌 *desvincular* - Desconectar tu cuenta\n' +
+        '🎧 *soporte* - Contacto directo\n\n' +
+        '_✨ Vinculación automática: Tu WhatsApp se conecta a tu cuenta sin necesidad de contraseñas si tu teléfono coincide._';
         
         if (user && user.role === 'admin') {
             helpText += '\n\n👑 *COMANDOS ADMIN:*\n' +

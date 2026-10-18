@@ -32,22 +32,27 @@ async function vincular(context) {
                 step: 'select_account', 
                 availableUsers: matchingUsers 
             };
-            let listTxt = '👋 *¡Hola! Cuentas detectadas con tu número*\n\nEncontramos más de una cuenta registrada con tu WhatsApp. ¿Cuál de ellas deseas vincular a este chat?\n\n';
+            let listTxt = '👋 *¡Hola! Cuentas encontradas con tu número*\n━━━━━━━━━━━━━━━━━━━━━━\nEncontramos más de una cuenta con tu teléfono. ¿A cuál deseas conectar este WhatsApp?\n\n';
             matchingUsers.forEach((u, idx) => {
                 listTxt += `*${idx + 1}.* 👤 Usuario: *${u.username}* (Rol: ${u.role})\n`;
             });
-            listTxt += `\n👉 Responde con el *número de la opción* (ej. 1 o 2), o escribe *cancelar*.`;
+            listTxt += `\n👉 Responde con el *número de la opción* (ej. 1 o 2). ¡No necesitas contraseña!`;
             await sock.sendMessage(remoteJid, { text: listTxt });
             return true;
         }
 
         if (matchingUsers.length === 1) {
-            sessionManager.loginSessions[remoteJid] = { 
-                step: 2, 
-                username: matchingUsers[0].username 
-            };
+            const matchedUser = matchingUsers[0];
+            // Unlink any prior session for this user ID if needed
+            Object.keys(wusers).forEach(jid => {
+                if (wusers[jid] === matchedUser.id) delete wusers[jid];
+            });
+            wusers[remoteJid] = matchedUser.id;
+            writeDB(WHATSAPP_USERS_FILE, wusers);
+
+            delete sessionManager.loginSessions[remoteJid];
             await sock.sendMessage(remoteJid, { 
-                text: `👋 ¡Hola *${matchingUsers[0].username}*!\n\n🔗 Detectamos tu cuenta registrada con este número.\n🔑 Por favor ingresa tu *contraseña* para vincularla a este WhatsApp (o escribe *cancelar*):` 
+                text: `✨ *¡Bienvenido de nuevo, ${matchedUser.username}!* ✨\n━━━━━━━━━━━━━━━━━━━━━━\n🔗 Tu WhatsApp ha sido *vinculado automáticamente* a tu cuenta de MegaUnlockPhone.\n\n📱 Ahora recibirás aquí las notificaciones de tus pedidos y recargas.\n\n💡 *Comandos disponibles:*\n• *saldo* - Ver tus créditos\n• *pedir* - Realizar un pedido\n• *pedidos* - Ver tus órdenes\n• *desactivar* - Si deseas silenciar avisos\n• *ayuda* - Ver menú completo` 
             });
             return true;
         }
@@ -67,7 +72,7 @@ async function vincular(context) {
             return true;
         }
 
-        // Selección de cuenta si hay varias asociadas al número
+        // Selección de cuenta si hay varias asociadas al número (sin contraseña requerida)
         if (session.step === 'select_account') {
             const choice = parseInt(text.trim(), 10);
             if (isNaN(choice) || choice < 1 || choice > session.availableUsers.length) {
@@ -76,9 +81,16 @@ async function vincular(context) {
             }
 
             const chosenUser = session.availableUsers[choice - 1];
-            session.username = chosenUser.username;
-            session.step = 2;
-            await sock.sendMessage(remoteJid, { text: `Has seleccionado: *${chosenUser.username}*.\n\n🔑 Por favor ingresa tu *contraseña*:` });
+            Object.keys(wusers).forEach(jid => {
+                if (wusers[jid] === chosenUser.id) delete wusers[jid];
+            });
+            wusers[remoteJid] = chosenUser.id;
+            writeDB(WHATSAPP_USERS_FILE, wusers);
+
+            delete sessionManager.loginSessions[remoteJid];
+            await sock.sendMessage(remoteJid, { 
+                text: `✅ *¡Cuenta vinculada con éxito!*\n━━━━━━━━━━━━━━━━━━━━━━\nConectado como: *${chosenUser.username}*.\n\n📱 Recibirás aquí tus notificaciones en tiempo real.\n💡 Escribe *saldo*, *pedidos* o *ayuda* para comenzar.` 
+            });
             return true;
         }
 

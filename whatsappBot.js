@@ -290,6 +290,34 @@ async function connectToWhatsApp() {
         wusers = readDB(WHATSAPP_USERS_FILE) || {};
         wsettings = readDB(WHATSAPP_SETTINGS_FILE) || { adminGroupId: null };
         
+        // Auto-vincular por número de teléfono si el remitente no está registrado aún
+        const rawDigits = remoteJid.split('@')[0].replace(/\D/g, '');
+        let isUserLinked = !!(wusers[remoteJid] || Object.keys(wusers).some(k => {
+            const kDigits = k.split('@')[0].replace(/\D/g, '');
+            return kDigits === rawDigits || kDigits.endsWith(rawDigits) || rawDigits.endsWith(kDigits);
+        }));
+
+        if (!isUserLinked && !isGroup && rawDigits.length >= 10) {
+            try {
+                const users = readDB(USERS_FILE) || [];
+                const matchingUsers = users.filter(u => {
+                    if (!u.phone) return false;
+                    const uClean = String(u.phone).replace(/\D/g, '');
+                    return uClean === rawDigits || (uClean.length >= 10 && rawDigits.endsWith(uClean.slice(-10)));
+                });
+
+                if (matchingUsers.length === 1) {
+                    const matchedUser = matchingUsers[0];
+                    wusers[remoteJid] = matchedUser.id;
+                    writeDB(WHATSAPP_USERS_FILE, wusers);
+                    isUserLinked = true;
+                    console.log(`[AUTO-LINK] WhatsApp ${remoteJid} auto-vinculado con usuario ${matchedUser.username} (${matchedUser.id})`);
+                }
+            } catch (autoLinkErr) {
+                console.error('[AUTO-LINK] Error auto-linking:', autoLinkErr);
+            }
+        }
+
         const sessionManager = require('./src/sessionManager');
         const commands = require('./src/commands/index');
 
@@ -312,16 +340,14 @@ async function connectToWhatsApp() {
         const handled = await commands.handleCommand(context);
 
         if (!handled && !isGroup && firstWord.length < 30) {
-            const rawDigits = remoteJid.split('@')[0].replace(/\D/g, '');
-            const isUserLinked = !!(wusers[remoteJid] || Object.keys(wusers).some(k => {
-                const kDigits = k.split('@')[0].replace(/\D/g, '');
-                return kDigits === rawDigits || kDigits.endsWith(rawDigits) || rawDigits.endsWith(kDigits);
-            }));
-
             if (!isUserLinked) {
-                await sock.sendMessage(remoteJid, { text: '🤖 ¡Hola! Soy el bot oficial de Mega Unlock Phone.\nPara interactuar por este medio, necesitas vincular tu cuenta.\n\nPor favor, responde escribiendo la palabra */vincular* (o *hola*) para empezar paso a paso.' });
+                await sock.sendMessage(remoteJid, { 
+                    text: '👋 ¡Hola! Soy el asistente inteligente de *MegaUnlockPhone*.\n\nPara conectarte a tu cuenta y recibir avisos de tus pedidos, escribe *vincular* (o *hola*) para activarla en segundos sin contraseñas.' 
+                });
             } else {
-                await sock.sendMessage(remoteJid, { text: '🤖 ¡Hola! Soy un bot automatizado y no entendí tu mensaje.\n\nPor favor, escribe */comandos* para ver la lista de acciones disponibles o contacta a un humano para soporte.' });
+                await sock.sendMessage(remoteJid, { 
+                    text: '🤖 No reconocí esa opción.\n\nPuedes escribir *comandos* (o */comandos*) para ver lo que puedo hacer, o escribe *soporte* si necesitas ayuda con un asesor.' 
+                });
             }
         }
 
@@ -365,14 +391,64 @@ setInterval(async () => {
                     await randomThrottleDelay();
                 }
             } else if (item.type === 'private') {
-                let wusersLocal = readDB(WHATSAPP_USERS_FILE) || {};
-                const phoneIds = Object.keys(wusersLocal).filter(key => wusersLocal[key] === item.userId);
-                for (const phoneId of phoneIds) {
-                    try {
-                        await sock.sendMessage(phoneId, { text: item.message });
-                        await randomThrottleDelay();
-                    } catch (e) {
-                        console.error(`[QUEUE] Error sending private message to ${phoneId}:`, e);
+                let wsettingsLocal = readDB(WHATSAPP_SETTINGS_FILE) || {};
+                const mutedUsers = wsettingsLocal.mutedUsers || {};
+                
+                // Si el usuario silenció o desactivó las notificaciones, no enviar
+                if (item.userId && mutedUsers[item.userId]) {
+                    console.log(`[QUEUE] Notificaciones silenciadas para usuario ${item.userId}. Omitiendo envío privado.`);
+                } else {
+                    let wusersLocal = readDB(WHATSAPP_USERS_FILE) || {};
+                    let phoneIds = Object.keys(wusersLocal).filter(key => wusersLocal[key] === item.userId);
+
+                    // Si no está vinculado en WhatsAppLinks, buscar el teléfono de su cuenta para auto-enviarle
+                    if (phoneIds.length === 0 && item.userId) {
+                        try {
+                            const users = readDB(USERS_FILE) || [];
+                            const targetUser = users.find(u => u.id === item.userId);
+                            if (targetUser && targetUser.phone) {
+                                let cleanDigits = String(targetUser.phone).replace(/\D/g, '');
+                                if (cleanDigits.length === 10) cleanDigits = '52' + cleanDigits;
+                                if (cleanDigits.length >= 10) {
+                                    phoneIds = [`${cleanDigits}@s.whatsapp.net`];
+                                }
+                            }
+                        } catch (lookupErr) {
+                            console.error('[QUEUE] Error buscando teléfono del usuario:', lookupErr);
+                        }
+                    }
+
+                    for (const phoneId of phoneIds) {
+                        try {
+                            let sent = false;
+                            // Validar JID en WhatsApp si es posible
+                            try {
+                                const [check] = await sock.onWhatsApp(phoneId) || [];
+                                if (check && check.exists && check.jid) {
+                                    await sock.sendMessage(check.jid, { text: item.message });
+                                    sent = true;
+                                }
+                            } catch (_) {}
+
+                            // Fallback móvil para México (52 -> 521)
+                            if (!sent && phoneId.startsWith('52') && !phoneId.startsWith('521')) {
+                                const fallbackJid = phoneId.replace(/^52/, '521');
+                                try {
+                                    const [checkFallback] = await sock.onWhatsApp(fallbackJid) || [];
+                                    if (checkFallback && checkFallback.exists && checkFallback.jid) {
+                                        await sock.sendMessage(checkFallback.jid, { text: item.message });
+                                        sent = true;
+                                    }
+                                } catch (_) {}
+                            }
+
+                            if (!sent) {
+                                await sock.sendMessage(phoneId, { text: item.message });
+                            }
+                            await randomThrottleDelay();
+                        } catch (e) {
+                            console.error(`[QUEUE] Error sending private message to ${phoneId}:`, e);
+                        }
                     }
                 }
             } else if (item.type === 'direct') {
