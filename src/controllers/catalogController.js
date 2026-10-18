@@ -58,12 +58,22 @@ exports.getProducts = async (req, res) => {
           paramsServer.append('action', 'serverservicelist');
           paramsServer.append('requestformat', 'JSON');
 
-          const [resImei, resServer] = await Promise.all([
+          const paramsFile = new URLSearchParams();
+          paramsFile.append('username', username);
+          paramsFile.append('apiaccesskey', apiaccesskey);
+          paramsFile.append('action', 'fileservicelist');
+          paramsFile.append('requestformat', 'JSON');
+
+          const [resImei, resServer, resFile] = await Promise.all([
             axios.post(targetUrl, paramsImei.toString(), {
               headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'Dhru-Fusion-Web-Client/1.0' },
               timeout: 15000, httpsAgent: ipv4Agent
             }).catch(e => ({ data: { ERROR: e.message } })),
             axios.post(targetUrl, paramsServer.toString(), {
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'Dhru-Fusion-Web-Client/1.0' },
+              timeout: 15000, httpsAgent: ipv4Agent
+            }).catch(e => ({ data: { ERROR: e.message } })),
+            axios.post(targetUrl, paramsFile.toString(), {
               headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'Dhru-Fusion-Web-Client/1.0' },
               timeout: 15000, httpsAgent: ipv4Agent
             }).catch(e => ({ data: { ERROR: e.message } }))
@@ -90,6 +100,21 @@ exports.getProducts = async (req, res) => {
                  mergedList[g].SERVICES = { ...mergedList[g].SERVICES, ...serverList[g].SERVICES };
               } else {
                  mergedList[g] = serverList[g];
+              }
+            }
+            hasSuccess = true;
+          }
+
+          if (resFile.data && resFile.data.SUCCESS && resFile.data.SUCCESS[0] && resFile.data.SUCCESS[0].LIST) {
+            const fileList = resFile.data.SUCCESS[0].LIST;
+            for (const g in fileList) {
+              for (const s in fileList[g].SERVICES || {}) {
+                fileList[g].SERVICES[s]._SERVICE_TYPE = 'FILE';
+              }
+              if (mergedList[g]) {
+                 mergedList[g].SERVICES = { ...mergedList[g].SERVICES, ...fileList[g].SERVICES };
+              } else {
+                 mergedList[g] = fileList[g];
               }
             }
             hasSuccess = true;
