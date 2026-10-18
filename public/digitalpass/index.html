@@ -1790,42 +1790,61 @@
 
   <!-- WhatsApp Bot Modal -->
   <div class="modal-overlay hidden" id="whatsappBotModal" style="z-index: 9999;">
-    <div class="modal-card" style="max-width: 500px; width: 95%;">
+    <div class="modal-card" style="max-width: 520px; width: 95%;">
       <div class="modal-header">
         <div class="modal-title-area">
           <i data-lucide="message-circle" style="color: #25D366; width: 24px; height: 24px;"></i>
-          <h2 class="modal-title">Bot de WhatsApp</h2>
+          <h2 class="modal-title">MegaBOOT • Asistente Oficial 24/7</h2>
         </div>
         <button type="button" class="btn-icon" id="btnCloseWhatsappBotModal">
           <i data-lucide="x"></i>
         </button>
       </div>
       <div class="modal-body" style="text-align: center;">
-        <h3 style="color: white; margin-bottom: 0.5rem;">¡Conecta tu cuenta con nuestro Bot! 🤖</h3>
-        <p style="color: #cbd5e1; font-size: 0.95rem; margin-bottom: 1.5rem; line-height: 1.5;">
-          Recibe notificaciones automáticas cuando tus pedidos sean procesados o rechazados. ¡Todo sin salir de WhatsApp!
+        <h3 style="color: white; margin-bottom: 0.5rem;">¡Tu WhatsApp conectado automáticamente! 🤖✨</h3>
+        <p style="color: #cbd5e1; font-size: 0.95rem; margin-bottom: 1.25rem; line-height: 1.5;">
+          Recibe notificaciones en tiempo real cuando tus pedidos se completen, consulta saldo o envía servicios sin necesidad de contraseñas.
         </p>
 
-        <div style="background: rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem;">
-          <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 0.5rem; text-transform: uppercase;">Número Oficial del Bot</p>
-          <div style="font-size: 1.8rem; font-weight: 800; color: #25D366; letter-spacing: 2px; margin-bottom: 1rem;">
+        <div style="background: rgba(37, 211, 102, 0.08); border: 1px solid rgba(37, 211, 102, 0.25); padding: 1.25rem; border-radius: 14px; margin-bottom: 1.25rem;">
+          <p style="color: #94a3b8; font-size: 0.8rem; margin-bottom: 0.3rem; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Número Oficial del Bot</p>
+          <div style="font-size: 1.7rem; font-weight: 800; color: #25D366; letter-spacing: 1.5px; margin-bottom: 0.9rem;">
             +52 783 147 5482
           </div>
           
-          <a href="https://wa.me/527831475482?text=hola" target="_blank" class="btn btn-primary" style="background: #25D366; color: #000; border: none; width: 100%; font-weight: bold; font-size: 1rem; padding: 0.8rem;">
+          <a href="https://wa.me/527831475482?text=hola" target="_blank" class="btn btn-primary" style="background: #25D366; color: #000; border: none; width: 100%; font-weight: 800; font-size: 1rem; padding: 0.8rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
             <i data-lucide="message-circle" style="color: #000;"></i>
-            Abrir Chat en WhatsApp
+            Abrir Chat con el Bot
           </a>
         </div>
 
-        <div style="text-align: left; background: rgba(0,0,0,0.3); padding: 1.2rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
-          <h4 style="color: #e2e8f0; margin-bottom: 0.8rem; font-size: 1rem;"><i data-lucide="info" style="width: 16px; height: 16px; display: inline-block; vertical-align: middle; margin-right: 5px;"></i> ¿Cómo iniciar sesión?</h4>
-          <ol style="color: #cbd5e1; font-size: 0.9rem; line-height: 1.6; padding-left: 1.2rem; margin: 0;">
-            <li style="margin-bottom: 0.5rem;">Abre el chat con el bot haciendo clic en el botón verde.</li>
-            <li style="margin-bottom: 0.5rem;">Escribe <strong>hola</strong> y envíalo.</li>
-            <li style="margin-bottom: 0.5rem;">El bot te pedirá tu <strong>Usuario</strong>. Ingrésalo exactamente como accedes aquí.</li>
-            <li>Luego te pedirá tu <strong>Contraseña</strong>. Al enviarla, ¡quedarás vinculado!</li>
-          </ol>
+        <div style="text-align: left; background: rgba(15, 23, 42, 0.65); padding: 1.2rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; gap: 0.85rem;">
+          <div>
+            <h4 style="color: #38bdf8; margin: 0 0 0.35rem; font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">
+              <i data-lucide="zap" style="width: 16px; height: 16px; color: #38bdf8;"></i> Vinculación Instantánea (Sin Logins)
+            </h4>
+            <p style="color: #cbd5e1; font-size: 0.88rem; line-height: 1.45; margin: 0;">
+              Si registraste tu número telefónico en tu cuenta, <strong>no necesitas ingresar usuario ni contraseña</strong>. Con solo enviar un saludo como <code>hola</code> o <code>saldo</code> quedas vinculado automáticamente.
+            </p>
+          </div>
+
+          <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 0.75rem;">
+            <h4 style="color: #fbbf24; margin: 0 0 0.35rem; font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">
+              <i data-lucide="bell-off" style="width: 16px; height: 16px; color: #fbbf24;"></i> ¿Cómo silenciar o pausar notificaciones?
+            </h4>
+            <p style="color: #cbd5e1; font-size: 0.88rem; line-height: 1.45; margin: 0;">
+              Escribe <code>desactivar</code> o <code>silenciar</code> (no es necesario usar barra <code>/</code>) para dejar de recibir alertas automáticas. Para volver a recibirlas, escribe <code>activar</code> en cualquier momento.
+            </p>
+          </div>
+
+          <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 0.75rem;">
+            <h4 style="color: #4ade80; margin: 0 0 0.35rem; font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">
+              <i data-lucide="terminal" style="width: 16px; height: 16px; color: #4ade80;"></i> Comandos directos disponibles
+            </h4>
+            <p style="color: #94a3b8; font-size: 0.82rem; line-height: 1.4; margin: 0;">
+              <code>saldo</code> • <code>pedidos</code> • <code>recargar</code> • <code>ticket &lt;ID&gt;</code> • <code>ayuda</code>
+            </p>
+          </div>
         </div>
       </div>
     </div>
@@ -1938,7 +1957,7 @@
   <script src="/js/recharges.js" defer></script>
   <script src="/js/recharge.js?v=15" defer></script>
   <script src="/digitalpass/digitalpass.js?v=1" defer></script>
-  <script src="/index.js?v=33" defer></script>
+  <script src="/index.js?v=34" defer></script>
   <script src="/js/products.js?v=5" defer></script>
   <script src="/js/orders.js?v=5" defer></script>
   <script src="/js/warnings.js?v=2" defer></script>

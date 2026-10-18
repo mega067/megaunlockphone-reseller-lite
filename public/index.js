@@ -2727,22 +2727,22 @@ window.updateBotButtonStatus = function(isLinked) {
     btnWhatsappBot.innerHTML = `
       <i data-lucide="message-circle" style="width: 14px; height: 14px;"></i>
       <span style="font-weight: 700;">BOT</span>
-      <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 6px #22c55e;" title="Cuenta Vinculada con Bot WhatsApp"></span>
+      <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 6px #22c55e;" title="WhatsApp Conectado"></span>
     `;
     btnWhatsappBot.style.background = 'rgba(34, 197, 94, 0.18)';
     btnWhatsappBot.style.borderColor = 'rgba(34, 197, 94, 0.45)';
     btnWhatsappBot.style.color = '#4ade80';
-    btnWhatsappBot.title = 'Bot de WhatsApp: Vinculado ✅';
+    btnWhatsappBot.title = 'MegaBOOT 2.0: Conectado a tu cuenta (Clic para ver info y comandos)';
   } else {
     btnWhatsappBot.innerHTML = `
       <i data-lucide="message-circle" style="width: 14px; height: 14px;"></i>
       <span style="font-weight: 700;">BOT</span>
-      <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #f59e0b; box-shadow: 0 0 6px #f59e0b;" title="Cuenta No Vinculada"></span>
+      <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #38bdf8; box-shadow: 0 0 6px #38bdf8;" title="WhatsApp Bot Activo"></span>
     `;
-    btnWhatsappBot.style.background = 'rgba(245, 158, 11, 0.15)';
-    btnWhatsappBot.style.borderColor = 'rgba(245, 158, 11, 0.4)';
-    btnWhatsappBot.style.color = '#fbbf24';
-    btnWhatsappBot.title = 'Bot de WhatsApp: Sin Vincular (Clic para vincular)';
+    btnWhatsappBot.style.background = 'rgba(14, 165, 233, 0.15)';
+    btnWhatsappBot.style.borderColor = 'rgba(14, 165, 233, 0.4)';
+    btnWhatsappBot.style.color = '#38bdf8';
+    btnWhatsappBot.title = 'MegaBOOT 2.0: Clic para abrir chat y ver comandos';
   }
   if (window.lucide) window.lucide.createIcons();
 };
