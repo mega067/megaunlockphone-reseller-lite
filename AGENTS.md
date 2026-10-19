@@ -137,13 +137,18 @@ Historial reciente de versiones desplegadas en producción:
 
 | Commit Hash | Tipo | Descripción | Enlace en GitHub |
 |---|---|---|---|
+| `6450e6a` | `fix` | Botón X de cierre en esquina superior y toggle ocultar IMEI discreto | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/6450e6a) |
+| `babab4c` | `fix` | Mostrar nombre de grupo real del proveedor en modal de compra | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/babab4c) |
+| `21f33c6` | `refactor` | Tarjetas limpias sin insignias redundantes y lógica de precio atada al grupo real | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/21f33c6) |
+| `6496b5f` | `feat` | Aislamiento estricto: comisiones basadas en grupo real, custom solo visual | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/6496b5f) |
+| `ab0e38d` | `feat` | IP Whitelist con auto-binding en primera conexión y controles en Perfil | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/ab0e38d) |
+| `e5f009f` | `feat` | Documentación interactiva DHRU Fusion en Perfil y fix de solapamiento | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/e5f009f) |
 | `0889c72` | `docs` | Mapa de arquitectura completa, gestión de APIKEYS y modularidad | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/0889c72) |
 | `c6ad8e9` | `fix` | Bloqueo de bot process-aware con auto-limpieza en salida | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/c6ad8e9) |
 | `3b6572c` | `fix` | Optimización completa de vista móvil (cards, cuadrículas y botones) | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/3b6572c) |
 | `d2e0660` | `fix` | Paleta azul cielo suave del logo y presentación pulida en login | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/d2e0660) |
 | `ae07051` | `feat` | Tema claro por defecto idéntico al logo con switch a modo oscuro | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/ae07051) |
 | `072ea65` | `feat` | Carrusel con logos SVG oficiales de Streaming e Inteligencia Artificial | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/072ea65) |
-| `fca93b8` | `fix` | Filtrado estricto de productos de Streaming, IA y Cuentas en DigitalPass | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/fca93b8) |
 | `528904b` | `feat` | Implementación de ruta y portal dedicado `/digital-pass` | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/528904b) |
 | `a0f8ff0` | `feat` | Sincronización automática de órdenes en tiempo real y reembolsos | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/a0f8ff0) |
 | `9511b8d` | `fix` | Mostrar 0.00 créditos en interfaz cuando no hay sesión activa | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/9511b8d) |

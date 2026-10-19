@@ -24,22 +24,31 @@ El panel soporta múltiples servidores Dhru configurables desde `data/settings.j
 - **Servidor 2 (ALPHA-SERVER):** POPI-GSM.
 - **Servidor 3 (OMEGA-SERVER):** UnlockerFast (Catálogo masivo con cientos de servicios de Streaming, IA y herramientas).
 
-## 🚀 Nuevas Funcionalidades
-- **Arquitectura de Puente API Modular (`/api/v1/*` & `/api/v1/dhru`)**:
-  - Tu panel actúa como **proveedor puente pasivo** (cero consumo de CPU/RAM en segundo plano, activo bajo demanda).
-  - Cada cliente o revendedor puede generar su propia **API Key criptográfica (`mup_live_...`)** desde su Perfil.
-  - Almacenamiento seguro mediante hashes SHA-256 (`keyHash`) en SQLite/JSON con censura automática.
-  - **Forks Express**: Cualquier usuario que haga un *Fork* de este repositorio puede configurarlo en su `data/settings.json` apuntando a tu URL y comenzar a vender tus servicios de inmediato con sus propias ganancias.
-  - **Trazabilidad Total**: Las órdenes emitidas vía API se etiquetan como `API_BRIDGE` con su IP de origen y quedan reflejadas en el historial tanto del cliente como del panel administrador.
-- **Portal Exclusivo DigitalPass (`/digital-pass`)**: Fork desacoplado enfocado al 100% en entretenimiento digital, cuentas y herramientas de Inteligencia Artificial (ChatGPT, Gemini, Claude, Canva, Netflix, Disney+, Prime Video, Max, Spotify, etc.) con paleta de color azul cielo suave oficial, selector de tema claro/oscuro y carrusel de logos vectoriales SVG.
-- **Rediseño UI Premium y Vista Móvil Optimizada**: Ajuste responsive total para tarjetas de servicios, botones táctiles y modales limpios en smartphones sin desbordamientos de pantalla.
-- **Bot de WhatsApp Endurecido (Baileys)**:
-  - Sistema de candado inteligente por proceso (`bot.lock` con auto-limpieza al reiniciar).
-  - Pre-sincronización de presencia (`available` + `composing`) que elimina el error de "Esperando el mensaje".
-  - Cola de mensajes con throttling y reintentos exponenciales automáticos.
-- **Verificación y Rescate de Cuentas (`POST /api/verify-account`)**: Mecanismo alternativo seguro para validar y consultar cuentas activas incluso si el bot de mensajería está en mantenimiento.
-- **Rediseño UI Premium Dark & Light Mode**: Interfaz utilizando Glassmorphism, degradados modernos, banderas de servidores integradas y alertas flotantes para Notificaciones.
-- **Historial de Recargas y Deducción Segura**: Transacciones atómicas de saldo preventivas antes del despacho DHRU y auto-reembolso inmutable en caso de órdenes rechazadas.
+## 🚀 Nuevas Funcionalidades y Mejoras Arquitectónicas
+
+- **API Bridge Universal & Compatibilidad Nativa DHRU Fusion (`/api/v1/*` & `/api/v1/sX/dhru`)**:
+  - Tu panel opera como **proveedor puente pasivo transparente**: clientes externos, bots o forks pueden conectarse usando los parámetros estándar de la API de Dhru Fusion (`action=accountinfo`, `imeiservicelist`, `serverservicelist`, `fileservicelist`, `placeimeiorder`, `getimeiorder`, etc.).
+  - **Endpoints Dedicados por Servidor**:
+    - **Servidor 1 (MEGA-SERVER / Desbloqueos & Gaming)**: `POST /api/v1/s1/dhru` y REST `/api/v1/s1/*`.
+    - **Servidor 3 (OMEGA-SERVER / Software, Licencias & Herramientas)**: `POST /api/v1/s3/dhru` y REST `/api/v1/s3/*`.
+    - Endpoint genérico: `POST /api/v1/dhru` con selección vía header `X-Server-Id`.
+  - **Precios Calculados Transparentes**: El catálogo DHRU devuelto expone directamente el precio de venta final en MXN (con comisiones y tipo de cambio ya aplicados), garantizando compatibilidad 1-a-1 sin sorpresas en facturación.
+  - **Llaves API Criptográficas (`mup_live_...`)**: Generación y revocación segura con hashes SHA-256 en almacenamiento local.
+
+- **Seguridad de Lista Blanca de IPs (IP Whitelist con Auto-Binding)**:
+  - **Auto-Binding en Primera Conexión**: La primera petición realizada con una nueva API Key vincula automáticamente la IP pública del cliente a su cuenta, evitando configuraciones manuales complejas.
+  - **Gestión Completa en Perfil de Usuario**: Botones para agregar IPs manualmente, eliminar IPs existentes o resetear el auto-bind para revincular un nuevo servidor.
+  - **Soporte Detrás de Reverse Proxies**: Soporte completo para cabeceras `X-Forwarded-For` en servidores bajo Phusion Passenger / AlwaysData con `app.set('trust proxy', true)`.
+
+- **Arquitectura de Separación Estricta: Grupo Real vs. Grupo Personalizado**:
+  - **Aislamiento Financiero**: Las comisiones, markups y márgenes de ganancia (`group_markups.json`) se calculan **estrictamente sobre el grupo original del proveedor upstream** (`_ORIGINAL_GROUP`).
+  - **Organización Visual Limpia**: El grupo personalizado (`_CUSTOM_GROUP`) es exclusivo para filtrado de catálogo, navegación y estética en UI, eliminando por completo cualquier riesgo de distorsión o corrupción en precios de venta.
+
+- **Experiencia de Usuario (UI/UX) Refinada**:
+  - **Botón de Perfil Integrado**: Perfil de usuario con avatar, nombre, detalles de billeteras independientes (Server 1 y 3), gestión de API Key e historial.
+  - **Modales Despejados**: Botón "X" de cierre aislado y accesible en la esquina superior derecha; controles administrativos (como *[Admin] Ocultar IMEI*) ubicados discretamente junto a los campos respectivos sin estorbar al cliente final.
+  - **Exclusión Mutua de Secciones**: Corrección del solapamiento de pantallas al recargar saldo o consultar credenciales.
+  - **Cache-Busting Forzado (`?v=55`)**: Parámetros de versión en assets estáticos para garantizar que dispositivos móviles reciban siempre la última versión sin depender de la caché del navegador.
 
 ## 🏗️ Nueva Arquitectura Modular
 El servidor se está refactorizando en la carpeta `src/` para separar la lógica masiva de `server.js` y facilitar su mantenimiento:

@@ -62,19 +62,17 @@ function requireApiKey(req, res, next) {
   const keyHash = hashApiKey(cleanKey);
 
   const users = readDB('users.json') || [];
-  const userIndex = users.findIndex(u => {
+  const user = users.find(u => {
     if (!u.apiKeyHash && !u.apiKey) return false;
     return u.apiKeyHash === keyHash || u.apiKey === cleanKey;
   });
 
-  if (userIndex === -1) {
+  if (!user) {
     return res.status(403).json({
       SUCCESS: false,
       ERROR: [{ MESSAGE: 'API Key inválida o revocada. Genera una nueva llave desde tu Perfil de usuario.' }]
     });
   }
-
-  const user = users[userIndex];
 
   if (user.isActive === false) {
     return res.status(403).json({

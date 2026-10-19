@@ -85,6 +85,7 @@ dhru-client-web/
 │   ├── routes/                   # Definición modular de endpoints Express
 │   │   ├── accountRoutes.js      # /api/account/*
 │   │   ├── adminRoutes.js        # /api/admin/*
+│   │   ├── apiBridgeRoutes.js    # /api/v1/*, /api/v1/s1/*, /api/v1/s3/*, /api/v1/sX/dhru (DHRU Passthrough & IP Whitelist)
 │   │   ├── authRoutes.js         # /api/login, /api/register, /api/logout
 │   │   ├── botRoutes.js          # /api/bot/* (seguridad con BOT_SECRET)
 │   │   ├── catalogRoutes.js      # /api/products, /api/categories
@@ -190,6 +191,25 @@ Cliente (Web o WhatsApp) ──► POST /api/place-order
        └─ ERROR: Revertir saldo inmediatamente a la wallet
     4. Encolar notificación en whatsappQueue.js
     5. Bot envía mensaje a WhatsApp del cliente y al grupo Admin
+```
+
+### C. Flujo de API Bridge & DHRU Passthrough Gateway (`/api/v1/sX/dhru`)
+```
+Cliente Externo / Fork / Bot ──► POST /api/v1/s1/dhru (o /api/v1/s3/dhru)
+                                          │
+                                          ▼
+                             requireApiKey Middleware
+     1. Comprobar header X-API-Key o campo apiaccesskey (SHA-256 hash match)
+     2. Validar que la cuenta tenga acceso API activo (isApiEnabled)
+     3. Auto-Binding de IP: si allowedIps está vacío, registrar clientIp automáticamente
+     4. Validar que clientIp pertenezca a allowedIps (si está configurada)
+                                          │
+                                          ▼
+                             handleDhruAction Gateway
+     ├─ action=accountinfo    ──► Retorna saldo independiente (credits_1 o credits_3) en MXN
+     ├─ action=*servicelist   ──► Retorna catálogo con PRECIOS CALCULADOS transparentes
+     ├─ action=place*order    ──► Ejecuta deducción atómica y despacho upstream
+     └─ action=get*order      ──► Retorna estado actual de la orden en tiempo real
 ```
 
 ---
