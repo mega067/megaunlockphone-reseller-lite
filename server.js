@@ -16,6 +16,7 @@ const { initializeApp } = require('./src/init');
 initializeApp();
 
 const app = express();
+app.set('trust proxy', true);
 const PORT = process.env.PORT || 3000;
 const IP = process.env.IP || '::';
 

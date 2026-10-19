@@ -16,8 +16,25 @@ function hashApiKey(rawKey) {
 }
 
 /**
+ * Extrae la dirección IP real del cliente considerando proxies y cabeceras directas
+ */
+function getClientIp(req) {
+  let ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || req.ip || '';
+  if (typeof ip === 'string' && ip.includes(',')) {
+    ip = ip.split(',')[0].trim();
+  }
+  ip = String(ip).trim();
+  // Limpiar prefijo IPv6 si es IPv4 mapeada (::ffff:192.168.1.1)
+  if (ip.startsWith('::ffff:')) {
+    ip = ip.substring(7);
+  }
+  return ip;
+}
+
+/**
  * Middleware de Autenticación por API Key (Compatible con Dhru y clientes puente)
  * Soporta Header: X-API-Key, Authorization: Bearer <key>, o body: apiaccesskey/apikey
+ * Incluye validación y seteo automático de IP en la primera conexión
  */
 function requireApiKey(req, res, next) {
   let apiKey = req.headers['x-api-key'] || req.headers['x-api-token'];
@@ -45,17 +62,19 @@ function requireApiKey(req, res, next) {
   const keyHash = hashApiKey(cleanKey);
 
   const users = readDB('users.json') || [];
-  const user = users.find(u => {
+  const userIndex = users.findIndex(u => {
     if (!u.apiKeyHash && !u.apiKey) return false;
     return u.apiKeyHash === keyHash || u.apiKey === cleanKey;
   });
 
-  if (!user) {
+  if (userIndex === -1) {
     return res.status(403).json({
       SUCCESS: false,
       ERROR: [{ MESSAGE: 'API Key inválida o revocada. Genera una nueva llave desde tu Perfil de usuario.' }]
     });
   }
+
+  const user = users[userIndex];
 
   if (user.isActive === false) {
     return res.status(403).json({
@@ -73,16 +92,54 @@ function requireApiKey(req, res, next) {
     });
   }
 
+  // ==========================================
+  // GESTIÓN Y PROTECCIÓN DE IPs AUTORIZADAS
+  // ==========================================
+  const clientIp = getClientIp(req);
+  let userAllowedIps = Array.isArray(user.apiAllowedIps) ? [...user.apiAllowedIps] : [];
+  let dbNeedsSave = false;
+
+  // Auto-binding: Si el auto-bind está activo (por defecto true) y aún no hay IPs registradas,
+  // se registra automáticamente la IP del primer request como IP autorizada.
+  const isAutoBindEnabled = user.apiAutoBindIp !== false;
+  if (isAutoBindEnabled && userAllowedIps.length === 0 && clientIp && clientIp !== '127.0.0.1' && clientIp !== '::1') {
+    userAllowedIps.push(clientIp);
+    user.apiAllowedIps = userAllowedIps;
+    user.apiAutoBoundAt = new Date().toISOString();
+    dbNeedsSave = true;
+    console.log(`[API Bridge] IP auto-registrada para ${user.username}: ${clientIp}`);
+  }
+
+  // Si hay IPs en la lista blanca, verificar que la IP actual coincida con alguna de ellas
+  if (userAllowedIps.length > 0) {
+    const isIpAllowed = userAllowedIps.some(allowed => {
+      const cleanAllowed = String(allowed).trim();
+      return cleanAllowed === clientIp || cleanAllowed === '*' || (cleanAllowed === 'localhost' && (clientIp === '127.0.0.1' || clientIp === '::1'));
+    });
+
+    if (!isIpAllowed) {
+      return res.status(403).json({
+        SUCCESS: false,
+        ERROR: [{ 
+          MESSAGE: `Acceso denegado desde la IP "${clientIp}". Tu cuenta solo permite peticiones desde IPs autorizadas (${userAllowedIps.join(', ')}). Configura o agrega esta IP en tu Perfil de usuario o contacta al administrador.` 
+        }],
+        CLIENT_IP: clientIp
+      });
+    }
+  }
+
   req.user = {
     id: user.id,
     username: user.username,
     role: user.role || 'reseller',
-    isApiBridge: true
+    isApiBridge: true,
+    clientIp: clientIp
   };
 
-  // Registrar último uso (sin saturar disco)
+  // Registrar último uso e IP del cliente (sin saturar disco)
   const now = new Date().toISOString();
-  if (!user.apiKeyLastUsed || Date.now() - new Date(user.apiKeyLastUsed).getTime() > 60000) {
+  user.apiLastIp = clientIp;
+  if (!user.apiKeyLastUsed || Date.now() - new Date(user.apiKeyLastUsed).getTime() > 60000 || dbNeedsSave) {
     user.apiKeyLastUsed = now;
     writeDB('users.json', users);
   }
@@ -138,6 +195,14 @@ router.get('/user/apikey', requireAuth, (req, res) => {
     credits: {
       server1: creditS1.toFixed(2),
       server3: creditS3.toFixed(2)
+    },
+    // Configuración de Seguridad de IPs
+    security: {
+      clientIp: getClientIp(req),
+      lastIp: user.apiLastIp || null,
+      allowedIps: Array.isArray(user.apiAllowedIps) ? user.apiAllowedIps : [],
+      autoBindIp: user.apiAutoBindIp !== false,
+      autoBoundAt: user.apiAutoBoundAt || null
     },
     // Endpoints dedicados para cada servidor independiente
     server1: {
@@ -217,6 +282,104 @@ router.delete('/user/apikey/revoke', requireAuth, (req, res) => {
   res.json({
     success: true,
     message: 'API Key revocada correctamente. Todas las conexiones externas con esa llave han sido desconectadas.'
+  });
+});
+
+/**
+ * POST /api/user/apikey/ip
+ * Agrega una IP autorizada a la lista blanca del usuario
+ */
+router.post('/user/apikey/ip', requireAuth, (req, res) => {
+  const { ip } = req.body;
+  if (!ip || typeof ip !== 'string' || !ip.trim()) {
+    return res.status(400).json({ error: 'Dirección IP requerida' });
+  }
+
+  const cleanIp = ip.trim();
+  const users = readDB('users.json') || [];
+  const userIndex = users.findIndex(u => String(u.id) === String(req.user.id));
+  if (userIndex === -1) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+  let allowedIps = Array.isArray(users[userIndex].apiAllowedIps) ? users[userIndex].apiAllowedIps : [];
+  if (!allowedIps.includes(cleanIp)) {
+    allowedIps.push(cleanIp);
+  }
+  users[userIndex].apiAllowedIps = allowedIps;
+  writeDB('users.json', users);
+
+  res.json({
+    success: true,
+    message: `IP "${cleanIp}" autorizada correctamente.`,
+    allowedIps: allowedIps
+  });
+});
+
+/**
+ * DELETE /api/user/apikey/ip
+ * Elimina una IP de la lista blanca del usuario
+ */
+router.delete('/user/apikey/ip', requireAuth, (req, res) => {
+  const ipToDelete = req.body.ip || req.query.ip;
+  if (!ipToDelete) {
+    return res.status(400).json({ error: 'IP a eliminar requerida' });
+  }
+
+  const cleanIp = String(ipToDelete).trim();
+  const users = readDB('users.json') || [];
+  const userIndex = users.findIndex(u => String(u.id) === String(req.user.id));
+  if (userIndex === -1) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+  let allowedIps = Array.isArray(users[userIndex].apiAllowedIps) ? users[userIndex].apiAllowedIps : [];
+  allowedIps = allowedIps.filter(ip => ip !== cleanIp);
+  users[userIndex].apiAllowedIps = allowedIps;
+  writeDB('users.json', users);
+
+  res.json({
+    success: true,
+    message: `IP "${cleanIp}" eliminada de la lista blanca.`,
+    allowedIps: allowedIps
+  });
+});
+
+/**
+ * POST /api/user/apikey/ip/reset-auto
+ * Resetea la lista blanca y reactiva el seteo automático con la próxima conexión
+ */
+router.post('/user/apikey/ip/reset-auto', requireAuth, (req, res) => {
+  const users = readDB('users.json') || [];
+  const userIndex = users.findIndex(u => String(u.id) === String(req.user.id));
+  if (userIndex === -1) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+  users[userIndex].apiAllowedIps = [];
+  users[userIndex].apiAutoBindIp = true;
+  delete users[userIndex].apiAutoBoundAt;
+  writeDB('users.json', users);
+
+  res.json({
+    success: true,
+    message: 'Seteo automático de IP reactivado. La primera petición que realice tu cliente vinculará su IP automáticamente a tu cuenta.',
+    allowedIps: [],
+    autoBindIp: true
+  });
+});
+
+/**
+ * POST /api/user/apikey/ip/toggle-auto
+ * Activa o desactiva el modo de seteo automático de IP
+ */
+router.post('/user/apikey/ip/toggle-auto', requireAuth, (req, res) => {
+  const users = readDB('users.json') || [];
+  const userIndex = users.findIndex(u => String(u.id) === String(req.user.id));
+  if (userIndex === -1) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+  const current = users[userIndex].apiAutoBindIp !== false;
+  users[userIndex].apiAutoBindIp = !current;
+  writeDB('users.json', users);
+
+  res.json({
+    success: true,
+    message: `Seteo automático de IP ${!current ? 'activado' : 'desactivado'}.`,
+    autoBindIp: !current
   });
 });
 

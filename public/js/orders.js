@@ -928,12 +928,62 @@ async function loadUserApiKeyInfo() {
         s3Balance.textContent = `$${parseFloat(data.credits.server3 || 0).toFixed(2)} MXN`;
       }
 
+      // Render de Seguridad & Whitelist de IPs
+      renderAllowedIps(data.security);
+
       if (window.lucide) window.lucide.createIcons();
       updateForkJsonDisplay();
     }
   } catch (e) {
     console.warn('Error al cargar API Key del usuario:', e);
   }
+}
+
+let userClientIpDetected = '';
+
+function renderAllowedIps(security = {}) {
+  const container = document.getElementById('allowedIpsContainer');
+  const autoBindBadge = document.getElementById('apiAutoBindBadge');
+  if (!container) return;
+
+  const allowedIps = Array.isArray(security.allowedIps) ? security.allowedIps : [];
+  userClientIpDetected = security.clientIp || '';
+
+  if (autoBindBadge) {
+    if (security.autoBindIp) {
+      autoBindBadge.textContent = allowedIps.length === 0 ? '⚡ Auto-Seteo: Esperando 1ra Conexión' : '✅ Auto-Seteo: Vinculado';
+      autoBindBadge.style.background = 'rgba(52, 211, 153, 0.15)';
+      autoBindBadge.style.color = '#34d399';
+      autoBindBadge.style.borderColor = 'rgba(52, 211, 153, 0.3)';
+    } else {
+      autoBindBadge.textContent = 'Manual (Sin Auto-Seteo)';
+      autoBindBadge.style.background = 'rgba(148, 163, 184, 0.15)';
+      autoBindBadge.style.color = '#94a3b8';
+      autoBindBadge.style.borderColor = 'rgba(148, 163, 184, 0.3)';
+    }
+  }
+
+  if (allowedIps.length === 0) {
+    container.innerHTML = `
+      <div style="font-size: 0.74rem; color: #94a3b8; font-style: italic; background: rgba(0,0,0,0.25); border: 1px dashed rgba(255,255,255,0.1); border-radius: 6px; padding: 6px 10px; width: 100%;">
+        ⚡ Ninguna IP restringida aún. La primera petición que envíe tu Fork o Bot registrará su IP automáticamente (${userClientIpDetected || 'detectando...'}).
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = allowedIps.map(ip => {
+    const isCurrent = (ip === userClientIpDetected);
+    return `
+      <span style="display: inline-flex; align-items: center; gap: 6px; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 3px 8px; font-family: monospace; font-size: 0.75rem; color: #38bdf8;">
+        <span>${ip}</span>
+        ${isCurrent ? '<small style="color: #34d399; font-weight: 700; font-size: 0.65rem;">(Tu IP actual)</small>' : ''}
+        <button type="button" class="btn-remove-allowed-ip" data-ip="${ip}" title="Eliminar IP" style="background: transparent; border: none; color: #ef4444; cursor: pointer; padding: 0; display: inline-flex; align-items: center; margin-left: 2px;">
+          <i data-lucide="x" style="width: 12px; height: 12px;"></i>
+        </button>
+      </span>
+    `;
+  }).join('');
 }
 
 // Event delegation para los botones de pestañas de servidores del fork
@@ -1034,6 +1084,98 @@ if (btnCopyForkConfig) {
     }
   });
 }
+
+// ==========================================
+// EVENTOS PARA LISTA BLANCA DE IPs & AUTO-SETEO
+// ==========================================
+const btnAddAllowedIp = document.getElementById('btnAddAllowedIp');
+if (btnAddAllowedIp) {
+  btnAddAllowedIp.addEventListener('click', async () => {
+    const input = document.getElementById('inputAddAllowedIp');
+    const ip = (input ? input.value : '').trim();
+    if (!ip) return alert('Ingresa una dirección IP válida (ej: 189.203.28.28).');
+
+    try {
+      const res = await fetch('/api/user/apikey/ip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+        body: JSON.stringify({ ip })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        if (input) input.value = '';
+        alert(`✅ ${data.message || 'IP autorizada con éxito.'}`);
+        loadUserApiKeyInfo();
+      } else {
+        alert(`Error: ${data.error || 'No se pudo agregar la IP'}`);
+      }
+    } catch (e) {
+      alert('Error de conexión.');
+    }
+  });
+}
+
+const btnUseCurrentIp = document.getElementById('btnUseCurrentIp');
+if (btnUseCurrentIp) {
+  btnUseCurrentIp.addEventListener('click', () => {
+    const input = document.getElementById('inputAddAllowedIp');
+    if (input && userClientIpDetected) {
+      input.value = userClientIpDetected;
+      input.focus();
+    } else {
+      alert('No se detectó tu IP todavía.');
+    }
+  });
+}
+
+const btnResetAutoBindIp = document.getElementById('btnResetAutoBindIp');
+if (btnResetAutoBindIp) {
+  btnResetAutoBindIp.addEventListener('click', async () => {
+    if (!confirm('¿Deseas resetear el auto-seteo de IP?\n\nEsto vaciará las IPs autorizadas y la próxima petición que envíe tu cliente/Fork vinculará su IP automáticamente.')) return;
+
+    try {
+      const res = await fetch('/api/user/apikey/ip/reset-auto', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(`✅ ${data.message || 'Auto-seteo reactivado.'}`);
+        loadUserApiKeyInfo();
+      } else {
+        alert(`Error: ${data.error || 'No se pudo resetear'}`);
+      }
+    } catch (e) {
+      alert('Error de conexión.');
+    }
+  });
+}
+
+// Delegación de clic para eliminar IP
+document.addEventListener('click', async (e) => {
+  const btnRemove = e.target.closest('.btn-remove-allowed-ip');
+  if (btnRemove) {
+    const ip = btnRemove.getAttribute('data-ip');
+    if (!ip) return;
+    if (!confirm(`¿Eliminar la IP "${ip}" de la lista autorizada?`)) return;
+
+    try {
+      const res = await fetch('/api/user/apikey/ip', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+        body: JSON.stringify({ ip })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        loadUserApiKeyInfo();
+      } else {
+        alert(`Error: ${data.error || 'No se pudo eliminar la IP'}`);
+      }
+    } catch (e) {
+      alert('Error de conexión.');
+    }
+  }
+});
 
 // Clear History
 btnClearHistory.addEventListener('click', async () => {
