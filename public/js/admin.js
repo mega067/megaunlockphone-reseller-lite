@@ -140,9 +140,21 @@ async function loadAdminData() {
             autobackupList.innerHTML = '<p style="font-size: 0.85rem; color: var(--text-secondary);">No hay respaldos automáticos aún. Haz un movimiento de dinero para generar uno.</p>';
           } else {
             backups.forEach(b => {
-              const parts = b.filename.replace('autobackup_', '').replace('.json', '').split('_');
-              const timestamp = parts[0]; 
-              const reason = parts.slice(1).join(' ').replace(/_/g, ' ');
+              let label = 'Respaldo Automático';
+              let badgeColor = '#60a5fa';
+              let badgeBg = 'rgba(59, 130, 246, 0.15)';
+              let badgeText = 'Evento Financiero';
+
+              if (b.type === 'daily' || b.filename.startsWith('daily_backup_')) {
+                label = 'Respaldo 24h Programado';
+                badgeColor = '#34d399';
+                badgeBg = 'rgba(16, 185, 129, 0.2)';
+                badgeText = 'Diario (24h)';
+              } else if (b.filename.startsWith('autobackup_')) {
+                const parts = b.filename.replace('autobackup_', '').replace('.json', '').split('_');
+                label = parts.slice(1).join(' ').replace(/_/g, ' ') || 'Movimiento de Saldo / Cuenta';
+              }
+
               const kb = (b.size / 1024).toFixed(1);
               const localDate = new Date(b.date).toLocaleString('es-MX');
 
@@ -150,14 +162,17 @@ async function loadAdminData() {
               div.style.display = 'flex';
               div.style.justifyContent = 'space-between';
               div.style.alignItems = 'center';
-              div.style.padding = '8px 12px';
-              div.style.background = 'rgba(59, 130, 246, 0.1)';
-              div.style.borderRadius = '6px';
-              div.style.border = '1px solid rgba(59, 130, 246, 0.2)';
+              div.style.padding = '10px 14px';
+              div.style.background = 'rgba(30, 41, 59, 0.6)';
+              div.style.borderRadius = '8px';
+              div.style.border = '1px solid rgba(255, 255, 255, 0.08)';
 
               div.innerHTML = `
-                <div style="display: flex; flex-direction: column; gap: 2px;">
-                  <strong style="color: #bfdbfe; font-size: 0.9rem;">${reason || 'Respaldo Automático'}</strong>
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <strong style="color: #f1f5f9; font-size: 0.9rem;">${label}</strong>
+                    <span style="background: ${badgeBg}; color: ${badgeColor}; font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 9999px;">${badgeText}</span>
+                  </div>
                   <span style="color: var(--text-secondary); font-size: 0.75rem;">${localDate} &bull; ${kb} KB</span>
                 </div>
                 <button type="button" class="btn btn-sm btn-download-autobackup" data-file="${b.filename}" style="background: rgba(59, 130, 246, 0.2); border-color: rgba(59, 130, 246, 0.4); color: #60a5fa; white-space: nowrap;">
@@ -188,13 +203,38 @@ async function loadAdminData() {
                 }
               });
             });
-          }
           lucide.createIcons();
         }
       } catch(e) {
         console.error(e);
         autobackupList.innerHTML = '<p style="color: #f87171; font-size: 0.85rem;">Error al cargar respaldos.</p>';
       }
+    }
+
+    const btnTriggerDailyBackup = document.getElementById('btnTriggerDailyBackup');
+    if (btnTriggerDailyBackup && !btnTriggerDailyBackup._hasListener) {
+      btnTriggerDailyBackup._hasListener = true;
+      btnTriggerDailyBackup.addEventListener('click', async () => {
+        btnTriggerDailyBackup.disabled = true;
+        btnTriggerDailyBackup.innerHTML = '<i data-lucide="refresh-cw" class="icon-spin" style="width: 14px; height: 14px;"></i> Generando...';
+        lucide.createIcons();
+        try {
+          const res = await fetch('/api/cron/backup-24h');
+          const data = await res.json();
+          if (data.status === 'ok') {
+            alert('✅ Respaldo de 24h generado y firmado criptográficamente con éxito.');
+            if (btnAdminManage) btnAdminManage.click();
+          } else {
+            alert('❌ Error al generar respaldo: ' + (data.message || 'Error desconocido'));
+          }
+        } catch (err) {
+          alert('❌ Error de conexión al generar respaldo: ' + err.message);
+        } finally {
+          btnTriggerDailyBackup.disabled = false;
+          btnTriggerDailyBackup.innerHTML = '<i data-lucide="clock" style="width: 14px; height: 14px;"></i> Ejecutar Respaldo 24h Ahora';
+          lucide.createIcons();
+        }
+      });
     }
 
     const usersRes = await fetch('/api/users', { headers: { 'X-Server-Id': currentServerId, 'Authorization': `Bearer ${authToken}` }});

@@ -321,11 +321,42 @@ El sistema combina el rendimiento de archivos JSON para configuraciones dinámic
 - **`BankTransactions`:** Registro de comprobantes de pago y recargas bancarias.
 
 ### 2. Archivos JSON en `data/`
-- **`settings.json`:** Parámetros de conexión a APIs DHRU.
+- **`settings.json`:** Parámetros de conexión a APIs DHRU y tasas de cambio.
 - **`custom_groups.json`:** Mapeo de reclasificación de categorías creado por el admin.
 - **`prices_*.json`:** Caché de precios para acelerar el renderizado sin recalcular fórmulas en cada vista.
+- **`audit_blackbox.log`:** Caja negra criptográfica de auditoría inalterable (*Append-Only* con Hash Chaining).
 
 ---
+
+## 8.1. Motor de Respaldos, Resiliencia y Caja Negra Inalterable (`src/backupEngine.js`)
+
+Para asegurar la **total portabilidad agnóstica entre servidores, VPS o Clouds** (AlwaysData, Hetzner, AWS, Docker, Fly.io) y garantizar la recuperación ante cualquier desastre o contingencia:
+
+1. **Respaldos Automáticos por Evento Financiero (`autobackup_*.json`):**
+   - Se activan inmediatamente ante creación de usuarios, recargas de saldo, transferencias o creación de pedidos.
+   - Capturan el estado íntegro de SQLite y todos los archivos JSON de reglas, precios y credenciales.
+   - Se almacenan en `data/backups/instant/` con rotación automática de los últimos 30 eventos.
+
+2. **Respaldos Programados cada 24 Horas (`daily_backup_*.json`):**
+   - El servidor Express mantiene un temporizador continuo en memoria (`initBackupScheduler()`) y un endpoint cron invocable externamente (`GET /api/cron/backup-24h`).
+   - Genera un archivo consolidado con sello de tiempo diario en `data/backups/daily/` con retención de 30 días.
+
+3. **Caja Negra Criptográfica Inalterable (`audit_blackbox.log`):**
+   - Cada evento administrativo, financiero o de respaldo se escribe en un registro *Append-Only* estructurado.
+   - **Hash Chaining (Tipo Blockchain Ligero)**: Cada línea calcula su hash SHA-256 enlazándose al `entryHash` de la línea anterior comenzando desde `GENESIS_BLOCK`. Cualquier alteración manual o borrado intermedio rompe la cadena criptográfica de verificación de integridad.
+
+4. **Herramienta CLI de Migración y Recuperación ante Desastres (`scripts/migrationTool.js`):**
+   - Permite migrar todo el sistema entre hosts en segundos sin depender de la UI:
+     ```bash
+     # 1. En el host de origen: Exportar paquete universal completo
+     node scripts/migrationTool.js export backup_migracion.json
+
+     # 2. En el nuevo host: Importar y reconstruir base de datos y JSONs
+     node scripts/migrationTool.js import backup_migracion.json
+
+     # 3. Verificar estado de respaldos e integridad de la caja negra
+     node scripts/migrationTool.js verify
+     ```
 
 ## 9. Despliegue y Mantenimiento en AlwaysData
 

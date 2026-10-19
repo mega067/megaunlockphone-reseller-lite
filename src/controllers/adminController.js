@@ -388,25 +388,21 @@ exports.getBotLogs = (req, res) => {
   }
 };
 
+const backupEngine = require('../backupEngine');
+
 exports.getBackup = (req, res) => {
-  const users = readDB('users.json') || [];
-  const history = readDB('history.json') || [];
-  const prices = readDB('prices.json') || {};
-  const customPrices = readDB('custom_prices.json') || {};
-  const userCustomPrices = readDB('user_custom_prices.json') || {};
-  const settings = readDB('settings.json') || {};
-  const coupons = readDB('coupons.json') || [];
-  
-  res.json({
-    users,
-    history,
-    prices,
-    customPrices,
-    userCustomPrices,
-    settings,
-    coupons,
-    exportDate: new Date().toISOString()
-  });
+  try {
+    const fullSnapshot = backupEngine.generateFullBackupSnapshot('ADMIN_DOWNLOAD');
+    backupEngine.logAuditTrail('MANUAL_BACKUP_DOWNLOAD', {
+      adminId: req.user.id,
+      adminUsername: req.user.username,
+      snapshotHash: fullSnapshot.metadata.snapshotHash
+    }, req.user.username);
+    res.json(fullSnapshot);
+  } catch (err) {
+    console.error('Error generating full backup:', err);
+    res.status(500).json({ error: 'Error al generar el respaldo completo: ' + err.message });
+  }
 };
 
 exports.restoreBackup = (req, res) => {
@@ -416,56 +412,57 @@ exports.restoreBackup = (req, res) => {
   }
 
   try {
-    if (backup.users) writeDB('users.json', backup.users);
-    if (backup.history) writeDB('history.json', backup.history);
-    if (backup.prices) writeDB('prices.json', backup.prices);
-    if (backup.customPrices) writeDB('custom_prices.json', backup.customPrices);
-    if (backup.userCustomPrices) writeDB('user_custom_prices.json', backup.userCustomPrices);
-    if (backup.settings) writeDB('settings.json', backup.settings);
-    if (backup.coupons) writeDB('coupons.json', backup.coupons);
-    
-    res.json({ success: true });
+    const result = backupEngine.restoreSnapshot(backup, req.user ? req.user.username : 'ADMIN');
+    res.json({ success: true, isV2: result.isV2 });
   } catch (err) {
     console.error('Restore Error:', err);
-    res.status(500).json({ error: 'Error al restaurar el archivo.' });
+    backupEngine.logAuditTrail('SYSTEM_RESTORE_FAILED', {
+      adminId: req.user ? req.user.id : null,
+      error: err.message
+    }, req.user ? req.user.username : 'ADMIN');
+    res.status(500).json({ error: 'Error al restaurar el archivo: ' + err.message });
   }
 };
 
 exports.getAutoBackups = (req, res) => {
   try {
-    if (!fs.existsSync(BACKUP_DIR)) return res.json([]);
-    let files = fs.readdirSync(BACKUP_DIR).filter(f => f.endsWith('.json') && f.startsWith('autobackup_'));
-    files.sort().reverse();
-    
-    const fileData = files.map(filename => {
-      const stats = fs.statSync(path.join(BACKUP_DIR, filename));
-      return {
-        filename,
-        size: stats.size,
-        date: stats.mtime
-      };
-    });
-    res.json(fileData);
+    const backups = backupEngine.listAllBackups();
+    res.json(backups);
   } catch(e) {
-    res.status(500).json({ error: 'Error al leer backups automáticos.' });
+    res.status(500).json({ error: 'Error al leer backups automáticos: ' + e.message });
   }
 };
 
 exports.downloadAutoBackup = (req, res) => {
   const rawFilename = req.params.filename;
-  // Security: Prevent path traversal (e.g., ../ or encoded path characters)
   const filename = path.basename(String(rawFilename || ''));
-  if (!filename.startsWith('autobackup_') || !filename.endsWith('.json') || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+  if (!filename.endsWith('.json') || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
     return res.status(400).json({ error: 'Archivo inválido o intento de acceso denegado.' });
   }
-  const filepath = path.resolve(BACKUP_DIR, filename);
-  if (!filepath.startsWith(path.resolve(BACKUP_DIR))) {
-    return res.status(403).json({ error: 'Acceso no autorizado al archivo.' });
-  }
-  if (!fs.existsSync(filepath)) {
+
+  const allBackups = backupEngine.listAllBackups();
+  const match = allBackups.find(b => b.filename === filename);
+  if (!match || !fs.existsSync(match.path)) {
     return res.status(404).json({ error: 'Respaldo no encontrado.' });
   }
-  res.download(filepath);
+
+  backupEngine.logAuditTrail('FILE_BACKUP_DOWNLOADED', {
+    filename,
+    type: match.type,
+    adminUsername: req.user ? req.user.username : 'ADMIN'
+  }, req.user ? req.user.username : 'ADMIN');
+
+  res.download(match.path);
+};
+
+exports.getAuditLogs = (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit, 10) || 100;
+    const logs = backupEngine.getAuditLogs(limit);
+    res.json({ success: true, count: logs.length, logs });
+  } catch (err) {
+    res.status(500).json({ error: 'Error al leer registros de auditoría: ' + err.message });
+  }
 };
 
 exports.getCoupons = (req, res) => {

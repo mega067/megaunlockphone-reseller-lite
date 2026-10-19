@@ -43,6 +43,13 @@ El repositorio cuenta con la suite oficial de habilidades de diseño de [nextlev
 3. **Protección contra Corrupción (`NaN` / Números Negativos):**
    - Todos los cálculos monetarios utilizan `parseFloat(val) || 0` y validaciones estrictas `if (cost <= 0 || isNaN(cost))`.
    - Las recargas bancarias por SPEI o comprobante pasan por validaciones de duplicidad de clave de rastreo en SQLite (`BankTransactions`).
+4. **Respaldos Automáticos Financieros & Ciclo 24h ([src/backupEngine.js](file:///home/angel/Projects/REPOS/dhru-client-web/src/backupEngine.js)):**
+   - Cada creación de usuario, recarga o pedido genera un snapshot instantáneo inmutable (`data/backups/instant/`).
+   - Se ejecuta un ciclo programado continuo cada 24 horas (`data/backups/daily/`) con rotación de 30 días.
+5. **Caja Negra Criptográfica Inalterable (`audit_blackbox.log`):**
+   - Registro *Append-Only* con Hash Chaining SHA-256 (estilo blockchain ligero). Cada acción queda ligada criptográficamente al hash del bloque anterior. La alteración o borrado de eventos rompe la firma matemática.
+6. **Portabilidad Total de Migración ([scripts/migrationTool.js](file:///home/angel/Projects/REPOS/dhru-client-web/scripts/migrationTool.js)):**
+   - Paquete agnóstico que incluye SQLite + todos los JSONs de configuración, precios, llaves API e historiales para restaurar el sistema en cualquier VPS, Docker o Cloud en segundos ante fallas de host.
 
 ### B. Prevención de Inyecciones SQL (SQL Injection)
 - **Driver:** [better-sqlite3](file:///home/angel/Projects/REPOS/dhru-client-web/src/database.js)

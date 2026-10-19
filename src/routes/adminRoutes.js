@@ -30,6 +30,7 @@ router.get('/admin/backup', requireAuth, requireAdmin, adminController.getBackup
 router.post('/admin/restore', requireAuth, requireAdmin, adminController.restoreBackup);
 router.get('/admin/autobackups', requireAuth, requireAdmin, adminController.getAutoBackups);
 router.get('/admin/autobackups/:filename', requireAuth, requireAdmin, adminController.downloadAutoBackup);
+router.get('/admin/audit-logs', requireAuth, requireAdmin, adminController.getAuditLogs);
 
 router.get('/admin/coupons', requireAuth, requireAdmin, adminController.getCoupons);
 router.post('/admin/coupons', requireAuth, requireAdmin, adminController.createCoupon);

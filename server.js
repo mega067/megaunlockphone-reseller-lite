@@ -161,14 +161,27 @@ app.get('/api/proxy-image', async (req, res) => {
   }
 });
 
-// Cron Sync and Debug Endpoints
+// Cron Sync, Poller and 24h Backup Scheduler
 const { initPoller, pollPendingOrders } = require('./src/poller');
+const { initBackupScheduler, createDailyBackup, logAuditTrail } = require('./src/backupEngine');
+
 initPoller();
+initBackupScheduler();
+logAuditTrail('SYSTEM_SERVER_STARTED', { port: PORT, ip: IP, pid: process.pid });
 
 app.get('/api/cron/sync', async (req, res) => {
   try {
     await pollPendingOrders();
     res.json({ status: 'ok', message: 'Sync cron executed' });
+  } catch (e) {
+    res.status(500).json({ status: 'error', message: e.message });
+  }
+});
+
+app.get('/api/cron/backup-24h', async (req, res) => {
+  try {
+    const result = createDailyBackup();
+    res.json({ status: 'ok', message: '24h Daily backup executed successfully', result });
   } catch (e) {
     res.status(500).json({ status: 'error', message: e.message });
   }

@@ -775,11 +775,16 @@
 
             <!-- Auto Backup Settings -->
             <div style="background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 8px; padding: 16px; grid-column: 1 / -1;">
-              <h3 style="margin-top: 0; margin-bottom: 12px; font-size: 1.1rem; color: #60a5fa; display: flex; align-items: center; gap: 8px;">
-                <i data-lucide="cloud" style="width: 18px; height: 18px;"></i> Respaldos Automáticos del Servidor
-              </h3>
-              <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px;">Se conservan los últimos respaldos automáticos de seguridad.</p>
-              <div id="autobackupList" style="display: flex; gap: 10px; flex-wrap: wrap;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                <h3 style="margin: 0; font-size: 1.1rem; color: #60a5fa; display: flex; align-items: center; gap: 8px;">
+                  <i data-lucide="shield-check" style="width: 18px; height: 18px;"></i> Respaldos Automáticos &amp; Caja Negra Inalterable
+                </h3>
+                <button type="button" class="btn btn-sm btn-primary" id="btnTriggerDailyBackup" style="background: rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.4); color: #34d399; font-size: 0.85rem;">
+                  <i data-lucide="clock" style="width: 14px; height: 14px;"></i> Ejecutar Respaldo 24h Ahora
+                </button>
+              </div>
+              <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px;">Se guardan respaldos rotativos diarios de 24h e instantáneos de cada evento financiero. Cada acción queda firmada criptográficamente con hash chaining.</p>
+              <div id="autobackupList" style="display: flex; flex-direction: column; gap: 8px; max-height: 280px; overflow-y: auto;">
                 <p style="font-size: 0.85rem; color: var(--text-secondary);">Cargando respaldos automáticos...</p>
               </div>
             </div>
@@ -2175,11 +2180,11 @@
   <script src="/js/searchEngine.js?v=2" defer></script>
   <script src="js/recharges.js?v=2" defer></script>
   <script src="js/recharge.js?v=18" defer></script>
-  <script src="index.js?v=55" defer></script>
+  <script src="index.js?v=56" defer></script>
   <script src="js/products.js?v=10" defer></script>
-  <script src="js/orders.js?v=55" defer></script>
+  <script src="js/orders.js?v=56" defer></script>
   <script src="js/warnings.js?v=3" defer></script>
-  <script src="js/admin.js?v=55" defer></script>
+  <script src="js/admin.js?v=56" defer></script>
     <div class="modal-overlay hidden" id="globalLoadingOverlay" style="z-index: 100000; flex-direction: column; text-align: center;">
       <div class="icon-spin" style="color: #3b82f6; margin-bottom: 1rem;">
         <i data-lucide="refresh-cw" style="width: 64px; height: 64px;"></i>

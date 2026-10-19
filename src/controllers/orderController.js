@@ -10,35 +10,7 @@ const { fetchBulkOrdersStatus } = require('../syncService');
 
 const ipv4Agent = new https.Agent({ family: 4 });
 
-const BACKUP_DIR = path.join(DATA_DIR, 'backups');
-
-function createAutoBackup(reason) {
-  try {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const safeReason = reason.replace(/[^a-zA-Z0-9_]/g, '_');
-    const filename = `autobackup_${timestamp}_${safeReason}.json`;
-    const filepath = path.join(BACKUP_DIR, filename);
-    
-    const dbFiles = ['users.json', 'prices.json', 'custom_prices.json', 'history.json', 'settings.json', 'user_custom_prices.json', 'coupons.json'];
-    const backupData = {};
-    
-    dbFiles.forEach(file => {
-      backupData[file] = readDB(file);
-    });
-    
-    if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
-    fs.writeFileSync(filepath, JSON.stringify(backupData, null, 2));
-    
-    let files = fs.readdirSync(BACKUP_DIR).filter(f => f.endsWith('.json') && f.startsWith('autobackup_'));
-    if (files.length > 2) {
-      files.sort().reverse();
-      const filesToDelete = files.slice(2);
-      filesToDelete.forEach(f => fs.unlinkSync(path.join(BACKUP_DIR, f)));
-    }
-  } catch (e) {
-    console.error('Error creating auto-backup:', e);
-  }
-}
+const { createAutoBackup } = require('../backupEngine');
 
 
 exports.processOrder = async (req, res) => {
