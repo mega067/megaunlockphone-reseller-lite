@@ -77,11 +77,12 @@ window.initRechargeModule = function({
     const historySection = document.getElementById('historySection');
     const adminSection = document.getElementById('adminSection');
     const rechargesSection = document.getElementById('rechargesSection');
-    const btnBulkSavePrices = document.getElementById('btnBulkSavePrices');
+    const profileSection = document.getElementById('profileSection');
     
     if (productsSection) productsSection.classList.add('hidden');
     if (historySection) historySection.classList.add('hidden');
     if (adminSection) adminSection.classList.add('hidden');
+    if (profileSection) profileSection.classList.add('hidden');
     if (rechargesSection) rechargesSection.classList.add('hidden');
     if (btnBulkSavePrices) btnBulkSavePrices.classList.add('hidden');
     document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
