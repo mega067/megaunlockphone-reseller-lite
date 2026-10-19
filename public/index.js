@@ -1686,7 +1686,12 @@ function openPurchaseModal(serviceId) {
 
   let adminDisableHtml = '';
   if (authRole === 'admin') {
-    adminDisableHtml = `<div style="margin-top: 10px; background: rgba(139,92,246,0.1); padding: 8px; border-radius: 6px; border: 1px dashed rgba(139,92,246,0.3); display: flex; align-items: center; justify-content: space-between;"><span style="color:#c4b5fd; font-size: 0.8rem;">[Admin] Ocultar IMEI</span><input type="checkbox" id="adminToggleImei" ${raw && raw._NO_IMEI ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer;"></div>`;
+    adminDisableHtml = `
+      <div style="margin-top: 8px; padding: 6px 10px; background: rgba(139,92,246,0.06); border: 1px dashed rgba(139,92,246,0.25); border-radius: 6px; display: inline-flex; align-items: center; gap: 8px; font-size: 0.72rem; color: #a78bfa;">
+        <input type="checkbox" id="adminToggleImei" ${raw && raw._NO_IMEI ? 'checked' : ''} style="width: 13px; height: 13px; cursor: pointer; accent-color: #8b5cf6;">
+        <label for="adminToggleImei" style="cursor: pointer; margin: 0; user-select: none;">[Admin] Ocultar campo IMEI permanentemente para este servicio</label>
+      </div>
+    `;
   }
 
   if (raw && raw._NO_IMEI) {
@@ -1793,16 +1798,22 @@ function openPurchaseModal(serviceId) {
   imeiAutoGenerate.dispatchEvent(new Event('change'));
 
   if (authRole === 'admin') {
-    const headerDiv = document.querySelector('#purchaseModal .modal-header');
     let existingAdminToggle = document.getElementById('adminToggleImeiContainer');
     if (existingAdminToggle) existingAdminToggle.remove();
     
     if (adminDisableHtml) {
       const container = document.createElement('div');
       container.id = 'adminToggleImeiContainer';
-      container.style.width = '100%';
+      container.style.marginTop = '4px';
       container.innerHTML = adminDisableHtml;
-      headerDiv.appendChild(container);
+      
+      // Colocar de manera discreta junto a los controles de IMEI en el formulario
+      if (imeiInputGroup) {
+        imeiInputGroup.appendChild(container);
+      } else {
+        const modalBody = document.querySelector('#purchaseModal .modal-body');
+        if (modalBody) modalBody.appendChild(container);
+      }
       
       document.getElementById('adminToggleImei').addEventListener('change', async (e) => {
         try {
