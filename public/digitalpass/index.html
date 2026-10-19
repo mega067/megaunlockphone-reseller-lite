@@ -119,9 +119,9 @@
           <i data-lucide="wallet" style="width: 16px; height: 16px; color: #22d3ee;"></i>
           <span id="creditsBalanceText">Créditos: $0.00 MXN</span>
         </div>
-        <div class="connection-status" id="connectionStatus">
+        <div class="connection-status" id="connectionStatus" title="Estado del Servidor: Sin conectar" aria-label="Estado de conexión">
           <span class="status-dot offline"></span>
-          <span class="status-text">Sin conectar</span>
+          <span class="status-text hidden">Sin conectar</span>
         </div>
         
         <button type="button" class="btn btn-secondary btn-small hidden" id="btnAdminManage" style="background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.3); color: #c4b5fd;" title="Gestión de Precios y Usuarios">
@@ -144,12 +144,7 @@
           <span>Saldo</span>
         </button>
 
-        
 
-        <button type="button" class="btn btn-secondary btn-small hidden" id="btnUserProfile" style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); color: #4ade80;">
-          <i data-lucide="user"></i>
-          <span>Perfil</span>
-        </button>
 
         <button type="button" class="btn btn-primary btn-small" id="btnLoginTop" title="Iniciar Sesión">
           <i data-lucide="log-in"></i>

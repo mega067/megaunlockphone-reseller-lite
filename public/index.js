@@ -299,7 +299,7 @@ function checkPersistedSession() {
     btnAdminManage.classList.add('hidden');
     btnRechargeBalance.classList.add('hidden');
     btnWhatsappBot.classList.add('hidden');
-    btnUserProfile.classList.add('hidden');
+    if (btnUserProfile) btnUserProfile.classList.add('hidden');
     if (btnRechargesHistory) btnRechargesHistory.classList.add('hidden');
     btnLogout.classList.add('hidden');
     
@@ -324,7 +324,7 @@ function checkPersistedSession() {
         historyHead.appendChild(thProfit);
       }
     } else {
-      btnUserProfile.classList.remove('hidden');
+      if (btnUserProfile) btnUserProfile.classList.remove('hidden');
       if (btnCustomTicket) btnCustomTicket.classList.add('hidden');
       if (btnImportOrder) btnImportOrder.classList.remove('hidden');
       if (btnRechargesHistory) btnRechargesHistory.classList.remove('hidden');
@@ -332,7 +332,7 @@ function checkPersistedSession() {
 
     const tabProfileBtn = document.getElementById('tabProfile');
     if (tabProfileBtn) tabProfileBtn.classList.remove('hidden');
-    btnUserProfile.classList.remove('hidden');
+    if (btnUserProfile) btnUserProfile.classList.remove('hidden');
     
     btnRechargeBalance.classList.remove('hidden'); // Shown for EVERYONE now
     btnWhatsappBot.classList.remove('hidden');
@@ -403,7 +403,7 @@ function checkPersistedSession() {
     if (typeof btnBulkSavePrices !== 'undefined' && btnBulkSavePrices) btnBulkSavePrices.classList.add('hidden');
     btnRechargeBalance.classList.add('hidden');
     btnWhatsappBot.classList.add('hidden');
-    btnUserProfile.classList.add('hidden');
+    if (btnUserProfile) btnUserProfile.classList.add('hidden');
     
     // Always show 0 credits when outside of session
     globalApiCreditRaw = 0;
@@ -661,10 +661,12 @@ btnBulkSavePrices.addEventListener('click', async () => {
 
 // Status indicator helper
 function updateStatus(type, text) {
+  if (!connectionStatus) return;
   const dot = connectionStatus.querySelector('.status-dot');
   const label = connectionStatus.querySelector('.status-text');
-  dot.className = 'status-dot ' + type;
-  label.textContent = text;
+  if (dot) dot.className = 'status-dot ' + type;
+  if (label) label.textContent = text;
+  connectionStatus.setAttribute('title', `Estado del Servidor: ${text}`);
 }
 
 // Loading state helper
