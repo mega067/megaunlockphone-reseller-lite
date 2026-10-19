@@ -672,10 +672,6 @@ function renderProductCards(items) {
       </div>
       <h3 class="product-title">${escapeHtml(p.service)}</h3>
       <div class="product-details">
-        <div class="detail-row" style="flex-wrap: wrap; gap: 4px; margin-bottom: 6px;">
-          ${p.customGroup ? `<span style="font-size: 0.72rem; padding: 2px 7px; border-radius: 4px; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); font-weight: 600;" title="Grupo Personalizado (Agrupación)">📁 ${escapeHtml(p.customGroup)}</span>` : ''}
-          <span style="font-size: 0.72rem; padding: 2px 7px; border-radius: 4px; background: rgba(148, 163, 184, 0.12); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.2);" title="Grupo Real del Proveedor (Determina Precio y Comisiones)">🌐 ${escapeHtml(p.originalGroup || p.group)}</span>
-        </div>
         <div class="detail-row">
           <i data-lucide="clock"></i> <span>${escapeHtml(p.time)}</span>
         </div>
