@@ -544,13 +544,36 @@ async function loadFullUserProfile() {
       // Avatar & Logo Sync
       const avatarImg = document.getElementById('profileAvatarImg');
       const avatarLetter = document.getElementById('profileAvatarLetter');
-      if (data.logoUrl && avatarImg && avatarLetter) {
-        avatarImg.src = `${data.logoUrl}?t=${Date.now()}`;
-        avatarImg.style.display = 'block';
-        avatarLetter.style.display = 'none';
-      } else if (avatarImg && avatarLetter) {
-        avatarImg.style.display = 'none';
-        avatarLetter.style.display = 'flex';
+      const headerAvatarImg = document.getElementById('headerUserAvatarImg');
+      const headerAvatarLetter = document.getElementById('headerUserAvatarLetter');
+      const headerUserName = document.getElementById('headerUserName');
+
+      if (headerUserName) {
+        headerUserName.textContent = data.username || currentUsername;
+      }
+
+      if (data.logoUrl) {
+        const fullLogoUrl = `${data.logoUrl}?t=${Date.now()}`;
+        if (avatarImg && avatarLetter) {
+          avatarImg.src = fullLogoUrl;
+          avatarImg.style.display = 'block';
+          avatarLetter.style.display = 'none';
+        }
+        if (headerAvatarImg && headerAvatarLetter) {
+          headerAvatarImg.src = fullLogoUrl;
+          headerAvatarImg.style.display = 'block';
+          headerAvatarLetter.style.display = 'none';
+        }
+      } else {
+        if (avatarImg && avatarLetter) {
+          avatarImg.style.display = 'none';
+          avatarLetter.style.display = 'flex';
+        }
+        if (headerAvatarImg && headerAvatarLetter) {
+          headerAvatarImg.style.display = 'none';
+          headerAvatarLetter.style.display = 'flex';
+          headerAvatarLetter.textContent = (data.username || currentUsername).charAt(0).toUpperCase();
+        }
       }
 
       // Update WhatsApp Bot button indicator

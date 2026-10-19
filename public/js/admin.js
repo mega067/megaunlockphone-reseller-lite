@@ -244,6 +244,13 @@ async function loadAdminData() {
           countBadge.textContent = `${filtered.length} de ${users.length} usuarios`;
         }
 
+        // Preserve which user rows were expanded before re-render
+        const expandedUserIds = new Set();
+        document.querySelectorAll('.admin-user-detail-row:not(.hidden)').forEach(row => {
+          const match = row.id.match(/^user-detail-(.+)$/);
+          if (match) expandedUserIds.add(match[1]);
+        });
+
         usersTableBody.innerHTML = '';
         if (filtered.length === 0) {
           usersTableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 25px;">No se encontraron usuarios que coincidan con la búsqueda.</td></tr>`;
@@ -314,16 +321,19 @@ async function loadAdminData() {
             <td style="text-align: right; vertical-align: middle;">
               <button type="button" class="admin-user-accordion-btn btn-toggle-user-accordion" data-target="user-detail-${u.id}" title="Ver acciones completas">
                 <span>Gestionar</span>
-                <i data-lucide="chevron-down" style="width: 14px; height: 14px; transition: transform 0.2s;"></i>
+                <i data-lucide="chevron-down" style="width: 14px; height: 14px; transition: transform 0.2s; transform: ${expandedUserIds.has(String(u.id)) ? 'rotate(180deg)' : 'rotate(0deg)'};"></i>
               </button>
             </td>
           `;
+          if (expandedUserIds.has(String(u.id))) {
+            trHeader.classList.add('is-expanded');
+          }
           usersTableBody.appendChild(trHeader);
 
           // 2. Expandable Accordion Sub-row
           const trDetail = document.createElement('tr');
           trDetail.id = `user-detail-${u.id}`;
-          trDetail.className = 'admin-user-detail-row hidden';
+          trDetail.className = `admin-user-detail-row ${expandedUserIds.has(String(u.id)) ? '' : 'hidden'}`;
           trDetail.innerHTML = `
             <td colspan="5" style="padding: 0;">
               <div class="admin-user-detail-container">

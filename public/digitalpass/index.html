@@ -25,7 +25,7 @@
   <!-- TomSelect for searchable dropdowns -->
   <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet" crossorigin="anonymous">
   <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
-  <link rel="stylesheet" href="/digitalpass/digitalpass.css?v=2">
+  <link rel="stylesheet" href="/digitalpass/digitalpass.css?v=50">
 </head>
 <body>
   <div class="background-decor">
@@ -144,7 +144,13 @@
           <span>Saldo</span>
         </button>
 
-
+        <button type="button" class="header-user-btn hidden" id="btnUserProfile" title="Ver Mi Perfil & API">
+          <div class="header-user-avatar" id="headerUserAvatar">
+            <span id="headerUserAvatarLetter">U</span>
+            <img id="headerUserAvatarImg" src="" alt="Avatar" style="display: none;">
+          </div>
+          <span class="header-user-name" id="headerUserName">Usuario</span>
+        </button>
 
         <button type="button" class="btn btn-primary btn-small" id="btnLoginTop" title="Iniciar Sesión">
           <i data-lucide="log-in"></i>
@@ -333,9 +339,6 @@
         </button>
         <button class="tab-btn" id="tabHistory">
           <i data-lucide="history"></i> Historial de Órdenes
-        </button>
-        <button class="tab-btn hidden" id="tabProfile" style="background: rgba(14, 165, 233, 0.1); border: 1px solid rgba(14, 165, 233, 0.25); color: #38bdf8;">
-          <i data-lucide="user"></i> Mi Perfil & API
         </button>
         <button class="tab-btn hidden" id="tabAdmin" style="background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.3); color: #c4b5fd;">
           <i data-lucide="shield"></i> Administración
@@ -1057,7 +1060,7 @@
           <button type="button" class="profile-tab-btn" data-tab="tabProfileWhatsApp">
             <i data-lucide="message-square" style="width: 15px; height: 15px;"></i> WhatsApp y Alertas
           </button>
-          <button type="button" class="profile-tab-btn" data-tab="tabProfileApiBridge" style="color: #38bdf8;">
+          <button type="button" class="profile-tab-btn" data-tab="tabProfileApiBridge">
             <i data-lucide="cpu" style="width: 15px; height: 15px;"></i> API & Puente Fork
           </button>
         </div>
@@ -2044,20 +2047,20 @@
   <div id="toastContainer" style="position: fixed; bottom: 20px; right: 20px; z-index: 999999; display: flex; flex-direction: column; gap: 10px; pointer-events: none;"></div>
 
   <!-- Scripts Modulares -->
-  <script src="/js/api.js?v=1" defer></script>
-  <script src="/js/utils.js?v=1" defer></script>
-  <script src="/js/notifications.js?v=3" defer></script>
-  <script src="/js/state.js" defer></script>
-  <script src="/js/ticket.js" defer></script>
-  <script src="/js/searchEngine.js?v=1" defer></script>
-  <script src="/js/recharges.js" defer></script>
-  <script src="/js/recharge.js?v=15" defer></script>
-  <script src="/digitalpass/digitalpass.js?v=1" defer></script>
-  <script src="/index.js?v=34" defer></script>
-  <script src="/js/products.js?v=5" defer></script>
-  <script src="/js/orders.js?v=5" defer></script>
-  <script src="/js/warnings.js?v=2" defer></script>
-  <script src="/js/admin.js?v=2" defer></script>
+  <script src="/js/api.js?v=2" defer></script>
+  <script src="/js/utils.js?v=2" defer></script>
+  <script src="/js/notifications.js?v=4" defer></script>
+  <script src="/js/state.js?v=2" defer></script>
+  <script src="/js/ticket.js?v=2" defer></script>
+  <script src="/js/searchEngine.js?v=2" defer></script>
+  <script src="/js/recharges.js?v=2" defer></script>
+  <script src="/js/recharge.js?v=18" defer></script>
+  <script src="/digitalpass/digitalpass.js?v=50" defer></script>
+  <script src="/index.js?v=50" defer></script>
+  <script src="/js/products.js?v=6" defer></script>
+  <script src="/js/orders.js?v=50" defer></script>
+  <script src="/js/warnings.js?v=3" defer></script>
+  <script src="/js/admin.js?v=50" defer></script>
     <div class="modal-overlay hidden" id="globalLoadingOverlay" style="z-index: 100000; flex-direction: column; text-align: center;">
       <div class="icon-spin" style="color: #3b82f6; margin-bottom: 1rem;">
         <i data-lucide="refresh-cw" style="width: 64px; height: 64px;"></i>

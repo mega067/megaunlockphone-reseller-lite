@@ -330,20 +330,33 @@ function checkPersistedSession() {
       if (btnRechargesHistory) btnRechargesHistory.classList.remove('hidden');
     }
 
-    const tabProfileBtn = document.getElementById('tabProfile');
-    if (tabProfileBtn) tabProfileBtn.classList.remove('hidden');
     if (btnUserProfile) btnUserProfile.classList.remove('hidden');
     
     btnRechargeBalance.classList.remove('hidden'); // Shown for EVERYONE now
     btnWhatsappBot.classList.remove('hidden');
+
+    // Populate header profile button data immediately
+    const headerUserName = document.getElementById('headerUserName');
+    const headerAvatarLetter = document.getElementById('headerUserAvatarLetter');
+    if (headerUserName) headerUserName.textContent = authUsername || 'Usuario';
+    if (headerAvatarLetter) headerAvatarLetter.textContent = (authUsername || 'U').charAt(0).toUpperCase();
     
-    // Check WhatsApp bot link status for the button
+    // Check WhatsApp bot link status and user profile avatar for the button
     if (authToken) {
       fetch('/api/me', { headers: { 'Authorization': `Bearer ${authToken}` } })
         .then(r => r.ok ? r.json() : null)
         .then(meData => {
-          if (meData && typeof updateBotButtonStatus === 'function') {
-            updateBotButtonStatus(Boolean(meData.isLinkedToBot));
+          if (meData) {
+            if (typeof updateBotButtonStatus === 'function') {
+              updateBotButtonStatus(Boolean(meData.isLinkedToBot));
+            }
+            if (headerUserName && meData.username) headerUserName.textContent = meData.username;
+            const headerAvatarImg = document.getElementById('headerUserAvatarImg');
+            if (meData.logoUrl && headerAvatarImg && headerAvatarLetter) {
+              headerAvatarImg.src = `${meData.logoUrl}?t=${Date.now()}`;
+              headerAvatarImg.style.display = 'block';
+              headerAvatarLetter.style.display = 'none';
+            }
           }
         })
         .catch(() => {});
@@ -2807,9 +2820,10 @@ setInterval(() => {
        const settingsTab = document.getElementById('adminTabSettingsContent');
        const groupsTab = document.getElementById('adminTabGroupsContent');
        const isFormTabActive = (settingsTab && !settingsTab.classList.contains('hidden')) || (groupsTab && !groupsTab.classList.contains('hidden'));
+       const hasExpandedRows = Boolean(document.querySelector('.admin-user-detail-row:not(.hidden)'));
        
-       // Only refresh admin table if user is not actively typing AND not in a form tab
-       if (!isFormTabActive && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA' && document.activeElement.tagName !== 'SELECT') {
+       // Only refresh admin table if user is not actively typing, not in a form tab, and not inspecting an expanded user
+       if (!isFormTabActive && !hasExpandedRows && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA' && document.activeElement.tagName !== 'SELECT') {
           loadAdminData();
        }
     }
