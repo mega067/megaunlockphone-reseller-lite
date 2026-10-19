@@ -465,6 +465,76 @@ exports.getAuditLogs = (req, res) => {
   }
 };
 
+const gdriveSync = require('../gdriveSync');
+
+exports.getGDriveConfig = (req, res) => {
+  try {
+    const config = gdriveSync.getGDriveConfig();
+    const template = gdriveSync.getAppsScriptTemplate();
+    res.json({
+      success: true,
+      config: {
+        enabled: Boolean(config.enabled),
+        folderId: config.folderId || '',
+        appScriptUrl: config.appScriptUrl || '',
+        clientEmail: config.clientEmail || '',
+        hasPrivateKey: Boolean(config.privateKey),
+        keepCopies: parseInt(config.keepCopies, 10) || 7,
+        updatedAt: config.updatedAt || null
+      },
+      template
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Error al leer configuración de Google Drive: ' + err.message });
+  }
+};
+
+exports.updateGDriveConfig = (req, res) => {
+  try {
+    const { enabled, folderId, appScriptUrl, clientEmail, privateKey, keepCopies } = req.body;
+    const current = gdriveSync.getGDriveConfig();
+    
+    const updated = gdriveSync.saveGDriveConfig({
+      enabled: Boolean(enabled),
+      folderId: folderId !== undefined ? String(folderId).trim() : current.folderId,
+      appScriptUrl: appScriptUrl !== undefined ? String(appScriptUrl).trim() : current.appScriptUrl,
+      clientEmail: clientEmail !== undefined ? String(clientEmail).trim() : current.clientEmail,
+      privateKey: (privateKey && String(privateKey).trim()) ? String(privateKey).trim() : current.privateKey,
+      keepCopies: parseInt(keepCopies, 10) || 7
+    });
+
+    res.json({ success: true, message: 'Configuración de Google Drive guardada con éxito.', config: updated });
+  } catch (err) {
+    res.status(500).json({ error: 'Error al actualizar Google Drive: ' + err.message });
+  }
+};
+
+exports.testGDriveSync = async (req, res) => {
+  try {
+    // Tomar el respaldo diario más reciente o generar uno
+    const allBackups = backupEngine.listAllBackups();
+    let target = allBackups.find(b => b.type === 'daily') || allBackups[0];
+
+    if (!target) {
+      const newB = backupEngine.createDailyBackup();
+      target = { path: newB.filepath };
+    }
+
+    const syncResult = await gdriveSync.syncBackupToGoogleDrive(target.path);
+    if (!syncResult.success) {
+      return res.status(400).json({ success: false, error: syncResult.error || syncResult.reason });
+    }
+
+    res.json({
+      success: true,
+      message: 'Respaldo subido a Google Drive exitosamente y copias anteriores depuradas.',
+      syncResult
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Error al probar sincronización de Google Drive: ' + err.message });
+  }
+};
+
 exports.getCoupons = (req, res) => {
   const coupons = readDB('coupons.json') || [];
   res.json(coupons);

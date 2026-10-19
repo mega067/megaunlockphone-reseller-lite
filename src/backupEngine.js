@@ -197,6 +197,19 @@ function createDailyBackup() {
     });
 
     console.log(`[Backup Engine] Respaldo diario completado exitosamente: ${filename}`);
+
+    // Disparar sincronización opcional con Google Drive en segundo plano
+    try {
+      const { syncBackupToGoogleDrive } = require('./gdriveSync');
+      syncBackupToGoogleDrive(filepath).then(syncRes => {
+        if (syncRes && syncRes.success) {
+          console.log(`[Backup Engine] Respaldo diario sincronizado con Google Drive exitosamente.`);
+        }
+      }).catch(syncErr => {
+        console.error(`[Backup Engine] Fallo en sincronización a Google Drive:`, syncErr.message);
+      });
+    } catch (e) {}
+
     return { success: true, filename, filepath };
   } catch (err) {
     console.error('[Backup Engine] Error en respaldo diario:', err.message);

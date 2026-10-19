@@ -358,6 +358,11 @@ Para asegurar la **total portabilidad agnóstica entre servidores, VPS o Clouds*
      node scripts/migrationTool.js verify
      ```
 
+5. **Sincronización Automática con Google Drive & Rotación (`src/gdriveSync.js`):**
+   - **Subida Desacoplada sin Dependencias Pesadas**: Soporta integración mediante Webhook de Google Apps Script (método recomendado sin configurar consolas GCP) o mediante Google Service Account directa (firmado JWT RS256 nativo).
+   - **Rotación y Auto-Eliminación en la Nube**: Configurable desde el panel admin (`keepCopies: 7`). Al subir cada nuevo respaldo diario de 24h, lista los archivos en la carpeta de Drive y manda a la papelera automáticamente los más antiguos, manteniendo la nube limpia sin agotar espacio.
+   - **Pruebas en un Clic**: Botón *"Probar Subida Ahora"* en el panel administrativo para validar la conexión y verificar la entrega instantáneamente en Google Drive.
+
 ## 9. Despliegue y Mantenimiento en AlwaysData
 
 ### Despliegue Automatizado

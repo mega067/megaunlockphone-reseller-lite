@@ -237,6 +237,100 @@ async function loadAdminData() {
       });
     }
 
+    // Google Drive Sync Controls
+    const gdriveEnabled = document.getElementById('gdriveEnabled');
+    const gdriveKeepCopies = document.getElementById('gdriveKeepCopies');
+    const gdriveAppScriptUrl = document.getElementById('gdriveAppScriptUrl');
+    const gdriveFolderId = document.getElementById('gdriveFolderId');
+    const gdriveClientEmail = document.getElementById('gdriveClientEmail');
+    const btnSaveGDriveConfig = document.getElementById('btnSaveGDriveConfig');
+    const btnTestGDriveSync = document.getElementById('btnTestGDriveSync');
+    const btnShowAppsScriptModal = document.getElementById('btnShowAppsScriptModal');
+
+    // Cargar configuración de Google Drive
+    try {
+      const gdRes = await fetch('/api/admin/gdrive-config', { headers: { 'Authorization': `Bearer ${authToken}` } });
+      if (gdRes.ok) {
+        const gdData = await gdRes.json();
+        if (gdData.success && gdData.config) {
+          if (gdriveEnabled) gdriveEnabled.checked = Boolean(gdData.config.enabled);
+          if (gdriveKeepCopies) gdriveKeepCopies.value = gdData.config.keepCopies || 7;
+          if (gdriveAppScriptUrl) gdriveAppScriptUrl.value = gdData.config.appScriptUrl || '';
+          if (gdriveFolderId) gdriveFolderId.value = gdData.config.folderId || '';
+          if (gdriveClientEmail) gdriveClientEmail.value = gdData.config.clientEmail || '';
+          window._gdriveAppsScriptTemplate = gdData.template;
+        }
+      }
+    } catch (e) {
+      console.error('Error cargando config GDrive:', e);
+    }
+
+    if (btnSaveGDriveConfig && !btnSaveGDriveConfig._hasListener) {
+      btnSaveGDriveConfig._hasListener = true;
+      btnSaveGDriveConfig.addEventListener('click', async () => {
+        btnSaveGDriveConfig.disabled = true;
+        try {
+          const payload = {
+            enabled: gdriveEnabled ? gdriveEnabled.checked : false,
+            keepCopies: gdriveKeepCopies ? parseInt(gdriveKeepCopies.value, 10) : 7,
+            appScriptUrl: gdriveAppScriptUrl ? gdriveAppScriptUrl.value.trim() : '',
+            folderId: gdriveFolderId ? gdriveFolderId.value.trim() : '',
+            clientEmail: gdriveClientEmail ? gdriveClientEmail.value.trim() : ''
+          };
+          const res = await fetch('/api/admin/gdrive-config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          if (data.success) {
+            alert('✅ ' + data.message);
+          } else {
+            alert('❌ Error: ' + (data.error || 'No se pudo guardar'));
+          }
+        } catch (err) {
+          alert('❌ Error de red: ' + err.message);
+        } finally {
+          btnSaveGDriveConfig.disabled = false;
+        }
+      });
+    }
+
+    if (btnTestGDriveSync && !btnTestGDriveSync._hasListener) {
+      btnTestGDriveSync._hasListener = true;
+      btnTestGDriveSync.addEventListener('click', async () => {
+        btnTestGDriveSync.disabled = true;
+        btnTestGDriveSync.innerHTML = '<i data-lucide="refresh-cw" class="icon-spin" style="width: 14px; height: 14px;"></i> Subiendo...';
+        lucide.createIcons();
+        try {
+          const res = await fetch('/api/admin/gdrive-sync-test', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${authToken}` }
+          });
+          const data = await res.json();
+          if (data.success) {
+            alert('🎉 ¡ÉXITO!\n\n' + data.message + '\n\nRevisa tu carpeta en Google Drive para verificar el archivo.');
+          } else {
+            alert('⚠️ ' + (data.error || 'Fallo en la prueba de sincronización'));
+          }
+        } catch (err) {
+          alert('❌ Error de red al probar: ' + err.message);
+        } finally {
+          btnTestGDriveSync.disabled = false;
+          btnTestGDriveSync.innerHTML = '<i data-lucide="send" style="width: 14px; height: 14px;"></i> Probar Subida Ahora';
+          lucide.createIcons();
+        }
+      });
+    }
+
+    if (btnShowAppsScriptModal && !btnShowAppsScriptModal._hasListener) {
+      btnShowAppsScriptModal._hasListener = true;
+      btnShowAppsScriptModal.addEventListener('click', () => {
+        const code = window._gdriveAppsScriptTemplate || '// Cargando plantilla...';
+        prompt('📋 Copia este código para pegarlo en tu Google Apps Script (script.google.com):', code);
+      });
+    }
+
     const usersRes = await fetch('/api/users', { headers: { 'X-Server-Id': currentServerId, 'Authorization': `Bearer ${authToken}` }});
     if (usersRes.ok) {
       const users = await usersRes.json();

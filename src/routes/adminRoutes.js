@@ -31,6 +31,9 @@ router.post('/admin/restore', requireAuth, requireAdmin, adminController.restore
 router.get('/admin/autobackups', requireAuth, requireAdmin, adminController.getAutoBackups);
 router.get('/admin/autobackups/:filename', requireAuth, requireAdmin, adminController.downloadAutoBackup);
 router.get('/admin/audit-logs', requireAuth, requireAdmin, adminController.getAuditLogs);
+router.get('/admin/gdrive-config', requireAuth, requireAdmin, adminController.getGDriveConfig);
+router.post('/admin/gdrive-config', requireAuth, requireAdmin, adminController.updateGDriveConfig);
+router.post('/admin/gdrive-sync-test', requireAuth, requireAdmin, adminController.testGDriveSync);
 
 router.get('/admin/coupons', requireAuth, requireAdmin, adminController.getCoupons);
 router.post('/admin/coupons', requireAuth, requireAdmin, adminController.createCoupon);
