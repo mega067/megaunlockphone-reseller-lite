@@ -1492,7 +1492,8 @@ function openPurchaseModal(serviceId) {
 
   modalServiceId.textContent = `ID: ${product.serviceid}`;
   modalServiceName.textContent = product.service;
-  modalServiceGroup.textContent = product.group || 'General';
+  // Mostrar el grupo REAL del proveedor en el modal de pedido
+  modalServiceGroup.textContent = product.originalGroup || (product.rawItem && product.rawItem._ORIGINAL_GROUP) || product.group || 'General';
   modalServicePrice.textContent = `Costo: ${formatPrice(product.credit)}`;
 
   // Balance check and Price calculation
