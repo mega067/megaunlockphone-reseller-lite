@@ -1492,7 +1492,24 @@ function openPurchaseModal(serviceId) {
 
   modalServiceId.textContent = `ID: ${product.serviceid}`;
   modalServiceName.textContent = product.service;
-  modalServiceGroup.textContent = product.group;
+  
+  // Mostrar ambos grupos: Custom (organización) y Real del proveedor (precio base)
+  const customG = product.customGroup || (product.rawItem && product.rawItem._CUSTOM_GROUP);
+  const realG = product.originalGroup || (product.rawItem && product.rawItem._ORIGINAL_GROUP) || product.group;
+  
+  if (customG && customG !== realG) {
+    modalServiceGroup.innerHTML = `
+      <span style="display: inline-flex; align-items: center; gap: 4px; color: #38bdf8; font-weight: 600; font-size: 0.8rem;">
+        📁 ${escapeHtml(customG)}
+      </span>
+      <span style="font-size: 0.72rem; color: #94a3b8; margin-left: 6px; background: rgba(148, 163, 184, 0.12); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 4px; padding: 1px 6px;" title="Grupo Original del Proveedor (Determina tarifas y comisiones)">
+        🌐 ${escapeHtml(realG)}
+      </span>
+    `;
+  } else {
+    modalServiceGroup.textContent = realG || product.group || 'General';
+  }
+
   modalServicePrice.textContent = `Costo: ${formatPrice(product.credit)}`;
 
   // Balance check and Price calculation

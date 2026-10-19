@@ -232,6 +232,8 @@ exports.getProducts = async (req, res) => {
                                       (service.SERVICEID && serverCustomGroups[String(service.SERVICEID)]) || 
                                       (serviceKey && serverCustomGroups[String(serviceKey)]);
 
+          service._ORIGINAL_GROUP = groupName;
+
           if (assignedCustomGroup) {
               service._CUSTOM_GROUP = assignedCustomGroup;
               const customMarkup = serverGroupMarkups[service._CUSTOM_GROUP];
@@ -276,8 +278,9 @@ exports.getProducts = async (req, res) => {
             priceCache[realServiceId] = parseFloat(fallbackPrices[realServiceId]);
           }
 
-          // Active group markup for custom groups or original groups
-          const activeGroupMarkup = (service._CUSTOM_GROUP && serverGroupMarkups[service._CUSTOM_GROUP]) || groupMarkupObj;
+          // Los precios y comisiones se calculan estrictamente con el grupo real del proveedor (groupMarkupObj).
+          // El grupo custom (_CUSTOM_GROUP) es exclusivamente para organización visual y búsqueda.
+          const activeGroupMarkup = groupMarkupObj;
 
           let resellerCost = 0, clientPrice = 0;
           let isNoPrice = false;

@@ -109,6 +109,8 @@ async function syncProducts(shouldPersist = false) {
               serviceid: item.SERVICEID || serviceId,
               service: item.SERVICENAME || item.SERVICE || 'Sin nombre',
               group: item._CUSTOM_GROUP || groupName,
+              originalGroup: item._ORIGINAL_GROUP || groupName,
+              customGroup: item._CUSTOM_GROUP || null,
               groupIsHot: item._IS_HOT_OVERRIDE || group._IS_HOT || false,
               groupLogo: item._LOGO_OVERRIDE || group._LOGO || null,
               type: groupType || item.SERVICETYPE || item.TYPE || 'General',
@@ -125,6 +127,8 @@ async function syncProducts(shouldPersist = false) {
         serviceid: item.SERVICEID || item.serviceid || 'N/A',
         service: item.SERVICENAME || item.SERVICE || item.service || 'Sin nombre',
         group: item._CUSTOM_GROUP || item.GROUP || item.group || 'General',
+        originalGroup: item._ORIGINAL_GROUP || item.GROUP || item.group || 'General',
+        customGroup: item._CUSTOM_GROUP || null,
         groupIsHot: item._IS_HOT_OVERRIDE || item._IS_HOT || false,
         groupLogo: item._LOGO_OVERRIDE || item._LOGO || null,
         type: item.GROUPTYPE || item.SERVICETYPE || item.TYPE || item.type || 'General',
@@ -140,6 +144,8 @@ async function syncProducts(shouldPersist = false) {
               serviceid: item.SERVICEID || item.serviceid || 'N/A',
               service: item.SERVICENAME || item.SERVICE || item.service || 'Sin nombre',
               group: item._CUSTOM_GROUP || groupName || 'General',
+              originalGroup: item._ORIGINAL_GROUP || groupName || 'General',
+              customGroup: item._CUSTOM_GROUP || null,
               groupIsHot: item._IS_HOT_OVERRIDE || item._IS_HOT || false,
               groupLogo: item._LOGO_OVERRIDE || item._LOGO || null,
               type: item.GROUPTYPE || item.SERVICETYPE || item.TYPE || item.type || 'General',
@@ -666,6 +672,10 @@ function renderProductCards(items) {
       </div>
       <h3 class="product-title">${escapeHtml(p.service)}</h3>
       <div class="product-details">
+        <div class="detail-row" style="flex-wrap: wrap; gap: 4px; margin-bottom: 6px;">
+          ${p.customGroup ? `<span style="font-size: 0.72rem; padding: 2px 7px; border-radius: 4px; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); font-weight: 600;" title="Grupo Personalizado (Agrupación)">📁 ${escapeHtml(p.customGroup)}</span>` : ''}
+          <span style="font-size: 0.72rem; padding: 2px 7px; border-radius: 4px; background: rgba(148, 163, 184, 0.12); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.2);" title="Grupo Real del Proveedor (Determina Precio y Comisiones)">🌐 ${escapeHtml(p.originalGroup || p.group)}</span>
+        </div>
         <div class="detail-row">
           <i data-lucide="clock"></i> <span>${escapeHtml(p.time)}</span>
         </div>
