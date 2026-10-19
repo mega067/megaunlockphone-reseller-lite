@@ -43,12 +43,12 @@ window.IS_DIGITAL_PASS = true;
 
   // 3. Update Title & UI Branding when DOM is ready
   function customizeDigitalPassUI() {
-    document.title = 'DigitalPass - Entretenimiento y Cuentas Premium';
+    document.title = 'DigitalPass - Software, Licencias y Herramientas Digitales';
 
     // Update catalog title
     const catalogTitle = document.getElementById('catalogTitle');
     if (catalogTitle && catalogTitle.textContent.includes('Catálogo')) {
-      catalogTitle.textContent = 'Catálogo DigitalPass (Streaming & AI)';
+      catalogTitle.textContent = 'Catálogo DigitalPass (Software, Licencias & Rentas)';
     }
 
     // Update login modal / branding text if present
@@ -59,7 +59,7 @@ window.IS_DIGITAL_PASS = true;
 
     const loginDesc = document.querySelector('.login-header p');
     if (loginDesc) {
-      loginDesc.textContent = 'Entretenimiento sin límites, precios sin exceso.';
+      loginDesc.textContent = 'Software, licencias profesionales y rentas de herramientas.';
     }
 
     // Ensure Marquee contains pure Streaming & AI brand chips

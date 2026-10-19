@@ -793,14 +793,14 @@ function updateForkJsonDisplay() {
   if (currentForkServerMode === 'both') {
     configObj = {
       server1: {
-        name: "MEGA-PUENTE-S1 (IMEI)",
+        name: "MEGA-PUENTE-S1 (IMEI / UNLOCK)",
         endpoint: lastBridgeData.server1.dhruEndpoint,
         username: currentUsername,
         apiaccesskey: rawKey,
         enabled: true
       },
       server3: {
-        name: "OMEGA-PUENTE-S3 (STREAMING/IA)",
+        name: "OMEGA-PUENTE-S3 (LICENCIAS/HERRAMIENTAS)",
         endpoint: lastBridgeData.server3.dhruEndpoint,
         username: currentUsername,
         apiaccesskey: rawKey,
@@ -810,7 +810,7 @@ function updateForkJsonDisplay() {
   } else if (currentForkServerMode === 's1') {
     configObj = {
       server1: {
-        name: "MEGA-PUENTE-S1 (IMEI)",
+        name: "MEGA-PUENTE-S1 (IMEI / UNLOCK)",
         endpoint: lastBridgeData.server1.dhruEndpoint,
         username: currentUsername,
         apiaccesskey: rawKey,
@@ -820,7 +820,7 @@ function updateForkJsonDisplay() {
   } else if (currentForkServerMode === 's3') {
     configObj = {
       server1: {
-        name: "OMEGA-PUENTE-S3 (STREAMING/IA)",
+        name: "OMEGA-PUENTE-S3 (LICENCIAS/HERRAMIENTAS)",
         endpoint: lastBridgeData.server3.dhruEndpoint,
         username: currentUsername,
         apiaccesskey: rawKey,

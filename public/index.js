@@ -2337,7 +2337,7 @@ btnGenerateTicketFinal.addEventListener('click', async () => {
         if (boxTitle) {
           if (formatType === 'license') boxTitle.textContent = 'DETALLES DE ACTIVACIÓN / LICENCIA';
           else if (formatType === 'recharge') boxTitle.textContent = 'COMPROBANTE DE RECARGA / TRANSACCIÓN';
-          else if (formatType === 'streaming') boxTitle.textContent = 'DETALLES DE LA CUENTA STREAMING';
+          else if (formatType === 'streaming') boxTitle.textContent = 'DETALLES DE LA CUENTA / SERVICIO';
           else if (formatType === 'checker') boxTitle.textContent = 'REPORTE Y DIAGNÓSTICO DEL DISPOSITIVO';
           else boxTitle.textContent = 'DETALLES DEL SERVICIO';
         }
