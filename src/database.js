@@ -51,8 +51,25 @@ const initTables = () => {
             key TEXT PRIMARY KEY,
             value TEXT
         );
+
+        CREATE TABLE IF NOT EXISTS ApiKeys (
+            keyHash TEXT PRIMARY KEY,
+            userId TEXT NOT NULL,
+            name TEXT DEFAULT 'API Access Key',
+            prefix TEXT NOT NULL,
+            createdAt TEXT,
+            lastUsedAt TEXT,
+            isActive INTEGER DEFAULT 1,
+            data TEXT
+        );
     `);
     
+    try {
+        db.exec('ALTER TABLE Users ADD COLUMN apiKey TEXT');
+    } catch (e) {
+        // Ignorar si la columna ya existe
+    }
+
     try {
         db.exec('ALTER TABLE Users ADD COLUMN data TEXT');
     } catch (e) {

@@ -329,6 +329,10 @@ function checkPersistedSession() {
       if (btnImportOrder) btnImportOrder.classList.remove('hidden');
       if (btnRechargesHistory) btnRechargesHistory.classList.remove('hidden');
     }
+
+    const tabProfileBtn = document.getElementById('tabProfile');
+    if (tabProfileBtn) tabProfileBtn.classList.remove('hidden');
+    btnUserProfile.classList.remove('hidden');
     
     btnRechargeBalance.classList.remove('hidden'); // Shown for EVERYONE now
     btnWhatsappBot.classList.remove('hidden');
@@ -414,10 +418,17 @@ function checkPersistedSession() {
     dashboardView.classList.remove('hidden');
     if (historySection) historySection.classList.add('hidden');
     if (adminSection) adminSection.classList.add('hidden');
+    const profileSectionEl = document.getElementById('profileSection');
+    if (profileSectionEl) profileSectionEl.classList.add('hidden');
     if (productsSection) productsSection.classList.remove('hidden');
     if (tabCatalog) tabCatalog.classList.add('active');
     if (tabHistory) tabHistory.classList.remove('active');
     if (tabAdmin) tabAdmin.classList.remove('active');
+    const tabProfileEl = document.getElementById('tabProfile');
+    if (tabProfileEl) {
+      tabProfileEl.classList.remove('active');
+      tabProfileEl.classList.add('hidden');
+    }
     
     syncProducts(false); // Fetch products as guest
   }
@@ -1070,12 +1081,16 @@ function renderOrderHistory() {
           ` : ''}
           <div class="details-grid">
             <div class="details-col">
-              <span class="detail-label">PEDIDO DESDE</span>
-              <strong class="detail-val">${isWarranty ? 'GARANTÍA / IMPORTADO' : 'API'}</strong>
+              <span class="detail-label">CANAL DE ORIGEN</span>
+              <strong class="detail-val" style="display: flex; align-items: center; gap: 5px;">
+                ${item.isApiBridge || item.source === 'API_BRIDGE' ? 
+                  `<span style="color: #38bdf8; background: rgba(56, 189, 248, 0.15); padding: 2px 8px; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.3); font-size: 0.75rem;"><i data-lucide="cpu" style="width: 11px; height: 11px; vertical-align: middle;"></i> API PUENTE</span>` : 
+                  (isWarranty ? 'GARANTÍA / IMPORTADO' : '<span style="color: #a78bfa; background: rgba(167, 139, 250, 0.15); padding: 2px 8px; border-radius: 4px; border: 1px solid rgba(167, 139, 250, 0.3); font-size: 0.75rem;"><i data-lucide="globe" style="width: 11px; height: 11px; vertical-align: middle;"></i> WEB PANEL</span>')}
+              </strong>
             </div>
             <div class="details-col">
               <span class="detail-label">DIRECCIÓN IP</span>
-              <strong class="detail-val">${escapeHtml(item.ip || '127.0.0.1')}</strong>
+              <strong class="detail-val" style="font-family: 'Fira Code', monospace; color: #94a3b8;">${escapeHtml(item.ip || '127.0.0.1')}</strong>
             </div>
             <div class="details-col">
               <span class="detail-label">FECHA DE CREACIÓN</span>

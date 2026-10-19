@@ -3296,3 +3296,117 @@ h1, h2, h3, h4 { color: var(--text-primary); font-family: var(--font-display); f
   font-weight: 700;
   color: #f1f5f9;
 }
+
+/* ========================================================
+   FULL PROFILE SECTION TAB (DASHBOARD)
+======================================================== */
+.profile-section {
+  padding: 0 !important;
+  overflow: hidden;
+  border: 1px solid rgba(56, 189, 248, 0.22) !important;
+  border-radius: var(--radius-lg, 16px) !important;
+  background: linear-gradient(160deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 15, 28, 0.98) 100%) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  animation: fadeInModal 0.25s ease;
+}
+
+.profile-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.profile-nav-tabs-wrapper {
+  background: rgba(0, 0, 0, 0.35);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0 1.25rem;
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+}
+
+.profile-section-body {
+  padding: 1.5rem;
+}
+
+/* ========================================================
+   ADMIN USERS TABLE: EXPANDABLE ACCORDION ROWS
+======================================================== */
+.admin-user-row-header {
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.admin-user-row-header:hover {
+  background: rgba(56, 189, 248, 0.06) !important;
+}
+
+.admin-user-row-header.is-expanded {
+  background: rgba(56, 189, 248, 0.09) !important;
+  border-bottom: none !important;
+}
+
+.admin-user-accordion-btn {
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: #38bdf8;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.admin-user-accordion-btn:hover {
+  background: rgba(56, 189, 248, 0.25);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.admin-user-detail-row {
+  background: rgba(10, 16, 28, 0.95);
+  border-top: none;
+}
+
+.admin-user-detail-row.hidden {
+  display: none !important;
+}
+
+.admin-user-detail-container {
+  padding: 14px 18px;
+  border-top: 1px dashed rgba(56, 189, 248, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0 0 12px 12px;
+  background: linear-gradient(180deg, rgba(14, 165, 233, 0.03) 0%, rgba(0, 0, 0, 0.35) 100%);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.admin-detail-block {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.admin-detail-block-title {
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #94a3b8;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+

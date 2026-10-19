@@ -13,6 +13,18 @@ exports.getUsers = (req, res) => {
   const serverId = getServerId(req);
   const users = readDB('users.json') || [];
   const wUsers = readDB('whatsapp_users.json') || {};
+  const history = readDB('history.json') || [];
+  
+  // Contar pedidos históricos por usuario
+  const orderCountsByUser = {};
+  history.forEach(h => {
+    if (h.userId) {
+      const uKey = String(h.userId);
+      orderCountsByUser[uKey] = (orderCountsByUser[uKey] || 0) + 1;
+    }
+  });
+
+  const ticketConfigs = readDB('ticket_configs.json') || {};
   
   res.json(users.map(u => {
      const currentCredits = getUserCredit(u, serverId);
@@ -25,6 +37,9 @@ exports.getUsers = (req, res) => {
      const hasCleanPhone = !!(u.phone && String(u.phone).replace(/\D/g, '').length >= 10);
      const linkedBot = isExplicitlyLinked || hasCleanPhone;
      
+     const uCfg = ticketConfigs[String(u.id)] || {};
+     const logoUrl = uCfg.logoExt ? `/logos/${u.id}${uCfg.logoExt}` : '';
+
      return { 
        id: u.id, 
        username: u.username, 
@@ -34,12 +49,15 @@ exports.getUsers = (req, res) => {
        credits1: credits1,
        credits2: credits2,
        credits3: credits3,
+       totalOrders: orderCountsByUser[String(u.id)] || 0,
+       logoUrl: logoUrl,
        createdAt: u.createdAt, 
        password: u.password, 
        markup: u.markup,
        phone: u.phone || '-',
        email: u.email || '-',
-       linkedBot: linkedBot
+       linkedBot: linkedBot,
+       isApiEnabled: Boolean(u.isApiEnabled)
      };
   }));
 };
@@ -149,6 +167,9 @@ exports.updateUser = (req, res) => {
   }
   if (req.body.isActive !== undefined && user.role !== 'admin') {
     user.isActive = Boolean(req.body.isActive);
+  }
+  if (req.body.isApiEnabled !== undefined) {
+    user.isApiEnabled = Boolean(req.body.isApiEnabled);
   }
 
   writeDB('users.json', users);

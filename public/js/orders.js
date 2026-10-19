@@ -330,11 +330,51 @@ btnBackToCategories.addEventListener('click', () => {
 });
 
 // Setup Tabs
+const tabProfile = document.getElementById('tabProfile');
+const profileSection = document.getElementById('profileSection');
+const btnBackToCatalogFromProfile = document.getElementById('btnBackToCatalogFromProfile');
+
+function openProfileTab(subTab = 'tabProfileOverview') {
+  if (tabProfile) {
+    tabProfile.classList.remove('hidden');
+    tabProfile.classList.add('active');
+  }
+  if (tabCatalog) tabCatalog.classList.remove('active');
+  if (tabHistory) tabHistory.classList.remove('active');
+  if (tabAdmin) tabAdmin.classList.remove('active');
+
+  if (profileSection) profileSection.classList.remove('hidden');
+  if (productsSection) productsSection.classList.add('hidden');
+  if (historySection) historySection.classList.add('hidden');
+  if (adminSection) adminSection.classList.add('hidden');
+  const rechargeSection = document.getElementById('rechargeSection');
+  if (rechargeSection) rechargeSection.classList.add('hidden');
+  if (typeof rechargesSection !== 'undefined' && rechargesSection) rechargesSection.classList.add('hidden');
+
+  switchProfileTab(subTab);
+  loadFullUserProfile();
+  if (profileSection) setTimeout(() => profileSection.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+}
+
+if (tabProfile) {
+  tabProfile.addEventListener('click', () => {
+    openProfileTab('tabProfileOverview');
+  });
+}
+
+if (btnBackToCatalogFromProfile) {
+  btnBackToCatalogFromProfile.addEventListener('click', () => {
+    if (tabCatalog) tabCatalog.click();
+  });
+}
+
 tabCatalog.addEventListener('click', () => {
   tabCatalog.classList.add('active');
   tabHistory.classList.remove('active');
   if (tabAdmin) tabAdmin.classList.remove('active');
+  if (tabProfile) tabProfile.classList.remove('active');
   productsSection.classList.remove('hidden');
+  if (profileSection) profileSection.classList.add('hidden');
   const rechargeSection = document.getElementById('rechargeSection');
   if (rechargeSection) rechargeSection.classList.add('hidden');
   historySection.classList.add('hidden');
@@ -356,7 +396,9 @@ tabHistory.addEventListener('click', () => {
   tabHistory.classList.add('active');
   tabCatalog.classList.remove('active');
   if (tabAdmin) tabAdmin.classList.remove('active');
+  if (tabProfile) tabProfile.classList.remove('active');
   historySection.classList.remove('hidden');
+  if (profileSection) profileSection.classList.add('hidden');
   const rechargeSection = document.getElementById('rechargeSection');
   if (rechargeSection) rechargeSection.classList.add('hidden');
   productsSection.classList.add('hidden');
@@ -371,9 +413,11 @@ if (tabAdmin) {
     tabAdmin.classList.add('active');
     tabCatalog.classList.remove('active');
     tabHistory.classList.remove('active');
+    if (tabProfile) tabProfile.classList.remove('active');
     adminSection.classList.remove('hidden');
-  const rechargeSection = document.getElementById('rechargeSection');
-  if (rechargeSection) rechargeSection.classList.add('hidden');
+    if (profileSection) profileSection.classList.add('hidden');
+    const rechargeSection = document.getElementById('rechargeSection');
+    if (rechargeSection) rechargeSection.classList.add('hidden');
     productsSection.classList.add('hidden');
     historySection.classList.add('hidden');
     if (typeof rechargesSection !== 'undefined' && rechargesSection) rechargesSection.classList.add('hidden');
@@ -422,11 +466,11 @@ const profileAvatarLetter = document.getElementById('profileAvatarLetter');
 const inputNewPassword = document.getElementById('inputNewPassword');
 const btnSaveNewPassword = document.getElementById('btnSaveNewPassword');
 
-// Tab switching helper
+// Tab switching helper for Profile Section
 function switchProfileTab(targetTabId) {
-  if (!userProfileModal) return;
-  const tabBtns = userProfileModal.querySelectorAll('.profile-tab-btn');
-  const tabPanes = userProfileModal.querySelectorAll('.profile-tab-pane');
+  const container = document.getElementById('profileSection') || document;
+  const tabBtns = container.querySelectorAll('.profile-tab-btn');
+  const tabPanes = container.querySelectorAll('.profile-tab-pane');
 
   tabBtns.forEach(btn => {
     if (btn.getAttribute('data-tab') === targetTabId) {
@@ -448,8 +492,9 @@ function switchProfileTab(targetTabId) {
 }
 
 // Bind click on profile tabs
-if (userProfileModal) {
-  userProfileModal.querySelectorAll('.profile-tab-btn').forEach(btn => {
+document.addEventListener('DOMContentLoaded', () => {
+  const container = document.getElementById('profileSection') || document;
+  container.querySelectorAll('.profile-tab-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const targetTab = btn.getAttribute('data-tab');
       if (targetTab) switchProfileTab(targetTab);
@@ -464,7 +509,7 @@ if (userProfileModal) {
   if (btnGoWhatsAppTab) {
     btnGoWhatsAppTab.addEventListener('click', () => switchProfileTab('tabProfileWhatsApp'));
   }
-}
+});
 
 async function loadFullUserProfile() {
   const currentUsername = authUsername || localStorage.getItem('dhru_username') || 'Usuario';
@@ -512,6 +557,9 @@ async function loadFullUserProfile() {
       if (typeof updateBotButtonStatus === 'function') {
         updateBotButtonStatus(Boolean(data.isLinkedToBot));
       }
+
+      // Cargar estado de API Key
+      loadUserApiKeyInfo();
     }
   } catch (e) {
     console.warn('No se pudo cargar detalles adicionales del perfil:', e);
@@ -522,7 +570,6 @@ async function loadFullUserProfile() {
 
 if (btnUserProfile) {
   btnUserProfile.addEventListener('click', () => {
-    switchProfileTab('tabProfileOverview');
     inputNewPassword.value = '';
     const confirmPwd = document.getElementById('inputConfirmNewPassword');
     if (confirmPwd) confirmPwd.value = '';
@@ -531,8 +578,7 @@ if (btnUserProfile) {
     const currentPwd2 = document.getElementById('inputCurrentPasswordPhone');
     if (currentPwd2) currentPwd2.value = '';
 
-    loadFullUserProfile();
-    userProfileModal.classList.remove('hidden');
+    openProfileTab('tabProfileOverview');
   });
 }
 
@@ -702,6 +748,266 @@ if (inputProfilePhoto) {
       if (photoStatus) photoStatus.style.display = 'none';
     } finally {
       inputProfilePhoto.value = '';
+    }
+  });
+}
+
+// ==========================================
+// API BRIDGE & FORK CONNECTION LOGIC (DUAL SERVER)
+// ==========================================
+let lastBridgeData = null;
+let currentForkServerMode = 'both'; // 'both', 's1', 's3'
+
+function updateForkJsonDisplay() {
+  const codeForkConfig = document.getElementById('codeForkConfig');
+  if (!codeForkConfig || !lastBridgeData) return;
+
+  const currentUsername = authUsername || localStorage.getItem('dhru_username') || 'TuUsuario';
+  const rawKey = lastBridgeData.hasKey ? (lastBridgeData.prefix || "mup_live_TuAPIKeyAqui") : "mup_live_TuAPIKeyAqui";
+
+  let configObj = {};
+
+  if (currentForkServerMode === 'both') {
+    configObj = {
+      server1: {
+        name: "MEGA-PUENTE-S1 (IMEI)",
+        endpoint: lastBridgeData.server1.dhruEndpoint,
+        username: currentUsername,
+        apiaccesskey: rawKey,
+        enabled: true
+      },
+      server3: {
+        name: "OMEGA-PUENTE-S3 (STREAMING/IA)",
+        endpoint: lastBridgeData.server3.dhruEndpoint,
+        username: currentUsername,
+        apiaccesskey: rawKey,
+        enabled: true
+      }
+    };
+  } else if (currentForkServerMode === 's1') {
+    configObj = {
+      server1: {
+        name: "MEGA-PUENTE-S1 (IMEI)",
+        endpoint: lastBridgeData.server1.dhruEndpoint,
+        username: currentUsername,
+        apiaccesskey: rawKey,
+        enabled: true
+      }
+    };
+  } else if (currentForkServerMode === 's3') {
+    configObj = {
+      server1: {
+        name: "OMEGA-PUENTE-S3 (STREAMING/IA)",
+        endpoint: lastBridgeData.server3.dhruEndpoint,
+        username: currentUsername,
+        apiaccesskey: rawKey,
+        enabled: true
+      }
+    };
+  }
+
+  codeForkConfig.textContent = JSON.stringify(configObj, null, 2);
+}
+
+async function loadUserApiKeyInfo() {
+  const inputDisplay = document.getElementById('inputUserApiKeyDisplay');
+  const badge = document.getElementById('apiStatusBadge');
+  const lastUsedSpan = document.getElementById('apiKeyLastUsed');
+  const s1Balance = document.getElementById('apiS1BalanceDisplay');
+  const s3Balance = document.getElementById('apiS3BalanceDisplay');
+
+  if (!inputDisplay) return;
+
+  try {
+    const res = await fetch('/api/user/apikey', {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      lastBridgeData = data;
+      
+      const activationBox = document.getElementById('apiActivationStatusBox');
+      const activationTitle = document.getElementById('apiActivationTitle');
+      const activationDesc = document.getElementById('apiActivationDesc');
+      const activationIcon = document.getElementById('apiActivationIcon');
+
+      if (data.hasKey) {
+        inputDisplay.value = data.prefix || 'mup_live_••••••••';
+        
+        if (data.isApiEnabled) {
+          // Activada por admin
+          if (badge) {
+            badge.textContent = 'Activa y Operativa';
+            badge.style.background = 'rgba(16, 185, 129, 0.15)';
+            badge.style.color = '#34d399';
+            badge.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+          }
+          if (activationBox) {
+            activationBox.style.background = 'rgba(16, 185, 129, 0.1)';
+            activationBox.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+          }
+          if (activationTitle) {
+            activationTitle.textContent = 'API Habilitada para Despacho';
+            activationTitle.style.color = '#34d399';
+          }
+          if (activationDesc) {
+            activationDesc.textContent = 'Tu cuenta cuenta con autorización activa para despachar órdenes y sincronizar catálogo vía API.';
+          }
+          if (activationIcon) {
+            activationIcon.setAttribute('data-lucide', 'check-circle-2');
+            activationIcon.style.color = '#34d399';
+          }
+        } else {
+          // Generada pero pendiente de activación por soporte
+          if (badge) {
+            badge.textContent = 'Pendiente de Activación';
+            badge.style.background = 'rgba(245, 158, 11, 0.15)';
+            badge.style.color = '#fbbf24';
+            badge.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+          }
+          if (activationBox) {
+            activationBox.style.background = 'rgba(245, 158, 11, 0.1)';
+            activationBox.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+          }
+          if (activationTitle) {
+            activationTitle.textContent = 'Activación Requerida';
+            activationTitle.style.color = '#fbbf24';
+          }
+          if (activationDesc) {
+            activationDesc.textContent = 'Tu API Key está generada pero requiere que el equipo de soporte la active antes de procesar órdenes.';
+          }
+          if (activationIcon) {
+            activationIcon.setAttribute('data-lucide', 'shield-alert');
+            activationIcon.style.color = '#f59e0b';
+          }
+        }
+
+        if (lastUsedSpan) {
+          lastUsedSpan.textContent = data.lastUsedAt ? `Último uso: ${new Date(data.lastUsedAt).toLocaleString('es-MX')}` : 'Aún sin peticiones';
+        }
+      } else {
+        inputDisplay.value = '';
+        inputDisplay.placeholder = 'No tienes API Key. Haz clic en "Generar Llave"...';
+        if (badge) {
+          badge.textContent = 'Sin API Key';
+          badge.style.background = 'rgba(148, 163, 184, 0.1)';
+          badge.style.color = '#94a3b8';
+          badge.style.borderColor = 'rgba(148, 163, 184, 0.2)';
+        }
+        if (lastUsedSpan) lastUsedSpan.textContent = 'Inactiva';
+      }
+
+      // Saldos de cada servidor individual
+      if (s1Balance && data.credits) {
+        s1Balance.textContent = `$${parseFloat(data.credits.server1 || 0).toFixed(2)} MXN`;
+      }
+      if (s3Balance && data.credits) {
+        s3Balance.textContent = `$${parseFloat(data.credits.server3 || 0).toFixed(2)} MXN`;
+      }
+
+      if (window.lucide) window.lucide.createIcons();
+      updateForkJsonDisplay();
+    }
+  } catch (e) {
+    console.warn('Error al cargar API Key del usuario:', e);
+  }
+}
+
+// Event delegation para los botones de pestañas de servidores del fork
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.btn-server-fork-tab');
+  if (btn) {
+    document.querySelectorAll('.btn-server-fork-tab').forEach(b => {
+      b.classList.remove('active');
+      b.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+      b.style.color = 'var(--text-secondary)';
+    });
+    btn.classList.add('active');
+    btn.style.borderColor = '#38bdf8';
+    btn.style.color = '#38bdf8';
+    currentForkServerMode = btn.getAttribute('data-cfg') || 'both';
+    updateForkJsonDisplay();
+  }
+});
+
+const btnGenerateUserApiKey = document.getElementById('btnGenerateUserApiKey');
+if (btnGenerateUserApiKey) {
+  btnGenerateUserApiKey.addEventListener('click', async () => {
+    if (!confirm('¿Deseas generar una nueva API Key? Si ya tenías una activa, quedará revocada inmediatamente.')) return;
+    
+    try {
+      const res = await fetch('/api/user/apikey/generate', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const inputDisplay = document.getElementById('inputUserApiKeyDisplay');
+        const notice = document.getElementById('apiKeyAlertNotice');
+        if (inputDisplay) inputDisplay.value = data.apiKey;
+        if (notice) notice.classList.remove('hidden');
+
+        // Copiar automáticamente al portapapeles
+        if (navigator.clipboard) {
+          await navigator.clipboard.writeText(data.apiKey);
+        }
+
+        alert('✅ ¡API Key generada con éxito!\n\nSe ha copiado a tu portapapeles. Pégala en tu archivo data/settings.json de tu fork.');
+        loadUserApiKeyInfo();
+      } else {
+        const err = await res.json();
+        alert('Error: ' + (err.error || 'No se pudo generar la API Key'));
+      }
+    } catch (e) {
+      alert('Error de conexión al generar la API Key.');
+    }
+  });
+}
+
+const btnRevokeUserApiKey = document.getElementById('btnRevokeUserApiKey');
+if (btnRevokeUserApiKey) {
+  btnRevokeUserApiKey.addEventListener('click', async () => {
+    if (!confirm('¿Estás seguro de revocar tu API Key? Tu fork y conexiones externas dejarán de procesar órdenes hasta generar una nueva.')) return;
+
+    try {
+      const res = await fetch('/api/user/apikey/revoke', {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      if (res.ok) {
+        alert('API Key revocada correctamente.');
+        const notice = document.getElementById('apiKeyAlertNotice');
+        if (notice) notice.classList.add('hidden');
+        loadUserApiKeyInfo();
+      } else {
+        alert('Error al revocar la API Key.');
+      }
+    } catch (e) {
+      alert('Error de conexión.');
+    }
+  });
+}
+
+const btnCopyUserApiKey = document.getElementById('btnCopyUserApiKey');
+if (btnCopyUserApiKey) {
+  btnCopyUserApiKey.addEventListener('click', () => {
+    const inputDisplay = document.getElementById('inputUserApiKeyDisplay');
+    if (!inputDisplay || !inputDisplay.value) return alert('No hay API Key para copiar.');
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(inputDisplay.value);
+      alert('API Key copiada al portapapeles.');
+    }
+  });
+}
+
+const btnCopyForkConfig = document.getElementById('btnCopyForkConfig');
+if (btnCopyForkConfig) {
+  btnCopyForkConfig.addEventListener('click', () => {
+    const code = document.getElementById('codeForkConfig');
+    if (!code) return;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(code.textContent);
+      alert('Configuración JSON de ejemplo copiada al portapapeles.');
     }
   });
 }

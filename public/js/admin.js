@@ -246,83 +246,178 @@ async function loadAdminData() {
 
         usersTableBody.innerHTML = '';
         if (filtered.length === 0) {
-          usersTableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 25px;">No se encontraron usuarios que coincidan con la búsqueda.</td></tr>`;
+          usersTableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 25px;">No se encontraron usuarios que coincidan con la búsqueda.</td></tr>`;
           return;
         }
 
         filtered.forEach(u => {
           const isActive = u.isActive !== false;
-          const tr = document.createElement('tr');
+          const isApiActive = u.isApiEnabled === true;
+          const totalOrders = u.totalOrders || 0;
+          const initialLetter = (u.username || 'U').charAt(0).toUpperCase();
+
+          // 1. Primary Summary Row
+          const trHeader = document.createElement('tr');
+          trHeader.className = 'admin-user-row-header';
+          trHeader.dataset.targetDetail = `user-detail-${u.id}`;
           if (!isActive) {
-            tr.style.opacity = '0.65';
-            tr.style.background = 'rgba(239, 68, 68, 0.04)';
+            trHeader.style.opacity = '0.7';
+            trHeader.style.background = 'rgba(239, 68, 68, 0.04)';
           }
-          tr.innerHTML = `
-            <td><span style="font-family: monospace; font-size: 0.8rem; color: #a1a1aa;">${u.id}</span></td>
+
+          const avatarContent = u.logoUrl 
+            ? `<img src="${escapeHtml(u.logoUrl)}" alt="${escapeHtml(u.username)}" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid #38bdf8; box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);">`
+            : `<div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #0ea5e9, #6366f1); color: white; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1rem; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 2px 6px rgba(0,0,0,0.3);">${initialLetter}</div>`;
+
+          trHeader.innerHTML = `
             <td>
-               <div style="display:flex; flex-direction:column; gap:4px;">
-                 <div style="display: flex; align-items: center; gap: 6px;">
-                   <strong style="color: ${isActive ? 'white' : '#f87171'};">${escapeHtml(u.username)}</strong>
-                   ${!isActive ? `<span style="font-size: 0.65rem; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 1px 5px; border-radius: 4px; font-weight: 700;">INACTIVO</span>` : ''}
-                 </div>
-                 <div style="font-size: 0.75rem; color: var(--text-muted);">
-                   <div>📞 ${escapeHtml(u.phone || '-')}</div>
-                   <div>✉️ ${escapeHtml(u.email || '-')}</div>
-                   <div style="color: ${u.linkedBot ? '#34d399' : '#f472b6'}; font-weight: 600;">${u.linkedBot ? '🤖 Bot Vinculado' : '🤖 Sin Bot'}</div>
-                 </div>
-                 ${u.role === 'admin' ? `<span class="status-badge badge-category-server" style="width:fit-content; font-size:0.7rem; padding: 2px 6px;">ADMIN</span>` : 
-                   `<select class="role-select" data-id="${u.id}" style="width: fit-content; padding: 2px 6px; font-size: 0.7rem; background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.3); color: #c4b5fd; border-radius: 4px; outline: none; cursor: pointer;">
-                      <option value="reseller" ${u.role === 'reseller' || !u.role ? 'selected' : ''}>RESELLER</option>
-                      <option value="colaborador" ${u.role === 'colaborador' ? 'selected' : ''}>COLABORADOR</option>
-                    </select>`
-                 }
-                 <div style="display: flex; align-items: center; gap: 4px;">
-                   <input type="password" class="user-password-field" value="${escapeHtml(u.password || '')}" readonly style="width: 60px; padding: 2px; font-size:0.75rem; border-radius: 4px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: white;">
-                   ${u.role !== 'admin' ? `
-                     <button type="button" class="btn-icon btn-toggle-pwd" title="Mostrar/Ocultar" style="width: 20px; height: 20px; min-width: 20px; display: flex; align-items: center; justify-content: center;"><i data-lucide="eye" style="width: 12px; height: 12px;"></i></button>
-                     <button type="button" class="btn-icon btn-edit-pwd" data-id="${u.id}" title="Cambiar Contraseña" style="width: 20px; height: 20px; min-width: 20px; display: flex; align-items: center; justify-content: center;"><i data-lucide="key" style="width: 12px; height: 12px; color: #facc15;"></i></button>
-                   ` : ''}
-                 </div>
-               </div>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                ${avatarContent}
+                <div>
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <strong style="color: ${isActive ? '#f8fafc' : '#f87171'}; font-size: 0.95rem;">${escapeHtml(u.username)}</strong>
+                    <span style="font-family: monospace; font-size: 0.7rem; color: #94a3b8; background: rgba(255,255,255,0.06); padding: 1px 5px; border-radius: 4px;">#${u.id}</span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 6px; margin-top: 2px;">
+                    <span class="status-badge" style="font-size: 0.65rem; padding: 1px 6px; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); font-weight: 700; text-transform: uppercase;">${u.role || 'RESELLER'}</span>
+                    ${u.phone ? `<span style="font-size: 0.72rem; color: #94a3b8; font-family: monospace;">📞 +${escapeHtml(u.phone)}</span>` : ''}
+                  </div>
+                </div>
+              </div>
             </td>
             <td style="text-align: center; vertical-align: middle;">
               ${u.role !== 'admin' ? `
-                <button type="button" class="btn-toggle-active-status" data-id="${u.id}" data-active="${isActive ? 'true' : 'false'}" title="${isActive ? 'Desactivar acceso a este usuario' : 'Activar acceso a este usuario'}" style="background: ${isActive ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)'}; border: 1px solid ${isActive ? 'rgba(34, 197, 94, 0.35)' : 'rgba(239, 68, 68, 0.35)'}; color: ${isActive ? '#4ade80' : '#f87171'}; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s;">
-                  <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: ${isActive ? '#22c55e' : '#ef4444'};"></span>
+                <button type="button" class="btn-toggle-active-status" data-id="${u.id}" data-active="${isActive ? 'true' : 'false'}" title="${isActive ? 'Desactivar acceso' : 'Activar acceso'}" style="background: ${isActive ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)'}; border: 1px solid ${isActive ? 'rgba(34, 197, 94, 0.35)' : 'rgba(239, 68, 68, 0.35)'}; color: ${isActive ? '#4ade80' : '#f87171'}; padding: 3px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                  <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: ${isActive ? '#22c55e' : '#ef4444'};"></span>
                   ${isActive ? 'Activo' : 'Pausado'}
                 </button>
-              ` : '<span style="color: #22c55e; font-size: 0.75rem; font-weight: 700;">🟢 Siempre Activo</span>'}
+              ` : '<span style="color: #22c55e; font-size: 0.72rem; font-weight: 700;">🟢 Siempre Activo</span>'}
             </td>
             <td>
-              ${u.role !== 'admin' ? `
-                <div style="display: flex; align-items: center; gap: 4px;">
-                  <span style="color:var(--text-secondary);">$</span>
-                  <input type="number" step="0.1" class="user-markup-input" data-id="${u.id}" value="${u.markup !== null && u.markup !== undefined ? u.markup : ''}" placeholder="Global" style="width: 70px; padding: 4px; border-radius: 4px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); color: white;">
+              <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                <div style="background: rgba(14, 165, 233, 0.08); border: 1px solid rgba(14, 165, 233, 0.2); padding: 3px 8px; border-radius: 6px; font-size: 0.76rem; display: flex; align-items: center; gap: 5px;">
+                  <span style="color: #60a5fa; font-weight: 700;">⚡ S1:</span>
+                  <strong style="color: #38bdf8;">$${parseFloat(u.credits1 || 0).toFixed(2)}</strong>
                 </div>
-              ` : '-'}
+                <div style="background: rgba(168, 85, 247, 0.08); border: 1px solid rgba(168, 85, 247, 0.2); padding: 3px 8px; border-radius: 6px; font-size: 0.76rem; display: flex; align-items: center; gap: 5px;">
+                  <span style="color: #c084fc; font-weight: 700;">🔱 S3:</span>
+                  <strong style="color: #c084fc;">$${parseFloat(u.credits3 || 0).toFixed(2)}</strong>
+                </div>
+              </div>
             </td>
-            <td>
-               <div style="display:flex; flex-direction:column; gap:4px; font-size:0.85rem;">
-                 <div style="display:flex; justify-content:space-between; width: 170px; background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius:4px;"><span style="color:#60a5fa">⚡ MEGA:</span> <strong style="color: #34d399;">$${parseFloat(u.credits1 || 0).toFixed(2)}</strong></div>
-                 <div style="display:flex; justify-content:space-between; width: 170px; background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius:4px;"><span style="color:#f472b6">🛡 ALPHA:</span> <strong style="color: #34d399;">$${parseFloat(u.credits2 || 0).toFixed(2)}</strong></div>
-                 <div style="display:flex; justify-content:space-between; width: 170px; background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius:4px;"><span style="color:#facc15">Ω OMEGA:</span> <strong style="color: #34d399;">$${parseFloat(u.credits3 || 0).toFixed(2)}</strong></div>
-               </div>
+            <td style="text-align: center; vertical-align: middle;">
+              <span style="display: inline-flex; align-items: center; gap: 4px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1); padding: 3px 10px; border-radius: 999px; font-size: 0.8rem; font-weight: 700; color: #f1f5f9;">
+                <i data-lucide="package" style="width: 13px; height: 13px; color: #facc15;"></i>
+                ${totalOrders}
+              </span>
             </td>
             <td style="text-align: right; vertical-align: middle;">
-              ${u.role !== 'admin' ? `
-                <div style="display: flex; gap: 5px; justify-content: flex-end; align-items: center;">
-                  <button type="button" class="btn btn-sm btn-impersonate-user" data-id="${u.id}" data-name="${escapeHtml(u.username)}" title="Entrar a cuenta de ${escapeHtml(u.username)} (Inspeccionar saldo, pedidos, historial)" style="background: rgba(139, 92, 246, 0.15); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.35); padding: 6px;"><i data-lucide="user-check" style="width:16px;height:16px;"></i></button>
-                  ${!u.linkedBot && u.phone && u.phone !== '-' ? `
-                    <button type="button" class="btn btn-sm btn-notify-user-bot" data-id="${u.id}" data-name="${escapeHtml(u.username)}" title="Enviar mensaje de WhatsApp para vincular bot" style="background: rgba(37, 211, 102, 0.15); color: #25D366; border: 1px solid rgba(37, 211, 102, 0.35); padding: 6px;"><i data-lucide="message-circle" style="width:16px;height:16px;"></i></button>
-                  ` : ''}
-                  <button type="button" class="btn btn-sm btn-recharge-user" data-id="${u.id}" title="Añadir Saldo" style="background: rgba(34,211,238,0.1); color: #22d3ee; padding: 6px;"><i data-lucide="plus" style="width:16px;height:16px;"></i></button>
-                  <button type="button" class="btn btn-sm btn-deduct-user" data-id="${u.id}" title="Quitar Saldo" style="background: rgba(244,63,94,0.1); color: #f43f5e; padding: 6px;"><i data-lucide="minus" style="width:16px;height:16px;"></i></button>
-                  <button type="button" class="btn btn-sm btn-delete-user" data-id="${u.id}" title="Eliminar Usuario" style="background: rgba(239,68,68,0.1); color: #ef4444; padding: 6px;"><i data-lucide="trash-2" style="width:16px;height:16px;"></i></button>
-                </div>
-              ` : '<span style="color:var(--text-muted); font-size:0.8rem;">Admin</span>'}
+              <button type="button" class="admin-user-accordion-btn btn-toggle-user-accordion" data-target="user-detail-${u.id}" title="Ver acciones completas">
+                <span>Gestionar</span>
+                <i data-lucide="chevron-down" style="width: 14px; height: 14px; transition: transform 0.2s;"></i>
+              </button>
             </td>
           `;
-          usersTableBody.appendChild(tr);
+          usersTableBody.appendChild(trHeader);
+
+          // 2. Expandable Accordion Sub-row
+          const trDetail = document.createElement('tr');
+          trDetail.id = `user-detail-${u.id}`;
+          trDetail.className = 'admin-user-detail-row hidden';
+          trDetail.innerHTML = `
+            <td colspan="5" style="padding: 0;">
+              <div class="admin-user-detail-container">
+                <!-- Bloque 1: Ajuste de Saldos / Billeteras -->
+                <div class="admin-detail-block">
+                  <div class="admin-detail-block-title">
+                    <i data-lucide="wallet" style="width: 14px; height: 14px; color: #38bdf8;"></i>
+                    Modificar Saldo (Servidor Activo: ${currentServerId === '1' ? 'MEGA' : 'OMEGA'})
+                  </div>
+                  <div style="display: flex; gap: 8px; align-items: center; margin-top: 8px;">
+                    <button type="button" class="btn btn-secondary btn-small btn-recharge-user" data-id="${u.id}" style="flex: 1; justify-content: center; background: rgba(34, 211, 238, 0.12); color: #22d3ee; border-color: rgba(34, 211, 238, 0.35); font-weight: 700; font-size: 0.78rem;">
+                      <i data-lucide="plus" style="width: 14px; height: 14px;"></i> Añadir Saldo
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-small btn-deduct-user" data-id="${u.id}" style="flex: 1; justify-content: center; background: rgba(244, 63, 94, 0.12); color: #f43f5e; border-color: rgba(244, 63, 94, 0.35); font-weight: 700; font-size: 0.78rem;">
+                      <i data-lucide="minus" style="width: 14px; height: 14px;"></i> Quitar Saldo
+                    </button>
+                  </div>
+                  <div style="font-size: 0.72rem; color: #94a3b8; margin-top: 8px;">
+                    Cambia el selector superior MEGA / OMEGA para abonar a uno u otro servidor.
+                  </div>
+                </div>
+
+                <!-- Bloque 2: Credenciales y Seguridad -->
+                <div class="admin-detail-block">
+                  <div class="admin-detail-block-title">
+                    <i data-lucide="key" style="width: 14px; height: 14px; color: #facc15;"></i>
+                    Contraseña & Rol
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+                    <input type="password" class="user-password-field" value="${escapeHtml(u.password || '')}" readonly style="flex: 1; padding: 6px 10px; font-size: 0.8rem; border-radius: 6px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: white; font-family: monospace;">
+                    <button type="button" class="btn-icon btn-toggle-pwd" title="Mostrar/Ocultar" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; cursor: pointer; color: white;"><i data-lucide="eye" style="width: 14px; height: 14px;"></i></button>
+                    <button type="button" class="btn-icon btn-edit-pwd" data-id="${u.id}" title="Cambiar Contraseña" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: rgba(250, 204, 21, 0.15); border: 1px solid rgba(250, 204, 21, 0.3); border-radius: 6px; cursor: pointer; color: #facc15;"><i data-lucide="edit-3" style="width: 14px; height: 14px;"></i></button>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 0.75rem; color: #94a3b8;">Rol de usuario:</span>
+                    ${u.role === 'admin' ? `<span class="status-badge" style="font-size:0.7rem; padding: 2px 8px; background: rgba(139, 92, 246, 0.2); color: #c4b5fd;">ADMINISTRADOR</span>` : 
+                      `<select class="role-select" data-id="${u.id}" style="padding: 4px 8px; font-size: 0.75rem; background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.35); color: #c4b5fd; border-radius: 6px; outline: none; cursor: pointer;">
+                        <option value="reseller" ${u.role === 'reseller' || !u.role ? 'selected' : ''}>RESELLER</option>
+                        <option value="colaborador" ${u.role === 'colaborador' ? 'selected' : ''}>COLABORADOR</option>
+                      </select>`
+                    }
+                  </div>
+                </div>
+
+                <!-- Bloque 3: Ganancia Markup & Conexión API -->
+                <div class="admin-detail-block">
+                  <div class="admin-detail-block-title">
+                    <i data-lucide="cpu" style="width: 14px; height: 14px; color: #38bdf8;"></i>
+                    Comisión Markup & API Fork
+                  </div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-size: 0.75rem; color: #94a3b8;">Aumento adicional:</span>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                      <span style="color:var(--text-secondary); font-size: 0.8rem;">$</span>
+                      <input type="number" step="0.1" class="user-markup-input" data-id="${u.id}" value="${u.markup !== null && u.markup !== undefined ? u.markup : ''}" placeholder="Global" style="width: 80px; padding: 4px 8px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); color: white; font-size: 0.8rem;">
+                    </div>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.06);">
+                    <span style="font-size: 0.75rem; color: #94a3b8;">Acceso API Bridge:</span>
+                    <button type="button" class="btn-toggle-api-status" data-id="${u.id}" data-api="${isApiActive ? 'true' : 'false'}" style="background: ${isApiActive ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)'}; border: 1px solid ${isApiActive ? 'rgba(34, 197, 94, 0.35)' : 'rgba(239, 68, 68, 0.35)'}; color: ${isApiActive ? '#4ade80' : '#f87171'}; padding: 3px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                      <i data-lucide="${isApiActive ? 'check' : 'x'}" style="width: 12px; height: 12px;"></i>
+                      ${isApiActive ? 'API Activada' : 'API Inactiva'}
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Bloque 4: Acciones Avanzadas & Bot WhatsApp -->
+                <div class="admin-detail-block">
+                  <div class="admin-detail-block-title">
+                    <i data-lucide="settings" style="width: 14px; height: 14px; color: #a78bfa;"></i>
+                    Acciones de Cuenta
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <button type="button" class="btn btn-secondary btn-small btn-impersonate-user" data-id="${u.id}" data-name="${escapeHtml(u.username)}" style="justify-content: center; background: rgba(139, 92, 246, 0.15); color: #c4b5fd; border-color: rgba(139, 92, 246, 0.35); padding: 6px 12px; font-size: 0.78rem;">
+                      <i data-lucide="user-check" style="width: 14px; height: 14px;"></i> Iniciar Sesión como este usuario
+                    </button>
+
+                    ${!u.linkedBot && u.phone && u.phone !== '-' ? `
+                      <button type="button" class="btn btn-secondary btn-small btn-notify-user-bot" data-id="${u.id}" data-name="${escapeHtml(u.username)}" style="justify-content: center; background: rgba(37, 211, 102, 0.15); color: #25D366; border-color: rgba(37, 211, 102, 0.35); padding: 6px 12px; font-size: 0.78rem;">
+                        <i data-lucide="message-circle" style="width: 14px; height: 14px;"></i> Enviar invitación Bot WhatsApp
+                      </button>
+                    ` : ''}
+
+                    ${u.role !== 'admin' ? `
+                      <button type="button" class="btn btn-secondary btn-small btn-delete-user" data-id="${u.id}" style="justify-content: center; background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: rgba(239, 68, 68, 0.3); padding: 6px 12px; font-size: 0.78rem;">
+                        <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i> Eliminar Usuario Permanentemente
+                      </button>
+                    ` : ''}
+                  </div>
+                </div>
+              </div>
+            </td>
+          `;
+          usersTableBody.appendChild(trDetail);
         });
 
         lucide.createIcons();
@@ -330,6 +425,66 @@ async function loadAdminData() {
       }
 
       function bindAdminUserRowEvents() {
+        // Toggle Accordion Rows
+        document.querySelectorAll('.btn-toggle-user-accordion').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const targetId = btn.dataset.target;
+            const detailRow = document.getElementById(targetId);
+            const parentRow = btn.closest('.admin-user-row-header');
+            const icon = btn.querySelector('svg') || btn.querySelector('i');
+
+            if (detailRow) {
+              const isHidden = detailRow.classList.contains('hidden');
+              if (isHidden) {
+                detailRow.classList.remove('hidden');
+                if (parentRow) parentRow.classList.add('is-expanded');
+                if (icon) icon.style.transform = 'rotate(180deg)';
+              } else {
+                detailRow.classList.add('hidden');
+                if (parentRow) parentRow.classList.remove('is-expanded');
+                if (icon) icon.style.transform = 'rotate(0deg)';
+              }
+            }
+          });
+        });
+
+        // Also allow clicking header row directly to toggle accordion
+        document.querySelectorAll('.admin-user-row-header').forEach(row => {
+          row.addEventListener('click', (e) => {
+            if (e.target.closest('button') || e.target.closest('input') || e.target.closest('select')) return;
+            const btn = row.querySelector('.btn-toggle-user-accordion');
+            if (btn) btn.click();
+          });
+        });
+
+        // Toggle API Key Enablement
+        document.querySelectorAll('.btn-toggle-api-status').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const id = e.currentTarget.dataset.id;
+            const currentApi = e.currentTarget.dataset.api === 'true';
+            const newApi = !currentApi;
+
+            try {
+              const res = await fetch(`/api/users/${id}`, {
+                method: 'PUT',
+                headers: { 'X-Server-Id': currentServerId, 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify({ isApiEnabled: newApi })
+              });
+              if (res.ok) {
+                const targetUser = (window.cachedAdminUsers || []).find(u => String(u.id) === String(id));
+                if (targetUser) targetUser.isApiEnabled = newApi;
+                renderFilteredAdminUsers();
+                if (window.showToast) window.showToast(`Acceso API ${newApi ? 'activado' : 'desactivado'}.`, 'success');
+              } else {
+                alert('Error al modificar estado de la API.');
+              }
+            } catch (err) {
+              console.error(err);
+              alert('Error de conexión.');
+            }
+          });
+        });
         // Toggle Active / Deactive user account
         document.querySelectorAll('.btn-toggle-active-status').forEach(btn => {
           btn.addEventListener('click', async (e) => {

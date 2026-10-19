@@ -74,11 +74,13 @@ const botRoutes = require('./src/routes/botRoutes');
 const adminRoutes = require('./src/routes/adminRoutes');
 const serviceRoutes = require('./src/routes/serviceRoutes');
 const ticketConfigRoutes = require('./src/routes/ticketConfigRoutes');
+const apiBridgeRoutes = require('./src/routes/apiBridgeRoutes');
 
 app.use('/api', authRoutes);
 app.use('/api', catalogRoutes);
 app.use('/api', accountRoutes);
 app.use('/api', orderRoutes);
+app.use('/api', apiBridgeRoutes);
 app.use('/api/bot', botRoutes);
 app.use('/api', adminRoutes);
 app.use('/api', serviceRoutes);

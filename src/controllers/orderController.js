@@ -393,6 +393,9 @@ exports.processOrder = async (req, res) => {
         }
       }
 
+      const isApiBridge = Boolean(req.body._isApiBridge || req.user.isApiBridge);
+      const clientIp = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '127.0.0.1';
+
       history.unshift({
         id: 'txn_' + Date.now(),
         serverId: serverId,
@@ -411,7 +414,10 @@ exports.processOrder = async (req, res) => {
         status: 'pending',
         msg,
         statusText: msg,
-        notes: req.body.notes || ''
+        notes: req.body.notes || '',
+        isApiBridge: isApiBridge,
+        source: isApiBridge ? 'API_BRIDGE' : 'WEB_PANEL',
+        ip: String(clientIp).split(',')[0].trim()
       });
       if (history.length > 500) history.pop();
       writeDB('history.json', history);

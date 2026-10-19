@@ -25,6 +25,12 @@ El panel soporta múltiples servidores Dhru configurables desde `data/settings.j
 - **Servidor 3 (OMEGA-SERVER):** UnlockerFast (Catálogo masivo con cientos de servicios de Streaming, IA y herramientas).
 
 ## 🚀 Nuevas Funcionalidades
+- **Arquitectura de Puente API Modular (`/api/v1/*` & `/api/v1/dhru`)**:
+  - Tu panel actúa como **proveedor puente pasivo** (cero consumo de CPU/RAM en segundo plano, activo bajo demanda).
+  - Cada cliente o revendedor puede generar su propia **API Key criptográfica (`mup_live_...`)** desde su Perfil.
+  - Almacenamiento seguro mediante hashes SHA-256 (`keyHash`) en SQLite/JSON con censura automática.
+  - **Forks Express**: Cualquier usuario que haga un *Fork* de este repositorio puede configurarlo en su `data/settings.json` apuntando a tu URL y comenzar a vender tus servicios de inmediato con sus propias ganancias.
+  - **Trazabilidad Total**: Las órdenes emitidas vía API se etiquetan como `API_BRIDGE` con su IP de origen y quedan reflejadas en el historial tanto del cliente como del panel administrador.
 - **Portal Exclusivo DigitalPass (`/digital-pass`)**: Fork desacoplado enfocado al 100% en entretenimiento digital, cuentas y herramientas de Inteligencia Artificial (ChatGPT, Gemini, Claude, Canva, Netflix, Disney+, Prime Video, Max, Spotify, etc.) con paleta de color azul cielo suave oficial, selector de tema claro/oscuro y carrusel de logos vectoriales SVG.
 - **Rediseño UI Premium y Vista Móvil Optimizada**: Ajuste responsive total para tarjetas de servicios, botones táctiles y modales limpios en smartphones sin desbordamientos de pantalla.
 - **Bot de WhatsApp Endurecido (Baileys)**:

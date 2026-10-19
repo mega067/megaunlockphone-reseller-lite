@@ -312,6 +312,9 @@
         <button class="tab-btn" id="tabHistory">
           <i data-lucide="history"></i> Historial de Órdenes
         </button>
+        <button class="tab-btn hidden" id="tabProfile" style="background: rgba(14, 165, 233, 0.1); border: 1px solid rgba(14, 165, 233, 0.25); color: #38bdf8;">
+          <i data-lucide="user"></i> Mi Perfil & API
+        </button>
         <button class="tab-btn hidden" id="tabAdmin" style="background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.3); color: #c4b5fd;">
           <i data-lucide="shield"></i> Administración
         </button>
@@ -559,17 +562,16 @@
               </div>
             </div>
 
-            <!-- Users Table -->
+            <!-- Users Table (Collapsible Accordion UI/UX Pro Max) -->
             <div class="table-container">
               <table class="data-table">
                 <thead>
                   <tr>
-                    <th style="width: 60px;">ID</th>
                     <th>Usuario & Contacto</th>
-                    <th style="width: 90px; text-align: center;">Estado</th>
-                    <th style="width: 100px;">Aumento</th>
-                    <th>Billeteras (Saldo)</th>
-                    <th style="text-align: right;">Acciones</th>
+                    <th style="width: 110px; text-align: center;">Estado</th>
+                    <th>Saldos (Billeteras)</th>
+                    <th style="width: 130px; text-align: center;">Total Pedidos</th>
+                    <th style="width: 110px; text-align: right;">Detalles</th>
                   </tr>
                 </thead>
                 <tbody id="usersTableBody">
@@ -1043,6 +1045,248 @@
   </div>
 </section>
 
+      <!-- SECCIÓN: MI PERFIL DE USUARIO Y API BRIDGE (PESTAÑA COMPLETA PRO MAX) -->
+      <section class="card profile-section hidden" id="profileSection" style="margin-top: 15px;">
+        <div class="profile-section-header">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div class="icon-wrapper" style="background: rgba(14, 165, 233, 0.15); color: #38bdf8; width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+              <i data-lucide="user-check" style="width: 22px; height: 22px;"></i>
+            </div>
+            <div>
+              <h2 style="font-size: 1.3rem; margin: 0; line-height: 1.2; color: #f8fafc; font-weight: 800;">Mi Perfil de Usuario</h2>
+              <p style="font-size: 0.8rem; color: var(--text-muted); margin: 3px 0 0 0;">Gestión de cuenta, credenciales, canales de contacto y conexión de API Puente</p>
+            </div>
+          </div>
+          <button type="button" class="btn btn-secondary btn-small" id="btnBackToCatalogFromProfile" style="display: inline-flex; align-items: center; gap: 6px;">
+            <i data-lucide="arrow-left" style="width: 15px; height: 15px;"></i>
+            <span>Volver al Catálogo</span>
+          </button>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="profile-nav-tabs profile-nav-tabs-wrapper">
+          <button type="button" class="profile-tab-btn active" data-tab="tabProfileOverview">
+            <i data-lucide="id-card" style="width: 15px; height: 15px;"></i> Información General
+          </button>
+          <button type="button" class="profile-tab-btn" data-tab="tabProfileSecurity">
+            <i data-lucide="shield" style="width: 15px; height: 15px;"></i> Seguridad y Clave
+          </button>
+          <button type="button" class="profile-tab-btn" data-tab="tabProfileWhatsApp">
+            <i data-lucide="message-square" style="width: 15px; height: 15px;"></i> WhatsApp y Alertas
+          </button>
+          <button type="button" class="profile-tab-btn" data-tab="tabProfileApiBridge" style="color: #38bdf8;">
+            <i data-lucide="cpu" style="width: 15px; height: 15px;"></i> API & Puente Fork
+          </button>
+        </div>
+
+        <div class="profile-section-body">
+          <!-- TAB 1: INFORMACIÓN GENERAL -->
+          <div class="profile-tab-pane active" id="tabProfileOverview">
+            <div class="profile-hero-banner" style="position: relative;">
+              <div style="position: relative; display: inline-block;">
+                <div class="profile-avatar-circle" id="profileAvatarLetter">U</div>
+                <img id="profileAvatarImg" src="" alt="Avatar" style="display: none; width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 2px solid #38bdf8; box-shadow: 0 0 16px rgba(14, 165, 233, 0.4);">
+                <label for="inputProfilePhoto" title="Subir / Cambiar Foto de Perfil y Logo de Tickets" style="position: absolute; bottom: -4px; right: -4px; background: #0ea5e9; border: 2px solid #0f172a; border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; box-shadow: 0 2px 6px rgba(0,0,0,0.5);">
+                  <i data-lucide="camera" style="width: 13px; height: 13px;"></i>
+                </label>
+                <input type="file" id="inputProfilePhoto" accept="image/png,image/jpeg,image/webp" style="display: none;">
+              </div>
+              <div class="profile-hero-info">
+                <h3 class="profile-hero-username">
+                  <span id="profileUsername">-</span>
+                </h3>
+                <div class="profile-badges-row">
+                  <span class="profile-role-pill" id="profileRole">RESELLER</span>
+                  <span style="font-size: 0.72rem; color: #10b981; background: rgba(16, 185, 129, 0.15); padding: 3px 8px; border-radius: 999px; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                    <i data-lucide="check-circle-2" style="width: 11px; height: 11px;"></i> Cuenta Activa
+                  </span>
+                  <span id="profilePhotoStatus" style="font-size: 0.7rem; color: #94a3b8; display: none;"></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="profile-data-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+              <div class="profile-data-card">
+                <div class="data-label"><i data-lucide="hash" style="width: 13px; height: 13px; color: #38bdf8;"></i> ID de Cliente</div>
+                <div class="data-value" id="profileUserId" style="font-family: 'Fira Code', monospace; color: #a5b4fc;">-</div>
+              </div>
+              <div class="profile-data-card">
+                <div class="data-label"><i data-lucide="mail" style="width: 13px; height: 13px; color: #38bdf8;"></i> Correo Electrónico</div>
+                <div class="data-value" id="profileEmail" style="color: #e2e8f0;">-</div>
+              </div>
+              <div class="profile-data-card">
+                <div class="data-label"><i data-lucide="phone" style="width: 13px; height: 13px; color: #38bdf8;"></i> Teléfono Vinculado</div>
+                <div class="data-value" id="profilePhoneDisplay" style="font-family: 'Fira Code', monospace; color: #34d399;">-</div>
+              </div>
+              <div class="profile-data-card">
+                <div class="data-label"><i data-lucide="wallet" style="width: 13px; height: 13px; color: #38bdf8;"></i> Saldo Disponible</div>
+                <div class="data-value" id="profileCreditsDisplay" style="color: #38bdf8; font-weight: 800;">$0.00 MXN</div>
+              </div>
+            </div>
+
+            <div style="background: rgba(56, 189, 248, 0.05); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 10px; padding: 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 8px; color: #cbd5e1; font-size: 0.85rem;">
+                <i data-lucide="shield-check" style="width: 20px; height: 20px; color: #38bdf8;"></i>
+                <span>¿Deseas modificar tu clave de acceso o número de WhatsApp?</span>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button type="button" class="btn btn-secondary btn-small" id="btnGoSecurityTab" style="font-size: 0.78rem; padding: 6px 12px;">Cambiar Clave</button>
+                <button type="button" class="btn btn-secondary btn-small" id="btnGoWhatsAppTab" style="font-size: 0.78rem; padding: 6px 12px;">Vincular WhatsApp</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 2: SEGURIDAD Y CLAVE -->
+          <div class="profile-tab-pane" id="tabProfileSecurity">
+            <div class="profile-section-box" style="max-width: 600px;">
+              <h4 class="profile-section-title" style="color: #facc15;">
+                <i data-lucide="key-round" style="width: 16px; height: 16px;"></i> Cambiar Contraseña
+              </h4>
+              <div class="input-group">
+                <label>Contraseña Actual (Requerida)</label>
+                <input type="password" id="inputCurrentPasswordPwd" placeholder="Ingresa tu contraseña actual" style="width: 100%; margin-bottom: 10px;">
+                
+                <label>Nueva Contraseña (min. 6 chars y 1 mayúscula)</label>
+                <input type="password" id="inputNewPassword" placeholder="Nueva contraseña segura" style="width: 100%; margin-bottom: 10px;">
+                
+                <label>Confirmar Nueva Contraseña</label>
+                <input type="password" id="inputConfirmNewPassword" placeholder="Repite la nueva contraseña" style="width: 100%; margin-bottom: 12px;">
+                
+                <ul id="profPwdChecklist" style="list-style: none; padding: 10px; margin: 0 0 14px 0; font-size: 0.76rem; color: #94a3b8; background: rgba(0, 0, 0, 0.3); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.05);">
+                  <li id="profChkLength" style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;"><i data-lucide="x-circle" style="width:13px; height:13px; color: #ef4444;"></i> Mínimo 6 caracteres</li>
+                  <li id="profChkUpper" style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;"><i data-lucide="x-circle" style="width:13px; height:13px; color: #ef4444;"></i> Al menos 1 mayúscula</li>
+                  <li id="profChkSeq" style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;"><i data-lucide="x-circle" style="width:13px; height:13px; color: #ef4444;"></i> Sin repeticiones obvias (111, 123)</li>
+                  <li id="profChkMatch" style="display: flex; align-items: center; gap: 6px;"><i data-lucide="x-circle" style="width:13px; height:13px; color: #ef4444;"></i> Las contraseñas coinciden</li>
+                </ul>
+
+                <button type="button" class="btn btn-primary" id="btnSaveNewPassword" style="width: 100%; justify-content: center;" disabled>
+                  <i data-lucide="lock" style="width: 15px; height: 15px;"></i> Actualizar Contraseña
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 3: WHATSAPP Y NOTIFICACIONES -->
+          <div class="profile-tab-pane" id="tabProfileWhatsApp">
+            <div class="profile-section-box" style="max-width: 600px;">
+              <h4 class="profile-section-title" style="color: #4ade80;">
+                <i data-lucide="smartphone" style="width: 16px; height: 16px;"></i> Vincular Número de WhatsApp
+              </h4>
+              <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0 0 14px 0; line-height: 1.4;">
+                Este número se usa para enviarte notificaciones de tus pedidos completados y para identificarte cuando interactúes con el Bot de WhatsApp de MegaUnlockPhone.
+              </p>
+              <div class="input-group">
+                <label>Contraseña Actual (Para confirmar el cambio)</label>
+                <input type="password" id="inputCurrentPasswordPhone" placeholder="Tu contraseña actual" style="width: 100%; margin-bottom: 10px;">
+                
+                <label>Nuevo Número Telefónico (con código de país, ej. 522221234567)</label>
+                <input type="text" id="inputNewPhone" placeholder="Ej. 522212345678" style="width: 100%; margin-bottom: 14px;">
+                
+                <button type="button" class="btn btn-primary" id="btnSaveNewPhone" style="width: 100%; justify-content: center; background: linear-gradient(90deg, #10b981, #059669);">
+                  <i data-lucide="check" style="width: 15px; height: 15px;"></i> Guardar y Vincular WhatsApp
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 4: API & PUENTE FORK -->
+          <div class="profile-tab-pane" id="tabProfileApiBridge">
+            <div class="profile-section-box">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                <h4 class="profile-section-title" style="color: #38bdf8; margin: 0;">
+                  <i data-lucide="key" style="width: 16px; height: 16px;"></i> Conexión API Bridge (Proveedor / Fork)
+                </h4>
+                <span id="apiStatusBadge" style="font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; background: rgba(148, 163, 184, 0.1); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.2);">Sin API Key Activa</span>
+              </div>
+
+              <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0 0 14px 0; line-height: 1.45;">
+                Usa tu <strong>API Key</strong> para conectar tu propio <strong>Fork de la página web</strong>, tu propio bot o software externo. Tu web usará MegaUnlockPhone como proveedor puente sin saturar recursos.
+              </p>
+
+              <!-- Card de Llave API -->
+              <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 10px; padding: 14px; margin-bottom: 14px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <span style="font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px;">Tu API Key Secreta</span>
+                  <span id="apiKeyLastUsed" style="font-size: 0.7rem; color: #64748b;">Nunca usada</span>
+                </div>
+
+                <div style="display: flex; gap: 8px; align-items: center;">
+                  <input type="text" id="inputUserApiKeyDisplay" readonly value="••••••••••••••••••••••••••••••••" style="font-family: 'Fira Code', monospace; font-size: 0.82rem; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); color: #38bdf8; padding: 8px 12px; border-radius: 6px; flex: 1;" placeholder="Haz clic en Generar Llave...">
+                  <button type="button" class="btn btn-secondary btn-small" id="btnCopyUserApiKey" title="Copiar al portapapeles" style="padding: 8px 12px;">
+                    <i data-lucide="copy" style="width: 14px; height: 14px;"></i>
+                  </button>
+                </div>
+
+                <div id="apiKeyAlertNotice" class="hidden" style="margin-top: 10px; padding: 8px 10px; border-radius: 6px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); color: #fbbf24; font-size: 0.75rem;">
+                  ⚠️ <strong>Guarda tu clave ahora:</strong> Por seguridad no se volverá a mostrar completa.
+                </div>
+              </div>
+
+              <!-- Banner de Estado de Activación por Administrador -->
+              <div id="apiActivationStatusBox" style="margin-bottom: 14px; padding: 12px 14px; border-radius: 10px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: flex-start; gap: 10px; flex: 1; min-width: 240px;">
+                  <i data-lucide="shield-alert" id="apiActivationIcon" style="width: 20px; height: 20px; color: #f59e0b; flex-shrink: 0; margin-top: 2px;"></i>
+                  <div>
+                    <strong id="apiActivationTitle" style="color: #fbbf24; font-size: 0.85rem; display: block; margin-bottom: 2px;">Activación Requerida</strong>
+                    <span id="apiActivationDesc" style="color: #cbd5e1; font-size: 0.76rem; line-height: 1.35; display: block;">
+                      Tu API Key requiere activación manual por parte del equipo de soporte para comenzar a despachar pedidos y sincronizar datos.
+                    </span>
+                  </div>
+                </div>
+                <a href="https://wa.me/522216936720?text=Hola%2C%20solicito%20la%20activaci%C3%B3n%20de%20mi%20API%20Key%20para%20conectar%20mi%20Fork%20o%20Bot%20a%20MegaUnlockPhone." target="_blank" id="btnContactSupportApi" class="btn btn-secondary btn-small" style="background: rgba(37, 211, 102, 0.15); border: 1px solid rgba(37, 211, 102, 0.4); color: #4ade80; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 0.78rem;">
+                  <i data-lucide="message-circle" style="width: 14px; height: 14px;"></i>
+                  <span>Solicitar Activación a Soporte</span>
+                </a>
+              </div>
+
+              <!-- Acciones de Llave -->
+              <div style="display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap;">
+                <button type="button" class="btn btn-primary" id="btnGenerateUserApiKey" style="flex: 1; justify-content: center; font-size: 0.8rem; padding: 8px 14px;">
+                  <i data-lucide="refresh-cw" style="width: 14px; height: 14px;"></i> Generar / Rotar Llave
+                </button>
+                <button type="button" class="btn btn-secondary" id="btnRevokeUserApiKey" style="justify-content: center; font-size: 0.8rem; padding: 8px 14px; color: #ef4444; border-color: rgba(239, 68, 68, 0.3);">
+                  <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i> Revocar
+                </button>
+              </div>
+
+              <!-- Instrucciones Fork Express con Soporte Dual Server -->
+              <div style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 14px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                  <h5 style="color: #e2e8f0; font-size: 0.82rem; margin: 0; display: flex; align-items: center; gap: 6px;">
+                    <i data-lucide="git-fork" style="width: 14px; height: 14px; color: #10b981;"></i> Configuración para tu Fork (Elige qué Servidor conectar)
+                  </h5>
+                  <div style="display: flex; gap: 4px;">
+                    <button type="button" class="btn btn-secondary btn-small btn-server-fork-tab active" data-cfg="both" style="font-size: 0.68rem; padding: 3px 8px;">Ambos Servidores</button>
+                    <button type="button" class="btn btn-secondary btn-small btn-server-fork-tab" data-cfg="s1" style="font-size: 0.68rem; padding: 3px 8px;">Solo Server 1 (IMEI)</button>
+                    <button type="button" class="btn btn-secondary btn-small btn-server-fork-tab" data-cfg="s3" style="font-size: 0.68rem; padding: 3px 8px;">Solo Server 3 (Streaming/IA)</button>
+                  </div>
+                </div>
+
+                <!-- Resumen de Saldos de los Servidores -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
+                  <div style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 6px; padding: 6px 10px; font-size: 0.72rem;">
+                    <span style="color: #94a3b8; display: block;">⚡ Billetera Server 1 (IMEI):</span>
+                    <strong id="apiS1BalanceDisplay" style="color: #38bdf8; font-size: 0.85rem;">$0.00 MXN</strong>
+                  </div>
+                  <div style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(168, 85, 247, 0.2); border-radius: 6px; padding: 6px 10px; font-size: 0.72rem;">
+                    <span style="color: #94a3b8; display: block;">🔱 Billetera Server 3 (Streaming/IA):</span>
+                    <strong id="apiS3BalanceDisplay" style="color: #c084fc; font-size: 0.85rem;">$0.00 MXN</strong>
+                  </div>
+                </div>
+
+                <p style="font-size: 0.74rem; color: #94a3b8; margin: 0 0 8px 0;">
+                  Copia este bloque y pégalo directamente en <code>data/settings.json</code> de tu fork. Los precios reflejan automáticamente tus márgenes asignados:
+                </p>
+                <div style="position: relative;">
+                  <pre id="codeForkConfig" style="background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 10px; font-size: 0.72rem; color: #a5b4fc; font-family: 'Fira Code', monospace; overflow-x: auto; margin: 0; max-height: 180px;"></pre>
+                  <button type="button" id="btnCopyForkConfig" class="btn btn-secondary btn-small" style="position: absolute; top: 6px; right: 6px; font-size: 0.68rem; padding: 2px 8px;">Copiar JSON</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
     </div>
   <!-- Modal Recarga Saldo -->
   </main>
@@ -1335,150 +1579,7 @@
   </div>
 
 
-  <!-- User Profile Modal -->
-  <!-- User Profile Modal (Modular & Tabs Pro Max) -->
-  <div class="modal-overlay hidden" id="userProfileModal">
-    <div class="modal-card modal-profile-card">
-      <div class="modal-header">
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <div class="icon-wrapper" style="background: rgba(14, 165, 233, 0.15); color: #38bdf8;">
-            <i data-lucide="user-check"></i>
-          </div>
-          <div>
-            <h2 style="font-size: 1.2rem; margin: 0; line-height: 1.2;">Mi Perfil de Usuario</h2>
-            <p style="font-size: 0.76rem; color: var(--text-muted); margin: 2px 0 0 0;">Gestión de cuenta, seguridad y canales de contacto</p>
-          </div>
-        </div>
-        <button type="button" class="btn-icon" id="btnCloseProfileModal" title="Cerrar ventana">
-          <i data-lucide="x"></i>
-        </button>
-      </div>
 
-      <!-- Navigation Tabs -->
-      <div class="profile-nav-tabs">
-        <button type="button" class="profile-tab-btn active" data-tab="tabProfileOverview">
-          <i data-lucide="id-card" style="width: 15px; height: 15px;"></i> Información General
-        </button>
-        <button type="button" class="profile-tab-btn" data-tab="tabProfileSecurity">
-          <i data-lucide="shield" style="width: 15px; height: 15px;"></i> Seguridad y Clave
-        </button>
-        <button type="button" class="profile-tab-btn" data-tab="tabProfileWhatsApp">
-          <i data-lucide="message-square" style="width: 15px; height: 15px;"></i> WhatsApp y Alertas
-        </button>
-      </div>
-
-      <div class="modal-body" style="padding: 1.25rem;">
-        <!-- TAB 1: INFORMACIÓN GENERAL -->
-        <div class="profile-tab-pane active" id="tabProfileOverview">
-          <div class="profile-hero-banner" style="position: relative;">
-            <div style="position: relative; display: inline-block;">
-              <div class="profile-avatar-circle" id="profileAvatarLetter">U</div>
-              <img id="profileAvatarImg" src="" alt="Avatar" style="display: none; width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 2px solid #38bdf8; box-shadow: 0 0 16px rgba(14, 165, 233, 0.4);">
-              <label for="inputProfilePhoto" title="Subir / Cambiar Foto de Perfil y Logo de Tickets" style="position: absolute; bottom: -4px; right: -4px; background: #0ea5e9; border: 2px solid #0f172a; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; box-shadow: 0 2px 6px rgba(0,0,0,0.5);">
-                <i data-lucide="camera" style="width: 12px; height: 12px;"></i>
-              </label>
-              <input type="file" id="inputProfilePhoto" accept="image/png,image/jpeg,image/webp" style="display: none;">
-            </div>
-            <div class="profile-hero-info">
-              <h3 class="profile-hero-username">
-                <span id="profileUsername">-</span>
-              </h3>
-              <div class="profile-badges-row">
-                <span class="profile-role-pill" id="profileRole">RESELLER</span>
-                <span style="font-size: 0.72rem; color: #10b981; background: rgba(16, 185, 129, 0.15); padding: 3px 8px; border-radius: 999px; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
-                  <i data-lucide="check-circle-2" style="width: 11px; height: 11px;"></i> Cuenta Activa
-                </span>
-                <span id="profilePhotoStatus" style="font-size: 0.7rem; color: #94a3b8; display: none;"></span>
-              </div>
-            </div>
-          </div>
-
-          <div class="profile-data-grid">
-            <div class="profile-data-card">
-              <div class="data-label"><i data-lucide="hash" style="width: 13px; height: 13px; color: #38bdf8;"></i> ID de Cliente</div>
-              <div class="data-value" id="profileUserId" style="font-family: 'Fira Code', monospace; color: #a5b4fc;">-</div>
-            </div>
-            <div class="profile-data-card">
-              <div class="data-label"><i data-lucide="mail" style="width: 13px; height: 13px; color: #38bdf8;"></i> Correo Electrónico</div>
-              <div class="data-value" id="profileEmail" style="color: #e2e8f0;">-</div>
-            </div>
-            <div class="profile-data-card">
-              <div class="data-label"><i data-lucide="phone" style="width: 13px; height: 13px; color: #38bdf8;"></i> Teléfono Vinculado</div>
-              <div class="data-value" id="profilePhoneDisplay" style="font-family: 'Fira Code', monospace; color: #34d399;">-</div>
-            </div>
-            <div class="profile-data-card">
-              <div class="data-label"><i data-lucide="wallet" style="width: 13px; height: 13px; color: #38bdf8;"></i> Saldo Disponible</div>
-              <div class="data-value" id="profileCreditsDisplay" style="color: #38bdf8; font-weight: 800;">$0.00 MXN</div>
-            </div>
-          </div>
-
-          <div style="background: rgba(56, 189, 248, 0.05); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 10px; padding: 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
-            <div style="display: flex; align-items: center; gap: 8px; color: #cbd5e1; font-size: 0.8rem;">
-              <i data-lucide="shield-check" style="width: 18px; height: 18px; color: #38bdf8;"></i>
-              <span>¿Necesitas modificar tus datos de acceso o teléfono?</span>
-            </div>
-            <div style="display: flex; gap: 8px;">
-              <button type="button" class="btn btn-secondary btn-small" id="btnGoSecurityTab" style="font-size: 0.75rem; padding: 4px 10px;">Cambiar Clave</button>
-              <button type="button" class="btn btn-secondary btn-small" id="btnGoWhatsAppTab" style="font-size: 0.75rem; padding: 4px 10px;">WhatsApp</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- TAB 2: SEGURIDAD Y CLAVE -->
-        <div class="profile-tab-pane" id="tabProfileSecurity">
-          <div class="profile-section-box">
-            <h4 class="profile-section-title" style="color: #facc15;">
-              <i data-lucide="key-round" style="width: 16px; height: 16px;"></i> Cambiar Contraseña
-            </h4>
-            <div class="input-group">
-              <label>Contraseña Actual (Requerida)</label>
-              <input type="password" id="inputCurrentPasswordPwd" placeholder="Ingresa tu contraseña actual" style="width: 100%; margin-bottom: 10px;">
-              
-              <label>Nueva Contraseña (min. 6 chars y 1 mayúscula)</label>
-              <input type="password" id="inputNewPassword" placeholder="Nueva contraseña segura" style="width: 100%; margin-bottom: 10px;">
-              
-              <label>Confirmar Nueva Contraseña</label>
-              <input type="password" id="inputConfirmNewPassword" placeholder="Repite la nueva contraseña" style="width: 100%; margin-bottom: 12px;">
-              
-              <ul id="profPwdChecklist" style="list-style: none; padding: 10px; margin: 0 0 14px 0; font-size: 0.76rem; color: #94a3b8; background: rgba(0, 0, 0, 0.3); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.05);">
-                <li id="profChkLength" style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;"><i data-lucide="x-circle" style="width:13px; height:13px; color: #ef4444;"></i> Mínimo 6 caracteres</li>
-                <li id="profChkUpper" style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;"><i data-lucide="x-circle" style="width:13px; height:13px; color: #ef4444;"></i> Al menos 1 mayúscula</li>
-                <li id="profChkSeq" style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;"><i data-lucide="x-circle" style="width:13px; height:13px; color: #ef4444;"></i> Sin repeticiones obvias (111, 123)</li>
-                <li id="profChkMatch" style="display: flex; align-items: center; gap: 6px;"><i data-lucide="x-circle" style="width:13px; height:13px; color: #ef4444;"></i> Las contraseñas coinciden</li>
-              </ul>
-
-              <button type="button" class="btn btn-primary" id="btnSaveNewPassword" style="width: 100%; justify-content: center;" disabled>
-                <i data-lucide="lock" style="width: 15px; height: 15px;"></i> Actualizar Contraseña
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- TAB 3: WHATSAPP Y NOTIFICACIONES -->
-        <div class="profile-tab-pane" id="tabProfileWhatsApp">
-          <div class="profile-section-box">
-            <h4 class="profile-section-title" style="color: #4ade80;">
-              <i data-lucide="smartphone" style="width: 16px; height: 16px;"></i> Vincular Número de WhatsApp
-            </h4>
-            <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0 0 14px 0; line-height: 1.4;">
-              Este número se usa para enviarte notificaciones de tus pedidos completados y para identificarte cuando interactúes con el Bot de WhatsApp de MegaUnlockPhone.
-            </p>
-            <div class="input-group">
-              <label>Contraseña Actual (Para confirmar el cambio)</label>
-              <input type="password" id="inputCurrentPasswordPhone" placeholder="Tu contraseña actual" style="width: 100%; margin-bottom: 10px;">
-              
-              <label>Nuevo Número Telefónico (con código de país, ej. 522221234567)</label>
-              <input type="text" id="inputNewPhone" placeholder="Ej. 522212345678" style="width: 100%; margin-bottom: 14px;">
-              
-              <button type="button" class="btn btn-primary" id="btnSaveNewPhone" style="width: 100%; justify-content: center; background: linear-gradient(90deg, #10b981, #059669);">
-                <i data-lucide="check" style="width: 15px; height: 15px;"></i> Guardar y Vincular WhatsApp
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 
 
 
