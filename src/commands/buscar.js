@@ -19,9 +19,13 @@ async function buscar(context) {
         if (session.step === 'ask_server') {
             const val = query.toLowerCase();
             let sId = null;
-            if (val === 'mega' || val === '1' || val.includes('mega server') || val.includes('1️⃣')) sId = '1';
-            else if (val === 'omega' || val === '3' || val.includes('omega server') || val.includes('3️⃣')) sId = '3';
-            else if (val === '2') sId = '2';
+            if (val === 'omega' || val === '3' || val.includes('omega') || val.includes('3️⃣')) {
+                sId = '3';
+            } else if (val === 'mega' || val === '1' || val.includes('1️⃣') || /(^|\s|1️⃣)mega(\s|$|server)/i.test(val)) {
+                sId = '1';
+            } else if (val === '2') {
+                sId = '2';
+            }
             
             if (!sId) {
                 await sock.sendMessage(remoteJid, { text: '❌ Servidor inválido. Pulsa una opción en la encuesta o responde *1* para Mega o *3* para Omega.' });

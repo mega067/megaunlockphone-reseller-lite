@@ -22,8 +22,11 @@ async function pedir(context) {
         if (session.step === 'select_server') {
             const rawInput = text.trim().toLowerCase();
             let sId = null;
-            if (rawInput === 'mega' || rawInput === '1' || rawInput.includes('mega server') || rawInput.includes('1️⃣')) sId = '1';
-            else if (rawInput === 'omega' || rawInput === '3' || rawInput.includes('omega server') || rawInput.includes('3️⃣')) sId = '3';
+            if (rawInput === 'omega' || rawInput === '3' || rawInput.includes('omega') || rawInput.includes('3️⃣')) {
+                sId = '3';
+            } else if (rawInput === 'mega' || rawInput === '1' || rawInput.includes('1️⃣') || /(^|\s|1️⃣)mega(\s|$|server)/i.test(rawInput)) {
+                sId = '1';
+            }
 
             if (!sId || !['1', '3'].includes(sId)) {
                 await sock.sendMessage(remoteJid, { text: '❌ Servidor inválido. Pulsa una opción en la encuesta o responde *1* para Mega o *3* para Omega.' });

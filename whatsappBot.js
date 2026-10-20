@@ -119,6 +119,8 @@ async function connectToWhatsApp() {
     
     // Cache de mensajes salientes (LRU) para responder a reintentos de cifrado de WhatsApp
     const msgStore = new Map();
+    // Cache de votos de encuestas para evitar ejecución duplicada
+    const processedPollVotes = new Map();
 
     // CacheStore compatible con Baileys para control de reintentos
     const retryCounterMap = new Map();
@@ -370,6 +372,18 @@ async function connectToWhatsApp() {
                 }
 
                 console.log(`[POLL VOTE RESULT] resolvedText: "${resolvedText}" para ${remoteJid}`);
+
+                // Evitar procesar el mismo voto duplicado (WhatsApp emite 2 eventos upsert para el mismo pollUpdate)
+                const voteId = `${msg.key.id}_${voterJid}_${resolvedText}`;
+                if (processedPollVotes.has(voteId)) {
+                    console.log(`[POLL DEDUPLICATE] Voto ya procesado previamente: ${voteId}, ignorando evento duplicado.`);
+                    return;
+                }
+                processedPollVotes.set(voteId, Date.now());
+                if (processedPollVotes.size > 500) {
+                    const oldestKey = processedPollVotes.keys().next().value;
+                    processedPollVotes.delete(oldestKey);
+                }
             } catch (pollErr) {
                 console.error('[POLL VOTE DECODE ERR]', pollErr);
             }
