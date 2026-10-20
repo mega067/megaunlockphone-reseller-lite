@@ -185,12 +185,24 @@ async function connectToWhatsApp() {
                     }
                 }
 
+                // Si es un mensaje de encuesta, asegurar que tenga su messageSecret explícito
+                let pollSecret = null;
+                if (content && content.poll) {
+                    const crypto = require('crypto');
+                    pollSecret = content.poll.messageSecret || crypto.randomBytes(32);
+                    content.poll.messageSecret = pollSecret;
+                }
+
                 const result = await Promise.race([
                     originalSendMessage.call(sock, jid, content, options),
                     new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout de WhatsApp socket')), 20000))
                 ]);
 
                 if (result && result.key && result.key.id && result.message) {
+                    if (pollSecret) {
+                        result.message.messageContextInfo = result.message.messageContextInfo || {};
+                        result.message.messageContextInfo.messageSecret = pollSecret;
+                    }
                     msgStore.set(result.key.id, result.message);
                     // Mantener tamaño de caché controlado (máx 1000 mensajes para bajo consumo RAM)
                     if (msgStore.size > 1000) {
@@ -302,22 +314,19 @@ async function connectToWhatsApp() {
             try {
                 const pollUpdate = msg.message.pollUpdateMessage;
                 const pollKey = pollUpdate.pollCreationMessageKey;
-                const pollCreationMsg = pollKey?.id ? msgStore.get(pollKey.id) : null;
-                const { decryptPollVote } = require('@whiskeysockets/baileys');
+                const { decryptPollVote, jidNormalizedUser, getKeyAuthor } = require('@whiskeysockets/baileys');
                 const crypto = require('crypto');
 
-                let voterJid = msg.key.participant || remoteJid;
-                let pollCreatorJid = pollKey?.participant || sock.user?.id || '';
-                // Normalizar JIDs (quitar extensiones de dispositivo :1 o :2)
-                voterJid = voterJid.split(':')[0].replace(/@.*/, '') + (isGroup ? '@s.whatsapp.net' : '@s.whatsapp.net');
-                const meClean = (sock.user?.id || '').split(':')[0].replace(/@.*/, '');
-                if (!pollCreatorJid || pollCreatorJid.includes(meClean)) {
-                    pollCreatorJid = meClean + '@s.whatsapp.net';
-                }
+                const pollCreationMsg = pollKey?.id ? msgStore.get(pollKey.id) : null;
+                const meNormalised = jidNormalizedUser(sock.user?.id || sock.authState?.creds?.me?.id);
+                const pollCreatorJid = getKeyAuthor(pollKey, meNormalised);
+                const voterJid = getKeyAuthor(msg.key, meNormalised);
 
-                let pollEncKey = pollCreationMsg?.messageContextInfo?.messageSecret;
-                if (!pollEncKey && pollCreationMsg?.pollCreationMessage?.messageContextInfo?.messageSecret) {
-                    pollEncKey = pollCreationMsg.pollCreationMessage.messageContextInfo.messageSecret;
+                let pollEncKey = pollCreationMsg?.message?.messageContextInfo?.messageSecret ||
+                                 pollCreationMsg?.messageContextInfo?.messageSecret ||
+                                 pollCreationMsg?.pollCreationMessage?.messageContextInfo?.messageSecret;
+                if (typeof pollEncKey === 'string') {
+                    pollEncKey = Buffer.from(pollEncKey, 'base64');
                 }
 
                 let decryptedVote = null;
@@ -339,8 +348,11 @@ async function connectToWhatsApp() {
 
                 // Si logramos descifrar las opciones seleccionadas (hashes sha256)
                 if (decryptedVote && decryptedVote.selectedOptions?.length > 0) {
-                    const selectedHash = decryptedVote.selectedOptions[0];
-                    const opts = pollCreationMsg?.pollCreationMessage?.options ||
+                    const selectedHash = Buffer.from(decryptedVote.selectedOptions[0]);
+                    const opts = pollCreationMsg?.message?.pollCreationMessage?.options ||
+                                 pollCreationMsg?.message?.pollCreationMessageV2?.options ||
+                                 pollCreationMsg?.message?.pollCreationMessageV3?.options ||
+                                 pollCreationMsg?.pollCreationMessage?.options ||
                                  pollCreationMsg?.pollCreationMessageV2?.options ||
                                  pollCreationMsg?.pollCreationMessageV3?.options || [];
                     
@@ -353,15 +365,8 @@ async function connectToWhatsApp() {
                     }
                 }
 
-                // Fallback heurístico inteligente: si el usuario tenía una sesión activa esperando servidor
                 if (!resolvedText) {
-                    if (sessionManager.busSessions && sessionManager.busSessions[remoteJid]?.step === 'ask_server') {
-                        resolvedText = '3️⃣ OMEGA SERVER'; // Fallback a Omega o Mega según contexto
-                    } else if (sessionManager.orderSessions && sessionManager.orderSessions[remoteJid]?.step === 'select_server') {
-                        resolvedText = '1️⃣ MEGA SERVER';
-                    } else if (sessionManager.orderSessions && sessionManager.orderSessions[remoteJid]?.step === 'CONFIRM') {
-                        resolvedText = '✅ SÍ, PROCEDER';
-                    }
+                    console.warn(`[POLL WARNING] No se pudo resolver opción de encuesta ${pollKey?.id}. DecryptedVote:`, decryptedVote ? 'OK' : 'NULL');
                 }
 
                 console.log(`[POLL VOTE RESULT] resolvedText: "${resolvedText}" para ${remoteJid}`);
