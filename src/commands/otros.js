@@ -71,26 +71,48 @@ async function otros(context) {
             
             const usersList = readDB(USERS_FILE) || [];
             const ticketUser = usersList.find(u => u.id === linkedUserId);
-            const userName = (ticketUser && ticketUser.role === 'admin') ? 'Admin #1' : (ticketUser ? ticketUser.username : 'Socio');
             
             const configDb = readDB('ticket_configs.json') || {};
             const userConfig = configDb[linkedUserId] || {};
             
-            let receipt = `🧾 *MEGAUNLOCKPHONE TICKET* 🧾\n━━━━━━━━━━━━━━━━━━━━━━\n\n🆔 *Orden:* #${o.orderId}\n👤 *Atendido por:* ${userName} (ID: ${linkedUserId})\n📅 *Fecha y Hora:* ${dateStr}\n📱 *IMEI/SN:* ${o.imei || 'N/A'}\n🔧 *Servicio:* ${o.serviceName}\n\n💲 *Total Pagado:* $${clientPrice.toFixed(2)}\n\n🔑 *Respuesta / Código:*\n${cleanStatus}\n\n🎉 *Estado:* Completado\n\n━━━━━━━━━━━━━━━━━━━━━━\n_¡Gracias por tu preferencia!_ 🌐\n\n`;
+            // Branding personalizado idéntico a la web
+            const brandTitle = userConfig.nombre || (ticketUser && ticketUser.role === 'admin' ? 'MegaUnlockPhone' : (ticketUser ? ticketUser.username : 'MegaUnlockPhone'));
+            const serverLabel = o.serverId === '3' ? 'OMEGA SERVER' : (o.serverId === '2' ? 'ALPHA SERVER' : 'MEGA SERVER');
             
-            if (userConfig.whatsapp) receipt += `📱 *WhatsApp:* ${userConfig.whatsapp}\n`;
+            let receipt = `🧾 *${brandTitle.toUpperCase()}* 🧾\n` +
+                          `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+                          `🆔 *ID de Orden:* #${o.orderId}\n` +
+                          `📅 *Fecha:* ${dateStr}\n` +
+                          `🏢 *Servidor:* ${serverLabel}\n` +
+                          `🔧 *Servicio:* ${o.serviceName}\n`;
+            if (o.imei) receipt += `📱 *IMEI / SN:* ${o.imei}\n`;
+            if (clientPrice > 0) receipt += `💲 *Precio al Cliente:* $${clientPrice.toFixed(2)} MXN\n`;
+            receipt += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+                       `🔑 *DETALLES / RESPUESTA:*\n` +
+                       `${cleanStatus}\n` +
+                       `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+
+            if (userConfig.whatsapp) receipt += `📱 *WhatsApp de Atención:* ${userConfig.whatsapp}\n`;
             if (userConfig.facebook) receipt += `📘 *Facebook:* ${userConfig.facebook}\n`;
+            receipt += `👤 *Atendido por:* ${brandTitle} (ID: ${linkedUserId})\n` +
+                       `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+                       `✨ _¡Gracias por tu preferencia! Powered by MegaUnlockPhone_`;
             
-            receipt += `\n_Powered By MegaUnlockPhone_`;
-            
+            // Si tiene logotipo subido desde la web o el bot, mandar como imagen con pie de foto
+            let sentWithLogo = false;
             if (userConfig.logoExt) {
                 const logoPath = path.join(__dirname, '../../data/logos', `${linkedUserId}${userConfig.logoExt}`);
                 if (require('fs').existsSync(logoPath)) {
-                    await sock.sendMessage(remoteJid, { image: { url: logoPath }, caption: receipt });
-                } else {
-                    await sock.sendMessage(remoteJid, { text: receipt });
+                    try {
+                        const logoBuffer = require('fs').readFileSync(logoPath);
+                        await sock.sendMessage(remoteJid, { image: logoBuffer, caption: receipt });
+                        sentWithLogo = true;
+                    } catch (logoErr) {
+                        console.error('[TICKET LOGO ERR]', logoErr.message);
+                    }
                 }
-            } else {
+            }
+            if (!sentWithLogo) {
                 await sock.sendMessage(remoteJid, { text: receipt });
             }
             
@@ -274,8 +296,31 @@ async function otros(context) {
         return true;
     }
 
-    if (['/soporte', '!soporte', 'soporte'].includes(cmd)) {
-        await sock.sendMessage(remoteJid, { text: '🎧 *Soporte Técnico*\n\nSi necesitas ayuda con un pedido o tienes dudas sobre un servicio, por favor contáctanos:\n\n💬 WhatsApp: https://wa.me/522216936720\n\nNuestro equipo te atenderá lo más pronto posible.' });
+    if (['/soporte', '!soporte', 'soporte', '/contacto', '!contacto', 'contacto'].includes(cmd)) {
+        const vcard = 'BEGIN:VCARD\n' // metadata of the contact card
+            + 'VERSION:3.0\n' 
+            + 'FN:MegaUnlockPhone Soporte Oficial\n' 
+            + 'ORG:MegaUnlockPhone Cloud;\n' 
+            + 'TEL;type=CELL;type=VOICE;waid=522216936720:+52 221 693 6720\n' 
+            + 'URL:https://megaunlockphone-panel.alwaysdata.net\n'
+            + 'END:VCARD';
+
+        await sock.sendMessage(remoteJid, {
+            contacts: {
+                displayName: 'MegaUnlockPhone Soporte Oficial',
+                contacts: [{ vcard }]
+            }
+        });
+
+        await sock.sendMessage(remoteJid, {
+            text: `🎧 *CANALES DE ATENCIÓN & SOPORTE 24/7* 🌐\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+                  `¡Estamos listos para apoyarte con tus servicios, activaciones y recargas!\n\n` +
+                  `💬 *WhatsApp Directo:* https://wa.me/522216936720\n` +
+                  `🌐 *Panel Web:* https://megaunlockphone-panel.alwaysdata.net\n` +
+                  `📘 *Facebook:* https://www.facebook.com/share/1DjDKeofvo/\n` +
+                  `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+                  `_Toca la tarjeta de contacto adjunta arriba para guardar nuestro número en tu agenda con un solo clic._`
+        });
         return true;
     }
 

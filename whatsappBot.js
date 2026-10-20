@@ -117,8 +117,17 @@ async function connectToWhatsApp() {
     // Cache de claves de cifrado Signal con TTL para evitar lentitud y "Esperando mensaje"
     const keyStore = makeCacheableSignalKeyStore(state.keys);
     
-    // Cache de mensajes en memoria (LRU) para responder a reintentos de cifrado de WhatsApp
-    const msgRetryCache = new Map();
+    // Cache de mensajes salientes (LRU) para responder a reintentos de cifrado de WhatsApp
+    const msgStore = new Map();
+
+    // CacheStore compatible con Baileys para control de reintentos
+    const retryCounterMap = new Map();
+    const msgRetryCounterCache = {
+        get: (key) => retryCounterMap.get(key),
+        set: (key, val) => retryCounterMap.set(key, val),
+        del: (key) => retryCounterMap.delete(key),
+        flushAll: () => retryCounterMap.clear()
+    };
 
     sock = makeWASocket({
         auth: {
@@ -129,16 +138,17 @@ async function connectToWhatsApp() {
         browser: Browsers.ubuntu('Chrome'),
         markOnlineOnConnect: true,
         syncFullHistory: false,
-        connectTimeoutMs: 60000,
-        defaultQueryTimeoutMs: 60000,
-        keepAliveIntervalMs: 15000,
+        fireInitQueries: false,
+        msgRetryCounterCache,
+        connectTimeoutMs: 120000,
+        defaultQueryTimeoutMs: 120000,
+        keepAliveIntervalMs: 10000,
         emitOwnEvents: false,
         getMessage: async (key) => {
-            if (key && key.id && msgRetryCache.has(key.id)) {
-                return msgRetryCache.get(key.id);
+            if (key && key.id && msgStore.has(key.id)) {
+                return msgStore.get(key.id);
             }
-            // Devolver mensaje mínimo si no se encuentra en el caché para desbloquear la sesión
-            return proto.Message.fromObject({});
+            return undefined;
         },
         shouldIgnoreJid: (jid) => false
     });
@@ -181,11 +191,11 @@ async function connectToWhatsApp() {
                 ]);
 
                 if (result && result.key && result.key.id && result.message) {
-                    msgRetryCache.set(result.key.id, result.message);
+                    msgStore.set(result.key.id, result.message);
                     // Mantener tamaño de caché controlado (máx 1000 mensajes para bajo consumo RAM)
-                    if (msgRetryCache.size > 1000) {
-                        const firstKey = msgRetryCache.keys().next().value;
-                        msgRetryCache.delete(firstKey);
+                    if (msgStore.size > 1000) {
+                        const firstKey = msgStore.keys().next().value;
+                        msgStore.delete(firstKey);
                     }
                 }
 
@@ -321,14 +331,38 @@ async function connectToWhatsApp() {
         const sessionManager = require('./src/sessionManager');
         const commands = require('./src/commands/index');
 
+        // Soporte para votos de Encuestas Nativas (Poll Votes)
+        let resolvedText = text;
+        if (msg.message?.pollUpdateMessage) {
+            try {
+                const { getAggregateVotesInPollMessage } = require('@whiskeysockets/baileys');
+                const pollCreationMsg = msgStore.get(msg.message.pollUpdateMessage.pollCreationMessageKey?.id);
+                if (pollCreationMsg) {
+                    const votes = getAggregateVotesInPollMessage({
+                        message: pollCreationMsg,
+                        pollUpdates: [msg.message.pollUpdateMessage]
+                    });
+                    if (votes && votes.length > 0) {
+                        const topVote = votes.find(v => v.voters && v.voters.length > 0);
+                        if (topVote) {
+                            resolvedText = topVote.name;
+                            console.log(`[POLL VOTE CAPTURED] Opción votada: "${resolvedText}" por ${remoteJid}`);
+                        }
+                    }
+                }
+            } catch (pollErr) {
+                console.warn('[POLL VOTE DECODE ERR]', pollErr.message);
+            }
+        }
+
         const context = {
             sock,
             remoteJid,
-            text,
-            lowerText,
-            textParts,
-            firstWord,
-            args: textParts,
+            text: resolvedText,
+            lowerText: resolvedText.toLowerCase().trim(),
+            textParts: resolvedText.trim().split(/\s+/),
+            firstWord: resolvedText.toLowerCase().trim().split(/\s+/)[0],
+            args: resolvedText.trim().split(/\s+/),
             msg,
             isGroup,
             wusers,
@@ -337,7 +371,25 @@ async function connectToWhatsApp() {
             hasMedia
         };
 
+        // Reacción inmediata con emoji para dar feedback de procesamiento
+        if (context.firstWord && (context.firstWord.startsWith('/') || ['saldo', 'pedir', 'buscar', 'recargar', 'ticket', 'soporte', 'comandos', 'ayuda'].includes(context.firstWord))) {
+            try {
+                await sock.sendMessage(remoteJid, {
+                    react: { text: '⚡', key: msg.key }
+                });
+            } catch (e) {}
+        }
+
         const handled = await commands.handleCommand(context);
+
+        // Si se manejó exitosamente un comando principal, confirmar con reacción positiva
+        if (handled && msg.key) {
+            try {
+                await sock.sendMessage(remoteJid, {
+                    react: { text: '✅', key: msg.key }
+                });
+            } catch (e) {}
+        }
 
         if (!handled && !isGroup && firstWord.length < 30) {
             if (!isUserLinked) {
@@ -353,11 +405,17 @@ async function connectToWhatsApp() {
 
         } catch (err) {
             console.error('WhatsApp Bot Error:', err);
-            require('fs').appendFileSync('bot_error.log', new Date().toISOString() + '\\n' + err.stack + '\\n\\n');
+            // Reacción de error visual en el mensaje del usuario
+            try {
+                if (msg && msg.key) {
+                    await sock.sendMessage(remoteJid, { react: { text: '⚠️', key: msg.key } });
+                }
+            } catch (e) {}
+            require('fs').appendFileSync('bot_error.log', new Date().toISOString() + '\n' + err.stack + '\n\n');
             try {
                 const errMsg = err.message || '';
                 if (errMsg.toLowerCase().includes('network error') || errMsg.includes('502') || errMsg.includes('503') || errMsg.includes('econnrefused') || errMsg.includes('500') || errMsg.toLowerCase().includes('timeout')) {
-                    await sock.sendMessage(remoteJid, { text: '⚠️ *¡Atención!* El servidor principal está en mantenimiento o bajo revisión. 🛠️\\n\\nPor favor, *CÁMBIATE A OMEGA SERVER* (Servidor 2 o Servidor 3) para continuar enviando tus pedidos sin interrupciones.' });
+                    await sock.sendMessage(remoteJid, { text: '⚠️ *¡Atención!* El servidor principal está en mantenimiento o bajo revisión. 🛠️\n\nPor favor, *CÁMBIATE A OMEGA SERVER* (Servidor 2 o Servidor 3) para continuar enviando tus pedidos sin interrupciones.' });
                 } else {
                     await sock.sendMessage(remoteJid, { text: '❌ Ocurrió un error inesperado al procesar tu mensaje. El equipo de soporte ha sido notificado.' });
                 }
@@ -418,36 +476,35 @@ setInterval(async () => {
                         }
                     }
 
-                    for (const phoneId of phoneIds) {
+                    // Deduplicar JIDs para que el cliente reciba un solo mensaje en su chat real
+                    const resolvedJids = new Set();
+                    for (const rawPhone of phoneIds) {
                         try {
-                            let sent = false;
-                            // Validar JID en WhatsApp si es posible
-                            try {
-                                const [check] = await sock.onWhatsApp(phoneId) || [];
-                                if (check && check.exists && check.jid) {
-                                    await sock.sendMessage(check.jid, { text: item.message });
-                                    sent = true;
+                            const [check] = await sock.onWhatsApp(rawPhone) || [];
+                            if (check && check.exists && check.jid) {
+                                resolvedJids.add(check.jid);
+                            } else if (rawPhone.startsWith('52') && !rawPhone.startsWith('521')) {
+                                const fallbackJid = rawPhone.replace(/^52/, '521');
+                                const [checkFallback] = await sock.onWhatsApp(fallbackJid) || [];
+                                if (checkFallback && checkFallback.exists && checkFallback.jid) {
+                                    resolvedJids.add(checkFallback.jid);
+                                } else {
+                                    resolvedJids.add(rawPhone);
                                 }
-                            } catch (_) {}
-
-                            // Fallback móvil para México (52 -> 521)
-                            if (!sent && phoneId.startsWith('52') && !phoneId.startsWith('521')) {
-                                const fallbackJid = phoneId.replace(/^52/, '521');
-                                try {
-                                    const [checkFallback] = await sock.onWhatsApp(fallbackJid) || [];
-                                    if (checkFallback && checkFallback.exists && checkFallback.jid) {
-                                        await sock.sendMessage(checkFallback.jid, { text: item.message });
-                                        sent = true;
-                                    }
-                                } catch (_) {}
+                            } else {
+                                resolvedJids.add(rawPhone);
                             }
+                        } catch (_) {
+                            resolvedJids.add(rawPhone);
+                        }
+                    }
 
-                            if (!sent) {
-                                await sock.sendMessage(phoneId, { text: item.message });
-                            }
+                    for (const targetJid of resolvedJids) {
+                        try {
+                            await sock.sendMessage(targetJid, { text: item.message });
                             await randomThrottleDelay();
                         } catch (e) {
-                            console.error(`[QUEUE] Error sending private message to ${phoneId}:`, e);
+                            console.error(`[QUEUE] Error sending private message to ${targetJid}:`, e);
                         }
                     }
                 }

@@ -523,6 +523,63 @@ async function admin(context) {
         await sock.sendMessage(remoteJid, { text: '✅ Anuncio multimedia publicado exitosamente en el grupo principal.' });
         return true;
     }
+
+    // --- COMANDO DE ENCUESTA MASIVA: /pollall ---
+    const pollAllTriggers = ['/pollall', '!pollall', 'pollall', '/encuesta', '!encuesta'];
+    if (pollAllTriggers.includes(cmd)) {
+        // Formato esperado: /pollall ¿Pregunta? | Opcion 1 | Opcion 2 | Opcion 3
+        const rawInput = args.slice(1).join(' ').trim();
+        const parts = rawInput.split('|').map(p => p.trim()).filter(Boolean);
+
+        if (parts.length < 3) {
+            await sock.sendMessage(remoteJid, {
+                text: `📊 *COMANDO DE ENCUESTA MASIVA* 📊\n━━━━━━━━━━━━━━━━━━━━━━\nPermite enviar una encuesta interactiva a *TODOS* los clientes registrados y al grupo oficial.\n\n👉 *Uso:* \n*/pollall ¿Pregunta principal? | Opción 1 | Opción 2 | Opción 3*\n\n💡 *Ejemplo:* \n*/pollall ¿Qué servidor prefieren para recargas? | Mega Server | Omega Server | Ambos*`
+            });
+            return true;
+        }
+
+        const question = parts[0];
+        const options = parts.slice(1);
+
+        if (options.length > 12) {
+            await sock.sendMessage(remoteJid, { text: '❌ WhatsApp admite un máximo de 12 opciones por encuesta.' });
+            return true;
+        }
+
+        const pollMessage = {
+            poll: {
+                name: `📢 [MegaUnlock Oficial] ${question}`,
+                values: options,
+                selectableCount: 1
+            }
+        };
+
+        const recipients = getBroadcastRecipients();
+        await sock.sendMessage(remoteJid, { text: `🚀 *Iniciando transmisión de encuesta a ${recipients.length} clientes...*` });
+
+        let sentCount = 0;
+        for (const jid of recipients) {
+            try {
+                await sock.sendMessage(jid, pollMessage);
+                sentCount++;
+            } catch (err) {
+                console.error(`[POLLALL ERR] ${jid}:`, err.message);
+            }
+        }
+
+        // También enviar al grupo principal si está configurado
+        const { wsettings } = context;
+        if (wsettings && wsettings.adminGroupId) {
+            try {
+                await sock.sendMessage(wsettings.adminGroupId, pollMessage);
+            } catch (e) {}
+        }
+
+        await sock.sendMessage(remoteJid, {
+            text: `✅ *ENCUESTA MASIVA TRANSMITIDA*\n━━━━━━━━━━━━━━━━━━━━━━\nEncuesta entregada a *${sentCount}* usuarios y al grupo oficial.`
+        });
+        return true;
+    }
     
     return false;
 }

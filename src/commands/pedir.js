@@ -21,12 +21,12 @@ async function pedir(context) {
         
         if (session.step === 'select_server') {
             const rawInput = text.trim().toLowerCase();
-            let sId = rawInput;
-            if (rawInput === 'mega') sId = '1'; // FIXED: Mega = 1
-            else if (rawInput === 'omega') sId = '3'; // FIXED: Omega = 3
+            let sId = null;
+            if (rawInput === 'mega' || rawInput === '1' || rawInput.includes('mega server') || rawInput.includes('1️⃣')) sId = '1';
+            else if (rawInput === 'omega' || rawInput === '3' || rawInput.includes('omega server') || rawInput.includes('3️⃣')) sId = '3';
 
-            if (!['1', '3'].includes(sId)) {
-                await sock.sendMessage(remoteJid, { text: '❌ Servidor inválido. Responde con el número (1, 3) o el nombre (Mega, Omega).' });
+            if (!sId || !['1', '3'].includes(sId)) {
+                await sock.sendMessage(remoteJid, { text: '❌ Servidor inválido. Pulsa una opción en la encuesta o responde *1* para Mega o *3* para Omega.' });
                 return true;
             }
             session.serverId = sId;
@@ -85,15 +85,30 @@ async function pedir(context) {
             const fieldName = session.customField || session.imeiName || session.custom.customname || fallbackType;
             const totalCost = session.price * session.qnt;
             
-            let confMsg = `⚠️ *CONFIRMACIÓN DE PEDIDO* ⚠️\n\n🔧 Servicio: ${session.serviceName}\n`;
-            if (session.qntRequired) confMsg += `📦 Cantidad: ${session.qnt}\n`;
-            confMsg += `📱 ${fieldName}: ${session.imei}\n💲 Costo Total a descontar: $${totalCost.toFixed(2)} MXN\n\n¿Estás seguro de continuar? Responde *SI* para confirmar o *NO* para cancelar.`;
+            let confMsg = `⚠️ *RESUMEN DE PEDIDO* ⚠️\n━━━━━━━━━━━━━━━━━━━━━━\n` +
+                          `🔧 *Servicio:* ${session.serviceName}\n`;
+            if (session.qntRequired) confMsg += `📦 *Cantidad:* ${session.qnt}\n`;
+            confMsg += `📱 *${fieldName}:* ${session.imei}\n` +
+                       `💲 *Total a descontar:* $${totalCost.toFixed(2)} MXN\n` +
+                       `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                       `¿Deseas confirmar la compra ahora?`;
             
             await sock.sendMessage(remoteJid, { text: confMsg });
+            try {
+                await sock.sendMessage(remoteJid, {
+                    poll: {
+                        name: '¿Confirmar pedido?',
+                        values: ['✅ SÍ, PROCEDER', '❌ NO, CANCELAR'],
+                        selectableCount: 1
+                    }
+                });
+            } catch (pErr) {
+                await sock.sendMessage(remoteJid, { text: 'Responde *SI* para confirmar o *NO* para cancelar.' });
+            }
             return true;
         } else if (session.step === 'CONFIRM') {
             const ans = text.toLowerCase().trim();
-            if (ans === 'si' || ans === 'sí') {
+            if (ans === 'si' || ans === 'sí' || ans.includes('sí, proceder') || ans.includes('proceder') || ans.includes('✅')) {
                 await sock.sendMessage(remoteJid, { text: '⏳ Procesando pedido, por favor espera...' });
                 try {
                     const payload = {
@@ -193,13 +208,22 @@ async function pedir(context) {
                 await sock.sendMessage(remoteJid, { text: `🛒 ¡Excelente! Vamos a hacer un pedido en el Servidor ${sId === '1' ? '1️⃣ MEGA SERVER' : (sId === '3' ? '3️⃣ OMEGA SERVER' : sId)}.\n\nPor favor, ingresa el *ID del servicio* que deseas comprar (o escribe "cancelar" para salir):` });
             }
         } else {
-            let srvText = '🛍️ *SELECCIÓN DE SERVIDOR*\n\nPor favor, responde con el número o nombre del servidor (ej. *Mega* u *Omega*) donde deseas hacer tu pedido:\n\n';
-            srvText += `1️⃣ MEGA SERVER\n`;
-            srvText += `3️⃣ OMEGA SERVER\n`;
-            srvText += '\n(Escribe *cancelar* para salir)';
-            
             sessionManager.orderSessions[remoteJid] = { step: 'select_server' };
-            await sock.sendMessage(remoteJid, { text: srvText });
+            
+            // Envío interactivo con Encuesta nativa de 1 solo toque (WhatsApp Poll)
+            try {
+                await sock.sendMessage(remoteJid, {
+                    poll: {
+                        name: '🛒 Selecciona el Servidor para tu pedido:',
+                        values: ['1️⃣ MEGA SERVER', '3️⃣ OMEGA SERVER'],
+                        selectableCount: 1
+                    }
+                });
+            } catch (pollErr) {
+                console.warn('[PEDIR POLL FAIL] Fallback a texto:', pollErr.message);
+                let srvText = '🛍️ *SELECCIÓN DE SERVIDOR*\n━━━━━━━━━━━━━━━━━━━━━━\nResponde con el número o nombre del servidor:\n\n1️⃣ MEGA SERVER\n3️⃣ OMEGA SERVER\n\n_(O escribe "cancelar" para salir)_';
+                await sock.sendMessage(remoteJid, { text: srvText });
+            }
         }
         return true;
     }

@@ -19,12 +19,12 @@ async function buscar(context) {
         if (session.step === 'ask_server') {
             const val = query.toLowerCase();
             let sId = null;
-            if (val === 'mega' || val === '1') sId = '1';
-            else if (val === 'omega' || val === '3') sId = '3';
+            if (val === 'mega' || val === '1' || val.includes('mega server') || val.includes('1️⃣')) sId = '1';
+            else if (val === 'omega' || val === '3' || val.includes('omega server') || val.includes('3️⃣')) sId = '3';
             else if (val === '2') sId = '2';
             
             if (!sId) {
-                await sock.sendMessage(remoteJid, { text: '❌ Servidor inválido. Responde *Mega* o *Omega*, o escribe *cancelar*.' });
+                await sock.sendMessage(remoteJid, { text: '❌ Servidor inválido. Pulsa una opción en la encuesta o responde *1* para Mega o *3* para Omega.' });
                 return true;
             }
             
@@ -77,11 +77,18 @@ async function buscar(context) {
         }
     } else {
         sessionManager.busSessions[remoteJid] = { step: 'ask_server' };
-        let srvText = '🛍️ *SELECCIÓN DE SERVIDOR PARA BUSCAR*\n\n¿En qué servidor deseas buscar?\nResponde con el número o nombre del servidor:\n\n';
-        srvText += `1️⃣ MEGA SERVER\n`;
-        srvText += `3️⃣ OMEGA SERVER\n`;
-        srvText += '\n(Escribe *cancelar* para salir)';
-        await sock.sendMessage(remoteJid, { text: srvText });
+        try {
+            await sock.sendMessage(remoteJid, {
+                poll: {
+                    name: '🔎 Selecciona el Servidor para buscar:',
+                    values: ['1️⃣ MEGA SERVER', '3️⃣ OMEGA SERVER'],
+                    selectableCount: 1
+                }
+            });
+        } catch (pollErr) {
+            let srvText = '🛍️ *SELECCIÓN DE SERVIDOR PARA BUSCAR*\n━━━━━━━━━━━━━━━━━━━━━━\n¿En qué servidor deseas buscar?\n\n1️⃣ MEGA SERVER\n3️⃣ OMEGA SERVER\n\n_(O escribe "cancelar" para salir)_';
+            await sock.sendMessage(remoteJid, { text: srvText });
+        }
     }
     return true; // handled
 }
