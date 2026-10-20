@@ -321,8 +321,27 @@ async function connectToWhatsApp() {
 
                 const pollCreationMsg = pollKey?.id ? msgStore.get(pollKey.id) : null;
                 const meNormalised = jidNormalizedUser(sock.user?.id || sock.authState?.creds?.me?.id);
-                const pollCreatorJid = getKeyAuthor(pollKey, meNormalised);
-                const voterJid = getKeyAuthor(msg.key, meNormalised);
+                const meLid = sock.authState?.creds?.me?.lid ? jidNormalizedUser(sock.authState.creds.me.lid) : (sock.user?.lid ? jidNormalizedUser(sock.user.lid) : null);
+
+                // WhatsApp en chats privados puede cifrar la encuesta usando el LID en vez del número @s.whatsapp.net
+                const pollCreatorCandidates = [];
+                if (pollKey) {
+                    if (pollKey.fromMe) {
+                        if (meLid) pollCreatorCandidates.push(meLid);
+                        if (meNormalised) pollCreatorCandidates.push(meNormalised);
+                    } else {
+                        const author = getKeyAuthor(pollKey, meNormalised);
+                        if (author) pollCreatorCandidates.push(author);
+                    }
+                }
+                if (pollCreatorCandidates.length === 0 && meNormalised) pollCreatorCandidates.push(meNormalised);
+
+                const voterCandidates = [];
+                const voterDirect = getKeyAuthor(msg.key, meNormalised);
+                if (voterDirect) voterCandidates.push(voterDirect);
+                if (msg.key.participant) voterCandidates.push(jidNormalizedUser(msg.key.participant));
+                if (remoteJid) voterCandidates.push(jidNormalizedUser(remoteJid));
+                const uniqueVoterCandidates = [...new Set(voterCandidates)];
 
                 let pollEncKey = pollCreationMsg?.message?.messageContextInfo?.messageSecret ||
                                  pollCreationMsg?.messageContextInfo?.messageSecret ||
@@ -333,18 +352,26 @@ async function connectToWhatsApp() {
 
                 let decryptedVote = null;
                 if (pollEncKey && pollUpdate.vote) {
-                    try {
-                        decryptedVote = decryptPollVote(
-                            pollUpdate.vote,
-                            {
-                                pollCreatorJid,
-                                pollMsgId: pollKey.id,
-                                pollEncKey,
-                                voterJid
+                    for (const cCreator of pollCreatorCandidates) {
+                        for (const cVoter of uniqueVoterCandidates) {
+                            try {
+                                decryptedVote = decryptPollVote(
+                                    pollUpdate.vote,
+                                    {
+                                        pollCreatorJid: cCreator,
+                                        pollMsgId: pollKey.id,
+                                        pollEncKey,
+                                        voterJid: cVoter
+                                    }
+                                );
+                                if (decryptedVote && decryptedVote.selectedOptions) {
+                                    break;
+                                }
+                            } catch (e) {
+                                // Continuar probando siguiente combinación
                             }
-                        );
-                    } catch (decErr) {
-                        console.warn('[POLL DECRYPT WARN]', decErr.message);
+                        }
+                        if (decryptedVote && decryptedVote.selectedOptions) break;
                     }
                 }
 
