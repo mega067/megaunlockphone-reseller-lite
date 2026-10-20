@@ -351,6 +351,7 @@ async function connectToWhatsApp() {
                 }
 
                 let decryptedVote = null;
+                let lastErr = null;
                 if (pollEncKey && pollUpdate.vote) {
                     for (const cCreator of pollCreatorCandidates) {
                         for (const cVoter of uniqueVoterCandidates) {
@@ -365,13 +366,17 @@ async function connectToWhatsApp() {
                                     }
                                 );
                                 if (decryptedVote && decryptedVote.selectedOptions) {
+                                    console.log(`[POLL DECRYPT SUCCESS] Con creator: ${cCreator}, voter: ${cVoter}`);
                                     break;
                                 }
                             } catch (e) {
-                                // Continuar probando siguiente combinación
+                                lastErr = e.message;
                             }
                         }
                         if (decryptedVote && decryptedVote.selectedOptions) break;
+                    }
+                    if (!decryptedVote) {
+                        console.warn(`[POLL DECRYPT FAILED] Intentado creators: ${JSON.stringify(pollCreatorCandidates)}, voters: ${JSON.stringify(uniqueVoterCandidates)}, lastErr: ${lastErr}`);
                     }
                 }
 
