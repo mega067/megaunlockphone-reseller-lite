@@ -395,13 +395,13 @@ async function connectToWhatsApp() {
                 }
 
                 if (!resolvedText) {
-                    console.warn(`[POLL WARNING] No se pudo resolver opción de encuesta ${pollKey?.id}. DecryptedVote:`, decryptedVote ? 'OK' : 'NULL');
+                    console.warn(`[POLL WARNING] No se pudo resolver opción de encuesta ${pollKey?.id}. DecryptedVote:`, decryptedVote ? 'OK' : 'NULL', `pollEncKey:`, pollEncKey ? 'FOUND' : 'MISSING', `pollCreationMsg:`, pollCreationMsg ? 'FOUND' : 'MISSING');
                 }
 
                 console.log(`[POLL VOTE RESULT] resolvedText: "${resolvedText}" para ${remoteJid}`);
 
                 // Evitar procesar el mismo voto duplicado (WhatsApp emite 2 eventos upsert para el mismo pollUpdate)
-                const voteId = `${msg.key.id}_${voterJid}_${resolvedText}`;
+                const voteId = `${msg.key.id}_${voterDirect || remoteJid}_${resolvedText}`;
                 if (processedPollVotes.has(voteId)) {
                     console.log(`[POLL DEDUPLICATE] Voto ya procesado previamente: ${voteId}, ignorando evento duplicado.`);
                     return;
