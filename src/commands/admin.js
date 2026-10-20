@@ -58,12 +58,31 @@ async function admin(context) {
             session.resellerName = session.resellers[idx].username;
             session.step = 2;
             
-            await sock.sendMessage(remoteJid, { text: `✅ Revendedor seleccionado: ${session.resellerName} (ID: ${session.resellerId})\n\nSelecciona el servidor:\n1️⃣ Mega Server\n2️⃣ Servidor 2\n3️⃣ Omega Server` });
+            try {
+                await sock.sendMessage(remoteJid, {
+                    poll: {
+                        name: `🏢 Servidor para ${session.resellerName}:`,
+                        values: ['1️⃣ MEGA SERVER', '3️⃣ OMEGA SERVER'],
+                        selectableCount: 1
+                    }
+                });
+            } catch (pErr) {
+                await sock.sendMessage(remoteJid, { text: `✅ Revendedor seleccionado: ${session.resellerName} (ID: ${session.resellerId})\n\nSelecciona el servidor:\n1️⃣ Mega Server\n3️⃣ Omega Server` });
+            }
             return true;
         } else if (session.step === 2) {
-            const sId = text.trim();
-            if (!['1', '2', '3'].includes(sId)) {
-                await sock.sendMessage(remoteJid, { text: '❌ Servidor inválido. Responde 1, 2 o 3 (o escribe "cancelar").' });
+            const rawVal = text.trim().toLowerCase();
+            let sId = null;
+            if (rawVal === '3' || rawVal.includes('omega') || rawVal.includes('3️⃣')) {
+                sId = '3';
+            } else if (rawVal === '1' || /(^|\s|1️⃣)mega(\s|$|server)/i.test(rawVal) || rawVal.includes('1️⃣')) {
+                sId = '1';
+            } else if (rawVal === '2') {
+                sId = '2';
+            }
+
+            if (!sId) {
+                await sock.sendMessage(remoteJid, { text: '❌ Servidor inválido. Pulsa una opción en la encuesta o responde 1 o 3 (o escribe "cancelar").' });
                 return true;
             }
             session.serverId = sId;
@@ -116,15 +135,27 @@ async function admin(context) {
             }
             session.amount = amount;
             session.step = 4;
-            if (session.type === 'remove') {
-                await sock.sendMessage(remoteJid, { text: `⚠️ *CONFIRMACIÓN DE DESCUENTO* ⚠️\n\n👤 Revendedor: ${session.resellerName}\n🏢 Servidor: ${session.serverId}\n📉 Monto a descontar: $${amount.toFixed(2)} MXN\n\n¿Confirmas esta reducción de saldo? Responde *SI* para proceder.` });
-            } else {
-                await sock.sendMessage(remoteJid, { text: `⚠️ *CONFIRMACIÓN DE RECARGA* ⚠️\n\n👤 Revendedor: ${session.resellerName}\n🏢 Servidor: ${session.serverId}\n💲 Monto a agregar: $${amount.toFixed(2)} MXN\n\n¿Confirmas esta recarga? Responde *SI* para proceder.` });
+            const confirmAction = session.type === 'remove' ? 'descuento' : 'recarga';
+            const confirmName = `¿Confirmar ${confirmAction} de $${amount.toFixed(2)} a ${session.resellerName}?`;
+            try {
+                await sock.sendMessage(remoteJid, {
+                    poll: {
+                        name: confirmName,
+                        values: ['✅ SÍ, PROCEDER', '❌ NO, CANCELAR'],
+                        selectableCount: 1
+                    }
+                });
+            } catch (pErr) {
+                if (session.type === 'remove') {
+                    await sock.sendMessage(remoteJid, { text: `⚠️ *CONFIRMACIÓN DE DESCUENTO* ⚠️\n\n👤 Revendedor: ${session.resellerName}\n🏢 Servidor: ${session.serverId}\n📉 Monto a descontar: $${amount.toFixed(2)} MXN\n\n¿Confirmas esta reducción de saldo? Responde *SI* para proceder o *NO* para cancelar.` });
+                } else {
+                    await sock.sendMessage(remoteJid, { text: `⚠️ *CONFIRMACIÓN DE RECARGA* ⚠️\n\n👤 Revendedor: ${session.resellerName}\n🏢 Servidor: ${session.serverId}\n💲 Monto a agregar: $${amount.toFixed(2)} MXN\n\n¿Confirmas esta recarga? Responde *SI* para proceder o *NO* para cancelar.` });
+                }
             }
             return true;
         } else if (session.step === 4) {
             const ans = text.trim().toLowerCase();
-            if (ans === 'si' || ans === 'sí') {
+            if (ans === 'si' || ans === 'sí' || ans.includes('sí, proceder') || ans.includes('proceder') || ans.includes('✅')) {
                 try {
                     const { callBotApi } = require('../whatsappEngine');
                     let finalAmount = session.amount;
@@ -164,12 +195,11 @@ async function admin(context) {
                 } catch (e) {
                     await sock.sendMessage(remoteJid, { text: '❌ Ocurrió un error al procesar el saldo: ' + e.message });
                 }
-                delete sessionManager.addMoneySessions[remoteJid];
-            } else if (ans === 'no') {
+            } else if (ans === 'no' || ans.includes('cancelar') || ans.includes('❌') || ans.includes('no, cancelar')) {
                 delete sessionManager.addMoneySessions[remoteJid];
                 await sock.sendMessage(remoteJid, { text: '🚫 Operación cancelada.' });
             } else {
-                await sock.sendMessage(remoteJid, { text: '❌ Responde *SI* para confirmar o *NO* para cancelar.' });
+                await sock.sendMessage(remoteJid, { text: '❌ Respuesta inválida. Pulsa una opción en la encuesta o responde *SI* o *NO*.' });
             }
             return true;
         }

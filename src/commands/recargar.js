@@ -29,13 +29,30 @@ async function recargar(context) {
             }
             session.amount = amount;
             session.step = 1.5;
-            let serverText = '🖥️ *Selecciona el servidor al que deseas agregar saldo*\nResponde con el número de la lista:\n\n1️⃣ Mega Server (Mínimo recomendado: $50)\n3️⃣ Omega Server (Mínimo recomendado: $100)';
-            await sock.sendMessage(remoteJid, { text: serverText });
+            try {
+                await sock.sendMessage(remoteJid, {
+                    poll: {
+                        name: '🖥️ Selecciona el Servidor para tu recarga:',
+                        values: ['1️⃣ MEGA SERVER', '3️⃣ OMEGA SERVER'],
+                        selectableCount: 1
+                    }
+                });
+            } catch (pErr) {
+                let serverText = '🖥️ *Selecciona el servidor al que deseas agregar saldo*\nResponde con el número de la lista:\n\n1️⃣ Mega Server\n3️⃣ Omega Server';
+                await sock.sendMessage(remoteJid, { text: serverText });
+            }
             return true;
         } else if (session.step === 1.5) {
-            const opt = parseInt(text.trim());
-            if (opt !== 1 && opt !== 3) {
-               await sock.sendMessage(remoteJid, { text: '❌ Opción inválida. Responde 1 para Mega Server o 3 para Omega Server.' });
+            const rawVal = text.trim().toLowerCase();
+            let opt = null;
+            if (rawVal === '3' || rawVal.includes('omega') || rawVal.includes('3️⃣')) {
+                opt = 3;
+            } else if (rawVal === '1' || /(^|\s|1️⃣)mega(\s|$|server)/i.test(rawVal) || rawVal.includes('1️⃣')) {
+                opt = 1;
+            }
+
+            if (!opt) {
+               await sock.sendMessage(remoteJid, { text: '❌ Opción inválida. Pulsa una opción en la encuesta o responde 1 para Mega Server o 3 para Omega Server.' });
                return true;
             }
             session.serverId = String(opt);
