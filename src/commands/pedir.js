@@ -160,11 +160,11 @@ async function pedir(context) {
                     await sock.sendMessage(remoteJid, { text: `❌ Fallo al procesar el pedido:\n${errText}` });
                 }
                 delete sessionManager.orderSessions[remoteJid];
-            } else if (ans === 'no') {
+            } else if (ans === 'no' || ans.includes('cancelar') || ans.includes('❌') || ans.includes('no, cancelar')) {
                 delete sessionManager.orderSessions[remoteJid];
                 await sock.sendMessage(remoteJid, { text: '🚫 Pedido cancelado.' });
             } else {
-                await sock.sendMessage(remoteJid, { text: '❌ Respuesta inválida. Por favor responde *SI* o *NO*.' });
+                await sock.sendMessage(remoteJid, { text: '❌ Respuesta inválida. Por favor pulsa una opción en la encuesta o responde *SI* o *NO*.' });
             }
             return true;
         }

@@ -323,25 +323,28 @@ async function connectToWhatsApp() {
                 const meNormalised = jidNormalizedUser(sock.user?.id || sock.authState?.creds?.me?.id);
                 const meLid = sock.authState?.creds?.me?.lid ? jidNormalizedUser(sock.authState.creds.me.lid) : (sock.user?.lid ? jidNormalizedUser(sock.user.lid) : null);
 
-                // WhatsApp en chats privados puede cifrar la encuesta usando el LID en vez del número @s.whatsapp.net
+                // Candidatos para el creador de la encuesta:
+                // El bot casi siempre es el creador de la encuesta. En chats privados y grupos con LID,
+                // WhatsApp puede requerir el LID del bot o su JID normalizado @s.whatsapp.net.
                 const pollCreatorCandidates = [];
+                if (meLid) pollCreatorCandidates.push(meLid);
+                if (meNormalised) pollCreatorCandidates.push(meNormalised);
                 if (pollKey) {
-                    if (pollKey.fromMe) {
-                        if (meLid) pollCreatorCandidates.push(meLid);
-                        if (meNormalised) pollCreatorCandidates.push(meNormalised);
-                    } else {
-                        const author = getKeyAuthor(pollKey, meNormalised);
-                        if (author) pollCreatorCandidates.push(author);
-                    }
+                    const author = getKeyAuthor(pollKey, meNormalised);
+                    if (author) pollCreatorCandidates.push(author);
+                    if (pollKey.participant) pollCreatorCandidates.push(jidNormalizedUser(pollKey.participant));
+                    if (pollKey.remoteJid) pollCreatorCandidates.push(jidNormalizedUser(pollKey.remoteJid));
                 }
-                if (pollCreatorCandidates.length === 0 && meNormalised) pollCreatorCandidates.push(meNormalised);
+                const uniqueCreatorCandidates = [...new Set(pollCreatorCandidates.filter(Boolean))];
 
+                // Candidatos para el votante (quien emitió el voto):
+                // En privado suele ser msg.key.remoteJid o msg.key.participant (a menudo con formato LID o phone@s.whatsapp.net)
                 const voterCandidates = [];
                 const voterDirect = getKeyAuthor(msg.key, meNormalised);
                 if (voterDirect) voterCandidates.push(voterDirect);
                 if (msg.key.participant) voterCandidates.push(jidNormalizedUser(msg.key.participant));
                 if (remoteJid) voterCandidates.push(jidNormalizedUser(remoteJid));
-                const uniqueVoterCandidates = [...new Set(voterCandidates)];
+                const uniqueVoterCandidates = [...new Set(voterCandidates.filter(Boolean))];
 
                 let pollEncKey = pollCreationMsg?.message?.messageContextInfo?.messageSecret ||
                                  pollCreationMsg?.messageContextInfo?.messageSecret ||
@@ -353,7 +356,7 @@ async function connectToWhatsApp() {
                 let decryptedVote = null;
                 let lastErr = null;
                 if (pollEncKey && pollUpdate.vote) {
-                    for (const cCreator of pollCreatorCandidates) {
+                    for (const cCreator of uniqueCreatorCandidates) {
                         for (const cVoter of uniqueVoterCandidates) {
                             try {
                                 decryptedVote = decryptPollVote(
@@ -376,7 +379,7 @@ async function connectToWhatsApp() {
                         if (decryptedVote && decryptedVote.selectedOptions) break;
                     }
                     if (!decryptedVote) {
-                        console.warn(`[POLL DECRYPT FAILED] Intentado creators: ${JSON.stringify(pollCreatorCandidates)}, voters: ${JSON.stringify(uniqueVoterCandidates)}, lastErr: ${lastErr}`);
+                        console.warn(`[POLL DECRYPT FAILED] Intentado creators: ${JSON.stringify(uniqueCreatorCandidates)}, voters: ${JSON.stringify(uniqueVoterCandidates)}, lastErr: ${lastErr}`);
                     }
                 }
 
