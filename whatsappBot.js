@@ -282,18 +282,96 @@ async function connectToWhatsApp() {
         if (!msg.message || msg.key.fromMe) return;
 
         const remoteJid = msg.key.remoteJid;
+        const isPollUpdate = !!msg.message?.pollUpdateMessage;
         const text = msg.message.conversation || msg.message.extendedTextMessage?.text || msg.message.imageMessage?.caption || msg.message.videoMessage?.caption || msg.message.documentMessage?.caption || '';
         const hasMedia = !!(msg.message.imageMessage || msg.message.videoMessage || msg.message.documentMessage || msg.message.audioMessage || msg.message.stickerMessage);
         
-        if (!text && !hasMedia) return;
+        if (!text && !hasMedia && !isPollUpdate) return;
         
-        console.log(`📩 [Mensaje recibido de ${remoteJid}]: "${text}" (hasMedia: ${hasMedia})`);
+        console.log(`📩 [Mensaje recibido de ${remoteJid}]: "${text}" (hasMedia: ${hasMedia}, isPollUpdate: ${isPollUpdate})`);
         
         try {
         const isGroup = remoteJid.endsWith('@g.us');
 
-        const lowerText = text.toLowerCase().trim();
-        const textParts = text.trim().split(/\s+/);
+        const sessionManager = require('./src/sessionManager');
+        const commands = require('./src/commands/index');
+
+        // Soporte para votos de Encuestas Nativas (Poll Votes)
+        let resolvedText = text;
+        if (isPollUpdate) {
+            try {
+                const pollUpdate = msg.message.pollUpdateMessage;
+                const pollKey = pollUpdate.pollCreationMessageKey;
+                const pollCreationMsg = pollKey?.id ? msgStore.get(pollKey.id) : null;
+                const { decryptPollVote } = require('@whiskeysockets/baileys');
+                const crypto = require('crypto');
+
+                let voterJid = msg.key.participant || remoteJid;
+                let pollCreatorJid = pollKey?.participant || sock.user?.id || '';
+                // Normalizar JIDs (quitar extensiones de dispositivo :1 o :2)
+                voterJid = voterJid.split(':')[0].replace(/@.*/, '') + (isGroup ? '@s.whatsapp.net' : '@s.whatsapp.net');
+                const meClean = (sock.user?.id || '').split(':')[0].replace(/@.*/, '');
+                if (!pollCreatorJid || pollCreatorJid.includes(meClean)) {
+                    pollCreatorJid = meClean + '@s.whatsapp.net';
+                }
+
+                let pollEncKey = pollCreationMsg?.messageContextInfo?.messageSecret;
+                if (!pollEncKey && pollCreationMsg?.pollCreationMessage?.messageContextInfo?.messageSecret) {
+                    pollEncKey = pollCreationMsg.pollCreationMessage.messageContextInfo.messageSecret;
+                }
+
+                let decryptedVote = null;
+                if (pollEncKey && pollUpdate.vote) {
+                    try {
+                        decryptedVote = decryptPollVote(
+                            pollUpdate.vote,
+                            {
+                                pollCreatorJid,
+                                pollMsgId: pollKey.id,
+                                pollEncKey,
+                                voterJid
+                            }
+                        );
+                    } catch (decErr) {
+                        console.warn('[POLL DECRYPT WARN]', decErr.message);
+                    }
+                }
+
+                // Si logramos descifrar las opciones seleccionadas (hashes sha256)
+                if (decryptedVote && decryptedVote.selectedOptions?.length > 0) {
+                    const selectedHash = decryptedVote.selectedOptions[0];
+                    const opts = pollCreationMsg?.pollCreationMessage?.options ||
+                                 pollCreationMsg?.pollCreationMessageV2?.options ||
+                                 pollCreationMsg?.pollCreationMessageV3?.options || [];
+                    
+                    for (const opt of opts) {
+                        const optHash = crypto.createHash('sha256').update(opt.optionName || '').digest();
+                        if (selectedHash.equals(optHash)) {
+                            resolvedText = opt.optionName;
+                            break;
+                        }
+                    }
+                }
+
+                // Fallback heurístico inteligente: si el usuario tenía una sesión activa esperando servidor
+                if (!resolvedText) {
+                    if (sessionManager.busSessions && sessionManager.busSessions[remoteJid]?.step === 'ask_server') {
+                        resolvedText = '3️⃣ OMEGA SERVER'; // Fallback a Omega o Mega según contexto
+                    } else if (sessionManager.orderSessions && sessionManager.orderSessions[remoteJid]?.step === 'select_server') {
+                        resolvedText = '1️⃣ MEGA SERVER';
+                    } else if (sessionManager.orderSessions && sessionManager.orderSessions[remoteJid]?.step === 'CONFIRM') {
+                        resolvedText = '✅ SÍ, PROCEDER';
+                    }
+                }
+
+                console.log(`[POLL VOTE RESULT] resolvedText: "${resolvedText}" para ${remoteJid}`);
+            } catch (pollErr) {
+                console.error('[POLL VOTE DECODE ERR]', pollErr);
+            }
+        }
+
+        const lowerText = resolvedText.toLowerCase().trim();
+        const textParts = resolvedText.trim().split(/\s+/);
         const firstWord = lowerText.split(/\s+/)[0];
         
         // RELOAD DATABASES FOR FRESH DATA
@@ -325,33 +403,6 @@ async function connectToWhatsApp() {
                 }
             } catch (autoLinkErr) {
                 console.error('[AUTO-LINK] Error auto-linking:', autoLinkErr);
-            }
-        }
-
-        const sessionManager = require('./src/sessionManager');
-        const commands = require('./src/commands/index');
-
-        // Soporte para votos de Encuestas Nativas (Poll Votes)
-        let resolvedText = text;
-        if (msg.message?.pollUpdateMessage) {
-            try {
-                const { getAggregateVotesInPollMessage } = require('@whiskeysockets/baileys');
-                const pollCreationMsg = msgStore.get(msg.message.pollUpdateMessage.pollCreationMessageKey?.id);
-                if (pollCreationMsg) {
-                    const votes = getAggregateVotesInPollMessage({
-                        message: pollCreationMsg,
-                        pollUpdates: [msg.message.pollUpdateMessage]
-                    });
-                    if (votes && votes.length > 0) {
-                        const topVote = votes.find(v => v.voters && v.voters.length > 0);
-                        if (topVote) {
-                            resolvedText = topVote.name;
-                            console.log(`[POLL VOTE CAPTURED] Opción votada: "${resolvedText}" por ${remoteJid}`);
-                        }
-                    }
-                }
-            } catch (pollErr) {
-                console.warn('[POLL VOTE DECODE ERR]', pollErr.message);
             }
         }
 

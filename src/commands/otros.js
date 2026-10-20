@@ -14,16 +14,33 @@ async function otros(context) {
     const cmd = firstWord.toLowerCase();
     
     if (['/ticket', '!ticket', 'ticket'].includes(cmd)) {
+        if (!linkedUserId) {
+            await sock.sendMessage(remoteJid, { text: '⚠️ Debes vincular tu cuenta primero para generar recibos. Escribe *vincular*.' });
+            return true;
+        }
+
         if (!args[1]) {
-            context.sessionManager.ticketSessions[remoteJid] = { step: 1 };
-            await sock.sendMessage(remoteJid, { text: '🧾 *Generador de Recibos*\n\nPor favor, ingresa el *ID de tu Orden* para generar el recibo (ej. 12345):' });
+            context.sessionManager.ticketSessions[remoteJid] = { step: 'ask_order_id' };
+            await sock.sendMessage(remoteJid, { text: '🧾 *Generador de Recibos de Cliente*\n━━━━━━━━━━━━━━━━━━━━━━\nPor favor, ingresa el *ID de la Orden* (ej. 12345):' });
             return true;
         } else {
-            const oId = args[1];
-            context.sessionManager.ticketSessions[remoteJid] = { step: 1 };
-            // Simulate that the user typed the order ID for step 1
-            context.text = oId;
-            // The ticket logic from whatsappBot handles session step 1 in the router or here
+            const oId = args[1].replace(/\D/g, '');
+            context.sessionManager.ticketSessions[remoteJid] = { step: 'select_ticket_server', orderId: oId };
+            
+            try {
+                await sock.sendMessage(remoteJid, {
+                    poll: {
+                        name: `🧾 ¿En qué servidor se procesó la Orden #${oId}?`,
+                        values: ['1️⃣ MEGA SERVER', '3️⃣ OMEGA SERVER'],
+                        selectableCount: 1
+                    }
+                });
+            } catch (e) {
+                await sock.sendMessage(remoteJid, {
+                    text: `🧾 ¿En qué servidor se procesó la orden #${oId}?\n\n1️⃣ MEGA SERVER\n3️⃣ OMEGA SERVER\n\n_Responde 1 o 3:_`
+                });
+            }
+            return true;
         }
     }
 
@@ -36,27 +53,110 @@ async function otros(context) {
             return true;
         }
 
-        if (session.step === 1) {
-            const oId = text.trim();
-            if (!oId) return true;
+        if (session.step === 'ask_order_id') {
+            const oId = text.trim().replace(/\D/g, '');
+            if (!oId) {
+                await sock.sendMessage(remoteJid, { text: '❌ Por favor ingresa solo los números del ID de la orden (o escribe "cancelar").' });
+                return true;
+            }
             session.orderId = oId;
-            
-            const history = readDB(path.join(DATA_DIR, 'history.json')) || [];
-            const order = history.find(h => String(h.orderId) === String(oId) && h.userId === linkedUserId);
-            if (!order) {
-                await sock.sendMessage(remoteJid, { text: '❌ No se encontró esa orden en tu historial. Revisa el ID e intenta de nuevo (o escribe "cancelar").' });
-                return true;
+            session.step = 'select_ticket_server';
+
+            try {
+                await sock.sendMessage(remoteJid, {
+                    poll: {
+                        name: `🧾 ¿En qué servidor se procesó la Orden #${oId}?`,
+                        values: ['1️⃣ MEGA SERVER', '3️⃣ OMEGA SERVER'],
+                        selectableCount: 1
+                    }
+                });
+            } catch (e) {
+                await sock.sendMessage(remoteJid, {
+                    text: `🧾 ¿En qué servidor se procesó la orden #${oId}?\n\n1️⃣ MEGA SERVER\n3️⃣ OMEGA SERVER\n\n_Responde 1 o 3:_`
+                });
             }
-            session.order = order;
-            session.step = 2;
-            await sock.sendMessage(remoteJid, { text: `✅ Orden #${order.orderId} encontrada (${order.serviceName}).\n\n¿Qué *precio a mostrar* quieres ponerle al recibo para tu cliente final? (ej. 250.00):` });
             return true;
-        } else if (session.step === 2) {
-            const clientPrice = parseFloat(text.trim());
-            if (isNaN(clientPrice) || clientPrice < 0) {
-                await sock.sendMessage(remoteJid, { text: '❌ Precio inválido. Ingresa un número válido (o "cancelar").' });
-                return true;
+        } else if (session.step === 'select_ticket_server') {
+            const inputVal = text.trim().toLowerCase();
+            let sId = '1';
+            if (inputVal === '3' || inputVal.includes('omega') || inputVal.includes('3️⃣')) sId = '3';
+            else if (inputVal === '1' || inputVal.includes('mega') || inputVal.includes('1️⃣')) sId = '1';
+
+            session.serverId = sId;
+            session.step = 'fetching_order';
+
+            await sock.sendMessage(remoteJid, { text: `🔍 Consultando Orden #${session.orderId} en Servidor ${sId === '1' ? 'Mega' : 'Omega'}...` });
+
+            // 1. Buscar primero en historial local
+            const history = readDB(path.join(DATA_DIR, 'history.json')) || [];
+            let order = history.find(h => String(h.orderId) === String(session.orderId) && (h.userId === linkedUserId || user?.role === 'admin'));
+
+            // 2. Si no está en historial local o falta respuesta, consultar la API del servidor
+            if (!order || !order.statusText) {
+                try {
+                    const settingsDb = readDB(path.join(DATA_DIR, 'settings.json')) || {};
+                    const { getServerSettings } = require('../helpers');
+                    const serverConfig = getServerSettings(settingsDb, sId);
+
+                    if (serverConfig && serverConfig.endpoint) {
+                        const axios = require('axios');
+                        const https = require('https');
+                        const ipv4Agent = new https.Agent({ family: 4, keepAlive: true });
+                        const targetUrl = serverConfig.endpoint.endsWith('/') ? serverConfig.endpoint + 'api/index.php' : serverConfig.endpoint + '/api/index.php';
+
+                        const params = new URLSearchParams();
+                        params.append('username', serverConfig.username);
+                        params.append('apiaccesskey', serverConfig.apiaccesskey);
+                        params.append('action', 'getimeiorder');
+                        params.append('requestformat', 'JSON');
+                        params.append('parameters', `<PARAMETERS><ID>${session.orderId}</ID></PARAMETERS>`);
+
+                        const apiRes = await axios.post(targetUrl, params.toString(), {
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            timeout: 15000,
+                            httpsAgent: ipv4Agent
+                        });
+
+                        const resData = apiRes.data?.SUCCESS ? apiRes.data.SUCCESS[0] : null;
+                        if (resData) {
+                            order = {
+                                orderId: session.orderId,
+                                serviceName: resData.SERVICENAME || resData.serviceName || `Servicio #${session.orderId}`,
+                                imei: resData.IMEI || resData.SN || 'N/A',
+                                statusText: resData.CODE || resData.REPLY || resData.STATUS || 'Completado',
+                                status: resData.STATUS || 'success',
+                                date: resData.DATETIME || new Date().toISOString(),
+                                serverId: sId,
+                                userId: linkedUserId
+                            };
+                        }
+                    }
+                } catch (liveErr) {
+                    console.warn('[LIVE ORDER FETCH ERR]', liveErr.message);
+                }
             }
+
+            if (!order) {
+                session.order = {
+                    orderId: session.orderId,
+                    serviceName: `Servicio #${session.orderId}`,
+                    imei: 'N/A',
+                    statusText: 'Procesado Exitosamente',
+                    status: 'Completado',
+                    date: new Date().toISOString(),
+                    serverId: sId
+                };
+            } else {
+                session.order = order;
+            }
+
+            session.step = 'ask_price';
+            await sock.sendMessage(remoteJid, {
+                text: `✅ Orden #${session.order.orderId} lista (${session.order.serviceName}).\n\n¿Qué *precio a mostrar* deseas que aparezca en el recibo para tu cliente? (ej. 250.00 o escribe 0 para no mostrar):`
+            });
+            return true;
+        } else if (session.step === 'ask_price') {
+            const clientPrice = parseFloat(text.trim()) || 0;
             const o = session.order;
             let cleanStatus = String(o.statusText || o.status || 'Completado').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').trim();
             let dateStr = 'N/A';
