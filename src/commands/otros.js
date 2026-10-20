@@ -230,34 +230,44 @@ async function otros(context) {
         return true;
     }
 
-    if (['/ayuda', '!ayuda', 'ayuda', '/comandos', '!comandos', 'comandos'].includes(cmd)) {
-        let helpText = '🤖 *¡Hola! Soy MegaBOOT, tu asistente personal.*\n\n' +
-        'Aquí tienes mis comandos útiles. ¡Puedes escribirlos con o sin barra (/), como te sea más cómodo!\n\n' +
-        '🔎 *BÚSQUEDA DE SERVICIOS*\n' +
-        '📱 *buscar* (o /bus) - Buscar servicios en catálogo\n' +
-        '📱 *bus1 <modelo>* - Búsqueda rápida en Servidor 1\n\n' +
-        '🛒 *COMPRAS Y PEDIDOS* (Chat Privado)\n' +
-        '🛒 *pedir* (o /pedir) - Hacer un pedido interactivo\n' +
-        '🛒 *pedir 1 <ID> <IMEI>* - Pedido express directo\n' +
-        '🛍️ *pedidos* - Ver tus últimos pedidos\n\n' +
-        '🔐 *MI CUENTA Y AJUSTES* (Chat Privado)\n' +
-        '💳 *saldo* - Consultar tu saldo disponible\n' +
-        '💸 *recargar* - Recargas automáticas 24/7\n' +
-        '🧾 *ticket <ID>* - Generar recibo para tu cliente\n' +
-        '👤 *perfil* - Ver datos de tu cuenta\n' +
-        '🔕 *desactivar* (o silenciar) - Apagar avisos de WhatsApp\n' +
-        '🔔 *activar* - Encender avisos de WhatsApp\n' +
-        '🔌 *desvincular* - Desconectar tu cuenta\n' +
-        '🎧 *soporte* - Contacto directo\n\n' +
-        '_✨ Vinculación automática: Tu WhatsApp se conecta a tu cuenta sin necesidad de contraseñas si tu teléfono coincide._';
+    if (['/ayuda', '!ayuda', 'ayuda', '/comandos', '!comandos', 'comandos', '/menu', '!menu', 'menu'].includes(cmd)) {
+        let helpText = `⚡ *MEGAUNLOCK CLOUD BOT • MENÚ OFICIAL* ⚡\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+        `¡Hola! Soy tu asistente inteligente 24/7. Puedes escribir los comandos con o sin barra (*/*).\n\n` +
+        `🔍 *BÚSQUEDA DE SERVICIOS*\n` +
+        `• *buscar* (o /bus) ➔ Catálogo interactivo\n` +
+        `• *bus1 <modelo>* ➔ Mega Server directo\n` +
+        `• *bus3 <modelo>* ➔ Omega Server directo\n\n` +
+        `🛒 *PEDIDOS & COMPRAS* (Privado)\n` +
+        `• *pedir* ➔ Asistente guiado paso a paso\n` +
+        `• *pedir 1 <ID> <IMEI>* ➔ Compra express Servidor 1\n` +
+        `• *pedidos* ➔ Ver tus últimas 5 órdenes con estado\n\n` +
+        `💳 *BILLETERA & FINANZAS* (Privado)\n` +
+        `• *saldo* ➔ Consulta de créditos disponibles\n` +
+        `• *recargar* ➔ Depósito automático SPEI 24/7\n` +
+        `• *ticket <ID>* ➔ Genera recibo/factura para tu cliente\n\n` +
+        `⚙️ *CONFIGURACIÓN & PRIVACIDAD*\n` +
+        `• *perfil* ➔ Detalles y ID de tu cuenta\n` +
+        `• *desactivar* (o silenciar) ➔ Pausar avisos en WhatsApp\n` +
+        `• *activar* ➔ Reanudar notificaciones en tiempo real\n` +
+        `• *soporte* ➔ Contacto directo con el equipo técnico\n` +
+        `• *cancelar* ➔ Salir de cualquier proceso activo\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━`;
         
         if (user && user.role === 'admin') {
-            helpText += '\n\n👑 *COMANDOS ADMIN:*\n' +
-            '💰 */addmoney* - Agregar saldo\n' +
-            '📉 */removemoney* - Quitar saldo\n' +
-            '💬 */msguser* - Enviar mensaje privado a usuarios\n' +
-            '🌐 */historial* - Ver 10 últimos pedidos globales\n' +
-            '📢 */msggrup* - Anuncio en grupo';
+            helpText += `\n\n👑 *CONSOLA DE ADMINISTRADOR* 🛡️\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+            `• */msg <ID|Usuario> <Texto>* ➔ Mensaje a usuario (admite fotos/videos)\n` +
+            `• */msgall <Texto>* ➔ Difusión masiva a TODOS los clientes (fotos/videos)\n` +
+            `• */msggrup <Texto>* ➔ Anuncio al grupo oficial (fotos/videos)\n` +
+            `• */addmoney <ID> <Servidor> <Monto>* ➔ Recargar saldo a revendedor\n` +
+            `• */removemoney <ID> <Servidor> <Monto>* ➔ Descontar saldo\n` +
+            `• */setprice* ➔ Modificador de márgenes y precios\n` +
+            `• */historial* ➔ Últimos 10 pedidos globales\n` +
+            `• */sync* ➔ Forzar sincronización de pedidos con proveedores\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+        } else {
+            helpText += `\n_💡 Tip: Puedes adjuntarme el comprobante o consultar tu IMEI directamente en cualquier momento._`;
         }
         
         await sock.sendMessage(remoteJid, { text: helpText });

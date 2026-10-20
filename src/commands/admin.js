@@ -193,6 +193,67 @@ async function admin(context) {
 
     // Setprice, msgUser, msgGrup... can be added similarly if needed. For now just handle the most complex ones.
     
+    // Helper function to extract and download media from msg if present
+    const extractMediaPayload = async (rawCaption) => {
+        let mediaBuffer = null;
+        let isVideo = false;
+        let isAudio = false;
+        let isDoc = false;
+        let fileName = 'archivo';
+
+        if (hasMedia) {
+            try {
+                const { downloadMediaMessage } = require('@whiskeysockets/baileys');
+                mediaBuffer = await downloadMediaMessage(msg, 'buffer', {}, { reuploadRequest: sock.updateMediaMessage });
+                isVideo = Boolean(msg.message?.videoMessage);
+                isAudio = Boolean(msg.message?.audioMessage);
+                isDoc = Boolean(msg.message?.documentMessage);
+                if (isDoc && msg.message?.documentMessage?.fileName) {
+                    fileName = msg.message.documentMessage.fileName;
+                }
+            } catch (mediaErr) {
+                console.error('[ADMIN MEDIA ERROR]', mediaErr);
+                mediaBuffer = null;
+            }
+        }
+
+        if (mediaBuffer) {
+            if (isVideo) {
+                return { video: mediaBuffer, caption: rawCaption };
+            } else if (isAudio) {
+                return { audio: mediaBuffer, mimetype: 'audio/mp4', ptt: false };
+            } else if (isDoc) {
+                return { document: mediaBuffer, fileName: fileName, caption: rawCaption };
+            } else {
+                return { image: mediaBuffer, caption: rawCaption };
+            }
+        }
+        return { text: rawCaption };
+    };
+
+    // Helper to get all deduplicated client phone JIDs
+    const getBroadcastRecipients = () => {
+        const uniqueJids = new Set();
+        // 1. WhatsApp linked numbers in wusers (keys are JIDs)
+        for (const jid in wusers) {
+            if (jid && !jid.endsWith('@g.us')) {
+                uniqueJids.add(jid);
+            }
+        }
+        // 2. Users from database with registered phone numbers
+        const dbUsers = readDB(USERS_FILE) || [];
+        dbUsers.forEach(u => {
+            if (u.phone) {
+                const digits = String(u.phone).replace(/\D/g, '');
+                if (digits.length >= 10) {
+                    uniqueJids.add(`${digits}@s.whatsapp.net`);
+                }
+            }
+        });
+        return Array.from(uniqueJids);
+    };
+
+    // --- SESSIONS HANDLERS ---
     if (sessionManager.msgUserSessions && sessionManager.msgUserSessions[remoteJid]) {
         const session = sessionManager.msgUserSessions[remoteJid];
         if (text.toLowerCase() === 'cancelar') {
@@ -207,7 +268,7 @@ async function admin(context) {
             const inputNum = parseInt(inputStr);
             if (!isNaN(inputNum) && session.options && session.options[inputNum]) {
                 selectedId = session.options[inputNum];
-            } else if (inputStr === 'todos') {
+            } else if (['todos', 'all', 'global'].includes(inputStr)) {
                 selectedId = 'todos';
             } else {
                 const rawId = parseInt(inputStr);
@@ -217,7 +278,7 @@ async function admin(context) {
             }
             
             if (!selectedId) {
-                await sock.sendMessage(remoteJid, { text: '❌ Opción o ID inválido. Por favor, ingresa el número de la lista, el ID del usuario o escribe "cancelar".' });
+                await sock.sendMessage(remoteJid, { text: '❌ Opción o ID inválido. Ingresa el número de la lista, el ID del usuario o escribe "cancelar".' });
                 return true;
             }
             
@@ -225,38 +286,37 @@ async function admin(context) {
             session.step = 2;
             
             if (selectedId === 'todos') {
-                await sock.sendMessage(remoteJid, { text: '✅ Has seleccionado enviar a *TODOS* los usuarios.\n\nPor favor, escribe el *Mensaje* que deseas enviarles (o escribe "cancelar").' });
+                await sock.sendMessage(remoteJid, { 
+                    text: `📢 *DIFUSIÓN GLOBAL SELECCIONADA*\n━━━━━━━━━━━━━━━━━━━━━━\nHas seleccionado enviar a *TODOS* los usuarios de la plataforma.\n\n📸 *Puedes enviar texto, foto o video*:\nEnvía ahora tu mensaje o adjunta tu multimedia con el pie de texto que deseas transmitir.\n\n_Escribe "cancelar" para detener._` 
+                });
             } else {
-                await sock.sendMessage(remoteJid, { text: `✅ Usuario ID ${selectedId} seleccionado.\n\nPor favor, escribe el *Mensaje* que deseas enviarle (o escribe "cancelar").` });
+                await sock.sendMessage(remoteJid, { 
+                    text: `👤 *DESTINATARIO SELECCIONADO: ID ${selectedId}*\n━━━━━━━━━━━━━━━━━━━━━━\n📸 *Puedes enviar texto, foto o video*:\nEnvía tu mensaje o foto/video con texto para este usuario.\n\n_Escribe "cancelar" para detener._` 
+                });
             }
             return true;
         } else if (session.step === 2) {
             const msgText = text.trim();
-            const { downloadMediaMessage } = require('@whiskeysockets/baileys');
-            let mediaBuffer = null;
-            let messagePayload = { text: `📩 *MENSAJE DEL ADMINISTRADOR* 📩\n━━━━━━━━━━━━━━━━━━━━━━\n${msgText}\n━━━━━━━━━━━━━━━━━━━━━━\n🛡️ _MegaUnlockPhone_` };
-
-            if (hasMedia) {
-                try {
-                    mediaBuffer = await downloadMediaMessage(msg, 'buffer', { }, { reuploadRequest: sock.updateMediaMessage });
-                    const isVideo = Boolean(msg.message?.videoMessage);
-                    messagePayload = {
-                        [isVideo ? 'video' : 'image']: mediaBuffer,
-                        caption: `📩 *MENSAJE DEL ADMINISTRADOR* 📩\n━━━━━━━━━━━━━━━━━━━━━━\n${msgText}\n━━━━━━━━━━━━━━━━━━━━━━\n🛡️ _MegaUnlockPhone_`
-                    };
-                } catch (e) {
-                    await sock.sendMessage(remoteJid, { text: '❌ Error al descargar el archivo multimedia adjunto.' });
-                    return true;
-                }
-            }
+            const captionHeader = session.targetUserId === 'todos' 
+                ? `📢 *COMUNICADO OFICIAL • MEGAUNLOCKPHONE* 🌐\n━━━━━━━━━━━━━━━━━━━━━━\n${msgText}\n━━━━━━━━━━━━━━━━━━━━━━\n🛡️ _Equipo de Administración MegaUnlock_`
+                : `📩 *MENSAJE DIRECTO DEL ADMINISTRADOR* 📩\n━━━━━━━━━━━━━━━━━━━━━━\n${msgText}\n━━━━━━━━━━━━━━━━━━━━━━\n🛡️ _MegaUnlockPhone Cloud_`;
+            
+            const messagePayload = await extractMediaPayload(captionHeader);
 
             if (session.targetUserId === 'todos') {
+                const recipients = getBroadcastRecipients();
                 let sentCount = 0;
-                for (const jid in wusers) {
-                    await sock.sendMessage(jid, messagePayload);
-                    sentCount++;
+                await sock.sendMessage(remoteJid, { text: `🚀 *Iniciando transmisión masiva a ${recipients.length} destinatarios...*\n_Por favor espera unos momentos._` });
+                
+                for (const jid of recipients) {
+                    try {
+                        await sock.sendMessage(jid, messagePayload);
+                        sentCount++;
+                    } catch (sendErr) {
+                        console.error(`[BROADCAST ERROR] Falló envío a ${jid}:`, sendErr.message);
+                    }
                 }
-                await sock.sendMessage(remoteJid, { text: `✅ Mensaje enviado exitosamente a ${sentCount} usuarios.` });
+                await sock.sendMessage(remoteJid, { text: `✅ *DIFUSIÓN COMPLETADA*\n━━━━━━━━━━━━━━━━━━━━━━\nTransmisión entregada exitosamente a *${sentCount}* clientes.` });
             } else {
                 let targetJid = null;
                 for (const jid in wusers) {
@@ -265,11 +325,20 @@ async function admin(context) {
                         break;
                     }
                 }
+                if (!targetJid) {
+                    const dbUsers = readDB(USERS_FILE) || [];
+                    const foundUser = dbUsers.find(u => u.id === session.targetUserId);
+                    if (foundUser && foundUser.phone) {
+                        const cleanDigits = String(foundUser.phone).replace(/\D/g, '');
+                        if (cleanDigits.length >= 10) targetJid = `${cleanDigits}@s.whatsapp.net`;
+                    }
+                }
+
                 if (targetJid) {
                     await sock.sendMessage(targetJid, messagePayload);
                     await sock.sendMessage(remoteJid, { text: `✅ Mensaje enviado exitosamente al usuario ID ${session.targetUserId}.` });
                 } else {
-                    await sock.sendMessage(remoteJid, { text: `❌ No se encontró ningún dispositivo de WhatsApp vinculado al usuario ID ${session.targetUserId}.` });
+                    await sock.sendMessage(remoteJid, { text: `❌ No se encontró ningún teléfono o WhatsApp vinculado al usuario ID ${session.targetUserId}.` });
                 }
             }
             delete sessionManager.msgUserSessions[remoteJid];
@@ -287,60 +356,123 @@ async function admin(context) {
         const { wsettings } = context;
         const groupId = wsettings ? wsettings.adminGroupId : null;
         if (groupId) {
-            const { downloadMediaMessage } = require('@whiskeysockets/baileys');
-            let messagePayload = { text: `📢 *Anuncio Global:*\n\n${msgText}` };
-
-            if (hasMedia) {
-                try {
-                    let mediaBuffer = await downloadMediaMessage(msg, 'buffer', { }, { reuploadRequest: sock.updateMediaMessage });
-                    const isVideo = Boolean(msg.message?.videoMessage);
-                    messagePayload = {
-                        [isVideo ? 'video' : 'image']: mediaBuffer,
-                        caption: `📢 *Anuncio Global:*\n\n${msgText}`
-                    };
-                } catch (e) {
-                    await sock.sendMessage(remoteJid, { text: '❌ Error al descargar el archivo multimedia adjunto.' });
-                    return true;
-                }
-            }
+            const groupCaption = `📢 *ANUNCIO OFICIAL MEGAUNLOCK* 📢\n━━━━━━━━━━━━━━━━━━━━━━\n${msgText}\n━━━━━━━━━━━━━━━━━━━━━━\n⚡ _Información de Sistema_`;
+            const messagePayload = await extractMediaPayload(groupCaption);
 
             await sock.sendMessage(groupId, messagePayload);
-            await sock.sendMessage(remoteJid, { text: '✅ Anuncio enviado al grupo principal.' });
+            await sock.sendMessage(remoteJid, { text: '✅ Anuncio multimedia transmitido exitosamente al grupo principal.' });
         } else {
-            await sock.sendMessage(remoteJid, { text: '❌ No hay ningún grupo configurado. Usa /setgroup en un grupo para configurarlo.' });
+            await sock.sendMessage(remoteJid, { text: '❌ No hay ningún grupo configurado. Usa /setgroup dentro del grupo deseado.' });
         }
         delete sessionManager.msgGrupSessions[remoteJid];
         return true;
     }
 
-        if (['/msguser', '!msguser', 'msguser'].includes(cmd)) {
-        if (args.length < 3) {
+    // --- COMANDOS DIRECTOS: /msgall /broadcast /anuncio ---
+    const msgAllTriggers = ['/msgall', '!msgall', 'msgall', '/broadcast', '!broadcast', 'broadcast', '/anuncio', '!anuncio'];
+    if (msgAllTriggers.includes(cmd)) {
+        let msgText = '';
+        if (args.length > 1) {
+            msgText = args.slice(1).join(' ').trim();
+        }
+
+        if (!msgText && !hasMedia) {
+            if (!sessionManager.msgUserSessions) sessionManager.msgUserSessions = {};
+            sessionManager.msgUserSessions[remoteJid] = { step: 2, targetUserId: 'todos' };
+            await sock.sendMessage(remoteJid, {
+                text: `📢 *TRANSMISIÓN GLOBAL (MSGALL)*\n━━━━━━━━━━━━━━━━━━━━━━\nEnvía a continuación el texto, foto o video que deseas transmitir a *TODOS* los clientes de la plataforma (o escribe "cancelar").`
+            });
+            return true;
+        }
+
+        const captionHeader = `📢 *COMUNICADO OFICIAL • MEGAUNLOCKPHONE* 🌐\n━━━━━━━━━━━━━━━━━━━━━━\n${msgText}\n━━━━━━━━━━━━━━━━━━━━━━\n🛡️ _Equipo de Administración MegaUnlock_`;
+        const messagePayload = await extractMediaPayload(captionHeader);
+
+        const recipients = getBroadcastRecipients();
+        await sock.sendMessage(remoteJid, { text: `🚀 *Iniciando transmisión masiva a ${recipients.length} usuarios...*` });
+        
+        let sentCount = 0;
+        for (const jid of recipients) {
+            try {
+                await sock.sendMessage(jid, messagePayload);
+                sentCount++;
+            } catch (err) {
+                console.error(`[MSGALL FAIL] ${jid}:`, err.message);
+            }
+        }
+        await sock.sendMessage(remoteJid, { text: `✅ *DIFUSIÓN COMPLETADA*\n━━━━━━━━━━━━━━━━━━━━━━\nSe ha transmitido el mensaje multimedia a *${sentCount}* usuarios registrados.` });
+        return true;
+    }
+
+    // --- COMANDOS DIRECTOS: /msg /msguser ---
+    const msgUserTriggers = ['/msg', '!msg', 'msg', '/msguser', '!msguser', 'msguser'];
+    if (msgUserTriggers.includes(cmd)) {
+        if (args.length < 2 && !hasMedia) {
             if (!sessionManager.msgUserSessions) sessionManager.msgUserSessions = {};
             
             const resellers = users.filter(u => u.role !== 'admin');
-            let resText = `💬 *ENVIAR MENSAJE A USUARIO*\n\nResponde con el número de la opción o escribe el ID directamente:\n\n`;
+            let resText = `💬 *ENVIAR MENSAJE A USUARIOS*\n━━━━━━━━━━━━━━━━━━━━━━\nResponde con el número de opción o ID:\n\n`;
             
             const options = {};
             let counter = 1;
             
             resellers.slice(0, 10).forEach(r => {
-                resText += `${counter}️⃣ ${r.username} (ID: ${r.id})\n`;
+                resText += `*${counter}.* 👤 ${r.username} (ID: ${r.id})\n`;
                 options[counter] = r.id;
                 counter++;
             });
             
-            // Adding 'Todos' option
-            resText += `${counter}️⃣ 🌐 TODOS LOS USUARIOS\n`;
+            resText += `\n*${counter}.* 🌐 *TODOS LOS USUARIOS* (/msgall)\n`;
             options[counter] = 'todos';
             
+            resText += `\n💡 _Tip: También puedes usar directo:_ \n*/msg <ID o Usuario> <Mensaje>*\n_o adjuntar foto/video con el comando en el pie de foto._`;
+
             sessionManager.msgUserSessions[remoteJid] = { step: 1, options };
-            
             await sock.sendMessage(remoteJid, { text: resText });
             return true;
         }
         
-        const targetUserId = parseInt(args[1]);
-        const msgText = args.slice(2).join(' ');
+        // Determinar ID objetivo
+        const targetArg = args[1] ? args[1].toLowerCase() : '';
+        let targetUserId = null;
+
+        if (targetArg === 'todos' || targetArg === 'all') {
+            // Desviar a msgall
+            const restText = args.slice(2).join(' ').trim();
+            const captionHeader = `📢 *COMUNICADO OFICIAL • MEGAUNLOCKPHONE* 🌐\n━━━━━━━━━━━━━━━━━━━━━━\n${restText}\n━━━━━━━━━━━━━━━━━━━━━━\n🛡️ _Equipo de Administración MegaUnlock_`;
+            const messagePayload = await extractMediaPayload(captionHeader);
+            const recipients = getBroadcastRecipients();
+            await sock.sendMessage(remoteJid, { text: `🚀 Transmitiendo a ${recipients.length} usuarios...` });
+            let sentCount = 0;
+            for (const jid of recipients) {
+                try {
+                    await sock.sendMessage(jid, messagePayload);
+                    sentCount++;
+                } catch (e) {}
+            }
+            await sock.sendMessage(remoteJid, { text: `✅ Transmitido exitosamente a ${sentCount} usuarios.` });
+            return true;
+        }
+
+        const parsedId = parseInt(targetArg);
+        if (!isNaN(parsedId)) {
+            targetUserId = parsedId;
+        } else {
+            // Buscar por username
+            const foundByName = users.find(u => u.username && u.username.toLowerCase() === targetArg);
+            if (foundByName) {
+                targetUserId = foundByName.id;
+            }
+        }
+
+        if (!targetUserId) {
+            await sock.sendMessage(remoteJid, { text: '❌ No se reconoció el ID o nombre de usuario indicado. Ej: */msg 12 Hola buenas tardes*' });
+            return true;
+        }
+
+        const msgText = args.slice(2).join(' ').trim();
+        const captionHeader = `📩 *MENSAJE DIRECTO DEL ADMINISTRADOR* 📩\n━━━━━━━━━━━━━━━━━━━━━━\n${msgText}\n━━━━━━━━━━━━━━━━━━━━━━\n🛡️ _MegaUnlockPhone Cloud_`;
+        const messagePayload = await extractMediaPayload(captionHeader);
         
         let targetJid = null;
         for (const jid in wusers) {
@@ -349,38 +481,46 @@ async function admin(context) {
                 break;
             }
         }
+        if (!targetJid) {
+            const foundUser = users.find(u => u.id === targetUserId);
+            if (foundUser && foundUser.phone) {
+                const cleanDigits = String(foundUser.phone).replace(/\D/g, '');
+                if (cleanDigits.length >= 10) targetJid = `${cleanDigits}@s.whatsapp.net`;
+            }
+        }
         
         if (targetJid) {
-            await sock.sendMessage(targetJid, { text: `📢 *Mensaje del Administrador:*
-
-${msgText}` });
-            await sock.sendMessage(remoteJid, { text: `✅ Mensaje enviado exitosamente al usuario ID ${targetUserId}.` });
+            await sock.sendMessage(targetJid, messagePayload);
+            await sock.sendMessage(remoteJid, { text: `✅ Mensaje multimedia enviado exitosamente al usuario ID ${targetUserId}.` });
         } else {
-            await sock.sendMessage(remoteJid, { text: `❌ No se encontró ningún dispositivo de WhatsApp vinculado al usuario ID ${targetUserId}.` });
+            await sock.sendMessage(remoteJid, { text: `❌ No se encontró ningún WhatsApp vinculado al usuario ID ${targetUserId}.` });
         }
         return true;
     }
 
+    // --- COMANDOS DIRECTOS: /msggrup ---
     if (['/msggrup', '!msggrup', 'msggrup'].includes(cmd)) {
-        if (args.length < 2) {
+        const { wsettings } = context;
+        const groupId = wsettings ? wsettings.adminGroupId : null;
+
+        if (!groupId) {
+            await sock.sendMessage(remoteJid, { text: '❌ No hay ningún grupo configurado. Usa /setgroup dentro del grupo oficial.' });
+            return true;
+        }
+
+        let msgText = args.slice(1).join(' ').trim();
+        if (!msgText && !hasMedia) {
             if (!sessionManager.msgGrupSessions) sessionManager.msgGrupSessions = {};
             sessionManager.msgGrupSessions[remoteJid] = { step: 1 };
-            await sock.sendMessage(remoteJid, { text: `📢 *ANUNCIO EN GRUPO*\n\nPor favor, escribe el *Mensaje* que deseas enviar a todos en el grupo configurado (o escribe "cancelar").` });
+            await sock.sendMessage(remoteJid, { text: `📢 *ANUNCIO EN GRUPO*\n━━━━━━━━━━━━━━━━━━━━━━\nEnvía a continuación el texto, foto o video que deseas publicar en el grupo oficial (o escribe "cancelar").` });
             return true;
         }
         
-        const msgText = args.slice(1).join(' ');
-        const { wsettings } = context;
-        const groupId = wsettings ? wsettings.adminGroupId : null;
-        
-        if (groupId) {
-            await sock.sendMessage(groupId, { text: `📢 *Anuncio Global:*
+        const groupCaption = `📢 *ANUNCIO OFICIAL MEGAUNLOCK* 📢\n━━━━━━━━━━━━━━━━━━━━━━\n${msgText}\n━━━━━━━━━━━━━━━━━━━━━━\n⚡ _Información de Sistema_`;
+        const messagePayload = await extractMediaPayload(groupCaption);
 
-${msgText}` });
-            await sock.sendMessage(remoteJid, { text: '✅ Anuncio enviado al grupo principal.' });
-        } else {
-            await sock.sendMessage(remoteJid, { text: '❌ No hay ningún grupo configurado. Usa /setgroup en un grupo para configurarlo.' });
-        }
+        await sock.sendMessage(groupId, messagePayload);
+        await sock.sendMessage(remoteJid, { text: '✅ Anuncio multimedia publicado exitosamente en el grupo principal.' });
         return true;
     }
     
