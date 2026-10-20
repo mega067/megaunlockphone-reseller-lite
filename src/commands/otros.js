@@ -78,9 +78,14 @@ async function otros(context) {
             return true;
         } else if (session.step === 'select_ticket_server') {
             const inputVal = text.trim().toLowerCase();
-            let sId = '1';
-            if (inputVal === '3' || inputVal.includes('omega') || inputVal.includes('3️⃣')) sId = '3';
-            else if (inputVal === '1' || inputVal.includes('mega') || inputVal.includes('1️⃣')) sId = '1';
+            let sId = null;
+            if (inputVal === '3' || inputVal.includes('omega') || inputVal.includes('3️⃣')) {
+                sId = '3';
+            } else if (inputVal === '1' || /(^|\s|1️⃣)mega(\s|$|server)/i.test(inputVal) || inputVal.includes('1️⃣')) {
+                sId = '1';
+            } else {
+                sId = '1'; // fallback
+            }
 
             session.serverId = sId;
             session.step = 'fetching_order';
