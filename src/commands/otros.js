@@ -274,6 +274,8 @@ async function otros(context) {
                 const o = session.order;
                 const costAmount = parseFloat(o.costCharged || o.realCost || o.price || 0);
                 const chargedAmount = session.clientPrice || 0;
+                const buyerPhoneNum = remoteJid ? remoteJid.split('@')[0] : '';
+                const phoneNote = buyerPhoneNum ? ` | WA: +${buyerPhoneNum}` : '';
 
                 const recorded = financeManager.recordTransaction({
                     type: 'income_ticket',
@@ -282,7 +284,7 @@ async function otros(context) {
                     chargedAmount: chargedAmount,
                     costAmount: costAmount,
                     account: selectedAccount,
-                    notes: `Ticket #${o.orderId} - ${o.serviceName}`
+                    notes: `Ticket #${o.orderId} - ${o.serviceName}${phoneNote}`
                 });
 
                 let finMsg = `📊 *Registro Contable Guardado* 📊\n` +

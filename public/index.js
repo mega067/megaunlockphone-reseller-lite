@@ -2562,11 +2562,20 @@ btnGenerateTicketFinal.addEventListener('click', async () => {
       const registerCheck = document.getElementById('ticketRegisterFinanceCheck');
       const accountSelect = document.getElementById('ticketPaymentAccount');
       const chargedVal = parseFloat(ticketClientPrice.value) || 0;
+      const buyerPhoneInput = document.getElementById('ticketBuyerPhone');
+      const buyerNameInput = document.getElementById('ticketBuyerName');
+      const buyerPhone = buyerPhoneInput ? buyerPhoneInput.value.trim() : '';
+      const buyerName = buyerNameInput ? buyerNameInput.value.trim() : '';
       
       if (registerCheck && registerCheck.checked && chargedVal > 0 && currentTicketData && authToken) {
         const itemCost = parseFloat(currentTicketData.costCharged || currentTicketData.realCost || currentTicketData.price || 0);
         const selectedAcc = accountSelect ? accountSelect.value : 'General';
         
+        let clientDetails = [];
+        if (buyerPhone) clientDetails.push(`Tel: ${buyerPhone}`);
+        if (buyerName) clientDetails.push(`Cliente: ${buyerName}`);
+        const clientSuffix = clientDetails.length > 0 ? ` | ${clientDetails.join(' - ')}` : '';
+
         fetch('/api/admin/finance/transaction', {
           method: 'POST',
           headers: {
@@ -2581,7 +2590,7 @@ btnGenerateTicketFinal.addEventListener('click', async () => {
             chargedAmount: chargedVal,
             costAmount: itemCost,
             account: selectedAcc,
-            notes: `Ticket Web #${currentTicketData.orderId} (${selectedAcc})`
+            notes: `Ticket Web #${currentTicketData.orderId} (${selectedAcc})${clientSuffix}`
           })
         }).then(res => res.json()).then(resp => {
           if (resp && resp.success && typeof loadFinanceDashboard === 'function') {
