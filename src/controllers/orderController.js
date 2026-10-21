@@ -395,6 +395,26 @@ exports.processOrder = async (req, res) => {
       writeDB('history.json', history);
       incrementHistoryVersion();
       
+      // Control Contable y Registro Financiero de Ventas por Servidor (Web Panel / API Bridge)
+      // Toda venta a reseller/usuario registra el ingreso cobrado, el costo del proveedor y la ganancia asignada a la cuenta Servidor
+      if (isReseller && orderId && orderId !== 'Desconocido') {
+        try {
+          const financeManager = require('../financeManager');
+          financeManager.recordTransaction({
+            type: 'income_ticket',
+            orderId: String(orderId),
+            serviceName: serviceName || 'Servicio',
+            chargedAmount: finalCostToDeduct,
+            costAmount: realCost * quantity,
+            account: 'Server',
+            notes: `Orden Web #${orderId} (Usuario: ${user.username || user.id}) - Servidor ${serverId}`,
+            recordedBy: user.username || 'Sistema Web'
+          });
+        } catch (finErr) {
+          console.warn('[SERVER SALE AUTO-FINANCE ERR]', finErr.message);
+        }
+      }
+
       createAutoBackup('Nuevo_Pedido_S' + serverId);
 
       const userNameDisplay = user.role === 'admin' ? 'Admin #1' : user.username;

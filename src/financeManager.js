@@ -113,8 +113,9 @@ function recordTransaction(data) {
 /**
  * Obtener estadísticas globales y balances por cuenta bancaria
  */
-function getFinanceSummary() {
+function getFinanceSummary(filterOptions = {}) {
   const config = getFinanceConfig();
+  const orderId = filterOptions.orderId ? String(filterOptions.orderId).trim() : null;
   
   // Resumen general acumulado
   const totalRow = sqliteDb.prepare(`
@@ -162,10 +163,17 @@ function getFinanceSummary() {
     accountMap[row.account] = row;
   });
 
-  // Movimientos recientes (últimos 100)
-  const recent = sqliteDb.prepare(`
-    SELECT * FROM FinanceLedger ORDER BY createdAt DESC LIMIT 100
-  `).all();
+  // Movimientos recientes (o filtrados por ID de orden)
+  let recent = [];
+  if (orderId) {
+    recent = sqliteDb.prepare(`
+      SELECT * FROM FinanceLedger WHERE orderId = ? OR id = ? ORDER BY createdAt DESC
+    `).all(orderId, orderId);
+  } else {
+    recent = sqliteDb.prepare(`
+      SELECT * FROM FinanceLedger ORDER BY createdAt DESC LIMIT 150
+    `).all();
+  }
 
   return {
     config,
@@ -183,6 +191,56 @@ function getFinanceSummary() {
 }
 
 /**
+ * Buscar todos los datos contables y de ganancia asociados a una orden específica
+ */
+function getOrderFinanceDetails(orderId) {
+  if (!orderId) return null;
+  const oId = String(orderId).trim();
+
+  // 1. Buscar transacciones en el FinanceLedger
+  const ledgerEntries = sqliteDb.prepare(`
+    SELECT * FROM FinanceLedger WHERE orderId = ? ORDER BY createdAt DESC
+  `).all(oId);
+
+  // 2. Buscar en historial de órdenes (history.json)
+  const history = readDB('history.json') || [];
+  const orderRecord = history.find(h => String(h.orderId || h.id) === oId) || null;
+
+  // Calcular totales contables para esta orden
+  let totalCharged = 0;
+  let totalCost = 0;
+  let totalGrossProfit = 0;
+  let totalReinvest = 0;
+  let totalNetProfit = 0;
+
+  ledgerEntries.forEach(entry => {
+    totalCharged += parseFloat(entry.chargedAmount || 0);
+    totalCost += parseFloat(entry.costAmount || 0);
+    totalGrossProfit += parseFloat(entry.grossProfit || 0);
+    totalReinvest += parseFloat(entry.reinvestAmount || 0);
+    totalNetProfit += parseFloat(entry.netProfit || 0);
+  });
+
+  return {
+    orderId: oId,
+    order: orderRecord,
+    ledgerEntries,
+    financialSummary: {
+      hasLedgerRecord: ledgerEntries.length > 0,
+      totalCharged,
+      totalCost,
+      totalGrossProfit,
+      totalReinvest,
+      totalNetProfit,
+      // Ganancia original registrada en la orden del servidor si aplica
+      serverOrderProfit: orderRecord ? parseFloat(orderRecord.profit || 0) : 0,
+      serverOrderCostCharged: orderRecord ? parseFloat(orderRecord.costCharged || 0) : 0,
+      serverOrderRealCost: orderRecord ? parseFloat(orderRecord.realCost || 0) : 0
+    }
+  };
+}
+
+/**
  * Eliminar una entrada del ledger
  */
 function deleteTransaction(id) {
@@ -196,5 +254,6 @@ module.exports = {
   updateFinanceConfig,
   recordTransaction,
   getFinanceSummary,
+  getOrderFinanceDetails,
   deleteTransaction
 };

@@ -208,6 +208,22 @@ function processRefund(order) {
       const stmt = sqliteDb.prepare('UPDATE OrdersHistory SET status = ?, statusText = ?, data = ? WHERE orderId = ?');
       const dataPayload = JSON.stringify({ isRefunded: true, refundDate: refundTimestamp, refundAmount: amountToRefund });
       stmt.run('rejected', order.statusText || 'Rechazado y Reembolsado', dataPayload, targetOrderId);
+
+      // Reversión Contable en FinanceLedger
+      const existingLedger = sqliteDb.prepare('SELECT * FROM FinanceLedger WHERE orderId = ? AND type = "income_ticket" LIMIT 1').get(targetOrderId);
+      if (existingLedger) {
+        const financeManager = require('./financeManager');
+        financeManager.recordTransaction({
+          type: 'adjustment',
+          orderId: targetOrderId,
+          serviceName: `Reembolso / Anulación: ${order.serviceName || existingLedger.serviceName}`,
+          chargedAmount: -Math.abs(parseFloat(existingLedger.chargedAmount || amountToRefund)),
+          costAmount: -Math.abs(parseFloat(existingLedger.costAmount || 0)),
+          account: existingLedger.account || 'Server',
+          notes: `Reembolso Orden #${targetOrderId} - Orden Rechazada o Cancelada`,
+          recordedBy: 'Sistema Reembolsos'
+        });
+      }
     }
   } catch(e) {
     // Si la tabla no está disponible o falla SQLite, history.json ya está blindado
@@ -246,6 +262,12 @@ function logRecharge(userId, username, amount, type = 'MANUAL_ADMIN', adminUsern
   recharges.unshift(entry);
   if (recharges.length > 500) recharges.pop();
   writeDB('recharges.json', recharges);
+
+  try {
+    const { createAutoBackup } = require('./backupEngine');
+    createAutoBackup(numAmount > 0 ? 'Recarga_Saldo_User_' + userId : 'Deduccion_Saldo_User_' + userId);
+  } catch(e) {}
+
   return entry;
 }
 

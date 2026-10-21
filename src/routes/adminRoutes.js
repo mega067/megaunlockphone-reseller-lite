@@ -53,6 +53,7 @@ router.post('/admin/notify-unlinked-bot', requireAuth, requireAdmin, adminContro
 
 // Finanzas y Control de Ganancias
 router.get('/admin/finance', requireAuth, requireAdmin, adminController.getFinanceSummary);
+router.get('/admin/finance/order/:orderId', requireAuth, requireAdmin, adminController.getOrderFinanceDetails);
 router.post('/admin/finance/config', requireAuth, requireAdmin, adminController.updateFinanceConfig);
 router.post('/admin/finance/transaction', requireAuth, requireAdmin, adminController.addFinanceTransaction);
 router.delete('/admin/finance/transaction/:id', requireAuth, requireAdmin, adminController.deleteFinanceTransaction);

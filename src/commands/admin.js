@@ -610,6 +610,62 @@ async function admin(context) {
         });
         return true;
     }
+
+    if (['/ganancia', '!ganancia', 'ganancia', '/finanzas', '!finanzas', 'finanzas'].includes(cmd)) {
+        const orderIdParam = args[0] ? args[0].replace(/\D/g, '') : null;
+        const financeManager = require('../financeManager');
+
+        if (orderIdParam) {
+            const details = financeManager.getOrderFinanceDetails(orderIdParam);
+            if (!details || (!details.order && details.ledgerEntries.length === 0)) {
+                await sock.sendMessage(remoteJid, { text: `❌ No se encontró registro contable ni orden con ID #${orderIdParam}.` });
+                return true;
+            }
+
+            const o = details.order || {};
+            const sum = details.financialSummary || {};
+            const charged = sum.hasLedgerRecord ? sum.totalCharged : parseFloat(o.costCharged || o.resellerCost || o.price || 0);
+            const cost = sum.hasLedgerRecord ? sum.totalCost : parseFloat(o.realCost || 0);
+            const gross = sum.hasLedgerRecord ? sum.totalGrossProfit : (charged - cost);
+            const reinvest = sum.hasLedgerRecord ? sum.totalReinvest : (gross > 0 ? gross * 0.5 : 0);
+            const net = sum.hasLedgerRecord ? sum.totalNetProfit : (gross > 0 ? gross * 0.5 : gross);
+            const account = details.ledgerEntries.length > 0 ? details.ledgerEntries[0].account : 'Server';
+
+            let rep = `📊 *DESGLOSE FINANCIERO DE ORDEN #${orderIdParam}* 📊\n` +
+                      `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                      `🔧 *Servicio:* ${o.serviceName || 'Servicio'}\n` +
+                      `🏦 *Cuenta / Destino:* ${account}\n` +
+                      `💵 *Monto Cobrado:* $${charged.toFixed(2)} MXN\n` +
+                      `📉 *Costo Proveedor:* $${cost.toFixed(2)} MXN\n` +
+                      `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                      `📈 *Ganancia Bruta:* $${gross.toFixed(2)} MXN\n` +
+                      `🔄 *Fondo Reinversión:* $${reinvest.toFixed(2)} MXN\n` +
+                      `💰 *Tu Ganancia Real (Bolsillo):* $${net.toFixed(2)} MXN\n` +
+                      `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                      `_MegaUnlockPhone Financial Engine_`;
+            await sock.sendMessage(remoteJid, { text: rep });
+            return true;
+        }
+
+        // Resumen general si no dio ID
+        const data = financeManager.getFinanceSummary();
+        const s = data.summary;
+        let rep = `📊 *RESUMEN GENERAL DE FINANZAS* 📊\n` +
+                  `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                  `💵 *Total Cobrado:* $${parseFloat(s.totalCharged).toFixed(2)} MXN\n` +
+                  `📉 *Costo Servidores:* $${parseFloat(s.totalCost).toFixed(2)} MXN\n` +
+                  `🔄 *Fondo de Reinversión:* $${parseFloat(s.totalReinvest).toFixed(2)} MXN\n` +
+                  `💰 *Ganancia Real Neta:* $${parseFloat(s.totalNetProfit).toFixed(2)} MXN\n` +
+                  `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                  `🏦 *Balances por Cuenta:*\n`;
+        
+        data.accounts.forEach(acc => {
+            rep += `• *${acc.account}:* $${parseFloat(acc.balance).toFixed(2)} MXN (Neta: +$${parseFloat(acc.netProfit).toFixed(2)})\n`;
+        });
+        rep += `\n💡 _Para consultar una orden específica escribe:_ */ganancia <ID_ORDEN>*`;
+        await sock.sendMessage(remoteJid, { text: rep });
+        return true;
+    }
     
     return false;
 }

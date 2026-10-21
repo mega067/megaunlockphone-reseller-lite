@@ -2261,4 +2261,154 @@ document.addEventListener('DOMContentLoaded', () => {
       if (window.lucide) window.lucide.createIcons();
     });
   }
+
+  // Búsqueda Rápida de Ganancia por ID de Orden
+  const btnLookup = document.getElementById('btnFinanceOrderLookup');
+  const inputLookup = document.getElementById('financeOrderLookupInput');
+  if (btnLookup && inputLookup) {
+    btnLookup.addEventListener('click', () => lookupOrderFinance(inputLookup.value));
+    inputLookup.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') lookupOrderFinance(inputLookup.value);
+    });
+  }
 });
+
+/**
+ * Consultar ingreso, costo y ganancia real vinculada a una orden por su ID
+ */
+async function lookupOrderFinance(orderId) {
+  const cleanId = String(orderId || '').replace(/[^0-9a-zA-Z_-]/g, '').trim();
+  const resultContainer = document.getElementById('financeOrderLookupResult');
+  if (!resultContainer) return;
+
+  if (!cleanId) {
+    alert('Ingresa el ID del pedido a consultar (ej. 12345)');
+    return;
+  }
+
+  resultContainer.classList.remove('hidden');
+  resultContainer.innerHTML = `
+    <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(14, 165, 233, 0.4); border-radius: 12px; padding: 18px; text-align: center; color: #38bdf8;">
+      <i data-lucide="loader" class="lucide-spin" style="width: 24px; height: 24px; margin-bottom: 6px; display: inline-block;"></i>
+      <p style="margin: 0; font-size: 0.88rem;">Consultando estado contable y ganancias de la orden #${escapeHtml(cleanId)}...</p>
+    </div>
+  `;
+  if (window.lucide) window.lucide.createIcons();
+
+  try {
+    const res = await fetch(`/api/admin/finance/order/${cleanId}`, {
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'X-Server-Id': currentServerId
+      }
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      resultContainer.innerHTML = `
+        <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 16px; color: #f87171; display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <i data-lucide="alert-circle" style="width: 20px; height: 20px;"></i>
+            <span>No se encontraron registros de venta o ganancia para la orden <strong>#${escapeHtml(cleanId)}</strong>.</span>
+          </div>
+          <button type="button" onclick="document.getElementById('financeOrderLookupResult').classList.add('hidden')" style="background: none; border: none; color: #f87171; cursor: pointer;">
+            <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+          </button>
+        </div>
+      `;
+      if (window.lucide) window.lucide.createIcons();
+      return;
+    }
+
+    const o = data.order || {};
+    const sum = data.financialSummary || {};
+    const entries = data.ledgerEntries || [];
+
+    // Priorizar datos del ledger contable si existen; sino calcular con orden del servidor
+    const charged = sum.hasLedgerRecord ? sum.totalCharged : (parseFloat(o.costCharged || o.resellerCost || o.price || 0));
+    const cost = sum.hasLedgerRecord ? sum.totalCost : (parseFloat(o.realCost || 0));
+    const gross = sum.hasLedgerRecord ? sum.totalGrossProfit : (charged - cost);
+    const reinvest = sum.hasLedgerRecord ? sum.totalReinvest : (gross > 0 ? (gross * 0.5) : 0);
+    const net = sum.hasLedgerRecord ? sum.totalNetProfit : (gross > 0 ? (gross * 0.5) : gross);
+    const accountName = entries.length > 0 ? entries[0].account : 'Server';
+
+    let entriesHtml = '';
+    if (entries.length > 0) {
+      entriesHtml = `
+        <div style="margin-top: 14px; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 12px;">
+          <span style="font-size: 0.75rem; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Movimientos Contables Registrados (${entries.length})</span>
+          <div style="margin-top: 6px; display: flex; flex-direction: column; gap: 6px;">
+            ${entries.map(e => `
+              <div style="background: rgba(0, 0, 0, 0.25); border-radius: 6px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem;">
+                <div>
+                  <span style="font-weight: 700; color: #e2e8f0;">${escapeHtml(e.serviceName || 'Operación')}</span>
+                  <span style="color: #64748b; margin-left: 6px;">${escapeHtml(e.notes || '')}</span>
+                </div>
+                <div style="display: flex; gap: 12px; font-family: monospace;">
+                  <span style="color: #cbd5e1;">Cobro: <strong>$${parseFloat(e.chargedAmount).toFixed(2)}</strong></span>
+                  <span style="color: #f87171;">Costo: <strong>$${parseFloat(e.costAmount).toFixed(2)}</strong></span>
+                  <span style="color: #34d399; font-weight: 800;">Ganancia: <strong>+$${parseFloat(e.netProfit).toFixed(2)}</strong></span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    resultContainer.innerHTML = `
+      <div style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.8)); border: 1px solid rgba(14, 165, 233, 0.4); border-radius: 14px; padding: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative;">
+        <button type="button" onclick="document.getElementById('financeOrderLookupResult').classList.add('hidden')" style="position: absolute; top: 14px; right: 14px; background: none; border: none; color: #94a3b8; cursor: pointer; padding: 4px;" title="Cerrar">
+          <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+        </button>
+
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;">
+          <span style="background: rgba(14, 165, 233, 0.2); color: #38bdf8; font-weight: 800; font-family: monospace; font-size: 0.85rem; padding: 3px 10px; border-radius: 6px;">
+            ORDEN #${escapeHtml(cleanId)}
+          </span>
+          <span style="font-size: 0.88rem; font-weight: 700; color: #f1f5f9;">
+            ${escapeHtml(o.serviceName || 'Servicio')}
+          </span>
+          <span style="font-size: 0.75rem; background: rgba(168, 85, 247, 0.2); color: #c084fc; padding: 2px 8px; border-radius: 6px; font-weight: 700;">
+            Cuenta: ${escapeHtml(accountName)}
+          </span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px;">
+          <div style="background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 10px;">
+            <div style="font-size: 0.7rem; color: #94a3b8; text-transform: uppercase;">Monto Cobrado</div>
+            <div style="font-size: 1.25rem; font-weight: 800; color: #f8fafc; font-family: monospace;">$${charged.toFixed(2)}</div>
+            <div style="font-size: 0.65rem; color: #64748b;">Ingreso total</div>
+          </div>
+          <div style="background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 10px;">
+            <div style="font-size: 0.7rem; color: #f87171; text-transform: uppercase;">Costo Servidor</div>
+            <div style="font-size: 1.25rem; font-weight: 800; color: #fca5a5; font-family: monospace;">-$${cost.toFixed(2)}</div>
+            <div style="font-size: 0.65rem; color: #64748b;">Proveedor API</div>
+          </div>
+          <div style="background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 10px;">
+            <div style="font-size: 0.7rem; color: #60a5fa; text-transform: uppercase;">Ganancia Bruta</div>
+            <div style="font-size: 1.25rem; font-weight: 800; color: #93c5fd; font-family: monospace;">+$${gross.toFixed(2)}</div>
+            <div style="font-size: 0.65rem; color: #64748b;">Margen total</div>
+          </div>
+          <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 8px; padding: 10px;">
+            <div style="font-size: 0.7rem; color: #34d399; text-transform: uppercase; font-weight: 700;">Ganancia Neta (Bolsillo)</div>
+            <div style="font-size: 1.35rem; font-weight: 900; color: #10b981; font-family: monospace;">+$${net.toFixed(2)}</div>
+            <div style="font-size: 0.65rem; color: #a7f3d0;">Reinversión: $${reinvest.toFixed(2)}</div>
+          </div>
+        </div>
+
+        ${entriesHtml}
+      </div>
+    `;
+
+    if (window.lucide) window.lucide.createIcons();
+  } catch (err) {
+    resultContainer.innerHTML = `
+      <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 14px; color: #f87171;">
+        Error al consultar la orden: ${escapeHtml(err.message)}
+      </div>
+    `;
+    if (window.lucide) window.lucide.createIcons();
+  }
+}
+

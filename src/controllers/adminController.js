@@ -812,8 +812,22 @@ const financeManager = require('../financeManager');
 
 exports.getFinanceSummary = (req, res) => {
   try {
-    const data = financeManager.getFinanceSummary();
+    const data = financeManager.getFinanceSummary({
+      orderId: req.query.orderId
+    });
     res.json({ success: true, ...data });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+};
+
+exports.getOrderFinanceDetails = (req, res) => {
+  try {
+    const details = financeManager.getOrderFinanceDetails(req.params.orderId);
+    if (!details) {
+      return res.status(404).json({ success: false, error: 'Orden no encontrada' });
+    }
+    res.json({ success: true, ...details });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }

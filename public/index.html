@@ -1037,6 +1037,31 @@
               </div>
             </div>
 
+            <!-- Barra de Búsqueda Rápida de Ganancia por ID de Orden -->
+            <div style="background: linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(30, 41, 59, 0.6)); border: 1px solid rgba(14, 165, 233, 0.35); border-radius: 12px; padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(14, 165, 233, 0.2); display: flex; align-items: center; justify-content: center; color: #38bdf8;">
+                  <i data-lucide="search" style="width: 20px; height: 20px;"></i>
+                </div>
+                <div>
+                  <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #f8fafc;">Consultar Ganancia de una Orden</h4>
+                  <p style="margin: 2px 0 0 0; font-size: 0.75rem; color: #94a3b8;">Ingresa el ID del pedido (#) para ver ingreso cobrado, costo y ganancia real exacta.</p>
+                </div>
+              </div>
+              <div style="display: flex; gap: 8px; align-items: center; flex: 1; max-width: 420px; min-width: 260px;">
+                <input type="text" id="financeOrderLookupInput" placeholder="Ej: 12345 o #12345..." class="form-control" style="padding: 8px 12px; font-size: 0.85rem; font-family: monospace; flex: 1;">
+                <button type="button" id="btnFinanceOrderLookup" class="btn btn-primary" style="padding: 8px 16px; font-size: 0.82rem; background: #0284c7; border: none; white-space: nowrap;">
+                  <i data-lucide="calculator" style="width: 15px; height: 15px; margin-right: 4px;"></i>
+                  <span>Consultar</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Contenedor de Resultado de Búsqueda de Orden -->
+            <div id="financeOrderLookupResult" class="hidden" style="margin-bottom: 20px;">
+              <!-- Se poblará vía JS con diseño UI/UX Pro Max -->
+            </div>
+
             <!-- Tabla de Libro Contable Detallado -->
             <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; overflow: hidden;">
               <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: rgba(0, 0, 0, 0.25); border-bottom: 1px solid rgba(255, 255, 255, 0.06); flex-wrap: wrap; gap: 10px;">
