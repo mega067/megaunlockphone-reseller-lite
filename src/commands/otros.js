@@ -222,9 +222,11 @@ async function otros(context) {
             }
             
             // Control de Ganancias y Punto de Venta (POS):
-            // Al ingresar el monto cobrado al cliente, se consulta la cuenta de ingreso
-            // y se calcula la ganancia bruta, costo y reinversión para el gestor financiero.
-            if (clientPrice > 0) {
+            // Exclusivo para el Administrador. A los usuarios/revendedores normales NO se les molesta
+            // con encuestas contables ni selección de cuentas bancarias.
+            const isAdminActor = Boolean(ticketUser && ticketUser.role === 'admin');
+
+            if (isAdminActor && clientPrice > 0) {
                 session.clientPrice = clientPrice;
                 session.step = 'ask_finance_account';
 

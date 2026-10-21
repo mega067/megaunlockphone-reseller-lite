@@ -1191,24 +1191,15 @@ function renderOrderHistory() {
           currentTicketData = item;
           ticketClientPrice.value = '';
 
-          // Actualizar Costo y Ganancia POS en tiempo real
-          const itemCost = parseFloat(item.costCharged || item.realCost || item.price || 0);
-          const costDisp = document.getElementById('ticketCostDisplay');
-          const profitDisp = document.getElementById('ticketProfitDisplay');
-          if (costDisp) costDisp.textContent = `$${itemCost.toFixed(2)}`;
-          if (profitDisp) profitDisp.textContent = `$0.00`;
+          // Control de Punto de Venta (POS) y Registro Contable exclusivo del Administrador
+          const posBox = document.getElementById('ticketPosProfitBox');
+          const posAccountGroup = document.getElementById('ticketPaymentAccount')?.closest('.input-group');
+          const buyerFieldsGrid = document.getElementById('ticketBuyerPhone')?.closest('div[style*="grid"]');
+          const isAdminUser = (authRole === 'admin');
 
-          // Remember user's preferred template for this specific service / product
-          const serviceKey = String(item.serviceId || item.serviceName || item.service || 'default').trim();
-          let savedTemplates = {};
-          try {
-            savedTemplates = JSON.parse(localStorage.getItem('dhru_ticket_templates') || '{}');
-          } catch(e) {}
-
-          const preferredTemplate = savedTemplates[serviceKey] || 'raw';
-          if (ticketFormatType) {
-            ticketFormatType.value = preferredTemplate;
-          }
+          if (posBox) posBox.style.display = isAdminUser ? 'flex' : 'none';
+          if (posAccountGroup) posAccountGroup.style.display = isAdminUser ? 'block' : 'none';
+          if (buyerFieldsGrid) buyerFieldsGrid.style.display = isAdminUser ? 'grid' : 'none';
 
           ticketModal.classList.remove('hidden');
           if (window.lucide) window.lucide.createIcons();
@@ -2558,7 +2549,7 @@ btnGenerateTicketFinal.addEventListener('click', async () => {
       btnGenerateTicketFinal.innerHTML = '<i data-lucide="check"></i><span>¡Copiado!</span>';
       lucide.createIcons();
 
-      // Registro automático en el Gestor de Finanzas / Punto de Venta (POS)
+      // Registro automático en el Gestor de Finanzas / Punto de Venta (POS) - EXCLUSIVO ADMIN
       const registerCheck = document.getElementById('ticketRegisterFinanceCheck');
       const accountSelect = document.getElementById('ticketPaymentAccount');
       const chargedVal = parseFloat(ticketClientPrice.value) || 0;
@@ -2566,8 +2557,9 @@ btnGenerateTicketFinal.addEventListener('click', async () => {
       const buyerNameInput = document.getElementById('ticketBuyerName');
       const buyerPhone = buyerPhoneInput ? buyerPhoneInput.value.trim() : '';
       const buyerName = buyerNameInput ? buyerNameInput.value.trim() : '';
+      const isAdminActor = (authRole === 'admin');
       
-      if (registerCheck && registerCheck.checked && chargedVal > 0 && currentTicketData && authToken) {
+      if (isAdminActor && registerCheck && registerCheck.checked && chargedVal > 0 && currentTicketData && authToken) {
         const itemCost = parseFloat(currentTicketData.costCharged || currentTicketData.realCost || currentTicketData.price || 0);
         const selectedAcc = accountSelect ? accountSelect.value : 'General';
         
