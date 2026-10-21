@@ -65,7 +65,7 @@ const initTables = () => {
 
         CREATE TABLE IF NOT EXISTS FinanceLedger (
             id TEXT PRIMARY KEY,
-            type TEXT NOT NULL, /* 'income_ticket', 'income_manual', 'expense_manual', 'adjustment' */
+            type TEXT NOT NULL, /* 'income_ticket', 'income_manual', 'expense_manual', 'adjustment', 'transfer' */
             orderId TEXT,
             serviceName TEXT,
             chargedAmount REAL DEFAULT 0,
@@ -74,12 +74,50 @@ const initTables = () => {
             reinvestPercent REAL DEFAULT 50,
             reinvestAmount REAL DEFAULT 0,
             netProfit REAL DEFAULT 0,
-            account TEXT DEFAULT 'General', /* 'Nu', 'Revolut', 'MercadoPago', 'BBVA', 'Efectivo', etc. */
+            account TEXT DEFAULT 'General', /* Cuenta origen o cuenta receptora */
+            destAccount TEXT, /* En transferencias entre cuentas */
+            category TEXT DEFAULT 'servicios', /* 'servicios', 'comida', 'transporte', 'servidores', 'gustos', 'emergencia', 'inversion', 'otros' */
             notes TEXT,
             recordedBy TEXT,
             createdAt TEXT
         );
+
+        CREATE TABLE IF NOT EXISTS FinanceAccounts (
+            id TEXT PRIMARY KEY,
+            name TEXT UNIQUE NOT NULL,
+            type TEXT DEFAULT 'bank', /* 'bank', 'card', 'cash', 'investment', 'emergency' */
+            currency TEXT DEFAULT 'MXN',
+            initialBalance REAL DEFAULT 0,
+            currentBalance REAL DEFAULT 0,
+            color TEXT DEFAULT '#38bdf8',
+            icon TEXT DEFAULT 'wallet',
+            description TEXT,
+            isArchived INTEGER DEFAULT 0,
+            createdAt TEXT,
+            updatedAt TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS FinanceWeeklyAudits (
+            id TEXT PRIMARY KEY,
+            weekStart TEXT NOT NULL,
+            weekEnd TEXT NOT NULL,
+            totalIncome REAL DEFAULT 0,
+            totalExpenses REAL DEFAULT 0,
+            netSavings REAL DEFAULT 0,
+            accountsSnapshot TEXT, /* JSON con los balances de cada cuenta al cerrar la semana */
+            notes TEXT,
+            verifiedBy TEXT DEFAULT 'Admin',
+            createdAt TEXT
+        );
     `);
+
+    try {
+        db.exec('ALTER TABLE FinanceLedger ADD COLUMN destAccount TEXT');
+    } catch (e) {}
+
+    try {
+        db.exec('ALTER TABLE FinanceLedger ADD COLUMN category TEXT DEFAULT "servicios"');
+    } catch (e) {}
     
     try {
         db.exec('ALTER TABLE Users ADD COLUMN apiKey TEXT');

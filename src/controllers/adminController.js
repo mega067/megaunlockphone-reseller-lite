@@ -863,3 +863,42 @@ exports.deleteFinanceTransaction = (req, res) => {
   }
 };
 
+exports.getFinanceAccounts = (req, res) => {
+  try {
+    const accounts = financeManager.getAllAccounts();
+    res.json({ success: true, accounts });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+};
+
+exports.saveFinanceAccount = (req, res) => {
+  try {
+    const account = financeManager.saveAccount(req.body);
+    res.json({ success: true, account });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+};
+
+exports.deleteFinanceAccount = (req, res) => {
+  try {
+    const success = financeManager.deleteAccount(req.params.id);
+    res.json({ success });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+};
+
+exports.performWeeklyAudit = (req, res) => {
+  try {
+    const audit = financeManager.performWeeklyAudit({
+      ...req.body,
+      verifiedBy: req.user?.username || 'Admin'
+    });
+    res.json({ success: true, audit });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+};
+

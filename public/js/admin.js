@@ -1937,8 +1937,9 @@ async function loadFinanceDashboard() {
     currentFinanceData = data;
     renderFinanceKPIs(data.summary, data.config);
     renderFinanceAccounts(data.accounts, data.config);
+    renderFinanceCategories(data.categories);
     renderFinanceLedger(data.recent);
-    populateManualAccountsSelect(data.config.accounts);
+    populateManualAccountsSelect(data.accounts);
 
     // Actualizar sliders en configuración
     const slider = document.getElementById('inputFinanceReinvestPercent');
@@ -1985,48 +1986,117 @@ function renderFinanceKPIs(summary, config) {
 
 function renderFinanceAccounts(accounts, config) {
   const container = document.getElementById('financeAccountsGrid');
+  const totalAssetsBadge = document.getElementById('financeTotalAssetsBadge');
   if (!container) return;
 
   if (!accounts || accounts.length === 0) {
     container.innerHTML = '<div style="color: #64748b; font-size: 0.85rem;">No hay cuentas registradas.</div>';
+    if (totalAssetsBadge) totalAssetsBadge.textContent = 'Patrimonio: $0.00 MXN';
     return;
   }
 
-  // Iconos y colores distintivos por banco popular
+  let totalAssets = 0;
+
+  // Iconos y colores distintivos por banco o tipo de activo
   const bankStyles = {
-    'nu': { color: '#820ad1', bg: 'rgba(130, 10, 209, 0.15)', border: 'rgba(130, 10, 209, 0.35)', icon: 'credit-card' },
-    'revolut': { color: '#0075eb', bg: 'rgba(0, 117, 235, 0.15)', border: 'rgba(0, 117, 235, 0.35)', icon: 'globe' },
-    'mercado pago': { color: '#009ee3', bg: 'rgba(0, 158, 227, 0.15)', border: 'rgba(0, 158, 227, 0.35)', icon: 'smartphone' },
-    'bbva': { color: '#004481', bg: 'rgba(0, 68, 129, 0.2)', border: 'rgba(0, 68, 129, 0.45)', icon: 'landmark' },
-    'efectivo': { color: '#10b981', bg: 'rgba(16, 185, 129, 0.15)', border: 'rgba(16, 185, 129, 0.35)', icon: 'banknote' }
+    'nu': { color: '#a855f7', bg: 'rgba(168, 85, 247, 0.15)', border: 'rgba(168, 85, 247, 0.35)', icon: 'credit-card' },
+    'revolut': { color: '#0ea5e9', bg: 'rgba(14, 165, 233, 0.15)', border: 'rgba(14, 165, 233, 0.35)', icon: 'globe' },
+    'mercado pago': { color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.15)', border: 'rgba(6, 182, 212, 0.35)', icon: 'smartphone' },
+    'bbva': { color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.18)', border: 'rgba(59, 130, 246, 0.4)', icon: 'landmark' },
+    'efectivo': { color: '#10b981', bg: 'rgba(16, 185, 129, 0.15)', border: 'rgba(16, 185, 129, 0.35)', icon: 'banknote' },
+    'emergencia': { color: '#ef4444', bg: 'rgba(239, 68, 68, 0.15)', border: 'rgba(239, 68, 68, 0.35)', icon: 'shield-alert' },
+    'inversion': { color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)', border: 'rgba(245, 158, 11, 0.35)', icon: 'trending-up' },
+    'server': { color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.15)', border: 'rgba(139, 92, 246, 0.35)', icon: 'server' }
   };
 
   container.innerHTML = accounts.map(acc => {
-    const key = acc.account.toLowerCase().trim();
-    const style = bankStyles[key] || { color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.15)', border: 'rgba(56, 189, 248, 0.3)', icon: 'wallet' };
+    const accName = acc.name || acc.account || 'Cuenta';
+    const key = accName.toLowerCase().trim();
+    const typeKey = (acc.type || '').toLowerCase();
+    
+    // Identificar estilo
+    let style = bankStyles[key] || bankStyles[typeKey] || { 
+      color: acc.color || '#38bdf8', 
+      bg: `${acc.color || '#38bdf8'}22`, 
+      border: `${acc.color || '#38bdf8'}55`, 
+      icon: acc.icon || 'wallet' 
+    };
+
     const net = parseFloat(acc.netProfit || 0);
     const balance = parseFloat(acc.balance || 0);
+    totalAssets += balance;
+
+    const typeBadge = acc.type === 'emergency' 
+      ? '<span style="background: rgba(239, 68, 68, 0.25); color: #fca5a5; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 800;">EMERGENCIA</span>'
+      : (acc.type === 'investment' 
+          ? '<span style="background: rgba(245, 158, 11, 0.25); color: #fcd34d; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 800;">INVERSIÓN</span>'
+          : (acc.type === 'server'
+              ? '<span style="background: rgba(139, 92, 246, 0.25); color: #c4b5fd; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 800;">SERVIDOR</span>'
+              : (acc.type === 'card'
+                  ? '<span style="background: rgba(56, 189, 248, 0.25); color: #7dd3fc; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 800;">TARJETA</span>'
+                  : '')));
 
     return `
       <div style="background: ${style.bg}; border: 1px solid ${style.border}; border-radius: 12px; padding: 14px 16px; position: relative; overflow: hidden; transition: transform 0.2s ease;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
           <span style="font-weight: 800; font-size: 0.95rem; color: #f8fafc; display: flex; align-items: center; gap: 6px;">
-            <i data-lucide="${style.icon}" style="width: 17px; height: 17px; color: ${style.color};"></i> ${escapeHtml(acc.account)}
+            <i data-lucide="${style.icon}" style="width: 17px; height: 17px; color: ${style.color};"></i> ${escapeHtml(accName)}
           </span>
-          <span style="font-size: 0.7rem; font-weight: 700; color: #94a3b8; background: rgba(0,0,0,0.3); padding: 2px 7px; border-radius: 10px;">
-            ${acc.count} op${acc.count === 1 ? '' : 's'}
-          </span>
+          <div>${typeBadge}</div>
         </div>
         <div style="font-size: 1.35rem; font-weight: 800; color: #ffffff; font-family: 'Fira Code', monospace;">
           $${balance.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </div>
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 0.72rem; color: #cbd5e1; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 6px;">
-          <span>Ganancia neta:</span>
-          <span style="font-weight: 700; color: #34d399;">+$${net.toFixed(2)}</span>
+          <span>Ganancia generada:</span>
+          <span style="font-weight: 700; color: ${net >= 0 ? '#34d399' : '#f87171'};">${net >= 0 ? '+' : ''}$${net.toFixed(2)}</span>
         </div>
       </div>
     `;
   }).join('');
+
+  if (totalAssetsBadge) {
+    totalAssetsBadge.textContent = `Patrimonio Total: $${totalAssets.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN`;
+  }
+}
+
+function renderFinanceCategories(categories) {
+  const container = document.getElementById('financeCategoriesGrid');
+  if (!container) return;
+
+  const catMeta = {
+    'comida': { label: 'Comida & Súper', icon: 'utensils', color: '#f97316', bg: 'rgba(249, 115, 22, 0.15)' },
+    'pasaje': { label: 'Pasaje & Transporte', icon: 'bus', color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.15)' },
+    'gustos': { label: 'Gustos & Salidas', icon: 'sparkles', color: '#ec4899', bg: 'rgba(236, 72, 153, 0.15)' },
+    'servidores': { label: 'Servidores & DHRU', icon: 'server', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.15)' },
+    'emergencia': { label: 'Emergencias', icon: 'shield-alert', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.15)' },
+    'inversion': { label: 'Inversiones', icon: 'trending-up', color: '#eab308', bg: 'rgba(234, 179, 8, 0.15)' },
+    'servicios': { label: 'Servicios Básicos', icon: 'zap', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.15)' },
+    'otros': { label: 'Otros Gastos', icon: 'package', color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.15)' }
+  };
+
+  const list = Object.keys(catMeta).map(key => {
+    const meta = catMeta[key];
+    const catData = (categories || []).find(c => c.category === key) || { totalCost: 0, count: 0 };
+    return {
+      key,
+      ...meta,
+      total: parseFloat(catData.totalCost || 0),
+      count: parseInt(catData.count || 0, 10)
+    };
+  });
+
+  container.innerHTML = list.map(c => `
+    <div style="background: ${c.bg}; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; gap: 10px;">
+      <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: ${c.color};">
+        <i data-lucide="${c.icon}" style="width: 16px; height: 16px;"></i>
+      </div>
+      <div style="flex: 1; min-width: 0;">
+        <div style="font-size: 0.72rem; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c.label}</div>
+        <div style="font-size: 0.95rem; font-weight: 800; color: #f8fafc; font-family: monospace;">$${c.total.toFixed(2)}</div>
+      </div>
+    </div>
+  `).join('');
 }
 
 function renderFinanceLedger(records) {
@@ -2101,10 +2171,17 @@ function renderFinanceLedger(records) {
 }
 
 function populateManualAccountsSelect(accounts) {
-  const sel = document.getElementById('manualEntryAccount');
-  if (!sel) return;
-  const list = accounts && accounts.length > 0 ? accounts : ['Nu', 'Revolut', 'Mercado Pago', 'BBVA', 'Efectivo'];
-  sel.innerHTML = list.map(a => `<option value="${escapeHtml(a)}">${escapeHtml(a)}</option>`).join('');
+  const selOrigin = document.getElementById('manualEntryAccount');
+  const selDest = document.getElementById('manualEntryDestAccount');
+  if (!selOrigin) return;
+
+  const list = (accounts && accounts.length > 0)
+    ? accounts.map(a => typeof a === 'string' ? a : (a.name || a.account))
+    : ['Nu', 'Revolut', 'Mercado Pago', 'BBVA', 'Efectivo', 'Emergencias', 'Inversión', 'Server'];
+
+  const optionsHtml = list.map(a => `<option value="${escapeHtml(a)}">${escapeHtml(a)}</option>`).join('');
+  selOrigin.innerHTML = optionsHtml;
+  if (selDest) selDest.innerHTML = optionsHtml;
 }
 
 async function deleteFinanceEntry(id) {
@@ -2184,6 +2261,159 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Control de campos al cambiar el tipo de operación manual (Transferencia / Ingreso / Gasto)
+  const manualTypeSelect = document.getElementById('manualEntryType');
+  const destAccountContainer = document.getElementById('containerManualDestAccount');
+  const labelOriginAccount = document.getElementById('labelManualEntryAccount');
+  const costInputContainer = document.getElementById('containerManualEntryCost');
+  const chargedInputContainer = document.getElementById('containerManualEntryCharged');
+
+  if (manualTypeSelect) {
+    manualTypeSelect.addEventListener('change', (e) => {
+      const val = e.target.value;
+      if (val === 'transfer') {
+        if (destAccountContainer) destAccountContainer.style.display = 'block';
+        if (labelOriginAccount) labelOriginAccount.textContent = 'Cuenta / Tarjeta Origen (De dónde sale)';
+        if (costInputContainer) {
+          const l = costInputContainer.querySelector('label');
+          if (l) l.textContent = 'Monto a Transferir ($ MXN)';
+        }
+        if (chargedInputContainer) chargedInputContainer.style.display = 'none';
+      } else if (val === 'expense_manual') {
+        if (destAccountContainer) destAccountContainer.style.display = 'none';
+        if (labelOriginAccount) labelOriginAccount.textContent = 'Cuenta / Tarjeta con la que pagaste';
+        if (costInputContainer) {
+          costInputContainer.style.display = 'block';
+          const l = costInputContainer.querySelector('label');
+          if (l) l.textContent = 'Monto Gastado / Costo ($ MXN)';
+        }
+        if (chargedInputContainer) chargedInputContainer.style.display = 'none';
+      } else {
+        if (destAccountContainer) destAccountContainer.style.display = 'none';
+        if (labelOriginAccount) labelOriginAccount.textContent = 'Cuenta / Tarjeta Destino (A dónde entró)';
+        if (costInputContainer) {
+          costInputContainer.style.display = 'block';
+          const l = costInputContainer.querySelector('label');
+          if (l) l.textContent = 'Costo Servidor / Inversión ($ MXN)';
+        }
+        if (chargedInputContainer) chargedInputContainer.style.display = 'block';
+      }
+    });
+  }
+
+  // Toggle Gestor de Cuentas & Tarjetas
+  const btnToggleAccs = document.getElementById('btnToggleFinanceAccounts');
+  const accsContainer = document.getElementById('financeAccountsManagerContainer');
+  const btnCloseAccs = document.getElementById('btnCloseAccountsManager');
+  if (btnToggleAccs && accsContainer) {
+    btnToggleAccs.addEventListener('click', () => {
+      accsContainer.classList.toggle('hidden');
+      if (!accsContainer.classList.contains('hidden')) {
+        loadAccountsManagerList();
+      }
+    });
+  }
+  if (btnCloseAccs && accsContainer) {
+    btnCloseAccs.addEventListener('click', () => accsContainer.classList.add('hidden'));
+  }
+
+  // Formulario Crear / Editar Cuenta o Tarjeta
+  const formAcc = document.getElementById('formAddEditAccount');
+  const btnCancelEditAcc = document.getElementById('btnCancelEditAccount');
+  if (formAcc) {
+    formAcc.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('accountFormId').value;
+      const payload = {
+        id: id || undefined,
+        name: document.getElementById('accountFormName').value.trim(),
+        type: document.getElementById('accountFormType').value,
+        balance: parseFloat(document.getElementById('accountFormBalance').value) || 0,
+        color: document.getElementById('accountFormColor').value
+      };
+
+      try {
+        const res = await fetch('/api/admin/finance/accounts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`,
+            'X-Server-Id': currentServerId
+          },
+          body: JSON.stringify(payload)
+        });
+        const resData = await res.json();
+        if (res.ok && resData.success) {
+          alert('✅ Cuenta guardada correctamente.');
+          formAcc.reset();
+          document.getElementById('accountFormId').value = '';
+          if (btnCancelEditAcc) btnCancelEditAcc.style.display = 'none';
+          loadAccountsManagerList();
+          loadFinanceDashboard();
+        } else {
+          alert(resData.error || 'Error al guardar la cuenta');
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    });
+  }
+  if (btnCancelEditAcc && formAcc) {
+    btnCancelEditAcc.addEventListener('click', () => {
+      formAcc.reset();
+      document.getElementById('accountFormId').value = '';
+      btnCancelEditAcc.style.display = 'none';
+    });
+  }
+
+  // Toggle Cierre Semanal
+  const btnToggleAudit = document.getElementById('btnToggleWeeklyAudit');
+  const auditContainer = document.getElementById('financeWeeklyAuditContainer');
+  const btnCloseAudit = document.getElementById('btnCloseWeeklyAudit');
+  if (btnToggleAudit && auditContainer) {
+    btnToggleAudit.addEventListener('click', () => {
+      auditContainer.classList.toggle('hidden');
+      if (!auditContainer.classList.contains('hidden')) {
+        loadWeeklyAuditView();
+      }
+    });
+  }
+  if (btnCloseAudit && auditContainer) {
+    btnCloseAudit.addEventListener('click', () => auditContainer.classList.add('hidden'));
+  }
+
+  // Confirmar Cierre Semanal
+  const btnConfirmAudit = document.getElementById('btnExecuteWeeklyAudit');
+  if (btnConfirmAudit) {
+    btnConfirmAudit.addEventListener('click', async () => {
+      const notes = document.getElementById('weeklyAuditNotes').value.trim();
+      if (!confirm('¿Deseas registrar y certificar el corte y balance semanal de todas tus cuentas ahora?')) return;
+
+      try {
+        const res = await fetch('/api/admin/finance/weekly-audit', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`,
+            'X-Server-Id': currentServerId
+          },
+          body: JSON.stringify({ notes })
+        });
+        const d = await res.json();
+        if (res.ok && d.success) {
+          alert('🏆 Cierre semanal completado y guardado en la bitácora con éxito.');
+          document.getElementById('weeklyAuditNotes').value = '';
+          loadWeeklyAuditView();
+          loadFinanceDashboard();
+        } else {
+          alert(d.error || 'Error al generar el cierre semanal');
+        }
+      } catch (err) {
+        alert('Error de conexión: ' + err.message);
+      }
+    });
+  }
+
   // Toggle Form Manual
   const btnToggleManual = document.getElementById('btnToggleAddManualExpense');
   const manualContainer = document.getElementById('financeManualEntryContainer');
@@ -2202,12 +2432,15 @@ document.addEventListener('DOMContentLoaded', () => {
   if (formManual) {
     formManual.addEventListener('submit', async (e) => {
       e.preventDefault();
+      const opType = document.getElementById('manualEntryType').value;
       const payload = {
-        type: document.getElementById('manualEntryType').value,
+        type: opType,
+        category: document.getElementById('manualEntryCategory').value || 'otros',
         serviceName: document.getElementById('manualEntryService').value,
         chargedAmount: parseFloat(document.getElementById('manualEntryCharged').value) || 0,
         costAmount: parseFloat(document.getElementById('manualEntryCost').value) || 0,
         account: document.getElementById('manualEntryAccount').value,
+        destAccount: opType === 'transfer' ? document.getElementById('manualEntryDestAccount').value : undefined,
         orderId: document.getElementById('manualEntryOrderId').value.trim()
       };
 
@@ -2224,6 +2457,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (res.ok) {
           alert('✅ Movimiento contable registrado.');
           formManual.reset();
+          if (destAccountContainer) destAccountContainer.style.display = 'none';
           if (manualContainer) manualContainer.classList.add('hidden');
           loadFinanceDashboard();
         } else {
@@ -2409,6 +2643,184 @@ async function lookupOrderFinance(orderId) {
       </div>
     `;
     if (window.lucide) window.lucide.createIcons();
+  }
+}
+
+/**
+ * Cargar y renderizar la lista completa de tarjetas y cuentas en el gestor
+ */
+async function loadAccountsManagerList() {
+  const container = document.getElementById('accountsManagerCardsGrid');
+  if (!container) return;
+  container.innerHTML = '<div style="color: #94a3b8; font-size: 0.85rem; padding: 10px;">Cargando cuentas...</div>';
+
+  try {
+    const res = await fetch('/api/admin/finance/accounts', {
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'X-Server-Id': currentServerId
+      }
+    });
+    const d = await res.json();
+    if (!res.ok || !d.success) throw new Error(d.error || 'Error al obtener cuentas');
+
+    const accs = d.accounts || [];
+    if (accs.length === 0) {
+      container.innerHTML = '<div style="color: #64748b; font-size: 0.85rem;">No tienes cuentas agregadas aún. Registra la primera arriba.</div>';
+      return;
+    }
+
+    container.innerHTML = accs.map(acc => {
+      const balance = parseFloat(acc.balance || 0);
+      const color = acc.color || '#8b5cf6';
+      const icon = acc.icon || 'wallet';
+      return `
+        <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid ${color}44; border-left: 4px solid ${color}; border-radius: 10px; padding: 14px; position: relative;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+            <div>
+              <span style="font-weight: 800; font-size: 0.95rem; color: #f8fafc; display: flex; align-items: center; gap: 6px;">
+                <i data-lucide="${icon}" style="width: 16px; height: 16px; color: ${color};"></i> ${escapeHtml(acc.name)}
+              </span>
+              <span style="font-size: 0.7rem; color: #94a3b8; text-transform: uppercase;">${escapeHtml(acc.type || 'cuenta')}</span>
+            </div>
+            <div style="display: flex; gap: 4px;">
+              <button type="button" onclick="editFinanceAccount('${acc.id}', '${escapeHtml(acc.name)}', '${acc.type}', ${balance}, '${color}')" title="Editar" style="background: none; border: none; color: #38bdf8; cursor: pointer; padding: 3px;">
+                <i data-lucide="edit-3" style="width: 14px; height: 14px;"></i>
+              </button>
+              <button type="button" onclick="deleteFinanceAccount('${acc.id}', '${escapeHtml(acc.name)}')" title="Eliminar" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 3px;">
+                <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+              </button>
+            </div>
+          </div>
+          <div style="font-size: 1.25rem; font-weight: 800; color: #ffffff; font-family: 'Fira Code', monospace; margin-top: 6px;">
+            $${balance.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    if (window.lucide) window.lucide.createIcons();
+  } catch (err) {
+    container.innerHTML = `<div style="color: #ef4444; font-size: 0.85rem;">Error: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function editFinanceAccount(id, name, type, balance, color) {
+  document.getElementById('accountFormId').value = id;
+  document.getElementById('accountFormName').value = name;
+  document.getElementById('accountFormType').value = type;
+  document.getElementById('accountFormBalance').value = balance;
+  document.getElementById('accountFormColor').value = color;
+  const btnCancel = document.getElementById('btnCancelEditAccount');
+  if (btnCancel) btnCancel.style.display = 'inline-block';
+  document.getElementById('accountFormName').focus();
+}
+
+async function deleteFinanceAccount(id, name) {
+  if (!confirm(`¿Eliminar la cuenta "${name}"? Los movimientos pasados seguirán en el historial contable.`)) return;
+  try {
+    const res = await fetch(`/api/admin/finance/accounts/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'X-Server-Id': currentServerId
+      }
+    });
+    if (res.ok) {
+      loadAccountsManagerList();
+      loadFinanceDashboard();
+    } else {
+      alert('Error al eliminar cuenta');
+    }
+  } catch (err) {
+    alert('Error: ' + err.message);
+  }
+}
+
+/**
+ * Cargar y calcular el resumen de la semana actual y cierres anteriores
+ */
+async function loadWeeklyAuditView() {
+  const statsContainer = document.getElementById('weeklyAuditSummaryStats');
+  const historyContainer = document.getElementById('weeklyAuditHistoryList');
+  if (statsContainer) statsContainer.innerHTML = '<div style="color: #cbd5e1; font-size: 0.82rem;">Calculando flujo de los últimos 7 días...</div>';
+
+  try {
+    const res = await fetch('/api/admin/finance', {
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'X-Server-Id': currentServerId
+      }
+    });
+    const d = await res.json();
+    if (!res.ok || !d.success) throw new Error('Error al consultar datos');
+
+    const summary = d.summary || {};
+    const weekAudits = d.weeklyAudits || [];
+
+    // Calcular estadísticas aproximadas de los últimos 7 días
+    const now = Date.now();
+    const sevenDaysAgo = now - (7 * 24 * 60 * 60 * 1000);
+    const weekEntries = (d.recent || []).filter(r => {
+      const t = r.createdAt ? new Date(r.createdAt).getTime() : 0;
+      return t >= sevenDaysAgo;
+    });
+
+    let weekIncome = 0;
+    let weekExpenses = 0;
+    weekEntries.forEach(r => {
+      weekIncome += parseFloat(r.chargedAmount || 0);
+      weekExpenses += parseFloat(r.costAmount || 0);
+    });
+    const weekNet = weekIncome - weekExpenses;
+
+    if (statsContainer) {
+      statsContainer.innerHTML = `
+        <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 12px;">
+          <div style="font-size: 0.7rem; color: #34d399; text-transform: uppercase; font-weight: 700;">Ingresos Semanales</div>
+          <div style="font-size: 1.25rem; font-weight: 800; color: #f8fafc; font-family: monospace;">+$${weekIncome.toFixed(2)}</div>
+          <div style="font-size: 0.65rem; color: #94a3b8;">Últimos 7 días</div>
+        </div>
+        <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 12px;">
+          <div style="font-size: 0.7rem; color: #f87171; text-transform: uppercase; font-weight: 700;">Gastos Totales Semanales</div>
+          <div style="font-size: 1.25rem; font-weight: 800; color: #fca5a5; font-family: monospace;">-$${weekExpenses.toFixed(2)}</div>
+          <div style="font-size: 0.65rem; color: #94a3b8;">Personales + Servidores</div>
+        </div>
+        <div style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px; padding: 12px;">
+          <div style="font-size: 0.7rem; color: #fbbf24; text-transform: uppercase; font-weight: 700;">Balance Neto Semanal</div>
+          <div style="font-size: 1.25rem; font-weight: 800; color: ${weekNet >= 0 ? '#34d399' : '#ef4444'}; font-family: monospace;">${weekNet >= 0 ? '+' : ''}$${weekNet.toFixed(2)}</div>
+          <div style="font-size: 0.65rem; color: #94a3b8;">Ahorro neto generado</div>
+        </div>
+      `;
+    }
+
+    if (historyContainer) {
+      if (weekAudits.length === 0) {
+        historyContainer.innerHTML = '<div style="color: #64748b; font-size: 0.8rem; text-align: center; padding: 10px;">Aún no hay cortes semanales archivados. Realiza tu primer cierre con el botón superior.</div>';
+      } else {
+        historyContainer.innerHTML = weekAudits.map(a => {
+          let dateStr = a.auditDate || a.createdAt || 'Fecha';
+          try {
+            dateStr = new Date(dateStr).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' });
+          } catch(e) {}
+          return `
+            <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 8px 12px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem;">
+              <div>
+                <span style="font-weight: 700; color: #f1f5f9;"><i data-lucide="check" style="width: 14px; height: 14px; color: #34d399; display: inline-block; vertical-align: middle;"></i> Cierre del ${escapeHtml(dateStr)}</span>
+                <span style="color: #94a3b8; margin-left: 8px;">${escapeHtml(a.notes || 'Conciliación correcta')}</span>
+              </div>
+              <div style="font-family: monospace; font-weight: 800; color: #fbbf24;">
+                Patrimonio Total: $${parseFloat(a.totalAssets || 0).toFixed(2)}
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    if (window.lucide) window.lucide.createIcons();
+  } catch (err) {
+    if (statsContainer) statsContainer.innerHTML = `<div style="color: #ef4444;">Error al cargar datos semanales: ${escapeHtml(err.message)}</div>`;
   }
 }
 

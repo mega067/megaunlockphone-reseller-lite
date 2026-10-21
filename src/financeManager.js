@@ -33,18 +33,116 @@ function updateFinanceConfig(config) {
   return getFinanceConfig();
 }
 
+
+
 /**
- * Registrar un movimiento contable (desde Ticket o manual)
+ * Obtener estadísticas globales y balances por cuenta bancaria
+ */
+/**
+ * Inicializar cuentas por defecto si la tabla está vacía
+ */
+function initDefaultAccounts() {
+  const count = sqliteDb.prepare('SELECT COUNT(*) as count FROM FinanceAccounts').get().count;
+  if (count === 0) {
+    const defaults = [
+      { id: 'acc_nu', name: 'Nu Crédito / Débito', type: 'card', currency: 'MXN', color: '#820ad1', icon: 'credit-card', description: 'Tarjeta Nu y Cuenta de Ahorro' },
+      { id: 'acc_revolut', name: 'Revolut', type: 'bank', currency: 'USD', color: '#0075eb', icon: 'globe', description: 'Cuenta Internacional Revolut' },
+      { id: 'acc_bbva', name: 'BBVA', type: 'bank', currency: 'MXN', color: '#004481', icon: 'landmark', description: 'Banca BBVA Nómina / Débito' },
+      { id: 'acc_mp', name: 'Mercado Pago', type: 'bank', currency: 'MXN', color: '#009ee3', icon: 'smartphone', description: 'Billetera Mercado Pago' },
+      { id: 'acc_emergency', name: 'Fondo de Emergencia', type: 'emergency', currency: 'MXN', color: '#ef4444', icon: 'shield-alert', description: 'Tarjeta / Cuenta intocable para emergencias' },
+      { id: 'acc_investment', name: 'Cuenta Inversión', type: 'investment', currency: 'MXN', color: '#10b981', icon: 'trending-up', description: 'Cetes / Fondos de Inversión y Ganancias' },
+      { id: 'acc_cash', name: 'Efectivo / Caja', type: 'cash', currency: 'MXN', color: '#f59e0b', icon: 'banknote', description: 'Efectivo en mano y caja chica' },
+      { id: 'acc_server', name: 'Server (DHRU / Fondos)', type: 'bank', currency: 'MXN', color: '#6366f1', icon: 'server', description: 'Saldo en servidores para pedidos' }
+    ];
+    const insertStmt = sqliteDb.prepare(`
+      INSERT INTO FinanceAccounts (id, name, type, currency, initialBalance, currentBalance, color, icon, description, createdAt, updatedAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+    `);
+    const insertTx = sqliteDb.transaction((accs) => {
+      for (const a of accs) {
+        insertStmt.run(a.id, a.name, a.type, a.currency, 0, 0, a.color, a.icon, a.description);
+      }
+    });
+    insertTx(defaults);
+  }
+}
+initDefaultAccounts();
+
+/**
+ * Obtener todas las cuentas financieras
+ */
+function getAllAccounts() {
+  initDefaultAccounts();
+  return sqliteDb.prepare(`
+    SELECT * FROM FinanceAccounts WHERE isArchived = 0 ORDER BY 
+      CASE type 
+        WHEN 'bank' THEN 1 
+        WHEN 'card' THEN 2 
+        WHEN 'emergency' THEN 3 
+        WHEN 'investment' THEN 4 
+        WHEN 'cash' THEN 5 
+        ELSE 6 
+      END, name ASC
+  `).all();
+}
+
+/**
+ * Crear o editar una cuenta bancaria / tarjeta / inversión
+ */
+function saveAccount(accData) {
+  initDefaultAccounts();
+  const id = accData.id || ('acc_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6));
+  const name = String(accData.name || '').trim();
+  if (!name) throw new Error('El nombre de la cuenta o tarjeta es obligatorio');
+
+  const type = accData.type || 'bank';
+  const currency = accData.currency || 'MXN';
+  const initialBalance = parseFloat(accData.initialBalance) || 0;
+  const currentBalance = accData.currentBalance !== undefined ? parseFloat(accData.currentBalance) : initialBalance;
+  const color = accData.color || '#38bdf8';
+  const icon = accData.icon || 'wallet';
+  const description = accData.description || '';
+
+  const existing = sqliteDb.prepare('SELECT id FROM FinanceAccounts WHERE id = ?').get(id);
+  if (existing) {
+    sqliteDb.prepare(`
+      UPDATE FinanceAccounts 
+      SET name = ?, type = ?, currency = ?, currentBalance = ?, color = ?, icon = ?, description = ?, updatedAt = datetime('now')
+      WHERE id = ?
+    `).run(name, type, currency, currentBalance, color, icon, description, id);
+  } else {
+    sqliteDb.prepare(`
+      INSERT INTO FinanceAccounts (id, name, type, currency, initialBalance, currentBalance, color, icon, description, createdAt, updatedAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+    `).run(id, name, type, currency, initialBalance, currentBalance, color, icon, description);
+  }
+
+  return sqliteDb.prepare('SELECT * FROM FinanceAccounts WHERE id = ?').get(id);
+}
+
+/**
+ * Eliminar / archivar cuenta
+ */
+function deleteAccount(id) {
+  const stmt = sqliteDb.prepare('UPDATE FinanceAccounts SET isArchived = 1, updatedAt = datetime("now") WHERE id = ?');
+  return stmt.run(id).changes > 0;
+}
+
+/**
+ * Registrar un movimiento contable (Gastos personales, comida, pasajes, gustos, o ventas)
  */
 function recordTransaction(data) {
+  initDefaultAccounts();
   const config = getFinanceConfig();
   const chargedAmount = Math.max(0, parseFloat(data.chargedAmount) || 0);
   const costAmount = Math.max(0, parseFloat(data.costAmount) || 0);
-  const type = data.type || (data.orderId ? 'income_ticket' : 'income_manual');
+  const type = data.type || (data.orderId ? 'income_ticket' : (costAmount > 0 && chargedAmount === 0 ? 'expense_manual' : 'income_manual'));
   
   let grossProfit = 0;
   if (type === 'expense_manual') {
     grossProfit = -costAmount;
+  } else if (type === 'transfer') {
+    grossProfit = 0; // Traspaso entre cuentas propias
   } else {
     grossProfit = chargedAmount - costAmount;
   }
@@ -60,12 +158,13 @@ function recordTransaction(data) {
     reinvestAmount = Math.round((grossProfit * (reinvestPercent / 100)) * 100) / 100;
     netProfit = Math.round((grossProfit - reinvestAmount) * 100) / 100;
   } else {
-    // Si hubo pérdida o es gasto puro
     reinvestAmount = 0;
     netProfit = grossProfit;
   }
 
   const account = data.account ? String(data.account).trim() : 'General';
+  const destAccount = data.destAccount ? String(data.destAccount).trim() : null;
+  const category = data.category ? String(data.category).toLowerCase().trim() : 'servicios';
   const id = 'fin_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
   const createdAt = data.createdAt || new Date().toISOString();
 
@@ -73,8 +172,8 @@ function recordTransaction(data) {
     INSERT INTO FinanceLedger (
       id, type, orderId, serviceName, chargedAmount, costAmount,
       grossProfit, reinvestPercent, reinvestAmount, netProfit,
-      account, notes, recordedBy, createdAt
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      account, destAccount, category, notes, recordedBy, createdAt
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   stmt.run(
@@ -89,10 +188,26 @@ function recordTransaction(data) {
     reinvestAmount,
     netProfit,
     account,
+    destAccount,
+    category,
     data.notes || '',
     data.recordedBy || 'admin',
     createdAt
   );
+
+  // Actualizar saldo dinámico de la cuenta en FinanceAccounts si existe
+  try {
+    if (type === 'expense_manual') {
+      sqliteDb.prepare(`UPDATE FinanceAccounts SET currentBalance = currentBalance - ?, updatedAt = datetime('now') WHERE name = ? OR id = ?`).run(costAmount, account, account);
+    } else if (type === 'income_ticket' || type === 'income_manual') {
+      sqliteDb.prepare(`UPDATE FinanceAccounts SET currentBalance = currentBalance + ?, updatedAt = datetime('now') WHERE name = ? OR id = ?`).run(chargedAmount, account, account);
+    } else if (type === 'transfer' && destAccount) {
+      sqliteDb.prepare(`UPDATE FinanceAccounts SET currentBalance = currentBalance - ?, updatedAt = datetime('now') WHERE name = ? OR id = ?`).run(costAmount, account, account);
+      sqliteDb.prepare(`UPDATE FinanceAccounts SET currentBalance = currentBalance + ?, updatedAt = datetime('now') WHERE name = ? OR id = ?`).run(costAmount, destAccount, destAccount);
+    }
+  } catch (syncErr) {
+    console.warn('[BALANCE SYNC ERR]', syncErr.message);
+  }
 
   return {
     id,
@@ -106,16 +221,21 @@ function recordTransaction(data) {
     reinvestAmount,
     netProfit,
     account,
+    destAccount,
+    category,
     createdAt
   };
 }
 
 /**
- * Obtener estadísticas globales y balances por cuenta bancaria
+ * Obtener estadísticas globales, balances por cuenta bancaria y métricas personales
  */
 function getFinanceSummary(filterOptions = {}) {
+  initDefaultAccounts();
   const config = getFinanceConfig();
   const orderId = filterOptions.orderId ? String(filterOptions.orderId).trim() : null;
+  const category = filterOptions.category ? String(filterOptions.category).trim() : null;
+  const accountFilter = filterOptions.account ? String(filterOptions.account).trim() : null;
   
   // Resumen general acumulado
   const totalRow = sqliteDb.prepare(`
@@ -129,7 +249,20 @@ function getFinanceSummary(filterOptions = {}) {
     FROM FinanceLedger
   `).get();
 
-  // Resumen por cuenta bancaria
+  // Resumen de Gastos Personales por Categoría (Comida, Pasajes, Gustos, Servidores, etc.)
+  const categoryRows = sqliteDb.prepare(`
+    SELECT 
+      COALESCE(category, 'otros') as category,
+      COUNT(*) as count,
+      COALESCE(SUM(costAmount), 0) as totalExpense,
+      COALESCE(SUM(chargedAmount), 0) as totalIncome
+    FROM FinanceLedger
+    GROUP BY category
+    ORDER BY totalExpense DESC
+  `).all();
+
+  // Cuentas desde la tabla estructurada FinanceAccounts
+  const allAccounts = getAllAccounts();
   const accountRows = sqliteDb.prepare(`
     SELECT 
       account,
@@ -144,11 +277,13 @@ function getFinanceSummary(filterOptions = {}) {
     GROUP BY account
   `).all();
 
-  // Mapear cuentas asegurando que existan las configuradas (Nu, Revolut, etc.)
-  const accountMap = {};
-  config.accounts.forEach(acc => {
-    accountMap[acc] = {
-      account: acc,
+  const accountStatsMap = {};
+  accountRows.forEach(row => {
+    accountStatsMap[row.account.toLowerCase()] = row;
+  });
+
+  const enrichedAccounts = allAccounts.map(acc => {
+    const stats = accountStatsMap[acc.name.toLowerCase()] || accountStatsMap[acc.id.toLowerCase()] || {
       count: 0,
       balance: 0,
       charged: 0,
@@ -157,23 +292,41 @@ function getFinanceSummary(filterOptions = {}) {
       reinvestAmount: 0,
       netProfit: 0
     };
+    return {
+      ...acc,
+      opsCount: stats.count,
+      totalCharged: stats.charged,
+      totalCost: stats.cost,
+      totalProfit: stats.netProfit,
+      // Saldo acumulado en el ledger sumado al saldo base
+      computedBalance: parseFloat((acc.initialBalance + stats.balance).toFixed(2))
+    };
   });
 
-  accountRows.forEach(row => {
-    accountMap[row.account] = row;
-  });
+  // Movimientos recientes (con filtros flexibles)
+  let query = 'SELECT * FROM FinanceLedger WHERE 1=1';
+  const queryParams = [];
 
-  // Movimientos recientes (o filtrados por ID de orden)
-  let recent = [];
   if (orderId) {
-    recent = sqliteDb.prepare(`
-      SELECT * FROM FinanceLedger WHERE orderId = ? OR id = ? ORDER BY createdAt DESC
-    `).all(orderId, orderId);
-  } else {
-    recent = sqliteDb.prepare(`
-      SELECT * FROM FinanceLedger ORDER BY createdAt DESC LIMIT 150
-    `).all();
+    query += ' AND (orderId = ? OR id = ?)';
+    queryParams.push(orderId, orderId);
   }
+  if (category) {
+    query += ' AND category = ?';
+    queryParams.push(category);
+  }
+  if (accountFilter) {
+    query += ' AND (account = ? OR destAccount = ?)';
+    queryParams.push(accountFilter, accountFilter);
+  }
+
+  query += ' ORDER BY createdAt DESC LIMIT 150';
+  const recent = sqliteDb.prepare(query).all(...queryParams);
+
+  // Recuentos semanales recientes
+  const weeklyAudits = sqliteDb.prepare(`
+    SELECT * FROM FinanceWeeklyAudits ORDER BY weekEnd DESC LIMIT 10
+  `).all();
 
   return {
     config,
@@ -185,9 +338,66 @@ function getFinanceSummary(filterOptions = {}) {
       totalReinvest: totalRow.totalReinvest,
       totalNetProfit: totalRow.totalNetProfit
     },
-    accounts: Object.values(accountMap),
+    categories: categoryRows,
+    accounts: enrichedAccounts,
+    weeklyAudits,
     recent
   };
+}
+
+/**
+ * Realizar corte y verificación semanal de cuentas (Cierre de fin de semana)
+ */
+function performWeeklyAudit(data = {}) {
+  const now = new Date();
+  const dayOfWeek = now.getDay(); // 0 es Domingo
+  const weekEnd = data.weekEnd || now.toISOString().split('T')[0];
+  
+  // Calcular 7 días antes
+  const pastDate = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+  const weekStart = data.weekStart || pastDate.toISOString().split('T')[0];
+
+  // Totales de la semana
+  const weeklyStats = sqliteDb.prepare(`
+    SELECT 
+      COALESCE(SUM(chargedAmount), 0) as totalIncome,
+      COALESCE(SUM(costAmount), 0) as totalExpenses,
+      COALESCE(SUM(grossProfit), 0) as netSavings
+    FROM FinanceLedger
+    WHERE createdAt >= ? AND createdAt <= ?
+  `).get(weekStart + 'T00:00:00.000Z', weekEnd + 'T23:59:59.999Z');
+
+  // Snapshot de saldos actuales de cada cuenta
+  const accounts = getAllAccounts();
+  const snapshot = accounts.map(a => ({
+    id: a.id,
+    name: a.name,
+    type: a.type,
+    balance: a.currentBalance
+  }));
+
+  const id = 'audit_week_' + weekStart.replace(/-/g, '') + '_' + weekEnd.replace(/-/g, '');
+  const notes = data.notes || `Cierre semanal verificado (${weekStart} al ${weekEnd})`;
+  const totalAssets = snapshot.reduce((sum, a) => sum + (parseFloat(a.balance) || 0), 0);
+
+  sqliteDb.prepare(`
+    INSERT OR REPLACE INTO FinanceWeeklyAudits (
+      id, weekStart, weekEnd, totalIncome, totalExpenses, netSavings, accountsSnapshot, notes, verifiedBy, createdAt
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+  `).run(
+    id,
+    weekStart,
+    weekEnd,
+    weeklyStats.totalIncome,
+    weeklyStats.totalExpenses,
+    weeklyStats.netSavings,
+    JSON.stringify(snapshot),
+    notes,
+    data.verifiedBy || 'Admin'
+  );
+
+  const saved = sqliteDb.prepare('SELECT * FROM FinanceWeeklyAudits WHERE id = ?').get(id);
+  return { ...saved, totalAssets };
 }
 
 /**
@@ -232,7 +442,6 @@ function getOrderFinanceDetails(orderId) {
       totalGrossProfit,
       totalReinvest,
       totalNetProfit,
-      // Ganancia original registrada en la orden del servidor si aplica
       serverOrderProfit: orderRecord ? parseFloat(orderRecord.profit || 0) : 0,
       serverOrderCostCharged: orderRecord ? parseFloat(orderRecord.costCharged || 0) : 0,
       serverOrderRealCost: orderRecord ? parseFloat(orderRecord.realCost || 0) : 0
@@ -252,8 +461,12 @@ function deleteTransaction(id) {
 module.exports = {
   getFinanceConfig,
   updateFinanceConfig,
+  getAllAccounts,
+  saveAccount,
+  deleteAccount,
   recordTransaction,
   getFinanceSummary,
+  performWeeklyAudit,
   getOrderFinanceDetails,
   deleteTransaction
 };

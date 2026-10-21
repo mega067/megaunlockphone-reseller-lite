@@ -58,4 +58,12 @@ router.post('/admin/finance/config', requireAuth, requireAdmin, adminController.
 router.post('/admin/finance/transaction', requireAuth, requireAdmin, adminController.addFinanceTransaction);
 router.delete('/admin/finance/transaction/:id', requireAuth, requireAdmin, adminController.deleteFinanceTransaction);
 
+// Cuentas Bancarias / Tarjetas / Inversión / Emergencia
+router.get('/admin/finance/accounts', requireAuth, requireAdmin, adminController.getFinanceAccounts);
+router.post('/admin/finance/accounts', requireAuth, requireAdmin, adminController.saveFinanceAccount);
+router.delete('/admin/finance/accounts/:id', requireAuth, requireAdmin, adminController.deleteFinanceAccount);
+
+// Recuento y Verificación Semanal (Fin de semana)
+router.post('/admin/finance/weekly-audit', requireAuth, requireAdmin, adminController.performWeeklyAudit);
+
 module.exports = router;
