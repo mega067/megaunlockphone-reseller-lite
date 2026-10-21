@@ -1191,6 +1191,13 @@ function renderOrderHistory() {
           currentTicketData = item;
           ticketClientPrice.value = '';
 
+          // Actualizar Costo y Ganancia POS en tiempo real
+          const itemCost = parseFloat(item.costCharged || item.realCost || item.price || 0);
+          const costDisp = document.getElementById('ticketCostDisplay');
+          const profitDisp = document.getElementById('ticketProfitDisplay');
+          if (costDisp) costDisp.textContent = `$${itemCost.toFixed(2)}`;
+          if (profitDisp) profitDisp.textContent = `$0.00`;
+
           // Remember user's preferred template for this specific service / product
           const serviceKey = String(item.serviceId || item.serviceName || item.service || 'default').trim();
           let savedTemplates = {};
@@ -1204,6 +1211,7 @@ function renderOrderHistory() {
           }
 
           ticketModal.classList.remove('hidden');
+          if (window.lucide) window.lucide.createIcons();
         });
       }
     }
@@ -2231,6 +2239,20 @@ if (btnResetTicketConfig) {
   });
 }
 
+// Actualización en tiempo real de ganancia en el modal de ticket (POS)
+if (ticketClientPrice) {
+  ticketClientPrice.addEventListener('input', () => {
+    const charged = parseFloat(ticketClientPrice.value) || 0;
+    const itemCost = currentTicketData ? parseFloat(currentTicketData.costCharged || currentTicketData.realCost || currentTicketData.price || 0) : 0;
+    const profit = charged - itemCost;
+    const profitDisp = document.getElementById('ticketProfitDisplay');
+    if (profitDisp) {
+      profitDisp.textContent = `${profit >= 0 ? '+' : ''}$${profit.toFixed(2)}`;
+      profitDisp.style.color = profit >= 0 ? '#34d399' : '#ef4444';
+    }
+  });
+}
+
 btnGenerateTicketFinal.addEventListener('click', async () => {
   if (!currentTicketData) return;
   
@@ -2535,6 +2557,38 @@ btnGenerateTicketFinal.addEventListener('click', async () => {
       
       btnGenerateTicketFinal.innerHTML = '<i data-lucide="check"></i><span>¡Copiado!</span>';
       lucide.createIcons();
+
+      // Registro automático en el Gestor de Finanzas / Punto de Venta (POS)
+      const registerCheck = document.getElementById('ticketRegisterFinanceCheck');
+      const accountSelect = document.getElementById('ticketPaymentAccount');
+      const chargedVal = parseFloat(ticketClientPrice.value) || 0;
+      
+      if (registerCheck && registerCheck.checked && chargedVal > 0 && currentTicketData && authToken) {
+        const itemCost = parseFloat(currentTicketData.costCharged || currentTicketData.realCost || currentTicketData.price || 0);
+        const selectedAcc = accountSelect ? accountSelect.value : 'General';
+        
+        fetch('/api/admin/finance/transaction', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`,
+            'X-Server-Id': currentServerId
+          },
+          body: JSON.stringify({
+            type: 'income_ticket',
+            orderId: currentTicketData.orderId,
+            serviceName: currentTicketData.serviceName,
+            chargedAmount: chargedVal,
+            costAmount: itemCost,
+            account: selectedAcc,
+            notes: `Ticket Web #${currentTicketData.orderId} (${selectedAcc})`
+          })
+        }).then(res => res.json()).then(resp => {
+          if (resp && resp.success && typeof loadFinanceDashboard === 'function') {
+            loadFinanceDashboard();
+          }
+        }).catch(err => console.warn('[AUTO FINANCE RECORD ERR]', err));
+      }
       
       setTimeout(() => {
          btnGenerateTicketFinal.removeAttribute('disabled');

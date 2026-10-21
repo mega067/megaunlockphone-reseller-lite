@@ -1806,12 +1806,41 @@
             </select>
           </div>
         </div>
-        <div class="input-group">
-          <label>Precio a cobrar al cliente (Opcional)</label>
-          <div class="input-wrapper">
-            <i data-lucide="dollar-sign"></i>
-            <input type="number" id="ticketClientPrice" class="custom-field-input" placeholder="Ej. 150">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="input-group">
+            <label>Precio Cobrado al Cliente ($ MXN)</label>
+            <div class="input-wrapper">
+              <i data-lucide="dollar-sign"></i>
+              <input type="number" id="ticketClientPrice" class="custom-field-input" placeholder="Ej. 250">
+            </div>
           </div>
+          <div class="input-group">
+            <label>Cuenta / Billetera de Cobro</label>
+            <div class="input-wrapper">
+              <i data-lucide="credit-card"></i>
+              <select id="ticketPaymentAccount" class="custom-field-input" style="width: 100%; padding-left: 2.2rem;">
+                <option value="Nu">Nu (Tarjeta / SPEI)</option>
+                <option value="Revolut">Revolut</option>
+                <option value="Mercado Pago">Mercado Pago</option>
+                <option value="BBVA">BBVA</option>
+                <option value="Efectivo">Efectivo / Caja</option>
+                <option value="General">Cuenta General</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Vista previa de margen POS en tiempo real -->
+        <div id="ticketPosProfitBox" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px; padding: 10px 14px; margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+          <div style="font-size: 0.8rem; color: #cbd5e1;">
+            <span>Costo Servidor: <strong id="ticketCostDisplay" style="color: #f87171;">$0.00</strong></span>
+            <span style="margin: 0 8px; opacity: 0.4;">|</span>
+            <span>Ganancia Estimada: <strong id="ticketProfitDisplay" style="color: #34d399;">$0.00</strong></span>
+          </div>
+          <label style="font-size: 0.78rem; color: #94a3b8; display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0;">
+            <input type="checkbox" id="ticketRegisterFinanceCheck" checked style="accent-color: #10b981;">
+            Registrar en Gestor POS
+          </label>
         </div>
         
         <div id="ticketPreviewContainer" class="hidden" style="text-align: center; margin-top: 1.5rem; margin-bottom: 1rem; background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; border: 1px dashed var(--border-color);">

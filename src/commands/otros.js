@@ -221,10 +221,10 @@ async function otros(context) {
                 await sock.sendMessage(remoteJid, { text: receipt });
             }
             
-            // Si quien genera el ticket es el Administrador y colocó un precio cobrado al cliente,
-            // permitimos asignar a qué cuenta bancaria ingresó el pago (Nu, Revolut, BBVA, etc.)
-            // para alimentar automáticamente el Control de Finanzas, Reinversión y Ganancias.
-            if (ticketUser && ticketUser.role === 'admin' && clientPrice > 0) {
+            // Control de Ganancias y Punto de Venta (POS):
+            // Al ingresar el monto cobrado al cliente, se consulta la cuenta de ingreso
+            // y se calcula la ganancia bruta, costo y reinversión para el gestor financiero.
+            if (clientPrice > 0) {
                 session.clientPrice = clientPrice;
                 session.step = 'ask_finance_account';
 
