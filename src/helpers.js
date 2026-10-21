@@ -268,6 +268,36 @@ function logRecharge(userId, username, amount, type = 'MANUAL_ADMIN', adminUsern
     createAutoBackup(numAmount > 0 ? 'Recarga_Saldo_User_' + userId : 'Deduccion_Saldo_User_' + userId);
   } catch(e) {}
 
+  // Sincronizar automáticamente con el Módulo de Finanzas Personales si es un ingreso
+  if (numAmount > 0) {
+    try {
+      const financeManager = require('./financeManager');
+      let targetAccountName = 'Nu Crédito / Débito';
+      const rBank = (extra.receiverBankName || '').toUpperCase();
+      if (rBank.includes('REVOLUT') || rBank.includes('STP')) {
+        targetAccountName = 'Revolut';
+      } else if (rBank.includes('BBVA')) {
+        targetAccountName = 'BBVA';
+      } else if (rBank.includes('MERCADO')) {
+        targetAccountName = 'Mercado Pago';
+      } else if (rBank.includes('EFECTIVO')) {
+        targetAccountName = 'Efectivo / Caja';
+      }
+
+      financeManager.recordTransaction({
+        type: 'income_ticket',
+        serviceName: `Recarga Saldo S${serverId} (${username || userId})`,
+        chargedAmount: numAmount,
+        costAmount: 0,
+        account: targetAccountName,
+        category: 'servidores',
+        notes: `Depósito cliente ${extra.trackingNumber ? 'Rastreo: ' + extra.trackingNumber : 'Ajuste Admin'}`
+      });
+    } catch(finErr) {
+      console.warn('[FINANCE RECHARGE SYNC ERR]', finErr.message);
+    }
+  }
+
   return entry;
 }
 

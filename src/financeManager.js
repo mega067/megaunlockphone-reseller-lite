@@ -197,14 +197,38 @@ function recordTransaction(data) {
 
   // Actualizar saldo dinámico de la cuenta en FinanceAccounts si existe
   try {
+    const findAcc = (accName) => {
+      if (!accName) return null;
+      return sqliteDb.prepare(`
+        SELECT id FROM FinanceAccounts 
+        WHERE id = ? OR name = ? OR name LIKE ? OR ? LIKE ('%' || name || '%')
+        LIMIT 1
+      `).get(accName, accName, `%${accName}%`, accName);
+    };
+
+    const targetOrigin = findAcc(account);
+    const targetDest = destAccount ? findAcc(destAccount) : null;
+
     if (type === 'expense_manual') {
-      sqliteDb.prepare(`UPDATE FinanceAccounts SET currentBalance = currentBalance - ?, updatedAt = datetime('now') WHERE name = ? OR id = ?`).run(costAmount, account, account);
+      if (targetOrigin) {
+        sqliteDb.prepare(`UPDATE FinanceAccounts SET currentBalance = currentBalance - ?, updatedAt = datetime('now') WHERE id = ?`).run(costAmount, targetOrigin.id);
+      }
     } else if (type === 'income_ticket' || type === 'income_manual') {
-      sqliteDb.prepare(`UPDATE FinanceAccounts SET currentBalance = currentBalance + ?, updatedAt = datetime('now') WHERE name = ? OR id = ?`).run(chargedAmount, account, account);
-    } else if (type === 'transfer' && destAccount) {
-      sqliteDb.prepare(`UPDATE FinanceAccounts SET currentBalance = currentBalance - ?, updatedAt = datetime('now') WHERE name = ? OR id = ?`).run(costAmount, account, account);
-      sqliteDb.prepare(`UPDATE FinanceAccounts SET currentBalance = currentBalance + ?, updatedAt = datetime('now') WHERE name = ? OR id = ?`).run(costAmount, destAccount, destAccount);
+      if (targetOrigin) {
+        sqliteDb.prepare(`UPDATE FinanceAccounts SET currentBalance = currentBalance + ?, updatedAt = datetime('now') WHERE id = ?`).run(chargedAmount, targetOrigin.id);
+      }
+    } else if (type === 'transfer' && targetDest) {
+      if (targetOrigin) {
+        sqliteDb.prepare(`UPDATE FinanceAccounts SET currentBalance = currentBalance - ?, updatedAt = datetime('now') WHERE id = ?`).run(costAmount, targetOrigin.id);
+      }
+      sqliteDb.prepare(`UPDATE FinanceAccounts SET currentBalance = currentBalance + ?, updatedAt = datetime('now') WHERE id = ?`).run(costAmount, targetDest.id);
     }
+
+    // Respaldar automáticamente ante movimientos financieros
+    try {
+      const { createAutoBackup } = require('./backupEngine');
+      createAutoBackup(`Movimiento_Financiero_${type}_${category}`);
+    } catch(bErr) {}
   } catch (syncErr) {
     console.warn('[BALANCE SYNC ERR]', syncErr.message);
   }
@@ -397,6 +421,13 @@ function performWeeklyAudit(data = {}) {
   );
 
   const saved = sqliteDb.prepare('SELECT * FROM FinanceWeeklyAudits WHERE id = ?').get(id);
+
+  // Generar respaldo inmutable automático de finanzas y sincronizar a Google Drive
+  try {
+    const { createAutoBackup } = require('./backupEngine');
+    createAutoBackup(`Cierre_Semanal_${weekStart}_${weekEnd}`);
+  } catch(bErr) {}
+
   return { ...saved, totalAssets };
 }
 

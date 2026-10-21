@@ -249,22 +249,15 @@ module.exports = function(app, deps) {
       });
       writeDB('history.json', history);
       
-      const recharges = readDB('recharges.json') || [];
-      recharges.unshift({
-        id: "rec_" + Date.now(),
-        date: new Date().toISOString(),
-        userId: userId,
-        username: users[userIndex].username,
-        amount: requestedAmount,
-        serverId: serverIdToCredit,
-        type: 'SPEI',
-        trackingNumber: trackingNumber,
-        senderBankCode: bankCode,
-        senderBankName: senderBankName,
-        receiverBankName: receiverBankName,
-        processedBy: 'system'
-      });
-      writeDB('recharges.json', recharges);
+      const { logRecharge } = require('./helpers');
+      if (typeof logRecharge === 'function') {
+        logRecharge(userId, users[userIndex].username, requestedAmount, 'SPEI', 'System (Banxico)', serverIdToCredit, {
+          trackingNumber,
+          senderBankName,
+          receiverBankName,
+          note: `Recarga SPEI verificada en ${receiverBankName || 'NU/STP'}`
+        });
+      }
 
       try {
         const wsettings = readDB('whatsapp_settings.json') || {};

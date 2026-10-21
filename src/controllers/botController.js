@@ -551,8 +551,13 @@ exports.addMoney = async (req, res) => {
     enqueueWhatsApp('private', msgToReseller, users[resellerIdx].id);
     enqueueWhatsApp('group', groupMsg);
 
+    const adminDirectNotice = `💰 *Notificación de Recarga*\n\nSe ha ${numAmount > 0 ? 'acreditado' : 'retirado'} *$${Math.abs(numAmount).toFixed(2)} MXN* al revendedor *${users[resellerIdx].username || users[resellerIdx].id}* en ${getServerDisplayName(serverId)}.\nNuevo saldo: $${users[resellerIdx][creditKey].toFixed(2)} MXN.\nOperado por: @${adminUser.username}`;
+    enqueueWhatsAppAdmin(adminDirectNotice);
+
     if (numAmount > 0 && typeof logRecharge === 'function') {
-      logRecharge(users[resellerIdx].id, users[resellerIdx].username, numAmount, 'MANUAL_BOT', adminUser.username, serverId);
+      logRecharge(users[resellerIdx].id, users[resellerIdx].username, numAmount, 'MANUAL_BOT', adminUser.username, serverId, {
+        note: `Recarga por comando bot ejecutada por ${adminUser.username}`
+      });
     }
 
     res.json({ success: true, newBalance: users[resellerIdx][creditKey], resellerName: users[resellerIdx].username });
