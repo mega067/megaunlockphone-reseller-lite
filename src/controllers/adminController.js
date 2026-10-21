@@ -480,6 +480,8 @@ exports.getGDriveConfig = (req, res) => {
         clientEmail: config.clientEmail || '',
         hasPrivateKey: Boolean(config.privateKey),
         keepCopies: parseInt(config.keepCopies, 10) || 7,
+        syncOnEvent: Boolean(config.syncOnEvent),
+        keepLocalCopies: parseInt(config.keepLocalCopies, 10) || 3,
         updatedAt: config.updatedAt || null
       },
       template
@@ -491,7 +493,7 @@ exports.getGDriveConfig = (req, res) => {
 
 exports.updateGDriveConfig = (req, res) => {
   try {
-    const { enabled, folderId, appScriptUrl, clientEmail, privateKey, keepCopies } = req.body;
+    const { enabled, folderId, appScriptUrl, clientEmail, privateKey, keepCopies, syncOnEvent, keepLocalCopies } = req.body;
     const current = gdriveSync.getGDriveConfig();
     
     const updated = gdriveSync.saveGDriveConfig({
@@ -500,10 +502,12 @@ exports.updateGDriveConfig = (req, res) => {
       appScriptUrl: appScriptUrl !== undefined ? String(appScriptUrl).trim() : current.appScriptUrl,
       clientEmail: clientEmail !== undefined ? String(clientEmail).trim() : current.clientEmail,
       privateKey: (privateKey && String(privateKey).trim()) ? String(privateKey).trim() : current.privateKey,
-      keepCopies: parseInt(keepCopies, 10) || 7
+      keepCopies: parseInt(keepCopies, 10) || 7,
+      syncOnEvent: Boolean(syncOnEvent),
+      keepLocalCopies: keepLocalCopies !== undefined ? Math.max(1, parseInt(keepLocalCopies, 10) || 3) : (current.keepLocalCopies || 3)
     });
 
-    res.json({ success: true, message: 'Configuración de Google Drive guardada con éxito.', config: updated });
+    res.json({ success: true, message: 'Configuración de Google Drive y respaldos guardada con éxito.', config: updated });
   } catch (err) {
     res.status(500).json({ error: 'Error al actualizar Google Drive: ' + err.message });
   }
@@ -520,7 +524,7 @@ exports.testGDriveSync = async (req, res) => {
       target = { path: newB.filepath };
     }
 
-    const syncResult = await gdriveSync.syncBackupToGoogleDrive(target.path);
+    const syncResult = await gdriveSync.syncBackupToGoogleDrive(target.path, true);
     if (!syncResult.success) {
       return res.status(400).json({ success: false, error: syncResult.error || syncResult.reason });
     }
@@ -801,5 +805,47 @@ exports.notifyUnlinkedBot = (req, res) => {
     count: queuedCount,
     message: `Se enviaron ${queuedCount} mensajes de presentación y vinculación automática.`
   });
+};
+
+// --- GESTIÓN FINANCIERA Y CONTROL DE GANANCIAS ---
+const financeManager = require('../financeManager');
+
+exports.getFinanceSummary = (req, res) => {
+  try {
+    const data = financeManager.getFinanceSummary();
+    res.json({ success: true, ...data });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+};
+
+exports.updateFinanceConfig = (req, res) => {
+  try {
+    const updated = financeManager.updateFinanceConfig(req.body);
+    res.json({ success: true, config: updated });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+};
+
+exports.addFinanceTransaction = (req, res) => {
+  try {
+    const entry = financeManager.recordTransaction({
+      ...req.body,
+      recordedBy: req.user?.username || 'admin'
+    });
+    res.json({ success: true, transaction: entry });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+};
+
+exports.deleteFinanceTransaction = (req, res) => {
+  try {
+    const success = financeManager.deleteTransaction(req.params.id);
+    res.json({ success });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
 };
 

@@ -221,6 +221,84 @@ async function otros(context) {
                 await sock.sendMessage(remoteJid, { text: receipt });
             }
             
+            // Si quien genera el ticket es el Administrador y colocó un precio cobrado al cliente,
+            // permitimos asignar a qué cuenta bancaria ingresó el pago (Nu, Revolut, BBVA, etc.)
+            // para alimentar automáticamente el Control de Finanzas, Reinversión y Ganancias.
+            if (ticketUser && ticketUser.role === 'admin' && clientPrice > 0) {
+                session.clientPrice = clientPrice;
+                session.step = 'ask_finance_account';
+
+                const financeManager = require('../financeManager');
+                const finCfg = financeManager.getFinanceConfig();
+                const accounts = finCfg.accounts || ['Nu', 'Revolut', 'Mercado Pago', 'BBVA', 'Efectivo'];
+
+                try {
+                    await sock.sendMessage(remoteJid, {
+                        poll: {
+                            name: `💳 ¿A qué cuenta ingresaron los $${clientPrice.toFixed(2)}?`,
+                            values: accounts.slice(0, 5).map(a => `🏦 ${a}`),
+                            selectableCount: 1
+                        }
+                    });
+                } catch (pollErr) {
+                    let accText = `💳 *Control Financiero Admin*\n━━━━━━━━━━━━━━━━━━━━━━\n¿A qué cuenta ingresaron los *$${clientPrice.toFixed(2)}* cobrados al cliente?\n\n`;
+                    accounts.forEach((acc, idx) => {
+                        accText += `${idx + 1}️⃣ ${acc}\n`;
+                    });
+                    accText += `\n_Responde con el número o nombre de la cuenta (ej. Nu, Revolut) o escribe "omitir":_`;
+                    await sock.sendMessage(remoteJid, { text: accText });
+                }
+                return true;
+            }
+
+            delete context.sessionManager.ticketSessions[remoteJid];
+            return true;
+        } else if (session.step === 'ask_finance_account') {
+            const financeManager = require('../financeManager');
+            const finCfg = financeManager.getFinanceConfig();
+            const accounts = finCfg.accounts || ['Nu', 'Revolut', 'Mercado Pago', 'BBVA', 'Efectivo'];
+
+            const inputVal = text.trim();
+            let selectedAccount = 'General';
+
+            if (inputVal.toLowerCase() !== 'omitir' && inputVal.toLowerCase() !== 'no') {
+                const optNum = parseInt(inputVal);
+                if (!isNaN(optNum) && optNum >= 1 && optNum <= accounts.length) {
+                    selectedAccount = accounts[optNum - 1];
+                } else {
+                    const clean = inputVal.replace(/^🏦\s*/, '').trim();
+                    const match = accounts.find(a => a.toLowerCase() === clean.toLowerCase() || clean.toLowerCase().includes(a.toLowerCase()));
+                    selectedAccount = match || (clean.length > 0 ? clean : 'General');
+                }
+
+                const o = session.order;
+                const costAmount = parseFloat(o.costCharged || o.realCost || o.price || 0);
+                const chargedAmount = session.clientPrice || 0;
+
+                const recorded = financeManager.recordTransaction({
+                    type: 'income_ticket',
+                    orderId: o.orderId,
+                    serviceName: o.serviceName,
+                    chargedAmount: chargedAmount,
+                    costAmount: costAmount,
+                    account: selectedAccount,
+                    notes: `Ticket #${o.orderId} - ${o.serviceName}`
+                });
+
+                let finMsg = `📊 *Registro Contable Guardado* 📊\n` +
+                             `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                             `🏦 *Cuenta de Destino:* ${selectedAccount}\n` +
+                             `💲 *Cobrado al Cliente:* $${chargedAmount.toFixed(2)} MXN\n` +
+                             `📉 *Costo del Servidor:* $${costAmount.toFixed(2)} MXN\n` +
+                             `💰 *Ganancia Bruta:* $${recorded.grossProfit.toFixed(2)} MXN\n` +
+                             `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                             `🔄 *Fondo de Reinversión (${recorded.reinvestPercent}%):* $${recorded.reinvestAmount.toFixed(2)} MXN\n` +
+                             `💵 *Tu Ganancia Real (Bolsillo):* $${recorded.netProfit.toFixed(2)} MXN\n` +
+                             `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                             `_¡Registrado exitosamente en tu Panel de Finanzas!_ 🚀`;
+                await sock.sendMessage(remoteJid, { text: finMsg });
+            }
+
             delete context.sessionManager.ticketSessions[remoteJid];
             return true;
         }

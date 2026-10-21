@@ -2,7 +2,11 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <link rel="icon" type="image/png" href="/digitalpass/logo.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=3">
+  <link rel="icon" type="image/png" sizes="64x64" href="/favicon-64.png?v=3">
+  <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png?v=3">
+  <link rel="icon" type="image/png" href="/favicon.png?v=3">
+  <link rel="apple-touch-icon" href="/favicon.png?v=3">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DigitalPass - Software, Licencias y Herramientas Digitales</title>
   <!-- Google Fonts: Inter & Outfit -->
@@ -513,6 +517,9 @@
             <button class="btn btn-secondary btn-small" id="btnAdminTabGroups">
               <i data-lucide="layers"></i> Precios por Grupo
             </button>
+            <button class="btn btn-secondary btn-small" id="btnAdminTabFinance" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.4); color: #34d399;">
+              <i data-lucide="wallet"></i> Finanzas & Ganancias
+            </button>
           </div>
         </div>
 
@@ -809,6 +816,8 @@
               <div id="autobackupList" style="display: flex; flex-direction: column; gap: 8px; max-height: 280px; overflow-y: auto;">
                 <p style="font-size: 0.85rem; color: var(--text-secondary);">Cargando respaldos automáticos...</p>
               </div>
+            </div>
+
             <!-- Google Drive Cloud Sync -->
             <div style="background: rgba(234, 179, 8, 0.05); border: 1px solid rgba(234, 179, 8, 0.25); border-radius: 8px; padding: 16px; grid-column: 1 / -1;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
@@ -827,13 +836,25 @@
               <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 15px;">Sube automáticamente las copias diarias de 24h a tu Google Drive y elimina las anteriores para no saturar tu nube (rotación programada).</p>
               
               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-bottom: 12px;">
-                <div style="display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px;">
-                  <input type="checkbox" id="gdriveEnabled" style="width: 18px; height: 18px; accent-color: #facc15; cursor: pointer;">
-                  <label for="gdriveEnabled" style="font-size: 0.9rem; color: #f1f5f9; cursor: pointer; user-select: none; margin: 0;">Activar subida automática a Google Drive</label>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                  <div style="display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px;">
+                    <input type="checkbox" id="gdriveEnabled" style="width: 18px; height: 18px; accent-color: #facc15; cursor: pointer;">
+                    <label for="gdriveEnabled" style="font-size: 0.9rem; color: #f1f5f9; cursor: pointer; user-select: none; margin: 0;">Activar subida automática a Google Drive</label>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px;">
+                    <input type="checkbox" id="gdriveSyncOnEvent" style="width: 18px; height: 18px; accent-color: #38bdf8; cursor: pointer;">
+                    <label for="gdriveSyncOnEvent" style="font-size: 0.85rem; color: #38bdf8; cursor: pointer; user-select: none; margin: 0;">Subir a Drive en CADA PEDIDO o movimiento de saldo</label>
+                  </div>
                 </div>
-                <div>
-                  <label style="font-size: 0.8rem; color: #cbd5e1; display: block; margin-bottom: 4px;">Copias máximas a conservar en Drive (auto-elimina las viejas):</label>
-                  <input type="number" id="gdriveKeepCopies" placeholder="7" min="1" max="100" class="form-control" style="width: 100%; padding: 8px; font-size: 0.9rem;">
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                  <div>
+                    <label style="font-size: 0.8rem; color: #cbd5e1; display: block; margin-bottom: 4px;">Copias en Google Drive a conservar (auto-elimina las viejas):</label>
+                    <input type="number" id="gdriveKeepCopies" placeholder="7" min="1" max="100" class="form-control" style="width: 100%; padding: 8px; font-size: 0.9rem;">
+                  </div>
+                  <div>
+                    <label style="font-size: 0.8rem; color: #cbd5e1; display: block; margin-bottom: 4px;">Copias en Servidor Web a conservar (por evento/pedido):</label>
+                    <input type="number" id="gdriveKeepLocalCopies" placeholder="3" min="1" max="50" class="form-control" style="width: 100%; padding: 8px; font-size: 0.9rem;">
+                  </div>
                 </div>
               </div>
 
@@ -877,6 +898,200 @@
             
             <div id="groupMarkupsContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px;">
               <div style="text-align: center; color: #6b7280; padding: 20px; grid-column: 1 / -1;">Cargando grupos...</div>
+            </div>
+          <!-- TAB: FINANZAS Y GANANCIAS -->
+          <div id="adminTabFinanceContent" class="hidden">
+            <!-- Header con Acciones y Resumen -->
+            <div style="display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(6, 78, 59, 0.3)); border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; border: 1px solid rgba(16, 185, 129, 0.3); flex-wrap: wrap; gap: 15px;">
+              <div>
+                <h3 style="margin: 0; font-size: 1.25rem; font-weight: 800; color: #34d399; display: flex; align-items: center; gap: 8px;">
+                  <i data-lucide="line-chart" style="width: 22px; height: 22px;"></i> Gestor de Finanzas, Gastos & Ganancias
+                </h3>
+                <span style="font-size: 0.85rem; color: #cbd5e1;">Control de cobros al cliente, costo neto de servidores, distribución de reinversión y saldo por banco (Nu, Revolut, etc.)</span>
+              </div>
+              <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button type="button" class="btn btn-secondary btn-small" id="btnToggleFinanceConfig" style="background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.2); color: #f1f5f9;">
+                  <i data-lucide="sliders"></i> Configurar Reinversión & Cuentas
+                </button>
+                <button type="button" class="btn btn-primary btn-small" id="btnToggleAddManualExpense" style="background: linear-gradient(135deg, #059669, #10b981); border: none; color: white;">
+                  <i data-lucide="plus-circle"></i> Nuevo Ingreso / Gasto
+                </button>
+                <button type="button" class="btn btn-secondary btn-small" id="btnReloadFinance" title="Recargar datos" style="padding: 6px 10px;">
+                  <i data-lucide="refresh-cw" style="width: 14px; height: 14px;"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Panel de Configuración de Finanzas (Oculto por defecto) -->
+            <div id="financeConfigContainer" class="hidden" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(52, 211, 153, 0.3); border-radius: 10px; padding: 18px; margin-bottom: 24px; backdrop-filter: blur(10px);">
+              <h4 style="margin: 0 0 14px 0; color: #34d399; font-size: 1rem; display: flex; align-items: center; gap: 6px;">
+                <i data-lucide="settings"></i> Parámetros de Reinversión y Cuentas Bancarias
+              </h4>
+              <form id="formFinanceConfig" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;">
+                <div>
+                  <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #cbd5e1; margin-bottom: 6px;">
+                    % de Ganancia a Reinvertir en Servidores
+                  </label>
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <input type="range" id="inputFinanceReinvestPercent" min="0" max="100" step="5" value="50" style="flex: 1; accent-color: #10b981;">
+                    <span id="labelFinanceReinvestPercent" style="font-size: 1rem; font-weight: 800; color: #34d399; min-width: 50px;">50%</span>
+                  </div>
+                  <span style="font-size: 0.72rem; color: #94a3b8;">Por cada $100 de ganancia neta generada, <b id="previewReinvestSplit">$50 irán a fondo de saldo</b> y <b id="previewProfitSplit">$50 a tu bolsillo</b>.</span>
+                </div>
+                <div>
+                  <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #cbd5e1; margin-bottom: 6px;">
+                    Cuentas / Billeteras Permitidas (Separadas por comas)
+                  </label>
+                  <input type="text" id="inputFinanceAccounts" class="form-control" value="Nu, Revolut, Mercado Pago, BBVA, Efectivo" style="width: 100%; padding: 8px 12px; font-size: 0.85rem;">
+                  <span style="font-size: 0.72rem; color: #94a3b8;">Ejemplo: Nu, Revolut, BBVA, Mercado Pago, Efectivo</span>
+                </div>
+                <div style="display: flex; align-items: flex-end; gap: 10px;">
+                  <button type="submit" class="btn btn-primary" style="flex: 1; padding: 8px 14px; font-size: 0.85rem; background: #10b981; border: none;">
+                    <i data-lucide="check"></i> Guardar Configuración
+                  </button>
+                  <button type="button" class="btn btn-secondary" id="btnCancelFinanceConfig" style="padding: 8px 14px; font-size: 0.85rem;">
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Formulario de Movimiento Manual (Oculto por defecto) -->
+            <div id="financeManualEntryContainer" class="hidden" style="background: rgba(30, 41, 59, 0.85); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 10px; padding: 18px; margin-bottom: 24px;">
+              <h4 style="margin: 0 0 14px 0; color: #38bdf8; font-size: 1rem; display: flex; align-items: center; gap: 6px;">
+                <i data-lucide="plus-circle"></i> Registrar Ingreso Extra o Gasto Operativo
+              </h4>
+              <form id="formManualTransaction" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+                <div>
+                  <label style="font-size: 0.78rem; color: #cbd5e1; display: block; margin-bottom: 4px;">Tipo de Operación</label>
+                  <select id="manualEntryType" class="form-control" style="width: 100%; padding: 7px 10px; font-size: 0.82rem;">
+                    <option value="income_manual">🟢 Ingreso Directo / Venta Externa</option>
+                    <option value="expense_manual">🔴 Gasto Operativo / Retiro / Pago Servidor</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size: 0.78rem; color: #cbd5e1; display: block; margin-bottom: 4px;">Concepto / Servicio</label>
+                  <input type="text" id="manualEntryService" required placeholder="Ej: Venta FRP directa o Pago VPS" class="form-control" style="width: 100%; padding: 7px 10px; font-size: 0.82rem;">
+                </div>
+                <div>
+                  <label style="font-size: 0.78rem; color: #cbd5e1; display: block; margin-bottom: 4px;">Monto Cobrado / Ingreso ($ MXN)</label>
+                  <input type="number" step="0.01" min="0" id="manualEntryCharged" value="0.00" class="form-control" style="width: 100%; padding: 7px 10px; font-size: 0.82rem;">
+                </div>
+                <div>
+                  <label style="font-size: 0.78rem; color: #cbd5e1; display: block; margin-bottom: 4px;">Costo Servidor / Gasto ($ MXN)</label>
+                  <input type="number" step="0.01" min="0" id="manualEntryCost" value="0.00" class="form-control" style="width: 100%; padding: 7px 10px; font-size: 0.82rem;">
+                </div>
+                <div>
+                  <label style="font-size: 0.78rem; color: #cbd5e1; display: block; margin-bottom: 4px;">Cuenta / Billetera Destino</label>
+                  <select id="manualEntryAccount" class="form-control" style="width: 100%; padding: 7px 10px; font-size: 0.82rem;">
+                    <!-- Se poblará dinámicamente con las cuentas del admin -->
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size: 0.78rem; color: #cbd5e1; display: block; margin-bottom: 4px;">ID de Orden / Referencia (Opcional)</label>
+                  <input type="text" id="manualEntryOrderId" placeholder="Ej: #98765" class="form-control" style="width: 100%; padding: 7px 10px; font-size: 0.82rem;">
+                </div>
+                <div style="grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px;">
+                  <button type="button" class="btn btn-secondary" id="btnCancelManualEntry" style="padding: 7px 16px; font-size: 0.82rem;">Cancelar</button>
+                  <button type="submit" class="btn btn-primary" style="padding: 7px 20px; font-size: 0.82rem; background: #0284c7; border: none;">Guardar Operación</button>
+                </div>
+              </form>
+            </div>
+
+            <!-- KPIs Globales de Finanzas -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-bottom: 24px;">
+              <!-- Tarjeta 1: Total Cobrado -->
+              <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 16px; position: relative; overflow: hidden;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <span style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.5px;">Total Cobrado (Clientes)</span>
+                  <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(56, 189, 248, 0.15); display: flex; align-items: center; justify-content: center; color: #38bdf8;">
+                    <i data-lucide="badge-dollar-sign" style="width: 18px; height: 18px;"></i>
+                  </div>
+                </div>
+                <div id="finKpiTotalCharged" style="font-size: 1.65rem; font-weight: 800; color: #f8fafc; font-family: 'Fira Code', monospace;">$0.00</div>
+                <div style="font-size: 0.72rem; color: #64748b; margin-top: 4px;">Ingresos brutos percibidos</div>
+              </div>
+
+              <!-- Tarjeta 2: Costo de Proveedores / Servidores -->
+              <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 16px; position: relative; overflow: hidden;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <span style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.5px;">Costo Servidores</span>
+                  <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(239, 68, 68, 0.15); display: flex; align-items: center; justify-content: center; color: #f87171;">
+                    <i data-lucide="server" style="width: 18px; height: 18px;"></i>
+                  </div>
+                </div>
+                <div id="finKpiTotalCost" style="font-size: 1.65rem; font-weight: 800; color: #fca5a5; font-family: 'Fira Code', monospace;">$0.00</div>
+                <div style="font-size: 0.72rem; color: #64748b; margin-top: 4px;">Gastos netos deducidos</div>
+              </div>
+
+              <!-- Tarjeta 3: Fondo de Reinversión -->
+              <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 12px; padding: 16px; position: relative; overflow: hidden;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <span style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; color: #60a5fa; letter-spacing: 0.5px;">Fondo de Reinversión</span>
+                  <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(59, 130, 246, 0.15); display: flex; align-items: center; justify-content: center; color: #60a5fa;">
+                    <i data-lucide="refresh-ccw" style="width: 18px; height: 18px;"></i>
+                  </div>
+                </div>
+                <div id="finKpiTotalReinvest" style="font-size: 1.65rem; font-weight: 800; color: #93c5fd; font-family: 'Fira Code', monospace;">$0.00</div>
+                <div id="finKpiReinvestPercentBadge" style="font-size: 0.72rem; color: #3b82f6; font-weight: 700; margin-top: 4px;">Cuota fijada: 50%</div>
+              </div>
+
+              <!-- Tarjeta 4: Ganancia Real de Bolsillo -->
+              <div style="background: linear-gradient(135deg, rgba(6, 78, 59, 0.4), rgba(16, 185, 129, 0.15)); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 12px; padding: 16px; position: relative; overflow: hidden;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <span style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; color: #34d399; letter-spacing: 0.5px;">Tu Ganancia Real (Neta)</span>
+                  <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(16, 185, 129, 0.25); display: flex; align-items: center; justify-content: center; color: #34d399;">
+                    <i data-lucide="wallet" style="width: 18px; height: 18px;"></i>
+                  </div>
+                </div>
+                <div id="finKpiNetProfit" style="font-size: 1.75rem; font-weight: 900; color: #10b981; font-family: 'Fira Code', monospace;">$0.00</div>
+                <div style="font-size: 0.72rem; color: #a7f3d0; margin-top: 4px;">Dinero libre para ti</div>
+              </div>
+            </div>
+
+            <!-- Balances por Cuenta Bancaria (Nu, Revolut, etc.) -->
+            <div style="margin-bottom: 24px;">
+              <h4 style="margin: 0 0 12px 0; font-size: 0.95rem; font-weight: 800; color: #e2e8f0; display: flex; align-items: center; gap: 8px;">
+                <i data-lucide="landmark" style="color: #a855f7; width: 18px; height: 18px;"></i> Saldo Acumulado por Cuenta & Billetera
+              </h4>
+              <div id="financeAccountsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px;">
+                <!-- Se poblará vía JS -->
+              </div>
+            </div>
+
+            <!-- Tabla de Libro Contable Detallado -->
+            <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; overflow: hidden;">
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: rgba(0, 0, 0, 0.25); border-bottom: 1px solid rgba(255, 255, 255, 0.06); flex-wrap: wrap; gap: 10px;">
+                <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #f1f5f9; display: flex; align-items: center; gap: 8px;">
+                  <i data-lucide="history" style="width: 16px; height: 16px; color: #38bdf8;"></i> Registro de Movimientos Contables
+                </h4>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                  <input type="text" id="financeSearchInput" placeholder="Filtrar por orden, servicio o cuenta..." class="form-control" style="padding: 5px 10px; font-size: 0.8rem; width: 240px;">
+                </div>
+              </div>
+
+              <div class="table-responsive" style="max-height: 480px; overflow-y: auto;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.82rem;">
+                  <thead>
+                    <tr style="background: rgba(30, 41, 59, 0.6); color: #94a3b8; border-bottom: 1px solid rgba(255, 255, 255, 0.08); position: sticky; top: 0; z-index: 2;">
+                      <th style="padding: 10px 14px;">Fecha</th>
+                      <th style="padding: 10px 14px;">Tipo / Orden</th>
+                      <th style="padding: 10px 14px;">Servicio / Detalle</th>
+                      <th style="padding: 10px 14px;">Cuenta</th>
+                      <th style="padding: 10px 14px; text-align: right;">Cobrado</th>
+                      <th style="padding: 10px 14px; text-align: right;">Costo Servidor</th>
+                      <th style="padding: 10px 14px; text-align: right;">Reinversión</th>
+                      <th style="padding: 10px 14px; text-align: right;">Ganancia Real</th>
+                      <th style="padding: 10px 14px; text-align: center;">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody id="financeLedgerTableBody">
+                    <tr>
+                      <td colspan="9" style="text-align: center; padding: 24px; color: #64748b;">Cargando registros contables...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
           
@@ -2108,8 +2323,115 @@
     </div>
   </div>
 
-  <footer class="app-footer">
-    <p>&copy; 2026 Mega Unlock Phone (PANEL). Potenciado por Dhru Fusion API.</p>
+  <!-- FOOTER PRO MAX CON INFO DE SERVICIO, GITHUB, DHRU Y REDES SOCIALES -->
+  <footer class="app-footer" style="background: linear-gradient(180deg, rgba(15, 23, 42, 0.4) 0%, rgba(10, 15, 30, 0.95) 100%); border-top: 1px solid rgba(255, 255, 255, 0.08); padding: 3rem 1.5rem 2rem; margin-top: 3.5rem; text-align: left;">
+    <div style="max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 2.5rem; margin-bottom: 2.5rem;">
+      
+      <!-- Columna 1: Marca y Propósito -->
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <img src="/favicon.png" alt="MegaUnlockPhone Logo" style="height: 42px; width: 42px; border-radius: 50%; object-fit: cover; border: 2px solid #38bdf8; box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);">
+          <span style="font-weight: 800; font-size: 1.25rem; letter-spacing: -0.5px; background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">MegaUnlockPhone</span>
+        </div>
+        <p style="font-size: 0.85rem; line-height: 1.6; color: var(--text-secondary); margin: 0;">
+          Plataforma mayorista líder de desbloqueos remotos por IMEI, créditos de servidor, herramientas de servicio técnico, licencias digitales y streaming. Arquitectura redundante de alta disponibilidad.
+        </p>
+        <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+          <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 9999px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399; font-size: 0.72rem; font-weight: 700;">
+            <span style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981;"></span> SISTEMA OPERATIVO 24/7
+          </span>
+          <span style="padding: 4px 10px; border-radius: 9999px; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.25); color: #38bdf8; font-size: 0.72rem; font-weight: 700;">
+            v2.0 CLOUD
+          </span>
+        </div>
+      </div>
+
+      <!-- Columna 2: Tecnología & DHRU Fusion API -->
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <h4 style="margin: 0; font-size: 0.95rem; color: #f1f5f9; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="cpu" style="width: 16px; height: 16px; color: #38bdf8;"></i> Integración DHRU Fusion
+        </h4>
+        <p style="font-size: 0.85rem; line-height: 1.6; color: var(--text-secondary); margin: 0;">
+          Potenciado con el protocolo oficial <strong>DHRU Fusion API</strong>. Conexión directa y balanceo de carga multidistribuidor:
+        </p>
+        <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; font-size: 0.82rem; color: #cbd5e1;">
+          <li style="display: flex; align-items: center; gap: 8px;">
+            <i data-lucide="zap" style="width: 14px; height: 14px; color: #facc15;"></i>
+            <span><strong>⚡ MEGA-SERVER:</strong> Servidor Principal Activo</span>
+          </li>
+          <li style="display: flex; align-items: center; gap: 8px; opacity: 0.6;">
+            <i data-lucide="shield-alert" style="width: 14px; height: 14px; color: #94a3b8;"></i>
+            <span style="text-decoration: line-through; color: #94a3b8;"><strong>🛡 ALPHA-SERVER:</strong> No disponible actualmente</span>
+          </li>
+          <li style="display: flex; align-items: center; gap: 8px;">
+            <i data-lucide="globe" style="width: 14px; height: 14px; color: #a855f7;"></i>
+            <span><strong>🔱 OMEGA-SERVER:</strong> Gateway Internacional</span>
+          </li>
+        </ul>
+        <a href="/api/v1/docs" target="_blank" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; color: #38bdf8; font-weight: 600; text-decoration: underline; margin-top: 4px;">
+          <i data-lucide="book-open" style="width: 14px; height: 14px;"></i> Documentación API para Resellers (/api/v1/docs)
+        </a>
+      </div>
+
+      <!-- Columna 3: Código Abierto & GitHub -->
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <h4 style="margin: 0; font-size: 0.95rem; color: #f1f5f9; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="github" style="width: 16px; height: 16px; color: #cbd5e1;"></i> Repositorio &amp; Código
+        </h4>
+        <p style="font-size: 0.85rem; line-height: 1.6; color: var(--text-secondary); margin: 0;">
+          Proyecto de código abierto mantenido por desarrolladores para la comunidad de técnicos y mayoristas de telefonía móvil.
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <a href="https://github.com/mega067/MegaUnlockPhone" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; gap: 10px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.1); padding: 8px 12px; border-radius: 8px; color: #f1f5f9; text-decoration: none; font-size: 0.85rem; transition: all 0.2s ease;">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" style="flex-shrink: 0;"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+            <div style="display: flex; flex-direction: column; overflow: hidden;">
+              <strong style="font-size: 0.85rem; color: #fff;">mega067/MegaUnlockPhone</strong>
+              <span style="font-size: 0.72rem; color: #94a3b8;">Repositorio Oficial GitHub (Open Source)</span>
+            </div>
+          </a>
+          <a href="https://github.com/mega067" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; gap: 8px; color: #94a3b8; font-size: 0.82rem; text-decoration: none; padding: 2px 4px;">
+            <i data-lucide="user" style="width: 14px; height: 14px;"></i> Perfil del Desarrollador: <strong>@mega067</strong>
+          </a>
+        </div>
+      </div>
+
+      <!-- Columna 4: Contacto, Redes & Soporte -->
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <h4 style="margin: 0; font-size: 0.95rem; color: #f1f5f9; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="headphones" style="width: 16px; height: 16px; color: #10b981;"></i> Soporte &amp; Redes Sociales
+        </h4>
+        <p style="font-size: 0.85rem; line-height: 1.6; color: var(--text-secondary); margin: 0;">
+          Atención a clientes y activación de distribuidores:
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <a href="https://wa.me/522216936720" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; gap: 8px; color: #34d399; font-size: 0.85rem; text-decoration: none; font-weight: 600;">
+            <i data-lucide="message-circle" style="width: 16px; height: 16px;"></i> WhatsApp Soporte: +52 221 693 6720
+          </a>
+          <a href="https://wa.me/527831475482?text=hola" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; gap: 8px; color: #60a5fa; font-size: 0.85rem; text-decoration: none;">
+            <i data-lucide="bot" style="width: 16px; height: 16px;"></i> Bot Asistente Automático: +52 783 147 5482
+          </a>
+          <a href="https://www.facebook.com/share/1DjDKeofvo/" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; gap: 8px; color: #93c5fd; font-size: 0.85rem; text-decoration: none; font-weight: 600;">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg> Facebook Oficial: MegaUnlockPhone
+          </a>
+          <span style="font-size: 0.78rem; color: #94a3b8; display: flex; align-items: center; gap: 6px; margin-top: 2px;">
+            <i data-lucide="map-pin" style="width: 14px; height: 14px; color: #f87171;"></i> México &bull; Cobertura en toda Latinoamérica
+          </span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Barra Inferior de Copyright & Términos -->
+    <div style="max-width: 1200px; margin: 0 auto; padding-top: 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.05); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; font-size: 0.8rem; color: #64748b;">
+      <div>
+        &copy; 2026 <strong>MegaUnlockPhone</strong>. Todos los derechos reservados.
+      </div>
+      <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+        <span>Servicios por IMEI &bull; Licencias Digitales &bull; Streaming</span>
+        <a href="https://github.com/mega067/MegaUnlockPhone" target="_blank" rel="noopener noreferrer" style="color: #64748b; text-decoration: underline;">GitHub</a>
+        <a href="/" style="color: #64748b; text-decoration: underline;">Portal Principal</a>
+      </div>
+    </div>
   </footer>
 
   <!-- Modales de Registro y Verificación -->
@@ -2202,6 +2524,65 @@
     </div>
   </div>
 
+  <!-- Google Apps Script Interactive Helper Modal -->
+  <div id="modalAppsScriptHelp" class="modal-overlay hidden" style="z-index: 999999;">
+    <div class="modal-card" style="max-width: 680px; width: 95%; max-height: 90vh; overflow-y: auto; text-align: left; padding: 1.75rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; margin-bottom: 16px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="background: rgba(250, 204, 21, 0.2); padding: 8px; border-radius: 8px; color: #facc15;">
+            <i data-lucide="cloud" style="width: 24px; height: 24px;"></i>
+          </div>
+          <div>
+            <h3 style="margin: 0; font-size: 1.2rem; color: #fff;">Guía de Implementación en Google Drive</h3>
+            <span style="font-size: 0.8rem; color: #94a3b8;">Dónde encontrar el botón "Implementar" paso a paso</span>
+          </div>
+        </div>
+        <button type="button" id="btnCloseAppsScriptModal" style="background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer; padding: 4px 8px;">&times;</button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 14px; font-size: 0.9rem; color: #cbd5e1;">
+        <div style="background: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; padding: 12px; border-radius: 4px;">
+          <strong style="color: #60a5fa; display: block; margin-bottom: 4px;">📍 Paso 1: Abrir Google Apps Script</strong>
+          Entra a <a href="https://script.google.com" target="_blank" style="color: #38bdf8; text-decoration: underline; font-weight: 600;">script.google.com</a> y haz clic en el botón azul <strong style="color: #fff;">"+ Nuevo proyecto"</strong>.
+        </div>
+
+        <div style="background: rgba(16, 185, 129, 0.1); border-left: 4px solid #10b981; padding: 12px; border-radius: 4px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <strong style="color: #34d399;">📍 Paso 2: Pegar el Código Webhook</strong>
+            <button type="button" class="btn btn-sm btn-primary" id="btnCopyAppsScriptCodeModal" style="font-size: 0.75rem; padding: 4px 10px;">
+              <i data-lucide="copy" style="width: 12px; height: 12px;"></i> Copiar Código al Portapapeles
+            </button>
+          </div>
+          <p style="margin: 0 0 8px 0; font-size: 0.85rem;">Borra lo que haya en el archivo <code>Código.gs</code> y pega este script:</p>
+          <pre id="appsScriptCodeDisplay" style="background: #0f172a; padding: 10px; border-radius: 6px; font-size: 0.75rem; color: #38bdf8; max-height: 140px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.08);"></pre>
+        </div>
+
+        <div style="background: rgba(234, 179, 8, 0.1); border-left: 4px solid #eab308; padding: 12px; border-radius: 4px;">
+          <strong style="color: #facc15; display: block; margin-bottom: 6px;">📍 Paso 3: ¿Dónde está el botón "Implementar"?</strong>
+          <p style="margin: 0 0 8px 0; line-height: 1.4;">
+            En la esquina superior derecha de la pantalla de Google Apps Script verás un botón azul que dice <strong style="color: #fff; background: #2563eb; padding: 2px 8px; border-radius: 4px;">Implementar</strong> (o <em>Deploy</em> en inglés).
+          </p>
+          <ol style="margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px;">
+            <li>Haz clic en <strong style="color: #fff;">Implementar</strong> &rarr; <strong style="color: #38bdf8;">Nueva implementación</strong>.</li>
+            <li>En el ícono de engrane ⚙️ a la izquierda, selecciona <strong style="color: #fff;">Aplicación web</strong>.</li>
+            <li>En <em>"Ejecutar como"</em>: selecciona <strong style="color: #34d399;">Yo (tu correo)</strong>.</li>
+            <li>En <em>"Quién tiene acceso"</em>: selecciona obligatoriamente <strong style="color: #f59e0b;">Cualquier usuario</strong> (Anyone).</li>
+            <li>Presiona <strong style="color: #fff; background: #2563eb; padding: 2px 6px; border-radius: 4px;">Implementar</strong> y autoriza los permisos de Google.</li>
+          </ol>
+        </div>
+
+        <div style="background: rgba(147, 51, 234, 0.1); border-left: 4px solid #a855f7; padding: 12px; border-radius: 4px;">
+          <strong style="color: #c084fc; display: block; margin-bottom: 4px;">📍 Paso 4: Pegar la URL Webhook aquí</strong>
+          Copia la <strong style="color: #fff;">URL de la aplicación web</strong> que te dio Google (termina en <code>/exec</code>) y pégala en el campo <em>"URL Webhook de Google Apps Script"</em> de este panel. ¡Listo!
+        </div>
+      </div>
+
+      <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn btn-secondary" id="btnAppsScriptModalCloseBottom">Entendido</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notifications Container (Small) -->
   <div id="toastContainer" style="position: fixed; bottom: 20px; right: 20px; z-index: 999999; display: flex; flex-direction: column; gap: 10px; pointer-events: none;"></div>
 
@@ -2214,12 +2595,12 @@
   <script src="/js/searchEngine.js?v=2" defer></script>
   <script src="/js/recharges.js?v=2" defer></script>
   <script src="/js/recharge.js?v=18" defer></script>
-  <script src="/digitalpass/digitalpass.js?v=57" defer></script>
-  <script src="/index.js?v=57" defer></script>
+  <script src="/digitalpass/digitalpass.js?v=60" defer></script>
+  <script src="/index.js?v=60" defer></script>
   <script src="/js/products.js?v=10" defer></script>
-  <script src="/js/orders.js?v=57" defer></script>
+  <script src="/js/orders.js?v=60" defer></script>
   <script src="/js/warnings.js?v=3" defer></script>
-  <script src="/js/admin.js?v=57" defer></script>
+  <script src="/js/admin.js?v=60" defer></script>
     <div class="modal-overlay hidden" id="globalLoadingOverlay" style="z-index: 100000; flex-direction: column; text-align: center;">
       <div class="icon-spin" style="color: #3b82f6; margin-bottom: 1rem;">
         <i data-lucide="refresh-cw" style="width: 64px; height: 64px;"></i>

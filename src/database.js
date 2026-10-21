@@ -62,6 +62,23 @@ const initTables = () => {
             isActive INTEGER DEFAULT 1,
             data TEXT
         );
+
+        CREATE TABLE IF NOT EXISTS FinanceLedger (
+            id TEXT PRIMARY KEY,
+            type TEXT NOT NULL, /* 'income_ticket', 'income_manual', 'expense_manual', 'adjustment' */
+            orderId TEXT,
+            serviceName TEXT,
+            chargedAmount REAL DEFAULT 0,
+            costAmount REAL DEFAULT 0,
+            grossProfit REAL DEFAULT 0,
+            reinvestPercent REAL DEFAULT 50,
+            reinvestAmount REAL DEFAULT 0,
+            netProfit REAL DEFAULT 0,
+            account TEXT DEFAULT 'General', /* 'Nu', 'Revolut', 'MercadoPago', 'BBVA', 'Efectivo', etc. */
+            notes TEXT,
+            recordedBy TEXT,
+            createdAt TEXT
+        );
     `);
     
     try {

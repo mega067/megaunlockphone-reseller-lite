@@ -203,6 +203,7 @@ async function loadAdminData() {
                 }
               });
             });
+          }
           lucide.createIcons();
         }
       } catch(e) {
@@ -239,7 +240,9 @@ async function loadAdminData() {
 
     // Google Drive Sync Controls
     const gdriveEnabled = document.getElementById('gdriveEnabled');
+    const gdriveSyncOnEvent = document.getElementById('gdriveSyncOnEvent');
     const gdriveKeepCopies = document.getElementById('gdriveKeepCopies');
+    const gdriveKeepLocalCopies = document.getElementById('gdriveKeepLocalCopies');
     const gdriveAppScriptUrl = document.getElementById('gdriveAppScriptUrl');
     const gdriveFolderId = document.getElementById('gdriveFolderId');
     const gdriveClientEmail = document.getElementById('gdriveClientEmail');
@@ -254,7 +257,9 @@ async function loadAdminData() {
         const gdData = await gdRes.json();
         if (gdData.success && gdData.config) {
           if (gdriveEnabled) gdriveEnabled.checked = Boolean(gdData.config.enabled);
+          if (gdriveSyncOnEvent) gdriveSyncOnEvent.checked = Boolean(gdData.config.syncOnEvent);
           if (gdriveKeepCopies) gdriveKeepCopies.value = gdData.config.keepCopies || 7;
+          if (gdriveKeepLocalCopies) gdriveKeepLocalCopies.value = gdData.config.keepLocalCopies || 3;
           if (gdriveAppScriptUrl) gdriveAppScriptUrl.value = gdData.config.appScriptUrl || '';
           if (gdriveFolderId) gdriveFolderId.value = gdData.config.folderId || '';
           if (gdriveClientEmail) gdriveClientEmail.value = gdData.config.clientEmail || '';
@@ -272,7 +277,9 @@ async function loadAdminData() {
         try {
           const payload = {
             enabled: gdriveEnabled ? gdriveEnabled.checked : false,
+            syncOnEvent: gdriveSyncOnEvent ? gdriveSyncOnEvent.checked : false,
             keepCopies: gdriveKeepCopies ? parseInt(gdriveKeepCopies.value, 10) : 7,
+            keepLocalCopies: gdriveKeepLocalCopies ? parseInt(gdriveKeepLocalCopies.value, 10) : 3,
             appScriptUrl: gdriveAppScriptUrl ? gdriveAppScriptUrl.value.trim() : '',
             folderId: gdriveFolderId ? gdriveFolderId.value.trim() : '',
             clientEmail: gdriveClientEmail ? gdriveClientEmail.value.trim() : ''
@@ -299,6 +306,25 @@ async function loadAdminData() {
     if (btnTestGDriveSync && !btnTestGDriveSync._hasListener) {
       btnTestGDriveSync._hasListener = true;
       btnTestGDriveSync.addEventListener('click', async () => {
+        // Auto-guardar primero lo que el usuario tiene en pantalla si escribió la URL
+        if (gdriveAppScriptUrl && gdriveAppScriptUrl.value.trim()) {
+          try {
+            await fetch('/api/admin/gdrive-config', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+              body: JSON.stringify({
+                enabled: gdriveEnabled ? gdriveEnabled.checked : true,
+                syncOnEvent: gdriveSyncOnEvent ? gdriveSyncOnEvent.checked : false,
+                keepCopies: gdriveKeepCopies ? parseInt(gdriveKeepCopies.value, 10) : 7,
+                keepLocalCopies: gdriveKeepLocalCopies ? parseInt(gdriveKeepLocalCopies.value, 10) : 3,
+                appScriptUrl: gdriveAppScriptUrl.value.trim(),
+                folderId: gdriveFolderId ? gdriveFolderId.value.trim() : '',
+                clientEmail: gdriveClientEmail ? gdriveClientEmail.value.trim() : ''
+              })
+            });
+          } catch(e) {}
+        }
+
         btnTestGDriveSync.disabled = true;
         btnTestGDriveSync.innerHTML = '<i data-lucide="refresh-cw" class="icon-spin" style="width: 14px; height: 14px;"></i> Subiendo...';
         lucide.createIcons();
@@ -326,15 +352,58 @@ async function loadAdminData() {
     if (btnShowAppsScriptModal && !btnShowAppsScriptModal._hasListener) {
       btnShowAppsScriptModal._hasListener = true;
       btnShowAppsScriptModal.addEventListener('click', () => {
+        const modal = document.getElementById('modalAppsScriptHelp');
+        const codeDisplay = document.getElementById('appsScriptCodeDisplay');
         const code = window._gdriveAppsScriptTemplate || '// Cargando plantilla...';
-        prompt('📋 Copia este código para pegarlo en tu Google Apps Script (script.google.com):', code);
+        if (codeDisplay) codeDisplay.textContent = code;
+        if (modal) modal.classList.remove('hidden');
       });
     }
 
-    const usersRes = await fetch('/api/users', { headers: { 'X-Server-Id': currentServerId, 'Authorization': `Bearer ${authToken}` }});
-    if (usersRes.ok) {
-      const users = await usersRes.json();
-      window.cachedAdminUsers = users;
+    const btnCloseAppsScriptModal = document.getElementById('btnCloseAppsScriptModal');
+    if (btnCloseAppsScriptModal && !btnCloseAppsScriptModal._hasListener) {
+      btnCloseAppsScriptModal._hasListener = true;
+      btnCloseAppsScriptModal.addEventListener('click', () => {
+        const modal = document.getElementById('modalAppsScriptHelp');
+        if (modal) modal.classList.add('hidden');
+      });
+    }
+
+    const btnAppsScriptModalCloseBottom = document.getElementById('btnAppsScriptModalCloseBottom');
+    if (btnAppsScriptModalCloseBottom && !btnAppsScriptModalCloseBottom._hasListener) {
+      btnAppsScriptModalCloseBottom._hasListener = true;
+      btnAppsScriptModalCloseBottom.addEventListener('click', () => {
+        const modal = document.getElementById('modalAppsScriptHelp');
+        if (modal) modal.classList.add('hidden');
+      });
+    }
+
+    const btnCopyAppsScriptCodeModal = document.getElementById('btnCopyAppsScriptCodeModal');
+    if (btnCopyAppsScriptCodeModal && !btnCopyAppsScriptCodeModal._hasListener) {
+      btnCopyAppsScriptCodeModal._hasListener = true;
+      btnCopyAppsScriptCodeModal.addEventListener('click', async () => {
+        const code = window._gdriveAppsScriptTemplate || '';
+        if (!code) return alert('No hay código disponible aún.');
+        try {
+          await navigator.clipboard.writeText(code);
+          btnCopyAppsScriptCodeModal.innerHTML = '<i data-lucide="check" style="width: 12px; height: 12px;"></i> ¡Copiado!';
+          lucide.createIcons();
+          setTimeout(() => {
+            btnCopyAppsScriptCodeModal.innerHTML = '<i data-lucide="copy" style="width: 12px; height: 12px;"></i> Copiar Código al Portapapeles';
+            lucide.createIcons();
+          }, 2000);
+        } catch (e) {
+          prompt('Copia manualmente:', code);
+        }
+      });
+    }
+
+    // Cargar Usuarios
+    try {
+      const usersRes = await fetch('/api/users', { headers: { 'X-Server-Id': currentServerId, 'Authorization': `Bearer ${authToken}` }});
+      if (usersRes.ok) {
+        const users = await usersRes.json();
+        window.cachedAdminUsers = users;
       
       // Populate Master History User Filter while we have the users
       const masterUserFilter = document.getElementById('masterHistoryUserFilter');
@@ -935,6 +1004,9 @@ async function loadAdminData() {
         };
       }
     }
+    } catch (usersErr) {
+      console.error('Error cargando lista de usuarios:', usersErr);
+    }
   } catch (e) {
     console.error('Failed to load admin data', e);
   }
@@ -946,11 +1018,13 @@ const btnAdminTabUsers = document.getElementById('btnAdminTabUsers');
 const btnAdminTabHistory = document.getElementById('btnAdminTabHistory');
 const btnAdminTabSettings = document.getElementById('btnAdminTabSettings');
 const btnAdminTabGroups = document.getElementById('btnAdminTabGroups');
+const btnAdminTabFinance = document.getElementById('btnAdminTabFinance');
 
 const adminTabUsers = document.getElementById('adminTabUsersContent');
 const adminTabHistory = document.getElementById('adminTabHistoryContent');
 const adminTabSettings = document.getElementById('adminTabSettingsContent');
 const adminTabGroups = document.getElementById('adminTabGroupsContent');
+const adminTabFinance = document.getElementById('adminTabFinanceContent');
 
 if (btnAdminTabUsers) {
   btnAdminTabUsers.addEventListener('click', () => {
@@ -959,8 +1033,8 @@ if (btnAdminTabUsers) {
     adminTabUsers.classList.remove('hidden');
     adminTabHistory.classList.add('hidden');
     adminTabSettings.classList.add('hidden');
-    if (adminTabGroups) adminTabGroups.classList.add('hidden');
-    if (adminTabGroups) adminTabGroups.style.display = 'none';
+    if (adminTabGroups) { adminTabGroups.classList.add('hidden'); adminTabGroups.style.display = 'none'; }
+    if (adminTabFinance) adminTabFinance.classList.add('hidden');
   });
 }
 
@@ -971,8 +1045,8 @@ if (btnAdminTabHistory) {
     adminTabHistory.classList.remove('hidden');
     adminTabUsers.classList.add('hidden');
     adminTabSettings.classList.add('hidden');
-    if (adminTabGroups) adminTabGroups.classList.add('hidden');
-    if (adminTabGroups) adminTabGroups.style.display = 'none';
+    if (adminTabGroups) { adminTabGroups.classList.add('hidden'); adminTabGroups.style.display = 'none'; }
+    if (adminTabFinance) adminTabFinance.classList.add('hidden');
     fetchMasterHistory(); // Fetch data when entering the tab
   });
 }
@@ -984,8 +1058,8 @@ if (btnAdminTabSettings) {
     adminTabSettings.classList.remove('hidden');
     adminTabUsers.classList.add('hidden');
     adminTabHistory.classList.add('hidden');
-    if (adminTabGroups) adminTabGroups.classList.add('hidden');
-    if (adminTabGroups) adminTabGroups.style.display = 'none';
+    if (adminTabGroups) { adminTabGroups.classList.add('hidden'); adminTabGroups.style.display = 'none'; }
+    if (adminTabFinance) adminTabFinance.classList.add('hidden');
   });
 }
 
@@ -1000,6 +1074,7 @@ if (btnAdminTabGroups) {
     adminTabSettings.classList.add('hidden');
     adminTabUsers.classList.add('hidden');
     adminTabHistory.classList.add('hidden');
+    if (adminTabFinance) adminTabFinance.classList.add('hidden');
     
     // Attempt to load products if not loaded, so groups can render
     if (!productsList || productsList.length === 0) {
@@ -1009,6 +1084,20 @@ if (btnAdminTabGroups) {
         fetchProducts(true);
       }
     }
+  });
+}
+
+if (btnAdminTabFinance) {
+  btnAdminTabFinance.addEventListener('click', () => {
+    document.querySelectorAll('.admin-sub-tab').forEach(t => t.classList.remove('active'));
+    btnAdminTabFinance.classList.add('active');
+    if (adminTabFinance) adminTabFinance.classList.remove('hidden');
+    adminTabUsers.classList.add('hidden');
+    adminTabHistory.classList.add('hidden');
+    adminTabSettings.classList.add('hidden');
+    if (adminTabGroups) { adminTabGroups.classList.add('hidden'); adminTabGroups.style.display = 'none'; }
+    
+    loadFinanceDashboard();
   });
 }
 
@@ -1822,3 +1911,354 @@ async function generateCouponImage(coupon) {
     alert('Error al generar la imagen: ' + errMsg);
   }
 }
+
+// ==========================================
+// --- GESTOR FINANCIERO Y CONTROL DE GANANCIAS ---
+// ==========================================
+let currentFinanceData = null;
+
+async function loadFinanceDashboard() {
+  const tableBody = document.getElementById('financeLedgerTableBody');
+  const accountsGrid = document.getElementById('financeAccountsGrid');
+  if (tableBody) tableBody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 24px; color: #64748b;"><div class="spinner" style="margin: 0 auto 10px;"></div>Cargando registros contables...</td></tr>';
+  
+  try {
+    const res = await fetch('/api/admin/finance', {
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'X-Server-Id': currentServerId
+      }
+    });
+
+    if (!res.ok) throw new Error('Error al consultar finanzas: ' + res.statusText);
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Fallo al obtener datos contables');
+
+    currentFinanceData = data;
+    renderFinanceKPIs(data.summary, data.config);
+    renderFinanceAccounts(data.accounts, data.config);
+    renderFinanceLedger(data.recent);
+    populateManualAccountsSelect(data.config.accounts);
+
+    // Actualizar sliders en configuración
+    const slider = document.getElementById('inputFinanceReinvestPercent');
+    const label = document.getElementById('labelFinanceReinvestPercent');
+    const accountsInput = document.getElementById('inputFinanceAccounts');
+    if (slider && data.config) {
+      slider.value = data.config.reinvestPercent || 50;
+      if (label) label.textContent = `${slider.value}%`;
+      updateReinvestSplitPreview(slider.value);
+    }
+    if (accountsInput && data.config) {
+      accountsInput.value = (data.config.accounts || []).join(', ');
+    }
+
+    if (window.lucide) window.lucide.createIcons();
+  } catch (err) {
+    console.error('[FINANCE DASHBOARD ERR]', err);
+    if (tableBody) tableBody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 20px; color: #ef4444;"><i data-lucide="alert-triangle"></i> ${escapeHtml(err.message)}</td></tr>`;
+    if (window.lucide) window.lucide.createIcons();
+  }
+}
+
+function updateReinvestSplitPreview(pct) {
+  const p = parseFloat(pct) || 0;
+  const reinvSpan = document.getElementById('previewReinvestSplit');
+  const profSpan = document.getElementById('previewProfitSplit');
+  if (reinvSpan) reinvSpan.textContent = `$${p.toFixed(0)} irán a fondo de saldo`;
+  if (profSpan) profSpan.textContent = `$${(100 - p).toFixed(0)} a tu bolsillo`;
+  const badge = document.getElementById('finKpiReinvestPercentBadge');
+  if (badge) badge.textContent = `Cuota fijada: ${p}%`;
+}
+
+function renderFinanceKPIs(summary, config) {
+  const elCharged = document.getElementById('finKpiTotalCharged');
+  const elCost = document.getElementById('finKpiTotalCost');
+  const elReinvest = document.getElementById('finKpiTotalReinvest');
+  const elNetProfit = document.getElementById('finKpiNetProfit');
+
+  if (elCharged) elCharged.textContent = `$${parseFloat(summary.totalCharged || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN`;
+  if (elCost) elCost.textContent = `$${parseFloat(summary.totalCost || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN`;
+  if (elReinvest) elReinvest.textContent = `$${parseFloat(summary.totalReinvest || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN`;
+  if (elNetProfit) elNetProfit.textContent = `$${parseFloat(summary.totalNetProfit || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN`;
+}
+
+function renderFinanceAccounts(accounts, config) {
+  const container = document.getElementById('financeAccountsGrid');
+  if (!container) return;
+
+  if (!accounts || accounts.length === 0) {
+    container.innerHTML = '<div style="color: #64748b; font-size: 0.85rem;">No hay cuentas registradas.</div>';
+    return;
+  }
+
+  // Iconos y colores distintivos por banco popular
+  const bankStyles = {
+    'nu': { color: '#820ad1', bg: 'rgba(130, 10, 209, 0.15)', border: 'rgba(130, 10, 209, 0.35)', icon: 'credit-card' },
+    'revolut': { color: '#0075eb', bg: 'rgba(0, 117, 235, 0.15)', border: 'rgba(0, 117, 235, 0.35)', icon: 'globe' },
+    'mercado pago': { color: '#009ee3', bg: 'rgba(0, 158, 227, 0.15)', border: 'rgba(0, 158, 227, 0.35)', icon: 'smartphone' },
+    'bbva': { color: '#004481', bg: 'rgba(0, 68, 129, 0.2)', border: 'rgba(0, 68, 129, 0.45)', icon: 'landmark' },
+    'efectivo': { color: '#10b981', bg: 'rgba(16, 185, 129, 0.15)', border: 'rgba(16, 185, 129, 0.35)', icon: 'banknote' }
+  };
+
+  container.innerHTML = accounts.map(acc => {
+    const key = acc.account.toLowerCase().trim();
+    const style = bankStyles[key] || { color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.15)', border: 'rgba(56, 189, 248, 0.3)', icon: 'wallet' };
+    const net = parseFloat(acc.netProfit || 0);
+    const balance = parseFloat(acc.balance || 0);
+
+    return `
+      <div style="background: ${style.bg}; border: 1px solid ${style.border}; border-radius: 12px; padding: 14px 16px; position: relative; overflow: hidden; transition: transform 0.2s ease;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span style="font-weight: 800; font-size: 0.95rem; color: #f8fafc; display: flex; align-items: center; gap: 6px;">
+            <i data-lucide="${style.icon}" style="width: 17px; height: 17px; color: ${style.color};"></i> ${escapeHtml(acc.account)}
+          </span>
+          <span style="font-size: 0.7rem; font-weight: 700; color: #94a3b8; background: rgba(0,0,0,0.3); padding: 2px 7px; border-radius: 10px;">
+            ${acc.count} op${acc.count === 1 ? '' : 's'}
+          </span>
+        </div>
+        <div style="font-size: 1.35rem; font-weight: 800; color: #ffffff; font-family: 'Fira Code', monospace;">
+          $${balance.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 0.72rem; color: #cbd5e1; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 6px;">
+          <span>Ganancia neta:</span>
+          <span style="font-weight: 700; color: #34d399;">+$${net.toFixed(2)}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderFinanceLedger(records) {
+  const tableBody = document.getElementById('financeLedgerTableBody');
+  if (!tableBody) return;
+
+  if (!records || records.length === 0) {
+    tableBody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 32px; color: #64748b;">Aún no hay movimientos registrados. Genera un ticket en WhatsApp o pulsa "+ Nuevo Ingreso / Gasto" arriba para empezar.</td></tr>`;
+    return;
+  }
+
+  tableBody.innerHTML = records.map(r => {
+    let dateStr = 'N/A';
+    if (r.createdAt) {
+      try {
+        dateStr = new Date(r.createdAt).toLocaleString('es-MX', { timeZone: 'America/Mexico_City', dateStyle: 'short', timeStyle: 'short' });
+      } catch (e) {
+        dateStr = String(r.createdAt).substring(0, 16);
+      }
+    }
+
+    const isExpense = r.type === 'expense_manual';
+    const isTicket = r.type === 'income_ticket';
+    const typeBadge = isExpense 
+      ? '<span style="background: rgba(239, 68, 68, 0.2); color: #f87171; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700;">GASTO</span>'
+      : (isTicket 
+          ? '<span style="background: rgba(16, 185, 129, 0.2); color: #34d399; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700;">TICKET</span>'
+          : '<span style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700;">VENTA</span>');
+
+    const orderDisplay = r.orderId ? `<span style="font-family: monospace; font-weight: 700; color: #60a5fa;">#${escapeHtml(r.orderId)}</span>` : '<span style="color: #64748b;">Manual</span>';
+    const charged = parseFloat(r.chargedAmount || 0);
+    const cost = parseFloat(r.costAmount || 0);
+    const reinvest = parseFloat(r.reinvestAmount || 0);
+    const net = parseFloat(r.netProfit || 0);
+
+    return `
+      <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05); transition: background 0.15s ease;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+        <td style="padding: 10px 14px; color: #94a3b8; font-family: monospace; font-size: 0.75rem;">${escapeHtml(dateStr)}</td>
+        <td style="padding: 10px 14px;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            ${typeBadge} ${orderDisplay}
+          </div>
+        </td>
+        <td style="padding: 10px 14px; font-weight: 600; color: #f1f5f9;">
+          ${escapeHtml(r.serviceName || r.notes || 'Operación')}
+        </td>
+        <td style="padding: 10px 14px;">
+          <span style="background: rgba(168, 85, 247, 0.15); color: #c084fc; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700;">
+            ${escapeHtml(r.account || 'General')}
+          </span>
+        </td>
+        <td style="padding: 10px 14px; text-align: right; font-family: monospace; font-weight: 700; color: ${charged > 0 ? '#f8fafc' : '#64748b'};">
+          $${charged.toFixed(2)}
+        </td>
+        <td style="padding: 10px 14px; text-align: right; font-family: monospace; color: ${cost > 0 ? '#fca5a5' : '#64748b'};">
+          -$${cost.toFixed(2)}
+        </td>
+        <td style="padding: 10px 14px; text-align: right; font-family: monospace; font-weight: 700; color: ${reinvest > 0 ? '#93c5fd' : '#64748b'};">
+          +$${reinvest.toFixed(2)}
+        </td>
+        <td style="padding: 10px 14px; text-align: right; font-family: monospace; font-weight: 800; font-size: 0.88rem; color: ${net >= 0 ? '#34d399' : '#ef4444'};">
+          ${net >= 0 ? '+' : ''}$${net.toFixed(2)}
+        </td>
+        <td style="padding: 10px 14px; text-align: center;">
+          <button type="button" onclick="deleteFinanceEntry('${r.id}')" title="Eliminar movimiento" style="background: transparent; border: none; color: #ef4444; cursor: pointer; padding: 4px; border-radius: 4px; opacity: 0.7;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">
+            <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function populateManualAccountsSelect(accounts) {
+  const sel = document.getElementById('manualEntryAccount');
+  if (!sel) return;
+  const list = accounts && accounts.length > 0 ? accounts : ['Nu', 'Revolut', 'Mercado Pago', 'BBVA', 'Efectivo'];
+  sel.innerHTML = list.map(a => `<option value="${escapeHtml(a)}">${escapeHtml(a)}</option>`).join('');
+}
+
+async function deleteFinanceEntry(id) {
+  if (!confirm('¿Deseas eliminar este registro contable del libro?')) return;
+  try {
+    const res = await fetch(`/api/admin/finance/transaction/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'X-Server-Id': currentServerId
+      }
+    });
+    if (res.ok) {
+      loadFinanceDashboard();
+    } else {
+      alert('No se pudo eliminar el registro.');
+    }
+  } catch (err) {
+    alert('Error de conexión: ' + err.message);
+  }
+}
+
+// Event Listeners para Finanzas
+document.addEventListener('DOMContentLoaded', () => {
+  // Toggle Contenedor Config
+  const btnToggleCfg = document.getElementById('btnToggleFinanceConfig');
+  const cfgContainer = document.getElementById('financeConfigContainer');
+  const btnCancelCfg = document.getElementById('btnCancelFinanceConfig');
+  if (btnToggleCfg && cfgContainer) {
+    btnToggleCfg.addEventListener('click', () => {
+      cfgContainer.classList.toggle('hidden');
+    });
+  }
+  if (btnCancelCfg && cfgContainer) {
+    btnCancelCfg.addEventListener('click', () => cfgContainer.classList.add('hidden'));
+  }
+
+  // Slider de Reinversión
+  const reinvestSlider = document.getElementById('inputFinanceReinvestPercent');
+  const reinvestLabel = document.getElementById('labelFinanceReinvestPercent');
+  if (reinvestSlider) {
+    reinvestSlider.addEventListener('input', (e) => {
+      if (reinvestLabel) reinvestLabel.textContent = `${e.target.value}%`;
+      updateReinvestSplitPreview(e.target.value);
+    });
+  }
+
+  // Guardar Configuración
+  const formCfg = document.getElementById('formFinanceConfig');
+  if (formCfg) {
+    formCfg.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const p = parseFloat(document.getElementById('inputFinanceReinvestPercent').value) || 50;
+      const rawAcc = document.getElementById('inputFinanceAccounts').value;
+      const accList = rawAcc.split(',').map(s => s.trim()).filter(Boolean);
+
+      try {
+        const res = await fetch('/api/admin/finance/config', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`,
+            'X-Server-Id': currentServerId
+          },
+          body: JSON.stringify({ reinvestPercent: p, accounts: accList })
+        });
+        if (res.ok) {
+          alert('✅ Configuración financiera guardada exitosamente.');
+          if (cfgContainer) cfgContainer.classList.add('hidden');
+          loadFinanceDashboard();
+        } else {
+          alert('Error al guardar configuración');
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    });
+  }
+
+  // Toggle Form Manual
+  const btnToggleManual = document.getElementById('btnToggleAddManualExpense');
+  const manualContainer = document.getElementById('financeManualEntryContainer');
+  const btnCancelManual = document.getElementById('btnCancelManualEntry');
+  if (btnToggleManual && manualContainer) {
+    btnToggleManual.addEventListener('click', () => {
+      manualContainer.classList.toggle('hidden');
+    });
+  }
+  if (btnCancelManual && manualContainer) {
+    btnCancelManual.addEventListener('click', () => manualContainer.classList.add('hidden'));
+  }
+
+  // Guardar Transacción Manual
+  const formManual = document.getElementById('formManualTransaction');
+  if (formManual) {
+    formManual.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        type: document.getElementById('manualEntryType').value,
+        serviceName: document.getElementById('manualEntryService').value,
+        chargedAmount: parseFloat(document.getElementById('manualEntryCharged').value) || 0,
+        costAmount: parseFloat(document.getElementById('manualEntryCost').value) || 0,
+        account: document.getElementById('manualEntryAccount').value,
+        orderId: document.getElementById('manualEntryOrderId').value.trim()
+      };
+
+      try {
+        const res = await fetch('/api/admin/finance/transaction', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`,
+            'X-Server-Id': currentServerId
+          },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          alert('✅ Movimiento contable registrado.');
+          formManual.reset();
+          if (manualContainer) manualContainer.classList.add('hidden');
+          loadFinanceDashboard();
+        } else {
+          alert('Error al registrar movimiento.');
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    });
+  }
+
+  // Botón Recargar
+  const btnReloadFin = document.getElementById('btnReloadFinance');
+  if (btnReloadFin) {
+    btnReloadFin.addEventListener('click', loadFinanceDashboard);
+  }
+
+  // Filtro de búsqueda en la tabla contable
+  const searchFin = document.getElementById('financeSearchInput');
+  if (searchFin) {
+    searchFin.addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      if (!currentFinanceData || !currentFinanceData.recent) return;
+      if (!q) {
+        renderFinanceLedger(currentFinanceData.recent);
+      } else {
+        const filtered = currentFinanceData.recent.filter(r => {
+          return (r.orderId && r.orderId.toLowerCase().includes(q)) ||
+                 (r.serviceName && r.serviceName.toLowerCase().includes(q)) ||
+                 (r.account && r.account.toLowerCase().includes(q)) ||
+                 (r.notes && r.notes.toLowerCase().includes(q));
+        });
+        renderFinanceLedger(filtered);
+      }
+      if (window.lucide) window.lucide.createIcons();
+    });
+  }
+});

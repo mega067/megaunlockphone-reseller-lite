@@ -51,4 +51,10 @@ router.post('/admin/disable-imei', requireAuth, requireAdmin, adminController.to
 router.post('/admin/refund', requireAuth, requireAdmin, adminController.adminRefund);
 router.post('/admin/notify-unlinked-bot', requireAuth, requireAdmin, adminController.notifyUnlinkedBot);
 
+// Finanzas y Control de Ganancias
+router.get('/admin/finance', requireAuth, requireAdmin, adminController.getFinanceSummary);
+router.post('/admin/finance/config', requireAuth, requireAdmin, adminController.updateFinanceConfig);
+router.post('/admin/finance/transaction', requireAuth, requireAdmin, adminController.addFinanceTransaction);
+router.delete('/admin/finance/transaction/:id', requireAuth, requireAdmin, adminController.deleteFinanceTransaction);
+
 module.exports = router;
