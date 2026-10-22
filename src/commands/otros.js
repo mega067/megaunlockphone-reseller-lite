@@ -155,13 +155,23 @@ async function otros(context) {
                 session.order = order;
             }
 
+            // Detección automática de servicios gratuitos, checks o cotizaciones
+            const sName = (session.order.serviceName || '').toLowerCase();
+            const isLikelyCheck = sName.includes('check') || sName.includes('info') || sName.includes('status') || sName.includes('carrier') || sName.includes('icloud clean/lost') || sName.includes('blacklisted') || sName.includes('free') || sName.includes('gratis');
+
             session.step = 'ask_price';
-            await sock.sendMessage(remoteJid, {
-                text: `✅ Orden #${session.order.orderId} lista (${session.order.serviceName}).\n\n¿Qué *precio a mostrar* deseas que aparezca en el recibo para tu cliente? (ej. 250.00 o escribe 0 para no mostrar):`
-            });
+            let askMsg = `✅ Orden #${session.order.orderId} lista (${session.order.serviceName}).\n\n`;
+            if (isLikelyCheck) {
+                askMsg += `ℹ️ _Detectamos que es un check / cotización informativa._\n`;
+            }
+            askMsg += `¿Qué *precio a mostrar* deseas que aparezca en el recibo para tu cliente? (ej. 250.00 o escribe *0* / *gratis* si fue sin costo):`;
+
+            await sock.sendMessage(remoteJid, { text: askMsg });
             return true;
         } else if (session.step === 'ask_price') {
-            const clientPrice = parseFloat(text.trim()) || 0;
+            const rawInput = text.trim().toLowerCase();
+            const isZeroOrFree = rawInput === '0' || rawInput === 'gratis' || rawInput === 'free' || rawInput === 'cotizacion' || rawInput === 'check' || rawInput === 'no';
+            const clientPrice = isZeroOrFree ? 0 : (parseFloat(text.trim()) || 0);
             const o = session.order;
             let cleanStatus = String(o.statusText || o.status || 'Completado').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').trim();
             let dateStr = 'N/A';
@@ -429,6 +439,45 @@ async function otros(context) {
         return true;
     }
 
+    if (['/finanzas', '!finanzas', 'finanzas', '/ganancias', '!ganancias', 'ganancias'].includes(cmd)) {
+        if (!user || user.role !== 'admin') {
+            await sock.sendMessage(remoteJid, { text: '🔒 Este comando es exclusivo para el Administrador del sistema.' });
+            return true;
+        }
+
+        try {
+            const financeManager = require('../financeManager');
+            const summary = financeManager.getFinanceSummary();
+            const accounts = summary.accounts || [];
+
+            let finReport = `📊 *RESUMEN EJECUTIVO DE FINANZAS* 📊\n` +
+                            `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+                            `💵 *Cobrado Global:* $${summary.summary.totalCharged.toFixed(2)} MXN\n` +
+                            `📉 *Costo Servidores:* -$${summary.summary.totalCost.toFixed(2)} MXN\n` +
+                            `🔄 *Fondo Reinversión:* $${summary.summary.totalReinvest.toFixed(2)} MXN\n` +
+                            `🤑 *Tu Ganancia Real:* +$${summary.summary.totalNetProfit.toFixed(2)} MXN\n` +
+                            `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+                            `🏦 *BALANCES POR BANCO & TARJETA:*\n`;
+
+            let totalPatrimonio = 0;
+            accounts.forEach(acc => {
+                const bal = parseFloat(acc.currentBalance || acc.balance || 0);
+                totalPatrimonio += bal;
+                finReport += `• *${acc.name || acc.account}:* $${bal.toFixed(2)} MXN\n`;
+            });
+
+            finReport += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+                         `💎 *Patrimonio Total:* $${totalPatrimonio.toFixed(2)} MXN\n\n` +
+                         `🌐 *Acceso al Panel Web:* \nhttps://megaunlockphone-panel.alwaysdata.net\n` +
+                         `_Inicia sesión y pulsa el botón verde *Finanzas* en la barra superior._`;
+
+            await sock.sendMessage(remoteJid, { text: finReport });
+        } catch(err) {
+            await sock.sendMessage(remoteJid, { text: `❌ Error al consultar finanzas: ${err.message}` });
+        }
+        return true;
+    }
+
     if (['/info', '!info'].includes(cmd)) {
         await sock.sendMessage(remoteJid, { text: '🤖 *MegaUnlock Bot*\n\nSoy el asistente oficial del panel. Para consultar saldos y pedidos, envíame un mensaje privado directo para proteger tu privacidad.' });
         return true;
@@ -471,6 +520,7 @@ async function otros(context) {
             `• */msggrup <Texto>* ➔ Anuncio al grupo oficial (fotos/videos)\n` +
             `• */addmoney <ID> <Servidor> <Monto>* ➔ Recargar saldo a revendedor\n` +
             `• */removemoney <ID> <Servidor> <Monto>* ➔ Descontar saldo\n` +
+            `• */finanzas* (o */ganancias*) ➔ Resumen contable de bolsillo y bancos\n` +
             `• */setprice* ➔ Modificador de márgenes y precios\n` +
             `• */historial* ➔ Últimos 10 pedidos globales\n` +
             `• */sync* ➔ Forzar sincronización de pedidos con proveedores\n` +

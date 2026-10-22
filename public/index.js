@@ -308,6 +308,8 @@ function checkPersistedSession() {
     btnLogout.classList.remove('hidden');
     if (authRole === 'admin') {
       btnAdminManage.classList.remove('hidden');
+      const btnAdminFinTop = document.getElementById('btnAdminFinanceTop');
+      if (btnAdminFinTop) btnAdminFinTop.classList.remove('hidden');
       if (typeof btnAdminCoupons !== 'undefined' && btnAdminCoupons) btnAdminCoupons.classList.remove('hidden');
       if (btnImportOrder) btnImportOrder.classList.remove('hidden');
       if (btnBulkSavePrices) btnBulkSavePrices.classList.remove('hidden');
@@ -410,6 +412,8 @@ function checkPersistedSession() {
     if (btnLoginTop) btnLoginTop.classList.remove('hidden');
     btnLogout.classList.add('hidden');
     btnAdminManage.classList.add('hidden');
+    const btnAdminFinTop = document.getElementById('btnAdminFinanceTop');
+    if (btnAdminFinTop) btnAdminFinTop.classList.add('hidden');
     if (typeof btnAdminCoupons !== 'undefined' && btnAdminCoupons) btnAdminCoupons.classList.add('hidden');
     if (typeof btnCustomTicket !== 'undefined' && btnCustomTicket) btnCustomTicket.classList.add('hidden');
     if (typeof btnImportOrder !== 'undefined' && btnImportOrder) btnImportOrder.classList.add('hidden');
@@ -2862,6 +2866,17 @@ if (btnWhatsappBot) {
 if (btnAdminManage) {
   btnAdminManage.addEventListener('click', () => {
     if (tabAdmin) tabAdmin.click();
+    const adminSection = document.getElementById('adminSection');
+    if (adminSection) setTimeout(() => adminSection.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  });
+}
+
+const btnAdminFinTop = document.getElementById('btnAdminFinanceTop');
+if (btnAdminFinTop) {
+  btnAdminFinTop.addEventListener('click', () => {
+    if (tabAdmin) tabAdmin.click();
+    const btnFinTab = document.getElementById('btnAdminTabFinance');
+    if (btnFinTab) btnFinTab.click();
     const adminSection = document.getElementById('adminSection');
     if (adminSection) setTimeout(() => adminSection.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   });
