@@ -29,6 +29,8 @@
   <!-- TomSelect for searchable dropdowns -->
   <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet" crossorigin="anonymous">
   <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+  <!-- Chart.js CDN for Financial Analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <link rel="stylesheet" href="index.css?v=65">
 </head>
 <body>
@@ -1180,6 +1182,58 @@
               </h4>
               <div id="financeCategoriesGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px;">
                 <!-- Se poblará vía JS -->
+              </div>
+            </div>
+
+            <!-- ANALÍTICA VISUAL & GRÁFICAS FINANCIERAS (Chart.js) -->
+            <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(14, 165, 233, 0.3); border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 10px;">
+                <div>
+                  <h4 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #38bdf8; display: flex; align-items: center; gap: 8px;">
+                    <i data-lucide="bar-chart-3" style="width: 20px; height: 20px;"></i> Analítica Visual: Ingresos, Gastos, Ganancias & Cierres Semanales
+                  </h4>
+                  <span style="font-size: 0.78rem; color: #94a3b8;">Comparativa diaria de flujo de efectivo y evolución de saldos en tus auditorías de fin de semana</span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                  <span style="font-size: 0.75rem; background: rgba(16, 185, 129, 0.15); color: #34d399; padding: 4px 10px; border-radius: 6px; font-weight: 700;">🟢 Ganancias</span>
+                  <span style="font-size: 0.75rem; background: rgba(239, 68, 68, 0.15); color: #f87171; padding: 4px 10px; border-radius: 6px; font-weight: 700;">🔴 Gastos/Pérdidas</span>
+                  <span style="font-size: 0.75rem; background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 4px 10px; border-radius: 6px; font-weight: 700;">🔵 Ingresos Brutos</span>
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px;">
+                <!-- Gráfica 1: Evolución Diaria (Línea de Tendencia) -->
+                <div style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 10px; padding: 14px;">
+                  <h5 style="margin: 0 0 10px 0; font-size: 0.85rem; color: #e2e8f0; display: flex; align-items: center; justify-content: space-between;">
+                    <span>📈 Flujo Diario (Últimos 30 Días)</span>
+                    <span style="font-size: 0.7rem; color: #64748b;">Ingresos vs Gastos</span>
+                  </h5>
+                  <div style="position: relative; height: 220px; width: 100%;">
+                    <canvas id="chartFinanceDailyFlow"></canvas>
+                  </div>
+                </div>
+
+                <!-- Gráfica 2: Distribución de Gastos vs Ganancia (Doughnut) -->
+                <div style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 10px; padding: 14px;">
+                  <h5 style="margin: 0 0 10px 0; font-size: 0.85rem; color: #e2e8f0; display: flex; align-items: center; justify-content: space-between;">
+                    <span>🍩 Distribución por Categoría de Gasto</span>
+                    <span style="font-size: 0.7rem; color: #64748b;">Comida, pasajes, servers...</span>
+                  </h5>
+                  <div style="position: relative; height: 220px; width: 100%; display: flex; align-items: center; justify-content: center;">
+                    <canvas id="chartFinanceCategoryDoughnut"></canvas>
+                  </div>
+                </div>
+
+                <!-- Gráfica 3: Comparativa de Cierres Semanales (Barras) -->
+                <div style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 10px; padding: 14px; grid-column: 1 / -1;">
+                  <h5 style="margin: 0 0 10px 0; font-size: 0.85rem; color: #e2e8f0; display: flex; align-items: center; justify-content: space-between;">
+                    <span>📊 Rendimiento y Ahorro en Cierres de Fin de Semana</span>
+                    <span style="font-size: 0.7rem; color: #64748b;">Auditorías históricas</span>
+                  </h5>
+                  <div style="position: relative; height: 200px; width: 100%;">
+                    <canvas id="chartFinanceWeeklyAudits"></canvas>
+                  </div>
+                </div>
               </div>
             </div>
 

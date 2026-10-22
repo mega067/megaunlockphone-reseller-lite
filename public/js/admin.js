@@ -1938,6 +1938,7 @@ async function loadFinanceDashboard() {
     renderFinanceKPIs(data.summary, data.config);
     renderFinanceAccounts(data.accounts, data.config);
     renderFinanceCategories(data.categories);
+    renderFinanceCharts(data);
     renderFinanceLedger(data.recent);
     populateManualAccountsSelect(data.accounts);
 
@@ -2097,6 +2098,216 @@ function renderFinanceCategories(categories) {
       </div>
     </div>
   `).join('');
+}
+
+// Instancias globales de Chart.js para evitar fugas de memoria al refrescar
+let chartDailyFlowInstance = null;
+let chartCategoryDoughnutInstance = null;
+let chartWeeklyAuditsInstance = null;
+
+function renderFinanceCharts(data) {
+  if (typeof Chart === 'undefined') return;
+
+  // 1. Gráfica 1: Flujo Diario (30 Días) - Ingresos vs Gastos vs Ganancias
+  const ctxDaily = document.getElementById('chartFinanceDailyFlow');
+  if (ctxDaily) {
+    if (chartDailyFlowInstance) chartDailyFlowInstance.destroy();
+
+    const trends = data.dailyTrends && data.dailyTrends.length > 0 ? data.dailyTrends : [
+      { date: 'Hoy', income: parseFloat(data.summary?.totalCharged || 0), expense: parseFloat(data.summary?.totalCost || 0), profit: parseFloat(data.summary?.totalNetProfit || 0) }
+    ];
+
+    const labels = trends.map(t => t.date.length > 5 ? t.date.substring(5) : t.date);
+    const incomes = trends.map(t => parseFloat(t.income || 0));
+    const expenses = trends.map(t => parseFloat(t.expense || 0));
+    const profits = trends.map(t => parseFloat(t.profit || 0));
+
+    chartDailyFlowInstance = new Chart(ctxDaily, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Ganancia Neta ($)',
+            data: profits,
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.15)',
+            fill: true,
+            tension: 0.35,
+            borderWidth: 2.5,
+            pointRadius: 3,
+            pointHoverRadius: 6
+          },
+          {
+            label: 'Ingresos ($)',
+            data: incomes,
+            borderColor: '#38bdf8',
+            backgroundColor: 'transparent',
+            borderDash: [4, 4],
+            tension: 0.3,
+            borderWidth: 1.8,
+            pointRadius: 2
+          },
+          {
+            label: 'Gastos ($)',
+            data: expenses,
+            borderColor: '#f87171',
+            backgroundColor: 'rgba(239, 68, 68, 0.08)',
+            fill: true,
+            tension: 0.3,
+            borderWidth: 1.8,
+            pointRadius: 2
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            labels: { color: '#cbd5e1', font: { size: 10, family: 'Inter' }, boxWidth: 12 }
+          },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ` ${ctx.dataset.label}: $${parseFloat(ctx.raw || 0).toFixed(2)} MXN`
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: 'rgba(255, 255, 255, 0.04)' },
+            ticks: { color: '#94a3b8', font: { size: 10 } }
+          },
+          y: {
+            grid: { color: 'rgba(255, 255, 255, 0.06)' },
+            ticks: { color: '#94a3b8', font: { size: 10 }, callback: (val) => `$${val}` }
+          }
+        }
+      }
+    });
+  }
+
+  // 2. Gráfica 2: Doughnut de Categorías de Gastos
+  const ctxCategory = document.getElementById('chartFinanceCategoryDoughnut');
+  if (ctxCategory) {
+    if (chartCategoryDoughnutInstance) chartCategoryDoughnutInstance.destroy();
+
+    const catMeta = {
+      'comida': { label: 'Comida', color: '#f97316' },
+      'pasaje': { label: 'Pasaje', color: '#06b6d4' },
+      'gustos': { label: 'Gustos', color: '#ec4899' },
+      'servidores': { label: 'Servidores', color: '#8b5cf6' },
+      'emergencia': { label: 'Emergencias', color: '#ef4444' },
+      'inversion': { label: 'Inversiones', color: '#eab308' },
+      'servicios': { label: 'Servicios', color: '#3b82f6' },
+      'otros': { label: 'Otros', color: '#94a3b8' }
+    };
+
+    const categories = (data.categories && data.categories.length > 0) ? data.categories : [];
+    const validCats = categories.filter(c => parseFloat(c.totalExpense || c.totalCost || 0) > 0);
+
+    let catLabels = validCats.map(c => catMeta[c.category]?.label || c.category);
+    let catValues = validCats.map(c => parseFloat(c.totalExpense || c.totalCost || 0));
+    let catColors = validCats.map(c => catMeta[c.category]?.color || '#64748b');
+
+    if (catValues.length === 0) {
+      catLabels = ['Sin Gastos Aún'];
+      catValues = [1];
+      catColors = ['rgba(255,255,255,0.1)'];
+    }
+
+    chartCategoryDoughnutInstance = new Chart(ctxCategory, {
+      type: 'doughnut',
+      data: {
+        labels: catLabels,
+        datasets: [{
+          data: catValues,
+          backgroundColor: catColors,
+          borderWidth: 1,
+          borderColor: 'rgba(15, 23, 42, 0.9)'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'right',
+            labels: { color: '#cbd5e1', font: { size: 10, family: 'Inter' }, boxWidth: 10 }
+          },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ` ${ctx.label}: $${parseFloat(ctx.raw || 0).toFixed(2)} MXN`
+            }
+          }
+        },
+        cutout: '68%'
+      }
+    });
+  }
+
+  // 3. Gráfica 3: Rendimiento en Cierres Semanales (Auditorías)
+  const ctxWeekly = document.getElementById('chartFinanceWeeklyAudits');
+  if (ctxWeekly) {
+    if (chartWeeklyAuditsInstance) chartWeeklyAuditsInstance.destroy();
+
+    const audits = (data.weeklyAudits && data.weeklyAudits.length > 0) ? [...data.weeklyAudits].reverse() : [];
+    const labels = audits.map(a => `${a.weekStart.substring(5)} al ${a.weekEnd.substring(5)}`);
+    const incomes = audits.map(a => parseFloat(a.totalIncome || 0));
+    const expenses = audits.map(a => parseFloat(a.totalExpenses || 0));
+    const savings = audits.map(a => parseFloat(a.netSavings || 0));
+
+    chartWeeklyAuditsInstance = new Chart(ctxWeekly, {
+      type: 'bar',
+      data: {
+        labels: labels.length > 0 ? labels : ['Semana Actual'],
+        datasets: [
+          {
+            label: 'Ingresos Semanales ($)',
+            data: incomes.length > 0 ? incomes : [parseFloat(data.summary?.totalCharged || 0)],
+            backgroundColor: 'rgba(56, 189, 248, 0.75)',
+            borderRadius: 6
+          },
+          {
+            label: 'Gastos Semanales ($)',
+            data: expenses.length > 0 ? expenses : [parseFloat(data.summary?.totalCost || 0)],
+            backgroundColor: 'rgba(239, 68, 68, 0.75)',
+            borderRadius: 6
+          },
+          {
+            label: 'Ahorro / Ganancia Neta ($)',
+            data: savings.length > 0 ? savings : [parseFloat(data.summary?.totalNetProfit || 0)],
+            backgroundColor: 'rgba(16, 185, 129, 0.85)',
+            borderRadius: 6
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            labels: { color: '#cbd5e1', font: { size: 10, family: 'Inter' }, boxWidth: 12 }
+          },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ` ${ctx.dataset.label}: $${parseFloat(ctx.raw || 0).toFixed(2)} MXN`
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: 'rgba(255, 255, 255, 0.04)' },
+            ticks: { color: '#94a3b8', font: { size: 10 } }
+          },
+          y: {
+            grid: { color: 'rgba(255, 255, 255, 0.06)' },
+            ticks: { color: '#94a3b8', font: { size: 10 }, callback: (val) => `$${val}` }
+          }
+        }
+      }
+    });
+  }
 }
 
 function renderFinanceLedger(records) {

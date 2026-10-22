@@ -352,6 +352,21 @@ function getFinanceSummary(filterOptions = {}) {
     SELECT * FROM FinanceWeeklyAudits ORDER BY weekEnd DESC LIMIT 10
   `).all();
 
+  // Series temporales de los últimos 30 días para gráficas comparativas
+  const dailyTrends = sqliteDb.prepare(`
+    SELECT 
+      substr(createdAt, 1, 10) as date,
+      COUNT(*) as transactionsCount,
+      COALESCE(SUM(chargedAmount), 0) as income,
+      COALESCE(SUM(costAmount), 0) as expense,
+      COALESCE(SUM(CASE WHEN netProfit > 0 THEN netProfit ELSE 0 END), 0) as profit,
+      COALESCE(SUM(CASE WHEN netProfit < 0 THEN ABS(netProfit) ELSE 0 END), 0) as loss
+    FROM FinanceLedger
+    WHERE createdAt >= date('now', '-30 days')
+    GROUP BY substr(createdAt, 1, 10)
+    ORDER BY date ASC
+  `).all();
+
   return {
     config,
     summary: {
@@ -365,6 +380,7 @@ function getFinanceSummary(filterOptions = {}) {
     categories: categoryRows,
     accounts: enrichedAccounts,
     weeklyAudits,
+    dailyTrends,
     recent
   };
 }
