@@ -3561,32 +3561,68 @@ h1, h2, h3, h4 { color: var(--text-primary); font-family: var(--font-display); f
   .finance-header-actions .btn {
     width: 100% !important;
     padding: 10px 8px !important;
-    font-size: 0.78rem !important;
+    font-size: 0.76rem !important;
     text-align: center;
+    white-space: normal !important; /* Permite salto de línea en texto largo para no desbordar */
+    word-break: break-word !important;
   }
 
   .finance-header-actions #btnReloadFinance {
     grid-column: span 2 !important;
   }
 
-  /* Grid layouts for cards on mobile */
-  #accountsManagerCardsGrid,
-  #financeAccountsGrid {
+  /* KPIs Globales en móvil: 1 columna limpia y bien espaciada */
+  .finance-kpi-grid {
     grid-template-columns: 1fr !important;
     gap: 10px !important;
   }
 
+  /* Grid layouts for cards on mobile */
+  #accountsManagerCardsGrid,
+  #financeAccountsGrid,
+  #financeServersGrid,
+  #financeDebtsList {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  /* Categorías de gastos: 2 columnas compactas con ancho flexible que no desborda */
   #financeCategoriesGrid {
-    grid-template-columns: repeat(2, 1fr) !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     gap: 8px !important;
+    width: 100% !important;
+  }
+
+  #financeCategoriesGrid > div {
+    min-width: 0 !important;
+    padding: 8px 10px !important;
   }
 
   /* Form responsive adjustments */
   #formAddEditAccount,
+  #formAddEditDebt,
   #formManualTransaction,
   #formFinanceConfig {
     grid-template-columns: 1fr !important;
     gap: 10px !important;
+  }
+
+  /* Ocultar el botón flotante rosa de precios cuando se está en la pestaña de finanzas para no estorbar */
+  body.viewing-finance #btnBulkSavePrices,
+  #financeSection:not(.hidden) ~ #btnBulkSavePrices {
+    display: none !important;
+  }
+
+  /* Reducir tamaño y posicionamiento de botones flotantes en móvil */
+  .floating-whatsapp-btn {
+    bottom: 18px !important;
+    right: 18px !important;
+    width: 52px !important;
+    height: 52px !important;
+  }
+
+  #btnBulkSavePrices {
+    bottom: 78px !important;
   }
 
   /* Credit card detail inputs inside forms */
@@ -3608,5 +3644,6 @@ h1, h2, h3, h4 { color: var(--text-primary); font-family: var(--font-display); f
     overflow-x: auto !important;
   }
 }
+
 
 

@@ -356,6 +356,7 @@ function openProfileTab(subTab = 'tabProfileOverview') {
   if (typeof rechargesSection !== 'undefined' && rechargesSection) rechargesSection.classList.add('hidden');
   const ssc = document.getElementById('serverSwitchContainer');
   if (ssc) ssc.classList.remove('hidden');
+  document.body.classList.remove('viewing-finance');
 
   switchProfileTab(subTab);
   loadFullUserProfile();
@@ -392,6 +393,7 @@ tabCatalog.addEventListener('click', () => {
   if (typeof rechargesSection !== 'undefined' && rechargesSection) rechargesSection.classList.add('hidden');
   const ssc = document.getElementById('serverSwitchContainer');
   if (ssc) ssc.classList.remove('hidden');
+  document.body.classList.remove('viewing-finance');
   
   // Cleanly return to main categories view
   if (typeof showCategoriesView === 'function') {
@@ -422,12 +424,14 @@ tabHistory.addEventListener('click', () => {
   if (typeof rechargesSection !== 'undefined' && rechargesSection) rechargesSection.classList.add('hidden');
   const ssc = document.getElementById('serverSwitchContainer');
   if (ssc) ssc.classList.remove('hidden');
+  document.body.classList.remove('viewing-finance');
   fetchOrderHistory(); // Refresh history every time the tab is opened
   setTimeout(() => historySection.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
 });
 
 if (tabAdmin) {
   tabAdmin.addEventListener('click', async () => {
+    document.body.classList.remove('viewing-finance');
     tabAdmin.classList.add('active');
     tabCatalog.classList.remove('active');
     tabHistory.classList.remove('active');
@@ -475,6 +479,11 @@ if (tabFinanceBtn) {
     // Ocultar barra de servidores para evitar distracciones innecesarias al hacer números
     const ssc = document.getElementById('serverSwitchContainer');
     if (ssc) ssc.classList.add('hidden');
+
+    // Ocultar botón flotante de guardar precios en finanzas
+    const bsp = document.getElementById('btnBulkSavePrices');
+    if (bsp) bsp.classList.add('hidden');
+    document.body.classList.add('viewing-finance');
 
     if (typeof loadFinanceDashboard === 'function') {
       await loadFinanceDashboard();
