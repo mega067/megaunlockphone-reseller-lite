@@ -35,7 +35,7 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-// Serve static files with optimized caching
+// Serve static files with optimized caching (Bust cache for CSS, JS, and HTML on client updates)
 app.use(express.static(path.join(__dirname, 'public'), {
   setHeaders: function (res, filePath) {
     if (filePath.endsWith('.html')) {
@@ -46,8 +46,9 @@ app.use(express.static(path.join(__dirname, 'public'), {
       // Images & Fonts: Cache for 7 days
       res.setHeader('Cache-Control', 'public, max-age=604800, stale-while-revalidate=86400');
     } else if (filePath.match(/\.(css|js)$/i)) {
-      // CSS & JS: Cache for 1 hour with revalidation to ensure quick updates without full reload lag
-      res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=600');
+      // CSS & JS: No-cache revalidate so mobiles always get the latest code instantly
+      res.setHeader('Cache-Control', 'no-cache, must-revalidate, max-age=0');
+      res.setHeader('Pragma', 'no-cache');
     }
   }
 }));
