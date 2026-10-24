@@ -902,3 +902,41 @@ exports.performWeeklyAudit = (req, res) => {
   }
 };
 
+// --- GESTIÓN DE DEUDORES Y ACREEDORES ---
+exports.getDebts = (req, res) => {
+  try {
+    const data = financeManager.getAllDebts(req.query.type);
+    res.json({ success: true, ...data });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+};
+
+exports.saveDebt = (req, res) => {
+  try {
+    const debt = financeManager.saveDebt(req.body);
+    res.json({ success: true, debt });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+};
+
+exports.recordDebtPayment = (req, res) => {
+  try {
+    const { amount, account } = req.body;
+    const debt = financeManager.recordDebtPayment(req.params.id, amount, account);
+    res.json({ success: true, debt });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+};
+
+exports.deleteDebt = (req, res) => {
+  try {
+    const success = financeManager.deleteDebt(req.params.id);
+    res.json({ success });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+};
+

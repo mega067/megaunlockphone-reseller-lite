@@ -109,6 +109,23 @@ const initTables = () => {
             verifiedBy TEXT DEFAULT 'Admin',
             createdAt TEXT
         );
+
+        /* Control de Deudores (Me deben / Cuentas por cobrar) y Acreedores (Yo debo / Cuentas por pagar) */
+        CREATE TABLE IF NOT EXISTS FinanceDebts (
+            id TEXT PRIMARY KEY,
+            personName TEXT NOT NULL,
+            type TEXT NOT NULL, /* 'receivable' (me deben dinero) | 'payable' (yo le debo dinero) */
+            totalAmount REAL DEFAULT 0,
+            paidAmount REAL DEFAULT 0,
+            remainingAmount REAL DEFAULT 0,
+            concept TEXT,
+            dueDate TEXT,
+            phone TEXT,
+            notes TEXT,
+            status TEXT DEFAULT 'pending', /* 'pending' (pendiente) | 'partial' (abono parcial) | 'settled' (liquidada al 100%) */
+            createdAt TEXT,
+            updatedAt TEXT
+        );
     `);
 
     try {

@@ -66,4 +66,10 @@ router.delete('/admin/finance/accounts/:id', requireAuth, requireAdmin, adminCon
 // Recuento y Verificación Semanal (Fin de semana)
 router.post('/admin/finance/weekly-audit', requireAuth, requireAdmin, adminController.performWeeklyAudit);
 
+// Control de Deudores (Me deben) y Acreedores (Yo debo)
+router.get('/admin/finance/debts', requireAuth, requireAdmin, adminController.getDebts);
+router.post('/admin/finance/debts', requireAuth, requireAdmin, adminController.saveDebt);
+router.post('/admin/finance/debts/:id/pay', requireAuth, requireAdmin, adminController.recordDebtPayment);
+router.delete('/admin/finance/debts/:id', requireAuth, requireAdmin, adminController.deleteDebt);
+
 module.exports = router;

@@ -23,7 +23,7 @@ async function handleCommand(context) {
     const cmd = context.firstWord.toLowerCase();
 
     // Bloquear comandos privados en grupos
-    const privateCommands = ['/saldo', '!saldo', 'saldo', '/pedir', '!pedir', 'pedir', '/historial', '!historial', 'historial', '/recargar', '!recargar', 'recargar', '/vincular', '!vincular', 'vincular', '/pago', '!pago', 'pago', '/recibido', '!recibido', 'recibido', '/mesada', '!mesada', 'mesada'];
+    const privateCommands = ['/saldo', '!saldo', 'saldo', '/pedir', '!pedir', 'pedir', '/historial', '!historial', 'historial', '/recargar', '!recargar', 'recargar', '/vincular', '!vincular', 'vincular', '/pago', '!pago', 'pago', '/recibido', '!recibido', 'recibido', '/mesada', '!mesada', 'mesada', '/deudores', '!deudores', 'deudores', '/deudas', '!deudas', 'deudas', '/deudor', '!deudor', 'deudor', '/debo', '!debo', 'debo', '/abono', '!abono', 'abono'];
     if (isGroup && privateCommands.includes(cmd)) {
         await context.sock.sendMessage(remoteJid, { text: '🚫 *Comando Restringido*\n\nPor motivos de privacidad y seguridad, este comando solo puede utilizarse enviándome un mensaje por chat privado.' });
         return true;

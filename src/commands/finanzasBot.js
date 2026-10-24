@@ -66,6 +66,165 @@ async function financeBotCommands(context) {
     const cmd = (firstWord || '').toLowerCase();
     const isPagoCmd = ['/pago', '!pago', 'pago', '/gasto', '!gasto', 'gasto', '/pagar', '!pagar', 'pagar'].includes(cmd);
     const isRecibidoCmd = ['/recibido', '!recibido', 'recibido', '/recibi', '!recibi', 'recibi', '/mesada', '!mesada', 'mesada', '/ingreso', '!ingreso', 'ingreso'].includes(cmd);
+    const isDebtsListCmd = ['/deudores', '!deudores', 'deudores', '/deudas', '!deudas', 'deudas'].includes(cmd);
+    const isNewDebtCmd = ['/deudor', '!deudor', 'deudor', '/medeben', '!medeben', 'medeben', '/debo', '!debo', 'debo', '/prestamo', '!prestamo', 'prestamo'].includes(cmd);
+    const isAbonoCmd = ['/abono', '!abono', 'abono', '/abonar', '!abonar', 'abonar'].includes(cmd);
+
+    // 0. LISTAR DEUDAS Y DEUDORES: /deudores o /deudas
+    if (isDebtsListCmd) {
+        const data = financeManager.getAllDebts();
+        const debts = data.debts || [];
+        const s = data.summary || {};
+
+        if (debts.length === 0) {
+            await sock.sendMessage(remoteJid, {
+                text: `📋 *CONTROL DE DEUDAS Y DEUDORES*\n━━━━━━━━━━━━━━━━━━━━━━\n🎉 ¡No tienes deudas activas ni deudores registrados!\n\n_Para registrar un deudor escribe:_\n*deudor <Nombre> <Monto> [Concepto]*\n_Para registrar a quién le debes:_\n*debo <Nombre> <Monto> [Concepto]*`
+            });
+            return true;
+        }
+
+        let report = `📋 *CONTROL DE DEUDAS & DEUDORES* 📋\n` +
+                     `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                     `🟢 *Me Deben:* $${parseFloat(s.pendingReceivable || 0).toFixed(2)} MXN\n` +
+                     `🔴 *Yo Debo:* $${parseFloat(s.pendingPayable || 0).toFixed(2)} MXN\n` +
+                     `📊 *Balance Neto:* ${s.netBalance >= 0 ? '+' : ''}$${parseFloat(s.netBalance || 0).toFixed(2)} MXN\n` +
+                     `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+        const receivables = debts.filter(d => d.type === 'receivable' && d.status !== 'settled');
+        const payables = debts.filter(d => d.type === 'payable' && d.status !== 'settled');
+        const settled = debts.filter(d => d.status === 'settled');
+
+        if (receivables.length > 0) {
+            report += `🟢 *PERSONAS QUE ME DEBEN:*\n`;
+            receivables.forEach((d, idx) => {
+                const rem = parseFloat(d.remainingAmount || 0);
+                const tot = parseFloat(d.totalAmount || 0);
+                report += `${idx + 1}. *${d.personName}:* Resta *$${rem.toFixed(2)}* (de $${tot.toFixed(2)})\n   _Concepto: ${d.concept || 'Préstamo'}_${d.dueDate ? ` | Vence: ${d.dueDate}` : ''}\n`;
+            });
+            report += `\n`;
+        }
+
+        if (payables.length > 0) {
+            report += `🔴 *DEUDAS QUE YO DEBO:*\n`;
+            payables.forEach((d, idx) => {
+                const rem = parseFloat(d.remainingAmount || 0);
+                const tot = parseFloat(d.totalAmount || 0);
+                report += `${idx + 1}. *${d.personName}:* Debo *$${rem.toFixed(2)}* (de $${tot.toFixed(2)})\n   _Concepto: ${d.concept || 'Deuda'}_${d.dueDate ? ` | Vence: ${d.dueDate}` : ''}\n`;
+            });
+            report += `\n`;
+        }
+
+        report += `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                  `💡 *Comandos rápidos:*\n` +
+                  `• *deudor <Nombre> <Monto>* ➔ Registrar alguien que te debe\n` +
+                  `• *debo <Nombre> <Monto>* ➔ Registrar a quién le debes\n` +
+                  `• *abono <Nombre> <Monto>* ➔ Registrar abono o pago recibido`;
+
+        await sock.sendMessage(remoteJid, { text: report });
+        return true;
+    }
+
+    // REGISTRAR NUEVA DEUDA DIRECTA: /deudor <Nombre> <Monto> [Concepto] o /debo <Nombre> <Monto> [Concepto]
+    if (isNewDebtCmd) {
+        const isReceivable = !cmd.includes('debo');
+        if (args.length >= 3) {
+            const personName = args[1].trim();
+            const rawAmount = parseFloat(args[2].replace('$', '').trim());
+            const concept = args.slice(3).join(' ').trim() || (isReceivable ? 'Préstamo / Deuda' : 'Deuda pendiente');
+
+            if (isNaN(rawAmount) || rawAmount <= 0) {
+                await sock.sendMessage(remoteJid, { text: '❌ Monto inválido. Ejemplo: *deudor Juan 350 Desbloqueo*' });
+                return true;
+            }
+
+            try {
+                const newDebt = financeManager.saveDebt({
+                    personName,
+                    type: isReceivable ? 'receivable' : 'payable',
+                    totalAmount: rawAmount,
+                    paidAmount: 0,
+                    concept
+                });
+
+                const icon = isReceivable ? '🟢' : '🔴';
+                await sock.sendMessage(remoteJid, {
+                    text: `✅ *DEUDA REGISTRADA CON ÉXITO*\n` +
+                          `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                          `${icon} *Tipo:* ${isReceivable ? 'Me deben dinero (Deudor)' : 'Yo le debo dinero (Acreedor)'}\n` +
+                          `👤 *Persona / Entidad:* ${personName}\n` +
+                          `💵 *Monto Total:* $${rawAmount.toFixed(2)} MXN\n` +
+                          `🏷️ *Concepto:* ${concept}\n` +
+                          `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                          `_Registrado y visible en tu panel web en Deudores & Deudas._`
+                });
+                return true;
+            } catch (err) {
+                await sock.sendMessage(remoteJid, { text: `❌ Error al registrar deuda: ${err.message}` });
+                return true;
+            }
+        } else {
+            await sock.sendMessage(remoteJid, {
+                text: `📝 *REGISTRO RÁPIDO DE DEUDAS*\n━━━━━━━━━━━━━━━━━━━━━━\n` +
+                      `Usa este formato:\n` +
+                      `• *deudor <Nombre> <Monto> [Concepto]*\n` +
+                      `  _Ejemplo: deudor Pedro 450 pantalla_\n\n` +
+                      `• *debo <Nombre> <Monto> [Concepto]*\n` +
+                      `  _Ejemplo: debo Taller 600 refacción_\n\n` +
+                      `• Escribe *deudores* para ver la lista completa.`
+            });
+            return true;
+        }
+    }
+
+    // REGISTRAR ABONO: /abono <Nombre> <Monto>
+    if (isAbonoCmd) {
+        if (args.length >= 3) {
+            const searchName = args[1].toLowerCase().trim();
+            const payAmt = parseFloat(args[2].replace('$', '').trim());
+            if (isNaN(payAmt) || payAmt <= 0) {
+                await sock.sendMessage(remoteJid, { text: '❌ Monto de abono inválido. Ejemplo: *abono Juan 150*' });
+                return true;
+            }
+
+            const data = financeManager.getAllDebts();
+            const match = (data.debts || []).find(d => 
+                d.status !== 'settled' && 
+                (d.personName.toLowerCase().includes(searchName) || searchName.includes(d.personName.toLowerCase()))
+            );
+
+            if (!match) {
+                await sock.sendMessage(remoteJid, {
+                    text: `❌ No se encontró ninguna deuda activa para "${args[1]}". Escribe *deudores* para ver los nombres exactos.`
+                });
+                return true;
+            }
+
+            try {
+                const updated = financeManager.recordDebtPayment(match.id, payAmt, 'Efectivo / Caja');
+                const isSettled = updated.status === 'settled';
+
+                await sock.sendMessage(remoteJid, {
+                    text: `✅ *ABONO REGISTRADO CON ÉXITO*\n` +
+                          `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                          `👤 *Persona:* ${updated.personName}\n` +
+                          `💵 *Abono aplicado:* $${payAmt.toFixed(2)} MXN\n` +
+                          `📊 *Resta por liquidar:* $${parseFloat(updated.remainingAmount || 0).toFixed(2)} MXN\n` +
+                          `📌 *Estado:* ${isSettled ? '🎉 ¡TOTALMENTE LIQUIDADO!' : '⏳ Pendiente saldo restante'}\n` +
+                          `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                          `_Registrado automáticamente en tus ingresos y reflejado en la web._`
+                });
+                return true;
+            } catch (err) {
+                await sock.sendMessage(remoteJid, { text: `❌ Error al registrar abono: ${err.message}` });
+                return true;
+            }
+        } else {
+            await sock.sendMessage(remoteJid, {
+                text: `💵 *REGISTRAR ABONO O PAGO*\n━━━━━━━━━━━━━━━━━━━━━━\nFormato:\n*abono <Nombre> <Monto>*\n\n_Ejemplo: abono Juan 200_\n_Escribe *deudores* para ver la lista de pendientes._`
+            });
+            return true;
+        }
+    }
 
     // 1. INICIAR COMANDO: /pago o /recibido
     if (isPagoCmd || isRecibidoCmd) {

@@ -644,6 +644,154 @@ function deleteTransaction(id) {
   return res.changes > 0;
 }
 
+/**
+ * --- GESTIÓN DE DEUDORES (ME DEBEN) Y ACREEDORES (YO DEBO) ---
+ */
+
+function getAllDebts(filterType) {
+  try {
+    let sql = 'SELECT * FROM FinanceDebts';
+    const params = [];
+    if (filterType && (filterType === 'receivable' || filterType === 'payable')) {
+      sql += ' WHERE type = ?';
+      params.push(filterType);
+    }
+    sql += ' ORDER BY CASE WHEN status = "settled" THEN 1 ELSE 0 END, createdAt DESC';
+    const debts = sqliteDb.prepare(sql).all(...params);
+
+    // Totales calculados
+    let totalReceivable = 0;
+    let pendingReceivable = 0;
+    let totalPayable = 0;
+    let pendingPayable = 0;
+
+    debts.forEach(d => {
+      const remaining = parseFloat(d.remainingAmount || 0);
+      const total = parseFloat(d.totalAmount || 0);
+      if (d.type === 'receivable') {
+        totalReceivable += total;
+        if (d.status !== 'settled') pendingReceivable += remaining;
+      } else {
+        totalPayable += total;
+        if (d.status !== 'settled') pendingPayable += remaining;
+      }
+    });
+
+    return {
+      debts,
+      summary: {
+        totalReceivable,
+        pendingReceivable,
+        totalPayable,
+        pendingPayable,
+        netBalance: pendingReceivable - pendingPayable
+      }
+    };
+  } catch (err) {
+    console.error('[GET ALL DEBTS ERR]', err);
+    return { debts: [], summary: { totalReceivable: 0, pendingReceivable: 0, totalPayable: 0, pendingPayable: 0, netBalance: 0 } };
+  }
+}
+
+function saveDebt(data) {
+  const isUpdate = !!data.id;
+  const id = data.id || `debt_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
+  const personName = String(data.personName || '').trim();
+  if (!personName) throw new Error('El nombre de la persona o entidad es requerido.');
+
+  const type = data.type === 'payable' ? 'payable' : 'receivable';
+  const totalAmount = Math.max(0, parseFloat(data.totalAmount) || 0);
+  const paidAmount = Math.max(0, parseFloat(data.paidAmount) || 0);
+  const remainingAmount = Math.max(0, totalAmount - paidAmount);
+
+  let status = 'pending';
+  if (remainingAmount <= 0.009) {
+    status = 'settled';
+  } else if (paidAmount > 0) {
+    status = 'partial';
+  }
+
+  const concept = data.concept ? String(data.concept).trim() : '';
+  const dueDate = data.dueDate ? String(data.dueDate).trim() : null;
+  const phone = data.phone ? String(data.phone).trim() : null;
+  const notes = data.notes ? String(data.notes).trim() : '';
+
+  if (isUpdate) {
+    const stmt = sqliteDb.prepare(`
+      UPDATE FinanceDebts 
+      SET personName = ?, type = ?, totalAmount = ?, paidAmount = ?, remainingAmount = ?,
+          concept = ?, dueDate = ?, phone = ?, notes = ?, status = ?, updatedAt = datetime('now')
+      WHERE id = ?
+    `);
+    stmt.run(personName, type, totalAmount, paidAmount, remainingAmount, concept, dueDate, phone, notes, status, id);
+  } else {
+    const stmt = sqliteDb.prepare(`
+      INSERT INTO FinanceDebts (id, personName, type, totalAmount, paidAmount, remainingAmount, concept, dueDate, phone, notes, status, createdAt, updatedAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+    `);
+    stmt.run(id, personName, type, totalAmount, paidAmount, remainingAmount, concept, dueDate, phone, notes, status);
+  }
+
+  return sqliteDb.prepare('SELECT * FROM FinanceDebts WHERE id = ?').get(id);
+}
+
+/**
+ * Registrar un abono o liquidación a una deuda y opcionalmente mover el dinero a una cuenta bancaria/caja
+ */
+function recordDebtPayment(debtId, paymentAmount, accountName) {
+  const debt = sqliteDb.prepare('SELECT * FROM FinanceDebts WHERE id = ?').get(debtId);
+  if (!debt) throw new Error('Registro de deuda no encontrado.');
+
+  const payment = parseFloat(paymentAmount) || 0;
+  if (payment <= 0) throw new Error('El monto de abono debe ser mayor a 0.');
+
+  const currentPaid = parseFloat(debt.paidAmount || 0);
+  const currentTotal = parseFloat(debt.totalAmount || 0);
+  const newPaid = Math.min(currentTotal, currentPaid + payment);
+  const newRemaining = Math.max(0, currentTotal - newPaid);
+
+  let newStatus = 'partial';
+  if (newRemaining <= 0.009) {
+    newStatus = 'settled';
+  }
+
+  sqliteDb.prepare(`
+    UPDATE FinanceDebts 
+    SET paidAmount = ?, remainingAmount = ?, status = ?, updatedAt = datetime('now')
+    WHERE id = ?
+  `).run(newPaid, newRemaining, newStatus, debtId);
+
+  // Si se especificó una cuenta, registrar el movimiento en FinanceLedger y FinanceAccounts
+  if (accountName) {
+    const isReceivable = debt.type === 'receivable';
+    // Si me deben y me pagan: es un ingreso a mi cuenta (income_manual)
+    // Si yo debo y pago: es un gasto de mi cuenta (expense_manual)
+    const ledgerType = isReceivable ? 'income_manual' : 'expense_manual';
+    const noteText = isReceivable 
+      ? `Abono de ${debt.personName} a deuda #${debt.id.slice(-6)}: ${debt.concept || 'Deuda'}`
+      : `Pago realizado a ${debt.personName} por deuda #${debt.id.slice(-6)}: ${debt.concept || 'Deuda'}`;
+
+    recordTransaction({
+      type: ledgerType,
+      category: isReceivable ? 'otros' : 'servicios',
+      serviceName: noteText,
+      chargedAmount: isReceivable ? payment : 0,
+      costAmount: isReceivable ? 0 : payment,
+      account: accountName,
+      notes: noteText,
+      recordedBy: 'Admin'
+    });
+  }
+
+  return sqliteDb.prepare('SELECT * FROM FinanceDebts WHERE id = ?').get(debtId);
+}
+
+function deleteDebt(id) {
+  const stmt = sqliteDb.prepare('DELETE FROM FinanceDebts WHERE id = ?');
+  const res = stmt.run(id);
+  return res.changes > 0;
+}
+
 module.exports = {
   getFinanceConfig,
   updateFinanceConfig,
@@ -654,5 +802,9 @@ module.exports = {
   getFinanceSummary,
   performWeeklyAudit,
   getOrderFinanceDetails,
-  deleteTransaction
+  deleteTransaction,
+  getAllDebts,
+  saveDebt,
+  recordDebtPayment,
+  deleteDebt
 };

@@ -541,10 +541,13 @@ async function otros(context) {
             `• */msgall <Texto>* ➔ Difusión masiva a TODOS los clientes (fotos/videos)\n` +
             `• */msggrup <Texto>* ➔ Anuncio al grupo oficial (fotos/videos)\n` +
             `• */addmoney <ID> <Servidor> <Monto>* ➔ Recargar saldo a revendedor\n` +
-            `• */removemoney <ID> <Servidor> <Monto>* ➔ Descontar saldo\n` +
             `• */pago <Monto> [Concepto]* ➔ Registrar gasto (comida, pasaje, etc.) con selección de cuenta\n` +
             `• */recibido <Monto> [Concepto]* ➔ Registrar dinero recibido a cuenta o efectivo\n` +
             `• */mesada <Monto>* ➔ Registrar mesada o apoyo para pasajes/comida\n` +
+            `• */deudores* ➔ Ver lista de personas que te deben y a quiénes les debes\n` +
+            `• */deudor <Nombre> <Monto>* ➔ Registrar a alguien que te debe dinero\n` +
+            `• */debo <Nombre> <Monto>* ➔ Registrar a quién le debes dinero\n` +
+            `• */abono <Nombre> <Monto>* ➔ Registrar abono o liquidación de deuda\n` +
             `• */finanzas* (o */ganancias*) ➔ Resumen contable de bolsillo y bancos\n` +
             `• */setprice* ➔ Modificador de márgenes y precios\n` +
             `• */historial* ➔ Últimos 10 pedidos globales\n` +

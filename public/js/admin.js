@@ -1943,6 +1943,7 @@ async function loadFinanceDashboard() {
     renderFinanceCharts(data);
     renderFinanceLedger(data.recent);
     populateManualAccountsSelect(data.accounts);
+    loadDebtsSummary();
 
     // Actualizar sliders en configuración
     const slider = document.getElementById('inputFinanceReinvestPercent');
@@ -2750,6 +2751,100 @@ document.addEventListener('DOMContentLoaded', () => {
     btnCloseAudit.addEventListener('click', () => auditContainer.classList.add('hidden'));
   }
 
+  // Toggle Panel de Deudores & Deudas
+  const btnToggleDebts = document.getElementById('btnToggleDebtsManager');
+  const debtsContainer = document.getElementById('financeDebtsContainer');
+  const btnCloseDebts = document.getElementById('btnCloseDebtsManager');
+  if (btnToggleDebts && debtsContainer) {
+    btnToggleDebts.addEventListener('click', () => {
+      debtsContainer.classList.toggle('hidden');
+      if (!debtsContainer.classList.contains('hidden')) {
+        loadDebtsManagerList();
+      }
+    });
+  }
+  if (btnCloseDebts && debtsContainer) {
+    btnCloseDebts.addEventListener('click', () => debtsContainer.classList.add('hidden'));
+  }
+
+  // Filtros de Deudores & Deudas
+  document.querySelectorAll('.debt-filter-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      document.querySelectorAll('.debt-filter-btn').forEach(b => b.classList.remove('active'));
+      e.target.classList.add('active');
+      currentDebtsFilter = e.target.getAttribute('data-filter') || 'all';
+      filterAndRenderDebtsList();
+    });
+  });
+
+  const searchDebtsInput = document.getElementById('inputSearchDebts');
+  if (searchDebtsInput) {
+    searchDebtsInput.addEventListener('input', () => filterAndRenderDebtsList());
+  }
+
+  // Formulario Crear / Editar Deuda
+  const formDebt = document.getElementById('formAddEditDebt');
+  const btnCancelDebt = document.getElementById('btnCancelEditDebt');
+  if (formDebt) {
+    formDebt.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('debtFormId').value;
+      const payload = {
+        id: id || undefined,
+        type: document.getElementById('debtFormType').value,
+        personName: document.getElementById('debtFormPersonName').value.trim(),
+        totalAmount: parseFloat(document.getElementById('debtFormTotalAmount').value) || 0,
+        paidAmount: parseFloat(document.getElementById('debtFormPaidAmount').value) || 0,
+        concept: document.getElementById('debtFormConcept').value.trim(),
+        dueDate: document.getElementById('debtFormDueDate').value || null,
+        phone: document.getElementById('debtFormPhone').value.trim() || null
+      };
+
+      try {
+        const res = await fetch('/api/admin/finance/debts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`,
+            'X-Server-Id': currentServerId
+          },
+          body: JSON.stringify(payload)
+        });
+        const resData = await res.json();
+        if (res.ok && resData.success) {
+          alert('✅ Deuda / Deudor guardado correctamente.');
+          formDebt.reset();
+          document.getElementById('debtFormId').value = '';
+          const btnSaveD = document.getElementById('btnSaveDebt');
+          if (btnSaveD) {
+            btnSaveD.innerHTML = '<i data-lucide="check"></i> Guardar Deuda';
+            btnSaveD.style.background = '#ea580c';
+          }
+          if (btnCancelDebt) btnCancelDebt.style.display = 'none';
+          if (window.lucide) window.lucide.createIcons();
+          loadDebtsManagerList();
+        } else {
+          alert(resData.error || 'Error al guardar la deuda');
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    });
+  }
+  if (btnCancelDebt && formDebt) {
+    btnCancelDebt.addEventListener('click', () => {
+      formDebt.reset();
+      document.getElementById('debtFormId').value = '';
+      const btnSaveD = document.getElementById('btnSaveDebt');
+      if (btnSaveD) {
+        btnSaveD.innerHTML = '<i data-lucide="check"></i> Guardar Deuda';
+        btnSaveD.style.background = '#ea580c';
+      }
+      btnCancelDebt.style.display = 'none';
+      if (window.lucide) window.lucide.createIcons();
+    });
+  }
+
   // Confirmar Cierre Semanal
   const btnConfirmAudit = document.getElementById('btnExecuteWeeklyAudit');
   if (btnConfirmAudit) {
@@ -3299,4 +3394,271 @@ async function loadWeeklyAuditView() {
     if (statsContainer) statsContainer.innerHTML = `<div style="color: #ef4444;">Error al cargar datos semanales: ${escapeHtml(err.message)}</div>`;
   }
 }
+
+/**
+ * --- GESTIÓN DE DEUDORES & DEUDAS (CUENTAS POR COBRAR Y POR PAGAR) ---
+ */
+let currentDebtsList = [];
+let currentDebtsFilter = 'all';
+
+async function loadDebtsSummary() {
+  const badge = document.getElementById('badgeDebtsCount');
+  try {
+    const res = await fetch('/api/admin/finance/debts', {
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'X-Server-Id': currentServerId
+      }
+    });
+    const d = await res.json();
+    if (res.ok && d.success) {
+      const pendingCount = (d.debts || []).filter(item => item.status !== 'settled').length;
+      if (badge) badge.textContent = pendingCount;
+    }
+  } catch (e) {}
+}
+
+async function loadDebtsManagerList() {
+  const container = document.getElementById('financeDebtsList');
+  if (!container) return;
+  container.innerHTML = '<div style="color: #94a3b8; font-size: 0.85rem; padding: 10px;">Cargando lista de deudas y deudores...</div>';
+
+  try {
+    const res = await fetch('/api/admin/finance/debts', {
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'X-Server-Id': currentServerId
+      }
+    });
+    const d = await res.json();
+    if (!res.ok || !d.success) throw new Error(d.error || 'Error al obtener deudas');
+
+    currentDebtsList = d.debts || [];
+
+    // Actualizar KPIs
+    const s = d.summary || {};
+    const kpiPendingRec = document.getElementById('debtsKpiPendingReceivable');
+    const kpiTotalRec = document.getElementById('debtsKpiTotalReceivable');
+    const kpiPendingPay = document.getElementById('debtsKpiPendingPayable');
+    const kpiTotalPay = document.getElementById('debtsKpiTotalPayable');
+    const kpiNet = document.getElementById('debtsKpiNetBalance');
+    const badge = document.getElementById('badgeDebtsCount');
+
+    if (kpiPendingRec) kpiPendingRec.textContent = `$${parseFloat(s.pendingReceivable || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
+    if (kpiTotalRec) kpiTotalRec.textContent = `Total histórico: $${parseFloat(s.totalReceivable || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
+    if (kpiPendingPay) kpiPendingPay.textContent = `$${parseFloat(s.pendingPayable || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
+    if (kpiTotalPay) kpiTotalPay.textContent = `Total histórico: $${parseFloat(s.totalPayable || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
+    if (kpiNet) {
+      const net = parseFloat(s.netBalance || 0);
+      kpiNet.textContent = `${net >= 0 ? '+' : ''}$${net.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
+      kpiNet.style.color = net >= 0 ? '#38bdf8' : '#f87171';
+    }
+    if (badge) {
+      badge.textContent = currentDebtsList.filter(item => item.status !== 'settled').length;
+    }
+
+    filterAndRenderDebtsList();
+  } catch (err) {
+    container.innerHTML = `<div style="color: #ef4444; font-size: 0.85rem;">Error: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function filterAndRenderDebtsList() {
+  const container = document.getElementById('financeDebtsList');
+  if (!container) return;
+
+  const searchInput = document.getElementById('inputSearchDebts');
+  const term = (searchInput ? searchInput.value : '').toLowerCase().trim();
+
+  let filtered = currentDebtsList.filter(d => {
+    if (currentDebtsFilter !== 'all' && d.type !== currentDebtsFilter) return false;
+    if (term) {
+      const matchName = (d.personName || '').toLowerCase().includes(term);
+      const matchConcept = (d.concept || '').toLowerCase().includes(term);
+      const matchPhone = (d.phone || '').includes(term);
+      if (!matchName && !matchConcept && !matchPhone) return false;
+    }
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    container.innerHTML = '<div style="color: #64748b; font-size: 0.85rem; padding: 12px; grid-column: 1 / -1;">No hay registros de deudas o deudores en esta categoría.</div>';
+    return;
+  }
+
+  container.innerHTML = filtered.map(d => {
+    const isReceivable = d.type === 'receivable';
+    const isSettled = d.status === 'settled';
+    const isPartial = d.status === 'partial';
+
+    const total = parseFloat(d.totalAmount || 0);
+    const paid = parseFloat(d.paidAmount || 0);
+    const remaining = parseFloat(d.remainingAmount || 0);
+    const progress = total > 0 ? Math.min(100, (paid / total) * 100) : 0;
+
+    const badgeColor = isSettled 
+      ? 'background: rgba(34, 197, 94, 0.2); color: #86efac; border: 1px solid rgba(34, 197, 94, 0.4);' 
+      : (isPartial 
+          ? 'background: rgba(245, 158, 11, 0.2); color: #fde047; border: 1px solid rgba(245, 158, 11, 0.4);' 
+          : 'background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4);');
+
+    const statusLabel = isSettled ? '✅ LIQUIDADO' : (isPartial ? '⏳ ABONADO PARCIAL' : '🔴 PENDIENTE');
+    const typeLabel = isReceivable ? 'ME DEBE DINERO' : 'YO LE DEBO';
+    const cardBorderColor = isReceivable ? '#10b981' : '#ef4444';
+
+    return `
+      <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid ${cardBorderColor}44; border-left: 4px solid ${cardBorderColor}; border-radius: 10px; padding: 14px; position: relative; opacity: ${isSettled ? '0.75' : '1'};">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+          <div>
+            <span style="font-weight: 800; font-size: 0.95rem; color: #f8fafc; display: flex; align-items: center; gap: 6px;">
+              <i data-lucide="${isReceivable ? 'arrow-down-left' : 'arrow-up-right'}" style="width: 16px; height: 16px; color: ${cardBorderColor};"></i> ${escapeHtml(d.personName)}
+            </span>
+            <div style="font-size: 0.68rem; color: #94a3b8; text-transform: uppercase; margin-top: 2px;">
+              ${escapeHtml(typeLabel)} ${d.concept ? `• <b>${escapeHtml(d.concept)}</b>` : ''}
+            </div>
+          </div>
+          <div style="display: flex; gap: 4px; align-items: center;">
+            <span style="font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 800; ${badgeColor}">${statusLabel}</span>
+            <button type="button" onclick="editFinanceDebt('${d.id}')" title="Editar datos" style="background: none; border: none; color: #38bdf8; cursor: pointer; padding: 3px;">
+              <i data-lucide="edit-3" style="width: 14px; height: 14px;"></i>
+            </button>
+            <button type="button" onclick="deleteFinanceDebt('${d.id}', '${escapeHtml(d.personName)}')" title="Eliminar registro" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 3px;">
+              <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+            </button>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 10px;">
+          <div>
+            <div style="font-size: 0.68rem; color: #94a3b8;">Resta por ${isReceivable ? 'cobrar' : 'pagar'}:</div>
+            <div style="font-size: 1.25rem; font-weight: 800; color: ${isSettled ? '#86efac' : '#ffffff'}; font-family: 'Fira Code', monospace;">
+              $${remaining.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+            </div>
+          </div>
+          <div style="text-align: right; font-size: 0.75rem; color: #cbd5e1; font-family: monospace;">
+            Total: $${total.toFixed(2)}<br>
+            <span style="color: #34d399;">Abonado: $${paid.toFixed(2)}</span>
+          </div>
+        </div>
+
+        <!-- Barra de progreso de pago -->
+        <div style="width: 100%; height: 6px; background: rgba(0,0,0,0.4); border-radius: 4px; margin-top: 8px; overflow: hidden;">
+          <div style="width: ${progress}%; height: 100%; background: ${isSettled ? '#22c55e' : (isReceivable ? '#38bdf8' : '#f59e0b')}; transition: width 0.3s ease;"></div>
+        </div>
+
+        <!-- Meta y Acciones -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 0.72rem; color: #94a3b8; border-top: 1px dashed rgba(255,255,255,0.08); padding-top: 6px;">
+          <div>
+            ${d.dueDate ? `<span>Vence: <b>${escapeHtml(d.dueDate)}</b></span>` : '<span>Sin fecha límite</span>'}
+            ${d.phone ? ` • <a href="https://wa.me/${encodeURIComponent(d.phone.replace(/\\D/g, ''))}" target="_blank" style="color: #22c55e; text-decoration: none;">💬 WhatsApp</a>` : ''}
+          </div>
+          <div>
+            ${!isSettled ? `
+              <button type="button" onclick="promptDebtPayment('${d.id}', '${escapeHtml(d.personName)}', ${remaining}, '${d.type}')" class="btn btn-primary btn-sm" style="padding: 3px 8px; font-size: 0.7rem; background: ${isReceivable ? '#059669' : '#d97706'}; border: none; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
+                <i data-lucide="plus-circle" style="width: 12px; height: 12px;"></i> Registrar Abono
+              </button>
+            ` : '<span style="color: #34d399; font-weight: 700;">Completado</span>'}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  if (window.lucide) window.lucide.createIcons();
+}
+
+function editFinanceDebt(id) {
+  const debt = currentDebtsList.find(d => d.id === id);
+  if (!debt) return;
+
+  document.getElementById('debtFormId').value = debt.id;
+  document.getElementById('debtFormType').value = debt.type;
+  document.getElementById('debtFormPersonName').value = debt.personName;
+  document.getElementById('debtFormTotalAmount').value = debt.totalAmount;
+  document.getElementById('debtFormPaidAmount').value = debt.paidAmount;
+  document.getElementById('debtFormConcept').value = debt.concept || '';
+  document.getElementById('debtFormDueDate').value = debt.dueDate || '';
+  document.getElementById('debtFormPhone').value = debt.phone || '';
+
+  const btnSave = document.getElementById('btnSaveDebt');
+  if (btnSave) {
+    btnSave.innerHTML = '<i data-lucide="check"></i> Actualizar Deuda';
+    btnSave.style.background = '#2563eb';
+  }
+
+  const btnCancel = document.getElementById('btnCancelEditDebt');
+  if (btnCancel) btnCancel.style.display = 'inline-block';
+
+  const formDebt = document.getElementById('formAddEditDebt');
+  if (formDebt) {
+    formDebt.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  document.getElementById('debtFormPersonName').focus();
+  if (window.lucide) window.lucide.createIcons();
+}
+
+async function promptDebtPayment(id, personName, remaining, debtType) {
+  const isReceivable = debtType === 'receivable';
+  const actionWord = isReceivable ? 'Abono recibido de' : 'Pago entregado a';
+  const defaultAmount = remaining.toFixed(2);
+  const inputAmt = prompt(`¿Cuánto dinero se va a abonar a la cuenta de ${personName}?\n(Resta por liquidar: $${defaultAmount} MXN)`, defaultAmount);
+  if (!inputAmt) return;
+
+  const amount = parseFloat(inputAmt);
+  if (isNaN(amount) || amount <= 0) {
+    alert('Ingresa un monto numérico válido mayor a 0.');
+    return;
+  }
+
+  // Opcional: preguntar de qué cuenta entra o sale
+  const accountPrompt = prompt(`(Opcional) ¿A qué cuenta se registra el movimiento contable?\nEscribe el nombre de la cuenta (Ej: Efectivo / Caja, Nu Débito, BBVA, etc.) o déjalo en blanco si solo quieres restar la deuda:`, 'Efectivo / Caja');
+
+  try {
+    const res = await fetch(`/api/admin/finance/debts/${encodeURIComponent(id)}/pay`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`,
+        'X-Server-Id': currentServerId
+      },
+      body: JSON.stringify({
+        amount,
+        account: (accountPrompt && accountPrompt.trim()) || undefined
+      })
+    });
+    const d = await res.json();
+    if (res.ok && d.success) {
+      alert(`✅ Abono de $${amount.toFixed(2)} registrado con éxito.`);
+      loadDebtsManagerList();
+      loadFinanceDashboard(); // Refrescar cuentas y balances
+    } else {
+      alert(d.error || 'Error al registrar el abono');
+    }
+  } catch (err) {
+    alert('Error: ' + err.message);
+  }
+}
+
+async function deleteFinanceDebt(id, personName) {
+  if (!confirm(`¿Eliminar definitivamente el registro de deuda de "${personName}"?`)) return;
+  try {
+    const res = await fetch(`/api/admin/finance/debts/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'X-Server-Id': currentServerId
+      }
+    });
+    const d = await res.json();
+    if (res.ok && (d.success !== false)) {
+      loadDebtsManagerList();
+      loadDebtsSummary();
+    } else {
+      alert(d.error || 'Error al eliminar la deuda');
+    }
+  } catch (err) {
+    alert('Error: ' + err.message);
+  }
+}
+
 
