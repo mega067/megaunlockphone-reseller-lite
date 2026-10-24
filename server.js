@@ -57,25 +57,22 @@ app.use('/logos', express.static(path.join(__dirname, 'data/logos'), {
   maxAge: '7d'
 }));
 
-// Route for DigitalPass Fork
-app.get(['/digital-pass', '/digital-pass/'], (req, res) => {
+const moduleManager = require('./src/modules/moduleManager');
+
+// Route for DigitalPass Fork (Protected by addon check)
+app.get(['/digital-pass', '/digital-pass/'], moduleManager.requireModule('digitalPass'), (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'digitalpass', 'index.html'));
 });
 
 // Route for Dedicated Standalone Finance Portal (/finanzas)
-app.get(['/finanzas', '/finanzas/', '/finance'], (req, res) => {
+app.get(['/finanzas', '/finanzas/', '/finance'], moduleManager.requireModule('finance'), (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'finanzas', 'index.html'));
 });
 
 // Public Modular Configuration Endpoint (For forks and addons)
 app.get('/api/modules-config', (req, res) => {
   try {
-    const configPath = path.join(__dirname, 'modules.config.json');
-    if (fs.existsSync(configPath)) {
-      res.json(JSON.parse(fs.readFileSync(configPath, 'utf8')));
-    } else {
-      res.json({ success: true, modules: {} });
-    }
+    res.json(moduleManager.modulesConfig);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

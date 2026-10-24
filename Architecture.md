@@ -58,15 +58,20 @@ El ecosistema está construido como una solución integral cliente-servidor para
 ```plaintext
 dhru-client-web/
 ├── server.js                     # Servidor Express central, middleware, rutas y lifecycle
+├── modules.config.json           # Manifiesto modular maestro para habilitar/deshabilitar addons
 ├── whatsappBot.js                # Demonio independiente Baileys para WhatsApp
 ├── start_bot.sh                  # Lanzador monitoreado del bot para AlwaysData / PM2
 ├── deploy.sh                     # Script de sincronización rsync hacia AlwaysData
 │
 ├── src/                          # Backend modular
+│   ├── modules/                  # Motor desacoplado de Add-ons y Ciclo de Vida
+│   │   └── moduleManager.js      # Singleton de registro de addons, hooks e introspección
 │   ├── auth.js                   # Middleware JWT y validación de sesiones/roles
+│   ├── backupEngine.js           # Respaldos instantáneos, caja negra criptográfica y SHA-256
 │   ├── cacheManager.js           # Caché en memoria para catálogos con TTL
 │   ├── database.js               # Conexión principal SQLite (better-sqlite3)
 │   ├── db.js                     # Capa de abstracción para lectura/escritura JSON atómica
+│   ├── financeManager.js         # Motor contable, cuentas bancarias, cuotas a meses e ingresos
 │   ├── helpers.js                # Cálculo de márgenes, markups, llamadas DHRU GSM
 │   ├── history.js                # Sincronizador de historial y pedidos SQLite
 │   ├── payments.js               # Enrutador de pagos, saldo y transferencias
@@ -76,7 +81,7 @@ dhru-client-web/
 │   │
 │   ├── controllers/              # Controladores de lógica de negocio
 │   │   ├── accountController.js  # Perfil de usuario, balances y detalles
-│   │   ├── adminController.js    # CRUD de usuarios, asignación de precios, reinicio de bot
+│   │   ├── adminController.js    # CRUD de usuarios, cuotas a meses, pasaje universitario
 │   │   ├── botController.js      # Endpoints consumidos por whatsappBot.js
 │   │   ├── catalogController.js  # Obtención y filtrado de productos (Mega y DigitalPass)
 │   │   ├── orderController.js    # Creación, verificación y deducción de órdenes
@@ -84,8 +89,8 @@ dhru-client-web/
 │   │
 │   ├── routes/                   # Definición modular de endpoints Express
 │   │   ├── accountRoutes.js      # /api/account/*
-│   │   ├── adminRoutes.js        # /api/admin/*
-│   │   ├── apiBridgeRoutes.js    # /api/v1/*, /api/v1/s1/*, /api/v1/s3/*, /api/v1/sX/dhru (DHRU Passthrough & IP Whitelist)
+│   │   ├── adminRoutes.js        # /api/admin/* (Finanzas, cuotas, usuarios)
+│   │   ├── apiBridgeRoutes.js    # /api/v1/*, /api/v1/s1/*, /api/v1/s3/*, /api/v1/sX/dhru
 │   │   ├── authRoutes.js         # /api/login, /api/register, /api/logout
 │   │   ├── botRoutes.js          # /api/bot/* (seguridad con BOT_SECRET)
 │   │   ├── catalogRoutes.js      # /api/products, /api/categories
@@ -97,6 +102,7 @@ dhru-client-web/
 │       ├── admin.js              # Comandos para administradores (/addsaldo, etc.)
 │       ├── buscar.js             # Búsqueda interactiva de servicios por texto
 │       ├── configticket.js       # Configuración de entrega de tickets y credenciales
+│       ├── finanzasBot.js        # Comandos /meses, /pasaje, /uni, /deudores, /abono
 │       ├── index.js              # Router central de comandos WhatsApp
 │       ├── otros.js              # Comandos de ayuda, soporte y utilidades
 │       ├── pedir.js              # Creación de pedidos mediante WhatsApp
@@ -107,54 +113,89 @@ dhru-client-web/
 │
 ├── public/                       # Frontend SPA (Vanilla JS + Modern CSS)
 │   ├── index.html                # Interfaz principal de MegaUnlockPhone
-│   ├── index.css                 # Diseño oscuro moderno con efectos glassmorphism
+│   ├── index.css                 # Diseño moderno, responsivo con temas claro y oscuro
 │   ├── index.js                  # Orquestador del frontend general
-│   ├── js/                       # Módulos frontend desacoplados
-│   │   ├── admin.js              # Panel de administración, tabla de usuarios y precios
-│   │   ├── api.js                # Wrapper de llamadas HTTP fetch centralizado
-│   │   ├── notifications.js      # Notificaciones flotantes tipo Toast
-│   │   ├── orders.js             # Modal de compra, historial y estado de órdenes
-│   │   ├── products.js           # Renderizado de categorías y tarjetas de productos
-│   │   ├── recharge.js           # Modal y validación de recarga de saldo
-│   │   ├── searchEngine.js       # Buscador en tiempo real
-│   │   ├── state.js              # Estado reactivo global en el cliente
-│   │   ├── ticket.js             # Generador visual de comprobantes imprimibles
-│   │   ├── utils.js              # Formateadores de moneda, fechas y texto
-│   │   └── warnings.js           # Avisos y alertas del sistema
 │   │
-│   └── digitalpass/              # Fork Exclusivo DigitalPass
-│       ├── index.html            # Portal adaptado exclusivamente a Streaming & IA
-│       ├── digitalpass.css       # Paleta azul cielo suave del logo + toggle dark mode
-│       ├── digitalpass.js        # Interceptor de fetch (?digitalPass=true) y branding
-│       ├── logo.png              # Logo vectorizado oficial DigitalPass
-│       └── brands/               # Logos SVG oficiales (Netflix, Gemini, ChatGPT, Disney+, etc.)
+│   ├── finanzas/                 # Portal Autónomo de Finanzas & Tesorería
+│   │   ├── index.html            # Dashboard independiente de patrimonio, deudas y tarjetas
+│   │   └── finanzas.js           # Controlador desacoplado del portal financiero
+│   │
+│   ├── digitalpass/              # Fork Exclusivo DigitalPass
+│   │   ├── index.html            # Portal adaptado a Streaming & IA
+│   │   ├── digitalpass.css       # Paleta azul suave del logo + toggle dark mode
+│   │   ├── digitalpass.js        # Interceptor de fetch (?digitalPass=true) y branding
+│   │   └── brands/               # Logos SVG oficiales (Netflix, Gemini, ChatGPT, etc.)
+│   │
+│   └── js/                       # Módulos frontend desacoplados
+│       ├── admin.js              # Panel admin, cuotas a meses, deudas y pasaje uni
+│       ├── api.js                # Wrapper de llamadas HTTP fetch centralizado
+│       ├── orders.js             # Modal de compra, historial y sesión reactiva
+│       ├── products.js           # Renderizado de categorías y tarjetas de productos
+│       └── ticket.js             # Generador visual de comprobantes imprimibles
+│
+├── scripts/                      # Herramientas de Mantenimiento y Migración
+│   ├── migrationTool.js          # CLI de migración, exportación, forks y verificación
+│   └── cleanupPrices.js          # Saneamiento de caché de listas de precios
 │
 └── data/                         # Almacenamiento local persistente
-    ├── database.sqlite           # Base de datos relacional (Usuarios, Pedidos, Billeteras)
+    ├── database.sqlite           # Base de datos relacional (Usuarios, Pedidos, Finanzas)
     ├── settings.json             # Configuración central de servidores, credenciales y tasas
-    ├── custom_groups.json        # Categorías y grupos personalizados por el admin
-    ├── prices_1.json             # Caché de precios para Server 1
-    ├── prices_3.json             # Caché de precios para Server 3
-    └── whatsapp_users.json       # Relación de números de WhatsApp con IDs de usuario
+    ├── audit_blackbox.log        # Registro criptográfico inalterable SHA-256
+    └── backups/                  # Respaldos instantáneos y diarios con rotación de 30 días
 ```
 
 ---
 
-## 3. Paradigma de Modularidad y Reutilización de Código
+## 3. Paradigma de Modularidad y Reutilización de Código (Addons & Forks)
 
-El proyecto sigue una arquitectura **Layered / Shared-Core**:
+El proyecto evoluciona hacia una arquitectura **Addon-Driven / Pluggable Architecture**:
 
-1. **Separación de Responsabilidades (SoC):**
-   - **Rutas (`src/routes/`):** Solo definen rutas, métodos y validaciones previas (guards).
-   - **Controladores (`src/controllers/`):** Contienen toda la lógica de negocio; nunca manejan conexión directa con la capa de transporte más allá de responder JSON.
-   - **Capa de Abstracción de Datos (`src/db.js` y `src/database.js`):** Todos los módulos leen y escriben a través de utilidades atómicas, garantizando que si se migra de SQLite a PostgreSQL o MySQL, no se debe alterar ningún controlador.
-   - **Comandos Desacoplados del Bot (`src/commands/`):** Cada comando de WhatsApp es un archivo aislado que exporta su lógica. Si se agrega un nuevo comando (ejemplo: `/sorteo.js`), solo se añade el archivo sin modificar el motor principal de Baileys.
+### A. Mapa de Dependencias y Desacoplamiento (AST & Lifecycle)
+```mermaid
+graph TD
+    Client["🌐 Clientes (Web / Móvil / WhatsApp)"] --> Server["⚡ Express Gateway (server.js)"]
+    Server --> ModMgr["🔌 ModuleManager (src/modules/moduleManager.js)"]
+    
+    subgraph "Addons & Módulos Autónomos"
+        ModMgr -.-> ModCatalog["📦 Módulo Catálogo (catalogRoutes)"]
+        ModMgr -.-> ModPass["🎬 Módulo DigitalPass (/digital-pass)"]
+        ModMgr -.-> ModFin["💰 Módulo Finanzas (/finanzas)"]
+        ModMgr -.-> ModBot["🤖 Módulo WhatsApp (whatsappBot)"]
+        ModMgr -.-> ModPay["💳 Módulo Pagos & SPEI (payments)"]
+    end
 
-2. **Frontend Modular:**
-   - La carpeta `public/js/` separa el renderizado de productos (`products.js`), el historial (`orders.js`) y las llamadas API (`api.js`).
-   - El archivo `public/digitalpass/digitalpass.js` funciona como un **Decorador / Interceptor**. No duplica el código de lógica comercial ni la base de datos; solo intercepta las peticiones HTTP agregando `X-Digital-Pass: true` y modifica las capas visuales.
+    subgraph "Shared Core Services (Sin dependencias circulares)"
+        DB["🗄️ SQLite Database (src/database.js)"]
+        JSONLayer["📄 Atomic JSON DB (src/db.js)"]
+        AuthLayer["🔒 Auth & JWT (src/auth.js)"]
+        BackupEngine["🛡️ Backup & Blackbox (src/backupEngine.js)"]
+    end
 
----
+    ModCatalog --> SharedCore
+    ModPass --> SharedCore
+    ModFin --> SharedCore
+    ModBot --> SharedCore
+    ModPay --> SharedCore
+    
+    SharedCore["Core Compartido"] --> DB
+    SharedCore --> AuthLayer
+    SharedCore --> BackupEngine
+```
+
+### B. Manifiesto Modular (`modules.config.json`)
+Cada instalación o fork tiene un archivo [modules.config.json](file:///home/angel/Projects/REPOS/dhru-client-web/modules.config.json) que controla qué piezas existen en producción:
+- **Zero Coupling:** Si se apaga `"finance": { "enabled": false }`, las rutas `/finanzas` y los endpoints de balances responden `404 Module Disabled` de forma limpia; el servidor principal jamás se cuelga ni tira errores no controlados.
+- **Creación de nuevos Forks:**
+  ```bash
+  node scripts/migrationTool.js fork-init <nombre_del_fork>
+  ```
+  Genera un manifiesto limpio `modules.<nombre>.json` listo para activar en otro entorno o subdominio.
+
+### C. Estrategia de Despliegue Progresivo (Safe Canary & Hot Reload)
+1. **Verificación Estática (Pre-flight):** Comprobación sintáctica con `node -c` en todos los archivos modificados.
+2. **Validación de Addons:** `node scripts/migrationTool.js verify-modules` confirma que no existan referencias circulares rotas.
+3. **Copia Atómica (Rsync):** Despliegue con `./deploy.sh` preservando archivos de base de datos activa (`database.sqlite`, logs y sesiones).
+4. **Reinicio Seguro en Caliente (Hot Reload):** Invocación de `curl https://.../api/kill` con credenciales de administrador para que Phusion Passenger regenere el worker sin desconectar la base de datos ni bloquear el socket del bot.
 
 ## 4. Flujos de Conectividad e Integración
 
