@@ -2789,24 +2789,44 @@ document.addEventListener('DOMContentLoaded', () => {
     formDebt.addEventListener('submit', async (e) => {
       e.preventDefault();
       const id = document.getElementById('debtFormId').value;
+      const type = document.getElementById('debtFormType').value;
+      const personName = (document.getElementById('debtFormPersonName').value || '').trim();
+      const totalAmount = parseFloat(document.getElementById('debtFormTotalAmount').value) || 0;
+      const paidAmount = parseFloat(document.getElementById('debtFormPaidAmount').value) || 0;
+      const concept = (document.getElementById('debtFormConcept').value || '').trim();
+      const dueDate = document.getElementById('debtFormDueDate').value || null;
+      const phone = (document.getElementById('debtFormPhone').value || '').trim() || null;
+
+      if (!personName) {
+        alert('Por favor ingresa el nombre de la persona o negocio.');
+        return;
+      }
+      if (totalAmount <= 0 || isNaN(totalAmount)) {
+        alert('Por favor ingresa un monto total válido mayor a 0.');
+        return;
+      }
+
       const payload = {
         id: id || undefined,
-        type: document.getElementById('debtFormType').value,
-        personName: document.getElementById('debtFormPersonName').value.trim(),
-        totalAmount: parseFloat(document.getElementById('debtFormTotalAmount').value) || 0,
-        paidAmount: parseFloat(document.getElementById('debtFormPaidAmount').value) || 0,
-        concept: document.getElementById('debtFormConcept').value.trim(),
-        dueDate: document.getElementById('debtFormDueDate').value || null,
-        phone: document.getElementById('debtFormPhone').value.trim() || null
+        type,
+        personName,
+        totalAmount,
+        paidAmount,
+        concept,
+        dueDate,
+        phone
       };
+
+      const token = authToken || localStorage.getItem('dhru_token') || localStorage.getItem('mega_auth_token');
+      const serverId = currentServerId || localStorage.getItem('currentServerId') || '1';
 
       try {
         const res = await fetch('/api/admin/finance/debts', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${authToken}`,
-            'X-Server-Id': currentServerId
+            'Authorization': `Bearer ${token}`,
+            'X-Server-Id': serverId
           },
           body: JSON.stringify(payload)
         });
@@ -2822,12 +2842,13 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           if (btnCancelDebt) btnCancelDebt.style.display = 'none';
           if (window.lucide) window.lucide.createIcons();
-          loadDebtsManagerList();
+          await loadDebtsManagerList();
+          await loadDebtsSummary();
         } else {
-          alert(resData.error || 'Error al guardar la deuda');
+          alert('Error: ' + (resData.error || 'No se pudo guardar la deuda'));
         }
       } catch (err) {
-        alert('Error: ' + err.message);
+        alert('Error de conexión al guardar: ' + err.message);
       }
     });
   }
@@ -3403,11 +3424,13 @@ let currentDebtsFilter = 'all';
 
 async function loadDebtsSummary() {
   const badge = document.getElementById('badgeDebtsCount');
+  const token = authToken || localStorage.getItem('dhru_token') || localStorage.getItem('mega_auth_token');
+  const serverId = currentServerId || localStorage.getItem('currentServerId') || '1';
   try {
     const res = await fetch('/api/admin/finance/debts', {
       headers: {
-        'Authorization': `Bearer ${authToken}`,
-        'X-Server-Id': currentServerId
+        'Authorization': `Bearer ${token}`,
+        'X-Server-Id': serverId
       }
     });
     const d = await res.json();
@@ -3423,11 +3446,14 @@ async function loadDebtsManagerList() {
   if (!container) return;
   container.innerHTML = '<div style="color: #94a3b8; font-size: 0.85rem; padding: 10px;">Cargando lista de deudas y deudores...</div>';
 
+  const token = authToken || localStorage.getItem('dhru_token') || localStorage.getItem('mega_auth_token');
+  const serverId = currentServerId || localStorage.getItem('currentServerId') || '1';
+
   try {
     const res = await fetch('/api/admin/finance/debts', {
       headers: {
-        'Authorization': `Bearer ${authToken}`,
-        'X-Server-Id': currentServerId
+        'Authorization': `Bearer ${token}`,
+        'X-Server-Id': serverId
       }
     });
     const d = await res.json();
@@ -3613,13 +3639,16 @@ async function promptDebtPayment(id, personName, remaining, debtType) {
   // Opcional: preguntar de qué cuenta entra o sale
   const accountPrompt = prompt(`(Opcional) ¿A qué cuenta se registra el movimiento contable?\nEscribe el nombre de la cuenta (Ej: Efectivo / Caja, Nu Débito, BBVA, etc.) o déjalo en blanco si solo quieres restar la deuda:`, 'Efectivo / Caja');
 
+  const token = authToken || localStorage.getItem('dhru_token') || localStorage.getItem('mega_auth_token');
+  const serverId = currentServerId || localStorage.getItem('currentServerId') || '1';
+
   try {
     const res = await fetch(`/api/admin/finance/debts/${encodeURIComponent(id)}/pay`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`,
-        'X-Server-Id': currentServerId
+        'Authorization': `Bearer ${token}`,
+        'X-Server-Id': serverId
       },
       body: JSON.stringify({
         amount,
@@ -3629,7 +3658,8 @@ async function promptDebtPayment(id, personName, remaining, debtType) {
     const d = await res.json();
     if (res.ok && d.success) {
       alert(`✅ Abono de $${amount.toFixed(2)} registrado con éxito.`);
-      loadDebtsManagerList();
+      await loadDebtsManagerList();
+      await loadDebtsSummary();
       loadFinanceDashboard(); // Refrescar cuentas y balances
     } else {
       alert(d.error || 'Error al registrar el abono');
@@ -3641,18 +3671,20 @@ async function promptDebtPayment(id, personName, remaining, debtType) {
 
 async function deleteFinanceDebt(id, personName) {
   if (!confirm(`¿Eliminar definitivamente el registro de deuda de "${personName}"?`)) return;
+  const token = authToken || localStorage.getItem('dhru_token') || localStorage.getItem('mega_auth_token');
+  const serverId = currentServerId || localStorage.getItem('currentServerId') || '1';
   try {
     const res = await fetch(`/api/admin/finance/debts/${encodeURIComponent(id)}`, {
       method: 'DELETE',
       headers: {
-        'Authorization': `Bearer ${authToken}`,
-        'X-Server-Id': currentServerId
+        'Authorization': `Bearer ${token}`,
+        'X-Server-Id': serverId
       }
     });
     const d = await res.json();
     if (res.ok && (d.success !== false)) {
-      loadDebtsManagerList();
-      loadDebtsSummary();
+      await loadDebtsManagerList();
+      await loadDebtsSummary();
     } else {
       alert(d.error || 'Error al eliminar la deuda');
     }
