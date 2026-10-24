@@ -34,7 +34,7 @@
   <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
   <!-- Chart.js CDN for Financial Analytics -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <link rel="stylesheet" href="/digitalpass/digitalpass.css?v=71">
+  <link rel="stylesheet" href="/digitalpass/digitalpass.css?v=72">
 </head>
 <body>
   <div class="background-decor">
@@ -1223,6 +1223,19 @@
                 </div>
                 <div id="finKpiNetProfit" style="font-size: 1.75rem; font-weight: 900; color: #10b981; font-family: 'Fira Code', monospace;">$0.00</div>
                 <div style="font-size: 0.72rem; color: #a7f3d0; margin-top: 4px;">Dinero libre para ti</div>
+              </div>
+            </div>
+
+            <!-- Saldos en Servidores GSM Externos (Conexión Directa en Tiempo Real) -->
+            <div style="margin-bottom: 24px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                <h4 style="margin: 0; font-size: 0.95rem; font-weight: 800; color: #e2e8f0; display: flex; align-items: center; gap: 8px;">
+                  <i data-lucide="server" style="color: #6366f1; width: 18px; height: 18px;"></i> Saldo en Servidores GSM (Dividido por Servidor)
+                </h4>
+                <span id="financeTotalServerBalanceBadge" style="font-size: 0.82rem; font-weight: 800; color: #818cf8; background: rgba(99, 102, 241, 0.15); padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(99, 102, 241, 0.3);">Total Servidores: $0.00 MXN</span>
+              </div>
+              <div id="financeServersGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px;">
+                <!-- Se poblará vía JS con cada servidor GSM configurado -->
               </div>
             </div>
 
@@ -2897,20 +2910,20 @@
   <div id="toastContainer" style="position: fixed; bottom: 20px; right: 20px; z-index: 999999; display: flex; flex-direction: column; gap: 10px; pointer-events: none;"></div>
 
   <!-- Scripts Modulares -->
-  <script src="/js/api.js?v=71" defer></script>
-  <script src="/js/utils.js?v=71" defer></script>
-  <script src="/js/notifications.js?v=71" defer></script>
-  <script src="/js/state.js?v=71" defer></script>
-  <script src="/js/ticket.js?v=71" defer></script>
-  <script src="/js/searchEngine.js?v=71" defer></script>
-  <script src="/js/recharges.js?v=71" defer></script>
-  <script src="/js/recharge.js?v=71" defer></script>
-  <script src="/digitalpass/digitalpass.js?v=71" defer></script>
-  <script src="/index.js?v=71" defer></script>
-  <script src="/js/products.js?v=71" defer></script>
-  <script src="/js/orders.js?v=71" defer></script>
-  <script src="/js/warnings.js?v=71" defer></script>
-  <script src="/js/admin.js?v=71" defer></script>
+  <script src="/js/api.js?v=72" defer></script>
+  <script src="/js/utils.js?v=72" defer></script>
+  <script src="/js/notifications.js?v=72" defer></script>
+  <script src="/js/state.js?v=72" defer></script>
+  <script src="/js/ticket.js?v=72" defer></script>
+  <script src="/js/searchEngine.js?v=72" defer></script>
+  <script src="/js/recharges.js?v=72" defer></script>
+  <script src="/js/recharge.js?v=72" defer></script>
+  <script src="/digitalpass/digitalpass.js?v=72" defer></script>
+  <script src="/index.js?v=72" defer></script>
+  <script src="/js/products.js?v=72" defer></script>
+  <script src="/js/orders.js?v=72" defer></script>
+  <script src="/js/warnings.js?v=72" defer></script>
+  <script src="/js/admin.js?v=72" defer></script>
     <div class="modal-overlay hidden" id="globalLoadingOverlay" style="z-index: 100000; flex-direction: column; text-align: center;">
       <div class="icon-spin" style="color: #3b82f6; margin-bottom: 1rem;">
         <i data-lucide="refresh-cw" style="width: 64px; height: 64px;"></i>

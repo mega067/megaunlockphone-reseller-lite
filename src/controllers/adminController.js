@@ -810,9 +810,9 @@ exports.notifyUnlinkedBot = (req, res) => {
 // --- GESTIÓN FINANCIERA Y CONTROL DE GANANCIAS ---
 const financeManager = require('../financeManager');
 
-exports.getFinanceSummary = (req, res) => {
+exports.getFinanceSummary = async (req, res) => {
   try {
-    const data = financeManager.getFinanceSummary({
+    const data = await financeManager.getFinanceSummary({
       orderId: req.query.orderId
     });
     res.json({ success: true, ...data });

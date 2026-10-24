@@ -133,7 +133,7 @@ function saveAccount(accData) {
  * Eliminar / archivar cuenta
  */
 function deleteAccount(id) {
-  const stmt = sqliteDb.prepare('UPDATE FinanceAccounts SET isArchived = 1, updatedAt = datetime("now") WHERE id = ?');
+  const stmt = sqliteDb.prepare("UPDATE FinanceAccounts SET isArchived = 1, updatedAt = datetime('now') WHERE id = ?");
   return stmt.run(id).changes > 0;
 }
 
@@ -289,7 +289,7 @@ function recordTransaction(data) {
 /**
  * Obtener estadísticas globales, balances por cuenta bancaria y métricas personales
  */
-function getFinanceSummary(filterOptions = {}) {
+async function getFinanceSummary(filterOptions = {}) {
   initDefaultAccounts();
   const config = getFinanceConfig();
   const orderId = filterOptions.orderId ? String(filterOptions.orderId).trim() : null;
@@ -402,6 +402,9 @@ function getFinanceSummary(filterOptions = {}) {
     ORDER BY date ASC
   `).all();
 
+  // Resumen de saldos reales en servidores GSM externos
+  const serverBalances = await queryAllServerCredits();
+
   return {
     config,
     summary: {
@@ -414,10 +417,107 @@ function getFinanceSummary(filterOptions = {}) {
     },
     categories: categoryRows,
     accounts: enrichedAccounts,
+    serverBalances,
     weeklyAudits,
     dailyTrends,
     recent
   };
+}
+
+/**
+ * Consulta asíncrona de saldo en cada uno de los servidores GSM configurados
+ */
+async function queryAllServerCredits() {
+  const settingsDb = readDB('settings.json') || {};
+  const { getServerSettings, buildTargetUrl } = require('./helpers');
+  const axios = require('axios');
+  const https = require('https');
+  const ipv4Agent = new https.Agent({ family: 4, keepAlive: true });
+
+  const servers = [];
+  const serverIds = ['1', '2', '3'];
+
+  for (const sId of serverIds) {
+    const s = getServerSettings(settingsDb, sId);
+    if (!s) continue;
+    
+    const isEnabled = s.enabled !== false;
+    const targetUrl = buildTargetUrl(s.endpoint);
+    const serverObj = {
+      id: sId,
+      name: s.name || ('Servidor ' + sId),
+      enabled: isEnabled,
+      endpoint: s.endpoint || '',
+      creditRaw: 0,
+      creditMxn: 0,
+      assigned: 0,
+      available: 0,
+      currency: sId === '3' ? 'MXN' : 'USD',
+      status: 'offline',
+      statusMsg: 'Desactivado'
+    };
+
+    if (!isEnabled) {
+      servers.push(serverObj);
+      continue;
+    }
+
+    try {
+      const params = new URLSearchParams();
+      params.append('username', s.username || '');
+      params.append('apiaccesskey', s.apiaccesskey || '');
+      params.append('action', 'accountinfo');
+      params.append('requestformat', 'JSON');
+
+      const res = await axios.post(targetUrl, params.toString(), {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'User-Agent': 'Dhru-Fusion-Web-Client/1.0'
+        },
+        httpsAgent: ipv4Agent,
+        timeout: 5000
+      });
+
+      if (res.data?.SUCCESS?.[0]?.AccountInfo) {
+        const accInfo = res.data.SUCCESS[0].AccountInfo;
+        const raw = parseFloat(accInfo.creditraw !== undefined ? accInfo.creditraw : (accInfo.credit || 0));
+        const exchangeRate = parseFloat(settingsDb.exchangeRate || 17.60);
+        const rate = sId === '3' ? 1 : exchangeRate;
+        const creditMxn = raw * rate;
+
+        // Calcular créditos cedidos a resellers en este servidor
+        const users = readDB('users.json') || [];
+        const { getUserCredit } = require('./helpers');
+        let assigned = 0;
+        users.forEach(u => {
+          if (u.role !== 'admin') {
+            assigned += getUserCredit(u, sId);
+          }
+        });
+
+        serverObj.creditRaw = raw;
+        serverObj.creditMxn = parseFloat(creditMxn.toFixed(2));
+        serverObj.assigned = parseFloat(assigned.toFixed(2));
+        serverObj.available = parseFloat((creditMxn - assigned).toFixed(2));
+        serverObj.currency = accInfo.currency || (sId === '3' ? 'MXN' : 'USD');
+        serverObj.status = 'online';
+        serverObj.statusMsg = 'Conectado';
+      } else if (res.data?.ERROR?.[0]?.MESSAGE) {
+        serverObj.status = 'error';
+        serverObj.statusMsg = res.data.ERROR[0].MESSAGE;
+      } else {
+        serverObj.status = 'error';
+        serverObj.statusMsg = 'Respuesta no reconocida del servidor';
+      }
+    } catch (err) {
+      serverObj.status = 'error';
+      serverObj.statusMsg = err.message || 'Error de conexión';
+    }
+
+    servers.push(serverObj);
+  }
+
+  return servers;
 }
 
 /**
