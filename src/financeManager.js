@@ -97,8 +97,11 @@ function saveAccount(accData) {
 
   const type = accData.type || 'bank';
   const currency = accData.currency || 'MXN';
-  const initialBalance = parseFloat(accData.initialBalance) || 0;
-  const currentBalance = accData.currentBalance !== undefined ? parseFloat(accData.currentBalance) : initialBalance;
+  const rawBalance = accData.currentBalance !== undefined 
+    ? parseFloat(accData.currentBalance) 
+    : (accData.balance !== undefined ? parseFloat(accData.balance) : parseFloat(accData.initialBalance) || 0);
+  const initialBalance = parseFloat(accData.initialBalance) || rawBalance || 0;
+  const currentBalance = rawBalance || 0;
   const color = accData.color || (type === 'credit' ? '#ec4899' : '#38bdf8');
   const icon = accData.icon || (type === 'credit' ? 'credit-card' : 'wallet');
   const description = accData.description || '';
@@ -353,6 +356,7 @@ async function getFinanceSummary(filterOptions = {}) {
     };
     return {
       ...acc,
+      balance: acc.currentBalance !== undefined ? acc.currentBalance : acc.initialBalance,
       opsCount: stats.count,
       totalCharged: stats.charged,
       totalCost: stats.cost,

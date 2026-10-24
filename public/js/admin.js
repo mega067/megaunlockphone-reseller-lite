@@ -2102,7 +2102,7 @@ function renderFinanceAccounts(accounts, config) {
     };
 
     const net = parseFloat(acc.netProfit || 0);
-    const balance = parseFloat(acc.balance || 0);
+    const balance = parseFloat(acc.currentBalance !== undefined ? acc.currentBalance : (acc.balance !== undefined ? acc.balance : (acc.initialBalance || 0)));
     totalAssets += balance;
 
     const typeBadge = acc.type === 'credit'
