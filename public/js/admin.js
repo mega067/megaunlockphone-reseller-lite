@@ -2068,6 +2068,13 @@ function renderFinanceAccounts(accounts, config) {
   const totalAssetsBadge = document.getElementById('financeTotalAssetsBadge');
   if (!container) return;
 
+  // Registrar cuentas globalmente para lookup directo sin problemas de escaping
+  window.financeAccountsList = accounts || [];
+  window.financeAccountsMap = {};
+  (accounts || []).forEach(acc => {
+    if (acc && acc.id) window.financeAccountsMap[acc.id] = acc;
+  });
+
   if (!accounts || accounts.length === 0) {
     container.innerHTML = '<div style="color: #64748b; font-size: 0.85rem;">No hay cuentas registradas.</div>';
     if (totalAssetsBadge) totalAssetsBadge.textContent = 'Patrimonio: $0.00 MXN';
@@ -2145,7 +2152,12 @@ function renderFinanceAccounts(accounts, config) {
           <span style="font-weight: 800; font-size: 0.95rem; color: #f8fafc; display: flex; align-items: center; gap: 6px;">
             <i data-lucide="${style.icon}" style="width: 17px; height: 17px; color: ${style.color};"></i> ${escapeHtml(accName)}
           </span>
-          <div>${typeBadge}</div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            ${typeBadge}
+            <button type="button" onclick="editFinanceAccount('${acc.id}')" title="Editar saldo o datos de esta cuenta" style="background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; cursor: pointer; padding: 3px 6px; border-radius: 6px; display: inline-flex; align-items: center; gap: 3px; font-size: 0.7rem; font-weight: 700;">
+              <i data-lucide="edit-3" style="width: 12px; height: 12px;"></i> Editar
+            </button>
+          </div>
         </div>
         <div style="font-size: 1.35rem; font-weight: 800; color: #ffffff; font-family: 'Fira Code', monospace;">
           $${balance.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -2163,6 +2175,8 @@ function renderFinanceAccounts(accounts, config) {
   if (totalAssetsBadge) {
     totalAssetsBadge.textContent = `Patrimonio Total: $${totalAssets.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN`;
   }
+
+  if (window.lucide) window.lucide.createIcons();
 }
 
 function renderFinanceCategories(categories) {
@@ -2687,8 +2701,14 @@ document.addEventListener('DOMContentLoaded', () => {
           alert('✅ Cuenta / Tarjeta guardada correctamente.');
           formAcc.reset();
           document.getElementById('accountFormId').value = '';
+          const btnSave = document.getElementById('btnSaveAccount');
+          if (btnSave) {
+            btnSave.innerHTML = '<i data-lucide="check"></i> Guardar Cuenta';
+            btnSave.style.background = '#9333ea';
+          }
           if (creditCardFields) creditCardFields.style.display = 'none';
           if (btnCancelEditAcc) btnCancelEditAcc.style.display = 'none';
+          if (window.lucide) window.lucide.createIcons();
           loadAccountsManagerList();
           loadFinanceDashboard();
         } else {
@@ -2703,7 +2723,14 @@ document.addEventListener('DOMContentLoaded', () => {
     btnCancelEditAcc.addEventListener('click', () => {
       formAcc.reset();
       document.getElementById('accountFormId').value = '';
+      const btnSave = document.getElementById('btnSaveAccount');
+      if (btnSave) {
+        btnSave.innerHTML = '<i data-lucide="check"></i> Guardar Cuenta';
+        btnSave.style.background = '#9333ea';
+      }
+      if (creditCardFields) creditCardFields.style.display = 'none';
       btnCancelEditAcc.style.display = 'none';
+      if (window.lucide) window.lucide.createIcons();
     });
   }
 
@@ -3059,11 +3086,11 @@ async function loadAccountsManagerList() {
               <span style="font-size: 0.7rem; color: #94a3b8; text-transform: uppercase;">${isCredit ? '💳 TARJETA DE CRÉDITO' : escapeHtml(acc.type || 'cuenta')}</span>
             </div>
             <div style="display: flex; gap: 4px;">
-              <button type="button" onclick="editFinanceAccount('${acc.id}', '${escapeHtml(acc.name)}', '${acc.type}', ${balance}, '${color}', ${creditLimit}, ${cutoffDay}, ${paymentDueDay}, ${currentDebt}, ${minPayment})" title="Editar" style="background: none; border: none; color: #38bdf8; cursor: pointer; padding: 3px;">
-                <i data-lucide="edit-3" style="width: 14px; height: 14px;"></i>
+              <button type="button" onclick="editFinanceAccount('${acc.id}')" title="Editar" style="background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; cursor: pointer; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; font-size: 0.72rem;">
+                <i data-lucide="edit-3" style="width: 13px; height: 13px;"></i> Editar
               </button>
-              <button type="button" onclick="deleteFinanceAccount('${acc.id}', '${escapeHtml(acc.name)}')" title="Eliminar" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 3px;">
-                <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+              <button type="button" onclick="deleteFinanceAccount('${acc.id}', '${escapeHtml(acc.name)}')" title="Eliminar" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; cursor: pointer; padding: 4px 6px; border-radius: 6px;">
+                <i data-lucide="trash-2" style="width: 13px; height: 13px;"></i>
               </button>
             </div>
           </div>
@@ -3083,31 +3110,85 @@ async function loadAccountsManagerList() {
 }
 
 function editFinanceAccount(id, name, type, balance, color, creditLimit = 0, cutoffDay = 0, paymentDueDay = 0, currentDebt = 0, minPayment = 0) {
-  document.getElementById('accountFormId').value = id;
-  document.getElementById('accountFormName').value = name;
-  document.getElementById('accountFormType').value = type;
-  document.getElementById('accountFormBalance').value = balance;
-  document.getElementById('accountFormColor').value = color;
+  // Asegurar que el gestor de cuentas esté visible y abierto
+  const accsContainer = document.getElementById('financeAccountsManagerContainer');
+  if (accsContainer && accsContainer.classList.contains('hidden')) {
+    accsContainer.classList.remove('hidden');
+    loadAccountsManagerList();
+  }
+
+  // Lookup inteligente por objeto o parámetros directos
+  let accObj = (window.financeAccountsMap && window.financeAccountsMap[id]) ? window.financeAccountsMap[id] : null;
+
+  const targetId = id;
+  const targetName = (accObj && accObj.name) || name || '';
+  const targetType = (accObj && accObj.type) || type || 'bank';
+  const targetBalance = accObj 
+    ? (accObj.currentBalance !== undefined ? accObj.currentBalance : (accObj.balance !== undefined ? accObj.balance : (accObj.initialBalance || 0)))
+    : (balance !== undefined ? balance : 0);
+  const targetColor = (accObj && accObj.color) || color || '#8b5cf6';
+  const targetLimit = accObj ? (accObj.creditLimit || 0) : creditLimit;
+  const targetCutoff = accObj ? (accObj.cutoffDay || 0) : cutoffDay;
+  const targetDue = accObj ? (accObj.paymentDueDay || 0) : paymentDueDay;
+  const targetDebt = accObj ? (accObj.currentDebt || 0) : currentDebt;
+  const targetMinP = accObj ? (accObj.minPayment || 0) : minPayment;
+
+  const inputId = document.getElementById('accountFormId');
+  const inputName = document.getElementById('accountFormName');
+  const selectType = document.getElementById('accountFormType');
+  const inputBal = document.getElementById('accountFormBalance');
+  const selectColor = document.getElementById('accountFormColor');
+
+  if (inputId) inputId.value = targetId;
+  if (inputName) inputName.value = targetName;
+  if (selectType) selectType.value = targetType;
+  if (inputBal) inputBal.value = parseFloat(targetBalance || 0);
+  if (selectColor) selectColor.value = targetColor;
 
   // Credit card extra fields
   const creditFields = document.getElementById('creditCardExtraFields');
-  const isCredit = type === 'credit';
+  const isCredit = targetType === 'credit';
   if (creditFields) creditFields.style.display = isCredit ? 'block' : 'none';
 
   const clInput = document.getElementById('accountFormCreditLimit');
-  if (clInput) clInput.value = creditLimit || '';
+  if (clInput) clInput.value = targetLimit || '';
   const cdInput = document.getElementById('accountFormCutoffDay');
-  if (cdInput) cdInput.value = cutoffDay || '';
+  if (cdInput) cdInput.value = targetCutoff || '';
   const pdInput = document.getElementById('accountFormPaymentDueDay');
-  if (pdInput) pdInput.value = paymentDueDay || '';
+  if (pdInput) pdInput.value = targetDue || '';
   const debtInput = document.getElementById('accountFormCurrentDebt');
-  if (debtInput) debtInput.value = currentDebt || '';
+  if (debtInput) debtInput.value = targetDebt || '';
   const minPInput = document.getElementById('accountFormMinPayment');
-  if (minPInput) minPInput.value = minPayment || '';
+  if (minPInput) minPInput.value = targetMinP || '';
+
+  const btnSave = document.getElementById('btnSaveAccount');
+  if (btnSave) {
+    btnSave.innerHTML = '<i data-lucide="check"></i> Actualizar Cuenta';
+    btnSave.style.background = '#2563eb';
+  }
 
   const btnCancel = document.getElementById('btnCancelEditAccount');
   if (btnCancel) btnCancel.style.display = 'inline-block';
-  document.getElementById('accountFormName').focus();
+
+  // Desplazar suavemente hasta el formulario y enfocar el campo de saldo
+  const formAcc = document.getElementById('formAddEditAccount');
+  if (formAcc) {
+    formAcc.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    formAcc.style.transition = 'box-shadow 0.3s ease, border-color 0.3s ease';
+    formAcc.style.borderColor = '#38bdf8';
+    formAcc.style.boxShadow = '0 0 15px rgba(56, 189, 248, 0.4)';
+    setTimeout(() => {
+      formAcc.style.borderColor = 'rgba(255,255,255,0.05)';
+      formAcc.style.boxShadow = 'none';
+    }, 1800);
+  }
+
+  if (inputBal) {
+    inputBal.focus();
+    inputBal.select();
+  }
+
+  if (window.lucide) window.lucide.createIcons();
 }
 
 async function deleteFinanceAccount(id, name) {
