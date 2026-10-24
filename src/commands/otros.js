@@ -542,6 +542,9 @@ async function otros(context) {
             `• */msggrup <Texto>* ➔ Anuncio al grupo oficial (fotos/videos)\n` +
             `• */addmoney <ID> <Servidor> <Monto>* ➔ Recargar saldo a revendedor\n` +
             `• */removemoney <ID> <Servidor> <Monto>* ➔ Descontar saldo\n` +
+            `• */pago <Monto> [Concepto]* ➔ Registrar gasto (comida, pasaje, etc.) con selección de cuenta\n` +
+            `• */recibido <Monto> [Concepto]* ➔ Registrar dinero recibido a cuenta o efectivo\n` +
+            `• */mesada <Monto>* ➔ Registrar mesada o apoyo para pasajes/comida\n` +
             `• */finanzas* (o */ganancias*) ➔ Resumen contable de bolsillo y bancos\n` +
             `• */setprice* ➔ Modificador de márgenes y precios\n` +
             `• */historial* ➔ Últimos 10 pedidos globales\n` +
