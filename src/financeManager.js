@@ -99,22 +99,31 @@ function saveAccount(accData) {
   const currency = accData.currency || 'MXN';
   const initialBalance = parseFloat(accData.initialBalance) || 0;
   const currentBalance = accData.currentBalance !== undefined ? parseFloat(accData.currentBalance) : initialBalance;
-  const color = accData.color || '#38bdf8';
-  const icon = accData.icon || 'wallet';
+  const color = accData.color || (type === 'credit' ? '#ec4899' : '#38bdf8');
+  const icon = accData.icon || (type === 'credit' ? 'credit-card' : 'wallet');
   const description = accData.description || '';
+
+  // Credit Card fields
+  const creditLimit = Math.max(0, parseFloat(accData.creditLimit) || 0);
+  const cutoffDay = Math.max(0, Math.min(31, parseInt(accData.cutoffDay) || 0));
+  const paymentDueDay = Math.max(0, Math.min(31, parseInt(accData.paymentDueDay) || 0));
+  const currentDebt = Math.max(0, parseFloat(accData.currentDebt !== undefined ? accData.currentDebt : accData.debt) || 0);
+  const minPayment = Math.max(0, parseFloat(accData.minPayment) || 0);
 
   const existing = sqliteDb.prepare('SELECT id FROM FinanceAccounts WHERE id = ?').get(id);
   if (existing) {
     sqliteDb.prepare(`
       UPDATE FinanceAccounts 
-      SET name = ?, type = ?, currency = ?, currentBalance = ?, color = ?, icon = ?, description = ?, updatedAt = datetime('now')
+      SET name = ?, type = ?, currency = ?, currentBalance = ?, color = ?, icon = ?, description = ?,
+          creditLimit = ?, cutoffDay = ?, paymentDueDay = ?, currentDebt = ?, minPayment = ?,
+          updatedAt = datetime('now')
       WHERE id = ?
-    `).run(name, type, currency, currentBalance, color, icon, description, id);
+    `).run(name, type, currency, currentBalance, color, icon, description, creditLimit, cutoffDay, paymentDueDay, currentDebt, minPayment, id);
   } else {
     sqliteDb.prepare(`
-      INSERT INTO FinanceAccounts (id, name, type, currency, initialBalance, currentBalance, color, icon, description, createdAt, updatedAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-    `).run(id, name, type, currency, initialBalance, currentBalance, color, icon, description);
+      INSERT INTO FinanceAccounts (id, name, type, currency, initialBalance, currentBalance, color, icon, description, creditLimit, cutoffDay, paymentDueDay, currentDebt, minPayment, createdAt, updatedAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+    `).run(id, name, type, currency, initialBalance, currentBalance, color, icon, description, creditLimit, cutoffDay, paymentDueDay, currentDebt, minPayment);
   }
 
   return sqliteDb.prepare('SELECT * FROM FinanceAccounts WHERE id = ?').get(id);
@@ -211,17 +220,43 @@ function recordTransaction(data) {
 
     if (type === 'expense_manual') {
       if (targetOrigin) {
-        sqliteDb.prepare(`UPDATE FinanceAccounts SET currentBalance = currentBalance - ?, updatedAt = datetime('now') WHERE id = ?`).run(costAmount, targetOrigin.id);
+        // Si es tarjeta de crédito, un gasto aumenta la deuda
+        sqliteDb.prepare(`
+          UPDATE FinanceAccounts 
+          SET currentBalance = currentBalance - ?,
+              currentDebt = CASE WHEN type = 'credit' THEN currentDebt + ? ELSE currentDebt END,
+              updatedAt = datetime('now') 
+          WHERE id = ?
+        `).run(costAmount, costAmount, targetOrigin.id);
       }
     } else if (type === 'income_ticket' || type === 'income_manual') {
       if (targetOrigin) {
-        sqliteDb.prepare(`UPDATE FinanceAccounts SET currentBalance = currentBalance + ?, updatedAt = datetime('now') WHERE id = ?`).run(chargedAmount, targetOrigin.id);
+        // Si entra dinero a una tarjeta de crédito, amortiza la deuda
+        sqliteDb.prepare(`
+          UPDATE FinanceAccounts 
+          SET currentBalance = currentBalance + ?,
+              currentDebt = CASE WHEN type = 'credit' THEN MAX(0, currentDebt - ?) ELSE currentDebt END,
+              updatedAt = datetime('now') 
+          WHERE id = ?
+        `).run(chargedAmount, chargedAmount, targetOrigin.id);
       }
     } else if (type === 'transfer' && targetDest) {
       if (targetOrigin) {
-        sqliteDb.prepare(`UPDATE FinanceAccounts SET currentBalance = currentBalance - ?, updatedAt = datetime('now') WHERE id = ?`).run(costAmount, targetOrigin.id);
+        sqliteDb.prepare(`
+          UPDATE FinanceAccounts 
+          SET currentBalance = currentBalance - ?,
+              currentDebt = CASE WHEN type = 'credit' THEN currentDebt + ? ELSE currentDebt END,
+              updatedAt = datetime('now') 
+          WHERE id = ?
+        `).run(costAmount, costAmount, targetOrigin.id);
       }
-      sqliteDb.prepare(`UPDATE FinanceAccounts SET currentBalance = currentBalance + ?, updatedAt = datetime('now') WHERE id = ?`).run(costAmount, targetDest.id);
+      sqliteDb.prepare(`
+        UPDATE FinanceAccounts 
+        SET currentBalance = currentBalance + ?,
+            currentDebt = CASE WHEN type = 'credit' THEN MAX(0, currentDebt - ?) ELSE currentDebt END,
+            updatedAt = datetime('now') 
+        WHERE id = ?
+      `).run(costAmount, costAmount, targetDest.id);
     }
 
     // Respaldar automáticamente ante movimientos financieros

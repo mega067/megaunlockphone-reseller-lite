@@ -2028,15 +2028,39 @@ function renderFinanceAccounts(accounts, config) {
     const balance = parseFloat(acc.balance || 0);
     totalAssets += balance;
 
-    const typeBadge = acc.type === 'emergency' 
-      ? '<span style="background: rgba(239, 68, 68, 0.25); color: #fca5a5; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 800;">EMERGENCIA</span>'
-      : (acc.type === 'investment' 
-          ? '<span style="background: rgba(245, 158, 11, 0.25); color: #fcd34d; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 800;">INVERSIÓN</span>'
-          : (acc.type === 'server'
-              ? '<span style="background: rgba(139, 92, 246, 0.25); color: #c4b5fd; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 800;">SERVIDOR</span>'
-              : (acc.type === 'card'
-                  ? '<span style="background: rgba(56, 189, 248, 0.25); color: #7dd3fc; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 800;">TARJETA</span>'
-                  : '')));
+    const typeBadge = acc.type === 'credit'
+      ? '<span style="background: rgba(236, 72, 153, 0.25); color: #f472b6; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 800;">CRÉDITO</span>'
+      : (acc.type === 'emergency' 
+          ? '<span style="background: rgba(239, 68, 68, 0.25); color: #fca5a5; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 800;">EMERGENCIA</span>'
+          : (acc.type === 'investment' 
+              ? '<span style="background: rgba(245, 158, 11, 0.25); color: #fcd34d; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 800;">INVERSIÓN</span>'
+              : (acc.type === 'server'
+                  ? '<span style="background: rgba(139, 92, 246, 0.25); color: #c4b5fd; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 800;">SERVIDOR</span>'
+                  : (acc.type === 'card'
+                      ? '<span style="background: rgba(56, 189, 248, 0.25); color: #7dd3fc; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 800;">DÉBITO</span>'
+                      : ''))));
+
+    const isCredit = acc.type === 'credit';
+    const debt = parseFloat(acc.currentDebt || 0);
+    const limit = parseFloat(acc.creditLimit || 0);
+    const cutoff = acc.cutoffDay || 0;
+    const due = acc.paymentDueDay || 0;
+
+    let creditMetaSnippet = '';
+    if (isCredit) {
+      creditMetaSnippet = `
+        <div style="margin-top: 8px; padding-top: 6px; border-top: 1px dashed rgba(255,255,255,0.1); font-size: 0.72rem; display: flex; flex-direction: column; gap: 3px;">
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: #fca5a5; font-weight: 700;">Deuda por pagar:</span>
+            <span style="color: #f87171; font-weight: 800; font-family: monospace;">$${debt.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; color: #94a3b8;">
+            <span>Límite: $${limit.toLocaleString('es-MX', { minimumFractionDigits: 0 })}</span>
+            <span>Corte: <b>Día ${cutoff || '--'}</b> | Pagar: <b>Día ${due || '--'}</b></span>
+          </div>
+        </div>
+      `;
+    }
 
     return `
       <div style="background: ${style.bg}; border: 1px solid ${style.border}; border-radius: 12px; padding: 14px 16px; position: relative; overflow: hidden; transition: transform 0.2s ease;">
@@ -2048,7 +2072,9 @@ function renderFinanceAccounts(accounts, config) {
         </div>
         <div style="font-size: 1.35rem; font-weight: 800; color: #ffffff; font-family: 'Fira Code', monospace;">
           $${balance.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          ${isCredit ? '<span style="font-size: 0.7rem; color: #94a3b8; font-weight: normal; margin-left: 4px;">a favor</span>' : ''}
         </div>
+        ${creditMetaSnippet}
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 0.72rem; color: #cbd5e1; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 6px;">
           <span>Ganancia generada:</span>
           <span style="font-weight: 700; color: ${net >= 0 ? '#34d399' : '#f87171'};">${net >= 0 ? '+' : ''}$${net.toFixed(2)}</span>
@@ -2529,6 +2555,25 @@ document.addEventListener('DOMContentLoaded', () => {
     btnCloseAccs.addEventListener('click', () => accsContainer.classList.add('hidden'));
   }
 
+  // Control dinámico de campos para Tarjetas de Crédito
+  const accountTypeSelect = document.getElementById('accountFormType');
+  const creditCardFields = document.getElementById('creditCardExtraFields');
+  const lblAccountBalance = document.getElementById('lblAccountFormBalance');
+
+  if (accountTypeSelect) {
+    accountTypeSelect.addEventListener('change', (e) => {
+      const isCredit = e.target.value === 'credit';
+      if (creditCardFields) {
+        creditCardFields.style.display = isCredit ? 'block' : 'none';
+      }
+      if (lblAccountBalance) {
+        lblAccountBalance.textContent = isCredit 
+          ? 'Saldo a Favor Disponible ($ MXN)' 
+          : 'Saldo Inicial / Actual ($ MXN)';
+      }
+    });
+  }
+
   // Formulario Crear / Editar Cuenta o Tarjeta
   const formAcc = document.getElementById('formAddEditAccount');
   const btnCancelEditAcc = document.getElementById('btnCancelEditAccount');
@@ -2536,12 +2581,18 @@ document.addEventListener('DOMContentLoaded', () => {
     formAcc.addEventListener('submit', async (e) => {
       e.preventDefault();
       const id = document.getElementById('accountFormId').value;
+      const type = document.getElementById('accountFormType').value;
       const payload = {
         id: id || undefined,
         name: document.getElementById('accountFormName').value.trim(),
-        type: document.getElementById('accountFormType').value,
+        type: type,
         balance: parseFloat(document.getElementById('accountFormBalance').value) || 0,
-        color: document.getElementById('accountFormColor').value
+        color: document.getElementById('accountFormColor').value,
+        creditLimit: parseFloat(document.getElementById('accountFormCreditLimit')?.value) || 0,
+        cutoffDay: parseInt(document.getElementById('accountFormCutoffDay')?.value) || 0,
+        paymentDueDay: parseInt(document.getElementById('accountFormPaymentDueDay')?.value) || 0,
+        currentDebt: parseFloat(document.getElementById('accountFormCurrentDebt')?.value) || 0,
+        minPayment: parseFloat(document.getElementById('accountFormMinPayment')?.value) || 0
       };
 
       try {
@@ -2556,9 +2607,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         const resData = await res.json();
         if (res.ok && resData.success) {
-          alert('✅ Cuenta guardada correctamente.');
+          alert('✅ Cuenta / Tarjeta guardada correctamente.');
           formAcc.reset();
           document.getElementById('accountFormId').value = '';
+          if (creditCardFields) creditCardFields.style.display = 'none';
           if (btnCancelEditAcc) btnCancelEditAcc.style.display = 'none';
           loadAccountsManagerList();
           loadFinanceDashboard();
@@ -2883,9 +2935,43 @@ async function loadAccountsManagerList() {
     }
 
     container.innerHTML = accs.map(acc => {
-      const balance = parseFloat(acc.balance || 0);
-      const color = acc.color || '#8b5cf6';
-      const icon = acc.icon || 'wallet';
+      const balance = parseFloat(acc.currentBalance !== undefined ? acc.currentBalance : acc.balance || 0);
+      const color = acc.color || (acc.type === 'credit' ? '#ec4899' : '#8b5cf6');
+      const icon = acc.icon || (acc.type === 'credit' ? 'credit-card' : 'wallet');
+      const isCredit = acc.type === 'credit';
+      const creditLimit = parseFloat(acc.creditLimit || 0);
+      const currentDebt = parseFloat(acc.currentDebt || 0);
+      const cutoffDay = parseInt(acc.cutoffDay || 0);
+      const paymentDueDay = parseInt(acc.paymentDueDay || 0);
+      const minPayment = parseFloat(acc.minPayment || 0);
+
+      // Indicador de tarjeta de crédito
+      let creditDetailsHtml = '';
+      if (isCredit) {
+        creditDetailsHtml = `
+          <div style="background: rgba(0,0,0,0.3); border-radius: 8px; padding: 10px; margin-top: 10px; border: 1px solid rgba(236, 72, 153, 0.25); display: flex; flex-direction: column; gap: 6px;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.76rem;">
+              <span style="color: #f87171; font-weight: 700;">Deuda Acumulada:</span>
+              <span style="color: #fca5a5; font-family: monospace; font-weight: 800;">$${currentDebt.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.74rem;">
+              <span style="color: #fbbf24;">Límite de Crédito:</span>
+              <span style="color: #fde68a; font-family: monospace;">$${creditLimit.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.72rem; color: #94a3b8; border-top: 1px dashed rgba(255,255,255,0.08); padding-top: 4px;">
+              <span>Corte: <b>Día ${cutoffDay || '--'}</b></span>
+              <span>Pagar antes de: <b>Día ${paymentDueDay || '--'}</b></span>
+            </div>
+            ${minPayment > 0 ? `
+              <div style="display: flex; justify-content: space-between; font-size: 0.72rem; color: #34d399; font-weight: 700;">
+                <span>Pago Mínimo/No intereses:</span>
+                <span>$${minPayment.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }
+
       return `
         <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid ${color}44; border-left: 4px solid ${color}; border-radius: 10px; padding: 14px; position: relative;">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
@@ -2893,10 +2979,10 @@ async function loadAccountsManagerList() {
               <span style="font-weight: 800; font-size: 0.95rem; color: #f8fafc; display: flex; align-items: center; gap: 6px;">
                 <i data-lucide="${icon}" style="width: 16px; height: 16px; color: ${color};"></i> ${escapeHtml(acc.name)}
               </span>
-              <span style="font-size: 0.7rem; color: #94a3b8; text-transform: uppercase;">${escapeHtml(acc.type || 'cuenta')}</span>
+              <span style="font-size: 0.7rem; color: #94a3b8; text-transform: uppercase;">${isCredit ? '💳 TARJETA DE CRÉDITO' : escapeHtml(acc.type || 'cuenta')}</span>
             </div>
             <div style="display: flex; gap: 4px;">
-              <button type="button" onclick="editFinanceAccount('${acc.id}', '${escapeHtml(acc.name)}', '${acc.type}', ${balance}, '${color}')" title="Editar" style="background: none; border: none; color: #38bdf8; cursor: pointer; padding: 3px;">
+              <button type="button" onclick="editFinanceAccount('${acc.id}', '${escapeHtml(acc.name)}', '${acc.type}', ${balance}, '${color}', ${creditLimit}, ${cutoffDay}, ${paymentDueDay}, ${currentDebt}, ${minPayment})" title="Editar" style="background: none; border: none; color: #38bdf8; cursor: pointer; padding: 3px;">
                 <i data-lucide="edit-3" style="width: 14px; height: 14px;"></i>
               </button>
               <button type="button" onclick="deleteFinanceAccount('${acc.id}', '${escapeHtml(acc.name)}')" title="Eliminar" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 3px;">
@@ -2906,7 +2992,9 @@ async function loadAccountsManagerList() {
           </div>
           <div style="font-size: 1.25rem; font-weight: 800; color: #ffffff; font-family: 'Fira Code', monospace; margin-top: 6px;">
             $${balance.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            ${isCredit ? '<span style="font-size: 0.72rem; color: #94a3b8; font-weight: normal; margin-left: 4px;">(A favor)</span>' : ''}
           </div>
+          ${creditDetailsHtml}
         </div>
       `;
     }).join('');
@@ -2917,12 +3005,29 @@ async function loadAccountsManagerList() {
   }
 }
 
-function editFinanceAccount(id, name, type, balance, color) {
+function editFinanceAccount(id, name, type, balance, color, creditLimit = 0, cutoffDay = 0, paymentDueDay = 0, currentDebt = 0, minPayment = 0) {
   document.getElementById('accountFormId').value = id;
   document.getElementById('accountFormName').value = name;
   document.getElementById('accountFormType').value = type;
   document.getElementById('accountFormBalance').value = balance;
   document.getElementById('accountFormColor').value = color;
+
+  // Credit card extra fields
+  const creditFields = document.getElementById('creditCardExtraFields');
+  const isCredit = type === 'credit';
+  if (creditFields) creditFields.style.display = isCredit ? 'block' : 'none';
+
+  const clInput = document.getElementById('accountFormCreditLimit');
+  if (clInput) clInput.value = creditLimit || '';
+  const cdInput = document.getElementById('accountFormCutoffDay');
+  if (cdInput) cdInput.value = cutoffDay || '';
+  const pdInput = document.getElementById('accountFormPaymentDueDay');
+  if (pdInput) pdInput.value = paymentDueDay || '';
+  const debtInput = document.getElementById('accountFormCurrentDebt');
+  if (debtInput) debtInput.value = currentDebt || '';
+  const minPInput = document.getElementById('accountFormMinPayment');
+  if (minPInput) minPInput.value = minPayment || '';
+
   const btnCancel = document.getElementById('btnCancelEditAccount');
   if (btnCancel) btnCancel.style.display = 'inline-block';
   document.getElementById('accountFormName').focus();

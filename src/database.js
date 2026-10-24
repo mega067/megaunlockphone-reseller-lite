@@ -118,6 +118,23 @@ const initTables = () => {
     try {
         db.exec('ALTER TABLE FinanceLedger ADD COLUMN category TEXT DEFAULT "servicios"');
     } catch (e) {}
+
+    // Campos extendidos para Tarjetas de Crédito y Financiamiento
+    try {
+        db.exec('ALTER TABLE FinanceAccounts ADD COLUMN creditLimit REAL DEFAULT 0');
+    } catch (e) {}
+    try {
+        db.exec('ALTER TABLE FinanceAccounts ADD COLUMN cutoffDay INTEGER DEFAULT 0');
+    } catch (e) {}
+    try {
+        db.exec('ALTER TABLE FinanceAccounts ADD COLUMN paymentDueDay INTEGER DEFAULT 0');
+    } catch (e) {}
+    try {
+        db.exec('ALTER TABLE FinanceAccounts ADD COLUMN currentDebt REAL DEFAULT 0');
+    } catch (e) {}
+    try {
+        db.exec('ALTER TABLE FinanceAccounts ADD COLUMN minPayment REAL DEFAULT 0');
+    } catch (e) {}
     
     try {
         db.exec('ALTER TABLE Users ADD COLUMN apiKey TEXT');
