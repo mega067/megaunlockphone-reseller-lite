@@ -213,20 +213,42 @@ async function otros(context) {
                        `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
                        `✨ _¡Gracias por tu preferencia! Powered by MegaUnlockPhone_`;
             
-            // Si tiene logotipo subido desde la web o el bot, mandar como imagen con pie de foto
+            // Enviar ticket siempre como imagen con logotipo profesional (personalizado o logo oficial de fallback)
             let sentWithLogo = false;
+            let logoPath = null;
+
             if (userConfig.logoExt) {
-                const logoPath = path.join(__dirname, '../../data/logos', `${linkedUserId}${userConfig.logoExt}`);
-                if (require('fs').existsSync(logoPath)) {
-                    try {
-                        const logoBuffer = require('fs').readFileSync(logoPath);
-                        await sock.sendMessage(remoteJid, { image: logoBuffer, caption: receipt });
-                        sentWithLogo = true;
-                    } catch (logoErr) {
-                        console.error('[TICKET LOGO ERR]', logoErr.message);
+                const customLogo = path.join(__dirname, '../../data/logos', `${linkedUserId}${userConfig.logoExt}`);
+                if (require('fs').existsSync(customLogo)) {
+                    logoPath = customLogo;
+                }
+            }
+
+            // Fallback al logo oficial del sistema si no ha subido logo personalizado
+            if (!logoPath) {
+                const defaultLogoCandidates = [
+                    path.join(__dirname, '../../public/favicon-192.png'),
+                    path.join(__dirname, '../../public/logo.png'),
+                    path.join(__dirname, '../../public/favicon.png')
+                ];
+                for (const candidate of defaultLogoCandidates) {
+                    if (require('fs').existsSync(candidate)) {
+                        logoPath = candidate;
+                        break;
                     }
                 }
             }
+
+            if (logoPath) {
+                try {
+                    const logoBuffer = require('fs').readFileSync(logoPath);
+                    await sock.sendMessage(remoteJid, { image: logoBuffer, caption: receipt });
+                    sentWithLogo = true;
+                } catch (logoErr) {
+                    console.error('[TICKET LOGO ERR]', logoErr.message);
+                }
+            }
+
             if (!sentWithLogo) {
                 await sock.sendMessage(remoteJid, { text: receipt });
             }

@@ -347,9 +347,15 @@ function openProfileTab(subTab = 'tabProfileOverview') {
   if (productsSection) productsSection.classList.add('hidden');
   if (historySection) historySection.classList.add('hidden');
   if (adminSection) adminSection.classList.add('hidden');
+  const financeSection = document.getElementById('financeSection');
+  if (financeSection) financeSection.classList.add('hidden');
+  const tabFinanceEl = document.getElementById('tabFinance');
+  if (tabFinanceEl) tabFinanceEl.classList.remove('active');
   const rechargeSection = document.getElementById('rechargeSection');
   if (rechargeSection) rechargeSection.classList.add('hidden');
   if (typeof rechargesSection !== 'undefined' && rechargesSection) rechargesSection.classList.add('hidden');
+  const ssc = document.getElementById('serverSwitchContainer');
+  if (ssc) ssc.classList.remove('hidden');
 
   switchProfileTab(subTab);
   loadFullUserProfile();
@@ -372,6 +378,8 @@ tabCatalog.addEventListener('click', () => {
   tabCatalog.classList.add('active');
   tabHistory.classList.remove('active');
   if (tabAdmin) tabAdmin.classList.remove('active');
+  const tabFinanceEl = document.getElementById('tabFinance');
+  if (tabFinanceEl) tabFinanceEl.classList.remove('active');
   if (tabProfile) tabProfile.classList.remove('active');
   productsSection.classList.remove('hidden');
   if (profileSection) profileSection.classList.add('hidden');
@@ -379,7 +387,11 @@ tabCatalog.addEventListener('click', () => {
   if (rechargeSection) rechargeSection.classList.add('hidden');
   historySection.classList.add('hidden');
   if (adminSection) adminSection.classList.add('hidden');
+  const financeSection = document.getElementById('financeSection');
+  if (financeSection) financeSection.classList.add('hidden');
   if (typeof rechargesSection !== 'undefined' && rechargesSection) rechargesSection.classList.add('hidden');
+  const ssc = document.getElementById('serverSwitchContainer');
+  if (ssc) ssc.classList.remove('hidden');
   
   // Cleanly return to main categories view
   if (typeof showCategoriesView === 'function') {
@@ -396,6 +408,8 @@ tabHistory.addEventListener('click', () => {
   tabHistory.classList.add('active');
   tabCatalog.classList.remove('active');
   if (tabAdmin) tabAdmin.classList.remove('active');
+  const tabFinanceEl = document.getElementById('tabFinance');
+  if (tabFinanceEl) tabFinanceEl.classList.remove('active');
   if (tabProfile) tabProfile.classList.remove('active');
   historySection.classList.remove('hidden');
   if (profileSection) profileSection.classList.add('hidden');
@@ -403,7 +417,11 @@ tabHistory.addEventListener('click', () => {
   if (rechargeSection) rechargeSection.classList.add('hidden');
   productsSection.classList.add('hidden');
   if (adminSection) adminSection.classList.add('hidden');
+  const financeSection = document.getElementById('financeSection');
+  if (financeSection) financeSection.classList.add('hidden');
   if (typeof rechargesSection !== 'undefined' && rechargesSection) rechargesSection.classList.add('hidden');
+  const ssc = document.getElementById('serverSwitchContainer');
+  if (ssc) ssc.classList.remove('hidden');
   fetchOrderHistory(); // Refresh history every time the tab is opened
   setTimeout(() => historySection.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
 });
@@ -413,6 +431,8 @@ if (tabAdmin) {
     tabAdmin.classList.add('active');
     tabCatalog.classList.remove('active');
     tabHistory.classList.remove('active');
+    const tabFinanceEl = document.getElementById('tabFinance');
+    if (tabFinanceEl) tabFinanceEl.classList.remove('active');
     if (tabProfile) tabProfile.classList.remove('active');
     adminSection.classList.remove('hidden');
     if (profileSection) profileSection.classList.add('hidden');
@@ -420,10 +440,48 @@ if (tabAdmin) {
     if (rechargeSection) rechargeSection.classList.add('hidden');
     productsSection.classList.add('hidden');
     historySection.classList.add('hidden');
+    const financeSection = document.getElementById('financeSection');
+    if (financeSection) financeSection.classList.add('hidden');
     if (typeof rechargesSection !== 'undefined' && rechargesSection) rechargesSection.classList.add('hidden');
+    const ssc = document.getElementById('serverSwitchContainer');
+    if (ssc) ssc.classList.remove('hidden');
     
     await loadAdminData();
     await fetchMasterHistory();
+  });
+}
+
+// TAB INDEPENDIENTE: FINANZAS Y GANANCIAS (PANTALLA COMPLETA LIMPIA PARA NÚMEROS)
+const tabFinanceBtn = document.getElementById('tabFinance');
+if (tabFinanceBtn) {
+  tabFinanceBtn.addEventListener('click', async () => {
+    tabFinanceBtn.classList.add('active');
+    if (tabCatalog) tabCatalog.classList.remove('active');
+    if (tabHistory) tabHistory.classList.remove('active');
+    if (tabAdmin) tabAdmin.classList.remove('active');
+    if (tabProfile) tabProfile.classList.remove('active');
+
+    const financeSection = document.getElementById('financeSection');
+    if (financeSection) financeSection.classList.remove('hidden');
+
+    if (productsSection) productsSection.classList.add('hidden');
+    if (historySection) historySection.classList.add('hidden');
+    if (adminSection) adminSection.classList.add('hidden');
+    if (profileSection) profileSection.classList.add('hidden');
+    const rechargeSection = document.getElementById('rechargeSection');
+    if (rechargeSection) rechargeSection.classList.add('hidden');
+    if (typeof rechargesSection !== 'undefined' && rechargesSection) rechargesSection.classList.add('hidden');
+
+    // Ocultar barra de servidores para evitar distracciones innecesarias al hacer números
+    const ssc = document.getElementById('serverSwitchContainer');
+    if (ssc) ssc.classList.add('hidden');
+
+    if (typeof loadFinanceDashboard === 'function') {
+      await loadFinanceDashboard();
+    }
+    setTimeout(() => {
+      if (financeSection) financeSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
   });
 }
 

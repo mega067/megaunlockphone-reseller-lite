@@ -1089,14 +1089,15 @@ if (btnAdminTabGroups) {
 
 if (btnAdminTabFinance) {
   btnAdminTabFinance.addEventListener('click', () => {
+    const tabFin = document.getElementById('tabFinance');
+    if (tabFin) {
+      tabFin.click();
+      return;
+    }
     document.querySelectorAll('.admin-sub-tab').forEach(t => t.classList.remove('active'));
     btnAdminTabFinance.classList.add('active');
-    if (adminTabFinance) adminTabFinance.classList.remove('hidden');
-    adminTabUsers.classList.add('hidden');
-    adminTabHistory.classList.add('hidden');
-    adminTabSettings.classList.add('hidden');
-    if (adminTabGroups) { adminTabGroups.classList.add('hidden'); adminTabGroups.style.display = 'none'; }
-    
+    const finSec = document.getElementById('financeSection');
+    if (finSec) finSec.classList.remove('hidden');
     loadFinanceDashboard();
   });
 }

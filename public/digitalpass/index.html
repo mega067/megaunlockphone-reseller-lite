@@ -354,6 +354,9 @@
         <button class="tab-btn hidden" id="tabAdmin" style="background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.3); color: #c4b5fd;">
           <i data-lucide="shield"></i> Administración
         </button>
+        <button class="tab-btn hidden" id="tabFinance" style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.35); color: #34d399; font-weight: 700;">
+          <i data-lucide="wallet"></i> Finanzas & Ganancias
+        </button>
       </div>
 
       <!-- Products Grid/Table Panel -->
@@ -906,8 +909,12 @@
             <div id="groupMarkupsContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px;">
               <div style="text-align: center; color: #6b7280; padding: 20px; grid-column: 1 / -1;">Cargando grupos...</div>
             </div>
-          <!-- TAB: FINANZAS Y GANANCIAS -->
-          <div id="adminTabFinanceContent" class="hidden">
+          </div>
+        </div>
+      </section>
+
+      <!-- SECCIÓN INDEPENDIENTE COMPLETA: FINANZAS & GANANCIAS (PANTALLA LIMPIA DEDICADA) -->
+      <section class="card hidden" id="financeSection" style="margin-top: 20px; padding: 24px; border: 1px solid rgba(16, 185, 129, 0.3); background: rgba(15, 23, 42, 0.95);">
             <!-- Header con Acciones y Resumen -->
             <div style="display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(6, 78, 59, 0.3)); border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; border: 1px solid rgba(16, 185, 129, 0.3); flex-wrap: wrap; gap: 15px;">
               <div>
@@ -917,8 +924,14 @@
                 <span style="font-size: 0.85rem; color: #cbd5e1;">Control de cobros al cliente, costo neto de servidores, distribución de reinversión y saldo por banco (Nu, Revolut, etc.)</span>
               </div>
               <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button type="button" class="btn btn-secondary btn-small" id="btnToggleFinanceAccounts" style="background: rgba(168, 85, 247, 0.15); border-color: rgba(168, 85, 247, 0.4); color: #c084fc;">
+                  <i data-lucide="credit-card"></i> Mis Cuentas & Tarjetas
+                </button>
+                <button type="button" class="btn btn-secondary btn-small" id="btnToggleWeeklyAudit" style="background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.4); color: #fbbf24;">
+                  <i data-lucide="calendar-check"></i> Cierre Semanal
+                </button>
                 <button type="button" class="btn btn-secondary btn-small" id="btnToggleFinanceConfig" style="background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.2); color: #f1f5f9;">
-                  <i data-lucide="sliders"></i> Configurar Reinversión & Cuentas
+                  <i data-lucide="sliders"></i> Configurar Reinversión
                 </button>
                 <button type="button" class="btn btn-primary btn-small" id="btnToggleAddManualExpense" style="background: linear-gradient(135deg, #059669, #10b981); border: none; color: white;">
                   <i data-lucide="plus-circle"></i> Nuevo Ingreso / Gasto
@@ -963,40 +976,162 @@
               </form>
             </div>
 
+            <!-- Panel de Administración de Tarjetas y Cuentas (Nu, Revolut, Emergencias, Inversión, etc.) -->
+            <div id="financeAccountsManagerContainer" class="hidden" style="background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(168, 85, 247, 0.4); border-radius: 12px; padding: 20px; margin-bottom: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 10px;">
+                <h4 style="margin: 0; color: #c084fc; font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
+                  <i data-lucide="wallet-cards"></i> Mis Cuentas Bancarias, Tarjetas, Inversiones & Fondos
+                </h4>
+                <button type="button" class="btn btn-secondary btn-sm" id="btnCloseAccountsManager" style="padding: 4px 10px; font-size: 0.75rem;">Cerrar</button>
+              </div>
+
+              <!-- Formulario de Crear / Editar Tarjeta o Cuenta -->
+              <form id="formAddEditAccount" style="background: rgba(30, 41, 59, 0.6); padding: 14px; border-radius: 10px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05); display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; align-items: flex-end;">
+                <input type="hidden" id="accountFormId" value="">
+                <div>
+                  <label style="font-size: 0.75rem; color: #cbd5e1; display: block; margin-bottom: 4px; font-weight: 700;">Nombre de Cuenta / Tarjeta</label>
+                  <input type="text" id="accountFormName" required placeholder="Ej: Nu Débito, Revolut, Emergencias..." class="form-control" style="width: 100%; padding: 7px 10px; font-size: 0.82rem;">
+                </div>
+                <div>
+                  <label style="font-size: 0.75rem; color: #cbd5e1; display: block; margin-bottom: 4px; font-weight: 700;">Tipo de Activo</label>
+                  <select id="accountFormType" class="form-control" style="width: 100%; padding: 7px 10px; font-size: 0.82rem;">
+                    <option value="bank">🏦 Cuenta Bancaria (SPEI / Débito)</option>
+                    <option value="card">💳 Tarjeta (Crédito / Débito)</option>
+                    <option value="emergency">🚨 Fondo / Tarjeta de Emergencias</option>
+                    <option value="investment">📈 Cuenta de Inversión (Cetes, Rendimientos)</option>
+                    <option value="cash">💵 Efectivo Físico</option>
+                    <option value="server">🖥️ Saldo en Servidores / Proveedores</option>
+                    <option value="other">💼 Otra Billetera / Activo</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size: 0.75rem; color: #cbd5e1; display: block; margin-bottom: 4px; font-weight: 700;">Saldo Inicial / Actual ($ MXN)</label>
+                  <input type="number" step="0.01" id="accountFormBalance" value="0.00" class="form-control" style="width: 100%; padding: 7px 10px; font-size: 0.82rem;">
+                </div>
+                <div>
+                  <label style="font-size: 0.75rem; color: #cbd5e1; display: block; margin-bottom: 4px; font-weight: 700;">Color Distintivo</label>
+                  <select id="accountFormColor" class="form-control" style="width: 100%; padding: 7px 10px; font-size: 0.82rem;">
+                    <option value="#8b5cf6">Morado (Nu / Cripto)</option>
+                    <option value="#0ea5e9">Azul Cielo (Revolut / Digital)</option>
+                    <option value="#10b981">Esmeralda (Efectivo / Fondos)</option>
+                    <option value="#ef4444">Rojo (Emergencias / Alertas)</option>
+                    <option value="#f59e0b">Dorado (Inversiones / Rendimiento)</option>
+                    <option value="#3b82f6">Azul Marino (BBVA / Bancos)</option>
+                    <option value="#06b6d4">Cian (Mercado Pago / Wallets)</option>
+                  </select>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                  <button type="submit" class="btn btn-primary" id="btnSaveAccount" style="padding: 7px 16px; font-size: 0.82rem; background: #9333ea; border: none; flex: 1;">
+                    <i data-lucide="check"></i> Guardar Cuenta
+                  </button>
+                  <button type="button" class="btn btn-secondary" id="btnCancelEditAccount" style="padding: 7px 12px; font-size: 0.82rem; display: none;">
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+
+              <!-- Lista de Tarjetas y Cuentas registradas -->
+              <div id="accountsManagerCardsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px;">
+                <!-- Se poblará vía JS -->
+              </div>
+            </div>
+
+            <!-- Panel de Cierre y Verificación Semanal (Auditoría cada fin de semana) -->
+            <div id="financeWeeklyAuditContainer" class="hidden" style="background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 12px; padding: 20px; margin-bottom: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 10px;">
+                <div>
+                  <h4 style="margin: 0; color: #fbbf24; font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
+                    <i data-lucide="clipboard-check"></i> Cierre & Verificación Semanal de Finanzas
+                  </h4>
+                  <span style="font-size: 0.78rem; color: #94a3b8;">Recuento y conciliación de saldos en efectivo, tarjetas y cuentas bancarias de los últimos 7 días.</span>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" id="btnCloseWeeklyAudit" style="padding: 4px 10px; font-size: 0.75rem;">Cerrar</button>
+              </div>
+
+              <!-- Resumen de la semana actual -->
+              <div id="weeklyAuditSummaryStats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px;">
+                <!-- Dinámico -->
+              </div>
+
+              <!-- Notas y Verificación de Cuentas -->
+              <div style="background: rgba(30, 41, 59, 0.5); padding: 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px;">
+                <label style="font-size: 0.8rem; font-weight: 700; color: #e2e8f0; display: block; margin-bottom: 6px;">
+                  Notas de Conciliación Semanal / Discrepancias / Observaciones:
+                </label>
+                <textarea id="weeklyAuditNotes" rows="2" placeholder="Ej: Se conciliaron todas las cuentas al 100%. Saldo en efectivo verificado físicamente, fondo de emergencia intacto..." class="form-control" style="width: 100%; padding: 8px 12px; font-size: 0.82rem;"></textarea>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; flex-wrap: wrap; gap: 10px;">
+                  <span style="font-size: 0.75rem; color: #f59e0b; display: flex; align-items: center; gap: 6px;">
+                    <i data-lucide="shield-alert" style="width: 16px; height: 16px;"></i> Al registrar el corte se guardará una instantánea de auditoría inmutable de todas las cuentas.
+                  </span>
+                  <button type="button" class="btn btn-primary" id="btnExecuteWeeklyAudit" style="background: linear-gradient(135deg, #d97706, #f59e0b); border: none; color: black; font-weight: 800; padding: 8px 20px; font-size: 0.85rem;">
+                    <i data-lucide="check-circle-2"></i> Confirmar y Guardar Cierre Semanal
+                  </button>
+                </div>
+              </div>
+
+              <!-- Historial de cierres anteriores -->
+              <h5 style="margin: 0 0 10px 0; color: #cbd5e1; font-size: 0.88rem; display: flex; align-items: center; gap: 6px;">
+                <i data-lucide="history" style="width: 16px; height: 16px; color: #fbbf24;"></i> Historial de Cortes Semanales Anteriores
+              </h5>
+              <div id="weeklyAuditHistoryList" style="max-height: 220px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); padding: 8px;">
+                <!-- Dinámico -->
+              </div>
+            </div>
+
             <!-- Formulario de Movimiento Manual (Oculto por defecto) -->
             <div id="financeManualEntryContainer" class="hidden" style="background: rgba(30, 41, 59, 0.85); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 10px; padding: 18px; margin-bottom: 24px;">
               <h4 style="margin: 0 0 14px 0; color: #38bdf8; font-size: 1rem; display: flex; align-items: center; gap: 6px;">
-                <i data-lucide="plus-circle"></i> Registrar Ingreso Extra o Gasto Operativo
+                <i data-lucide="plus-circle"></i> Registrar Movimiento Contable / Gasto / Transferencia
               </h4>
               <form id="formManualTransaction" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
                 <div>
-                  <label style="font-size: 0.78rem; color: #cbd5e1; display: block; margin-bottom: 4px;">Tipo de Operación</label>
+                  <label style="font-size: 0.78rem; color: #cbd5e1; display: block; margin-bottom: 4px; font-weight: 700;">Tipo de Operación</label>
                   <select id="manualEntryType" class="form-control" style="width: 100%; padding: 7px 10px; font-size: 0.82rem;">
                     <option value="income_manual">🟢 Ingreso Directo / Venta Externa</option>
-                    <option value="expense_manual">🔴 Gasto Operativo / Retiro / Pago Servidor</option>
+                    <option value="expense_manual">🔴 Gasto Personal / Operativo / Retiro</option>
+                    <option value="transfer">🔄 Transferencia entre Cuentas (Nu ➔ Server / Efectivo)</option>
                   </select>
                 </div>
                 <div>
-                  <label style="font-size: 0.78rem; color: #cbd5e1; display: block; margin-bottom: 4px;">Concepto / Servicio</label>
-                  <input type="text" id="manualEntryService" required placeholder="Ej: Venta FRP directa o Pago VPS" class="form-control" style="width: 100%; padding: 7px 10px; font-size: 0.82rem;">
+                  <label style="font-size: 0.78rem; color: #cbd5e1; display: block; margin-bottom: 4px; font-weight: 700;">Categoría del Gasto / Movimiento</label>
+                  <select id="manualEntryCategory" class="form-control" style="width: 100%; padding: 7px 10px; font-size: 0.82rem;">
+                    <option value="otros">📦 General / Otros</option>
+                    <option value="comida">🍔 Comida & Supermercado</option>
+                    <option value="pasaje">🚌 Pasaje / Gasolina / Transporte</option>
+                    <option value="gustos">🎉 Gustos / Salidas / Personal</option>
+                    <option value="servidores">🖥️ Servidores / Recarga DHRU</option>
+                    <option value="emergencia">🚨 Emergencias / Imprevistos</option>
+                    <option value="inversion">📈 Inversiones & Rendimiento</option>
+                    <option value="servicios">⚡ Servicios (Luz, Internet, VPS)</option>
+                  </select>
                 </div>
                 <div>
-                  <label style="font-size: 0.78rem; color: #cbd5e1; display: block; margin-bottom: 4px;">Monto Cobrado / Ingreso ($ MXN)</label>
+                  <label style="font-size: 0.78rem; color: #cbd5e1; display: block; margin-bottom: 4px; font-weight: 700;">Concepto / Detalle</label>
+                  <input type="text" id="manualEntryService" required placeholder="Ej: Pasaje foráneo, Almuerzo, Recarga LatamGSM..." class="form-control" style="width: 100%; padding: 7px 10px; font-size: 0.82rem;">
+                </div>
+                <div id="containerManualEntryCharged">
+                  <label style="font-size: 0.78rem; color: #cbd5e1; display: block; margin-bottom: 4px; font-weight: 700;">Monto Cobrado / Ingreso ($ MXN)</label>
                   <input type="number" step="0.01" min="0" id="manualEntryCharged" value="0.00" class="form-control" style="width: 100%; padding: 7px 10px; font-size: 0.82rem;">
                 </div>
-                <div>
-                  <label style="font-size: 0.78rem; color: #cbd5e1; display: block; margin-bottom: 4px;">Costo Servidor / Gasto ($ MXN)</label>
+                <div id="containerManualEntryCost">
+                  <label style="font-size: 0.78rem; color: #cbd5e1; display: block; margin-bottom: 4px; font-weight: 700;">Monto Gastado / Costo ($ MXN)</label>
                   <input type="number" step="0.01" min="0" id="manualEntryCost" value="0.00" class="form-control" style="width: 100%; padding: 7px 10px; font-size: 0.82rem;">
                 </div>
                 <div>
-                  <label style="font-size: 0.78rem; color: #cbd5e1; display: block; margin-bottom: 4px;">Cuenta / Billetera Destino</label>
+                  <label id="labelManualEntryAccount" style="font-size: 0.78rem; color: #cbd5e1; display: block; margin-bottom: 4px; font-weight: 700;">Cuenta / Tarjeta Origen</label>
                   <select id="manualEntryAccount" class="form-control" style="width: 100%; padding: 7px 10px; font-size: 0.82rem;">
-                    <!-- Se poblará dinámicamente con las cuentas del admin -->
+                    <!-- Se poblará dinámicamente -->
+                  </select>
+                </div>
+                <div id="containerManualDestAccount" style="display: none;">
+                  <label style="font-size: 0.78rem; color: #38bdf8; display: block; margin-bottom: 4px; font-weight: 700;">Cuenta Destino (Transferencia)</label>
+                  <select id="manualEntryDestAccount" class="form-control" style="width: 100%; padding: 7px 10px; font-size: 0.82rem;">
+                    <!-- Se poblará dinámicamente -->
                   </select>
                 </div>
                 <div>
-                  <label style="font-size: 0.78rem; color: #cbd5e1; display: block; margin-bottom: 4px;">ID de Orden / Referencia (Opcional)</label>
-                  <input type="text" id="manualEntryOrderId" placeholder="Ej: #98765" class="form-control" style="width: 100%; padding: 7px 10px; font-size: 0.82rem;">
+                  <label style="font-size: 0.78rem; color: #cbd5e1; display: block; margin-bottom: 4px; font-weight: 700;">ID de Orden / Referencia (Opcional)</label>
+                  <input type="text" id="manualEntryOrderId" placeholder="Ej: #98765 o Ticket" class="form-control" style="width: 100%; padding: 7px 10px; font-size: 0.82rem;">
                 </div>
                 <div style="grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px;">
                   <button type="button" class="btn btn-secondary" id="btnCancelManualEntry" style="padding: 7px 16px; font-size: 0.82rem;">Cancelar</button>
@@ -1069,7 +1204,7 @@
               </div>
             </div>
 
-            <!-- Desglose de Gastos Personales por Categoría -->
+            <!-- Desglose de Gastos Personales por Categoría (Comida, Pasajes, Gustos, Servidores, etc.) -->
             <div id="financeCategoriesWidget" style="background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 16px 20px; margin-bottom: 24px;">
               <h4 style="margin: 0 0 14px 0; font-size: 0.95rem; font-weight: 800; color: #f1f5f9; display: flex; align-items: center; gap: 8px;">
                 <i data-lucide="pie-chart" style="color: #38bdf8; width: 18px; height: 18px;"></i> Desglose de Gastos por Categoría Personal
@@ -1096,7 +1231,7 @@
               </div>
 
               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px;">
-                <!-- Gráfica 1: Flujo Diario -->
+                <!-- Gráfica 1: Evolución Diaria (Línea de Tendencia) -->
                 <div style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 10px; padding: 14px;">
                   <h5 style="margin: 0 0 10px 0; font-size: 0.85rem; color: #e2e8f0; display: flex; align-items: center; justify-content: space-between;">
                     <span>📈 Flujo Diario (Últimos 30 Días)</span>
@@ -1107,7 +1242,7 @@
                   </div>
                 </div>
 
-                <!-- Gráfica 2: Doughnut por Categorías -->
+                <!-- Gráfica 2: Distribución de Gastos vs Ganancia (Doughnut) -->
                 <div style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 10px; padding: 14px;">
                   <h5 style="margin: 0 0 10px 0; font-size: 0.85rem; color: #e2e8f0; display: flex; align-items: center; justify-content: space-between;">
                     <span>🍩 Distribución por Categoría de Gasto</span>
@@ -1118,7 +1253,7 @@
                   </div>
                 </div>
 
-                <!-- Gráfica 3: Cierres Semanales -->
+                <!-- Gráfica 3: Comparativa de Cierres Semanales (Barras) -->
                 <div style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 10px; padding: 14px; grid-column: 1 / -1;">
                   <h5 style="margin: 0 0 10px 0; font-size: 0.85rem; color: #e2e8f0; display: flex; align-items: center; justify-content: space-between;">
                     <span>📊 Rendimiento y Ahorro en Cierres de Fin de Semana</span>
@@ -1190,9 +1325,6 @@
                 </table>
               </div>
             </div>
-          </div>
-          
-        </div>
       </section>
 
   <!-- Recarga Section (Converted from Modal) -->

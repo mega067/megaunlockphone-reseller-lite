@@ -43,7 +43,7 @@ async function configticket(context) {
                 try {
                     const mediaBuffer = await downloadMediaMessage(msg, 'buffer', { }, { reuploadRequest: sock.updateMediaMessage });
                     logoExt = msg.message.imageMessage ? '.jpg' : '.png'; // Fallback
-                    const logoDir = path.join(__dirname, '../../../data/logos');
+                    const logoDir = path.join(__dirname, '../../data/logos');
                     if (!fs.existsSync(logoDir)) {
                         fs.mkdirSync(logoDir, { recursive: true });
                     }

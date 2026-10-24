@@ -327,6 +327,9 @@
         <button class="tab-btn hidden" id="tabAdmin" style="background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.3); color: #c4b5fd;">
           <i data-lucide="shield"></i> Administración
         </button>
+        <button class="tab-btn hidden" id="tabFinance" style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.35); color: #34d399; font-weight: 700;">
+          <i data-lucide="wallet"></i> Finanzas & Ganancias
+        </button>
       </div>
 
       <!-- Products Grid/Table Panel -->
@@ -884,8 +887,12 @@
             <div id="groupMarkupsContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px;">
               <div style="text-align: center; color: #6b7280; padding: 20px; grid-column: 1 / -1;">Cargando grupos...</div>
             </div>
-          <!-- TAB: FINANZAS Y GANANCIAS -->
-          <div id="adminTabFinanceContent" class="hidden">
+          </div>
+        </div>
+      </section>
+
+      <!-- SECCIÓN INDEPENDIENTE COMPLETA: FINANZAS & GANANCIAS (PANTALLA LIMPIA DEDICADA) -->
+      <section class="card hidden" id="financeSection" style="margin-top: 20px; padding: 24px; border: 1px solid rgba(16, 185, 129, 0.3); background: rgba(15, 23, 42, 0.95);">
             <!-- Header con Acciones y Resumen -->
             <div style="display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(6, 78, 59, 0.3)); border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; border: 1px solid rgba(16, 185, 129, 0.3); flex-wrap: wrap; gap: 15px;">
               <div>
@@ -1296,9 +1303,6 @@
                 </table>
               </div>
             </div>
-          </div>
-          
-        </div>
       </section>
 
   <!-- Recarga Section (Modern Split Layout: Form Left / History Right) -->

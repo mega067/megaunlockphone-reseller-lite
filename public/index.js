@@ -48,9 +48,11 @@ const catalogTitle = document.getElementById('catalogTitle');
 const tabCatalog = document.getElementById('tabCatalog');
 const tabHistory = document.getElementById('tabHistory');
 const tabAdmin = document.getElementById('tabAdmin');
+const tabFinance = document.getElementById('tabFinance');
 const productsSection = document.getElementById('productsSection');
 const historySection = document.getElementById('historySection');
 const adminSection = document.getElementById('adminSection');
+const financeSection = document.getElementById('financeSection');
 
 const productCount = document.getElementById('productCount');
 const feedbackArea = document.getElementById('feedbackArea');
@@ -308,6 +310,7 @@ function checkPersistedSession() {
     btnLogout.classList.remove('hidden');
     if (authRole === 'admin') {
       btnAdminManage.classList.remove('hidden');
+      if (tabFinance) tabFinance.classList.remove('hidden');
       const btnAdminFinTop = document.getElementById('btnAdminFinanceTop');
       if (btnAdminFinTop) btnAdminFinTop.classList.remove('hidden');
       if (typeof btnAdminCoupons !== 'undefined' && btnAdminCoupons) btnAdminCoupons.classList.remove('hidden');
@@ -435,12 +438,17 @@ function checkPersistedSession() {
     dashboardView.classList.remove('hidden');
     if (historySection) historySection.classList.add('hidden');
     if (adminSection) adminSection.classList.add('hidden');
+    if (financeSection) financeSection.classList.add('hidden');
     const profileSectionEl = document.getElementById('profileSection');
     if (profileSectionEl) profileSectionEl.classList.add('hidden');
     if (productsSection) productsSection.classList.remove('hidden');
     if (tabCatalog) tabCatalog.classList.add('active');
     if (tabHistory) tabHistory.classList.remove('active');
     if (tabAdmin) tabAdmin.classList.remove('active');
+    if (tabFinance) {
+      tabFinance.classList.remove('active');
+      tabFinance.classList.add('hidden');
+    }
     const tabProfileEl = document.getElementById('tabProfile');
     if (tabProfileEl) {
       tabProfileEl.classList.remove('active');
@@ -2119,13 +2127,15 @@ function applyTicketSettings() {
     const dynamicLogo = document.getElementById('ticketDynamicLogo');
     const previewLogo = document.getElementById('configLogoPreview');
     if (dynamicLogo) {
+      dynamicLogo.style.display = 'block';
+      dynamicLogo.crossOrigin = 'anonymous';
       if (previewLogo && previewLogo.src && previewLogo.src.startsWith('data:image')) {
         // Use local base64 preview immediately for perfect sync
         dynamicLogo.src = previewLogo.src;
       } else if (customTicketSettings.logoExt) {
         dynamicLogo.src = `/logos/${authUserId}${customTicketSettings.logoExt}?t=${Date.now()}`;
       } else {
-        dynamicLogo.src = 'logo.png';
+        dynamicLogo.src = '/favicon-192.png';
       }
     }
     
@@ -2874,11 +2884,13 @@ if (btnAdminManage) {
 const btnAdminFinTop = document.getElementById('btnAdminFinanceTop');
 if (btnAdminFinTop) {
   btnAdminFinTop.addEventListener('click', () => {
-    if (tabAdmin) tabAdmin.click();
-    const btnFinTab = document.getElementById('btnAdminTabFinance');
-    if (btnFinTab) btnFinTab.click();
-    const adminSection = document.getElementById('adminSection');
-    if (adminSection) setTimeout(() => adminSection.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+    if (tabFinance) {
+      tabFinance.click();
+    } else if (tabAdmin) {
+      tabAdmin.click();
+    }
+    const finSec = document.getElementById('financeSection');
+    if (finSec) setTimeout(() => finSec.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   });
 }
 
