@@ -792,6 +792,150 @@ function deleteDebt(id) {
   return res.changes > 0;
 }
 
+/**
+ * --- PLANES DE COMPRAS Y PAGOS A MESES (NU, BANCOS, CUOTAS) ---
+ */
+function getAllInstallments() {
+  try {
+    const installments = sqliteDb.prepare(`
+      SELECT * FROM FinanceInstallments 
+      ORDER BY status ASC, dueDay ASC, createdAt DESC
+    `).all();
+
+    let totalFinanced = 0;
+    let totalPending = 0;
+    let totalPaid = 0;
+    let monthlyCommitment = 0;
+
+    installments.forEach(item => {
+      const remainingQuotas = Math.max(0, item.totalQuotas - item.paidQuotas);
+      const remainingAmount = Math.max(0, parseFloat((remainingQuotas * item.quotaAmount).toFixed(2)));
+      item.remainingQuotas = remainingQuotas;
+      item.remainingAmount = remainingAmount;
+      item.progressPercent = item.totalQuotas > 0 ? Math.min(100, Math.round((item.paidQuotas / item.totalQuotas) * 100)) : 0;
+
+      totalFinanced += parseFloat(item.totalAmount || 0);
+      if (item.status === 'active' && remainingQuotas > 0) {
+        totalPending += remainingAmount;
+        totalPaid += (item.paidQuotas * item.quotaAmount);
+        monthlyCommitment += parseFloat(item.quotaAmount || 0);
+      } else {
+        totalPaid += parseFloat(item.totalAmount || 0);
+      }
+    });
+
+    return {
+      installments,
+      summary: {
+        totalFinanced: parseFloat(totalFinanced.toFixed(2)),
+        totalPending: parseFloat(totalPending.toFixed(2)),
+        totalPaid: parseFloat(totalPaid.toFixed(2)),
+        monthlyCommitment: parseFloat(monthlyCommitment.toFixed(2)),
+        activeCount: installments.filter(i => i.status === 'active' && i.remainingQuotas > 0).length
+      }
+    };
+  } catch (err) {
+    console.error('[GET ALL INSTALLMENTS ERR]', err);
+    return { installments: [], summary: { totalFinanced: 0, totalPending: 0, totalPaid: 0, monthlyCommitment: 0, activeCount: 0 } };
+  }
+}
+
+function saveInstallment(data) {
+  const isUpdate = !!data.id;
+  const id = data.id || `inst_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
+  const title = String(data.title || '').trim();
+  if (!title) throw new Error('El título o concepto de la compra a meses es requerido.');
+
+  const accountId = data.accountId ? String(data.accountId).trim() : 'acc_nu';
+  const accountName = data.accountName ? String(data.accountName).trim() : 'Nu Crédito';
+  const totalAmount = Math.max(0, parseFloat(data.totalAmount) || 0);
+  const totalQuotas = Math.max(1, parseInt(data.totalQuotas) || 1);
+  const paidQuotas = Math.max(0, Math.min(totalQuotas, parseInt(data.paidQuotas) || 0));
+  const quotaAmount = Math.max(0, parseFloat(data.quotaAmount) || parseFloat((totalAmount / totalQuotas).toFixed(2)));
+  const dueDay = Math.max(1, Math.min(31, parseInt(data.dueDay) || 13));
+  const interestRate = parseFloat(data.interestRate) || 0;
+  const referenceNumber = data.referenceNumber ? String(data.referenceNumber).trim() : '';
+  const status = paidQuotas >= totalQuotas ? 'completed' : 'active';
+  const startDate = data.startDate ? String(data.startDate).trim() : new Date().toISOString().slice(0, 10);
+  const notes = data.notes ? String(data.notes).trim() : '';
+
+  if (isUpdate) {
+    sqliteDb.prepare(`
+      UPDATE FinanceInstallments 
+      SET accountId = ?, accountName = ?, title = ?, totalAmount = ?, totalQuotas = ?, paidQuotas = ?,
+          quotaAmount = ?, dueDay = ?, interestRate = ?, referenceNumber = ?, status = ?, startDate = ?,
+          notes = ?, updatedAt = datetime('now')
+      WHERE id = ?
+    `).run(accountId, accountName, title, totalAmount, totalQuotas, paidQuotas, quotaAmount, dueDay, interestRate, referenceNumber, status, startDate, notes, id);
+  } else {
+    sqliteDb.prepare(`
+      INSERT INTO FinanceInstallments (
+        id, accountId, accountName, title, totalAmount, totalQuotas, paidQuotas,
+        quotaAmount, dueDay, interestRate, referenceNumber, status, startDate, notes, createdAt, updatedAt
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+    `).run(id, accountId, accountName, title, totalAmount, totalQuotas, paidQuotas, quotaAmount, dueDay, interestRate, referenceNumber, status, startDate, notes);
+  }
+
+  return sqliteDb.prepare('SELECT * FROM FinanceInstallments WHERE id = ?').get(id);
+}
+
+function payInstallmentQuota(installmentId, quotaCount = 1, paymentAccount = 'Efectivo / Caja') {
+  const item = sqliteDb.prepare('SELECT * FROM FinanceInstallments WHERE id = ?').get(installmentId);
+  if (!item) throw new Error('Plan de cuotas no encontrado.');
+
+  const count = Math.max(1, parseInt(quotaCount) || 1);
+  const newPaid = Math.min(item.totalQuotas, (item.paidQuotas || 0) + count);
+  const newStatus = newPaid >= item.totalQuotas ? 'completed' : 'active';
+  const paidAmount = parseFloat((item.quotaAmount * count).toFixed(2));
+
+  sqliteDb.prepare(`
+    UPDATE FinanceInstallments 
+    SET paidQuotas = ?, status = ?, updatedAt = datetime('now') 
+    WHERE id = ?
+  `).run(newPaid, newStatus, installmentId);
+
+  // Registrar el gasto contable en FinanceLedger y descontar de la cuenta con la que se pagó la mensualidad
+  if (paymentAccount) {
+    recordTransaction({
+      type: 'expense_manual',
+      category: 'servicios',
+      serviceName: `Pago Mensualidad (${newPaid}/${item.totalQuotas}): ${item.title}`,
+      chargedAmount: 0,
+      costAmount: paidAmount,
+      account: paymentAccount,
+      notes: `Cuota ${newPaid}/${item.totalQuotas} de ${item.title} (${item.accountName || 'Nu'}). Ref: ${item.referenceNumber || 'N/A'}`,
+      recordedBy: 'Admin'
+    });
+  }
+
+  return sqliteDb.prepare('SELECT * FROM FinanceInstallments WHERE id = ?').get(installmentId);
+}
+
+function deleteInstallment(id) {
+  const stmt = sqliteDb.prepare('DELETE FROM FinanceInstallments WHERE id = ?');
+  return stmt.run(id).changes > 0;
+}
+
+/**
+ * --- INGRESO SEMANAL DE PASAJE & COMIDA EN LA UNIVERSIDAD ---
+ * Inyecta directamente saldo positivo en efectivo/caja y lo categoriza como apoyo semanal
+ */
+function recordCollegeAllowance(amount, notes = 'Pasaje y comida semanal uni', targetAccount = 'Efectivo / Caja') {
+  const numAmount = Math.max(0, parseFloat(amount) || 0);
+  if (numAmount <= 0) throw new Error('El monto de la semana debe ser mayor a 0');
+
+  return recordTransaction({
+    type: 'income_manual',
+    category: 'pasaje',
+    serviceName: `Apoyo Semanal Uni (Pasaje & Comida)`,
+    chargedAmount: numAmount,
+    costAmount: 0,
+    account: targetAccount,
+    notes: String(notes || 'Dinero en efectivo otorgado para la semana (transporte y comida en la universidad)'),
+    recordedBy: 'Admin'
+  });
+}
+
 module.exports = {
   getFinanceConfig,
   updateFinanceConfig,
@@ -799,6 +943,7 @@ module.exports = {
   saveAccount,
   deleteAccount,
   recordTransaction,
+  recordManualTransaction: recordTransaction,
   getFinanceSummary,
   performWeeklyAudit,
   getOrderFinanceDetails,
@@ -806,5 +951,11 @@ module.exports = {
   getAllDebts,
   saveDebt,
   recordDebtPayment,
-  deleteDebt
+  deleteDebt,
+  getAllInstallments,
+  saveInstallment,
+  payInstallmentQuota,
+  deleteInstallment,
+  recordCollegeAllowance
 };
+

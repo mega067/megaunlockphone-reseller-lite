@@ -478,6 +478,7 @@ if (btnBackToCatalog) {
 }
 
 // checkPersistedSession moved to the bottom of the script
+window.checkPersistedSession = checkPersistedSession;
 
 async function updateAccountCredits() {
   if (!authToken) {

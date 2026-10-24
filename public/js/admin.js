@@ -1944,6 +1944,7 @@ async function loadFinanceDashboard() {
     renderFinanceLedger(data.recent);
     populateManualAccountsSelect(data.accounts);
     loadDebtsSummary();
+    loadInstallmentsSummary();
 
     // Actualizar sliders en configuración
     const slider = document.getElementById('inputFinanceReinvestPercent');
@@ -2109,7 +2110,7 @@ function renderFinanceAccounts(accounts, config) {
       icon: acc.icon || 'wallet' 
     };
 
-    const net = parseFloat(acc.netProfit || 0);
+    const net = parseFloat(acc.totalProfit !== undefined ? acc.totalProfit : (acc.netProfit || 0));
     const balance = parseFloat(acc.currentBalance !== undefined ? acc.currentBalance : (acc.balance !== undefined ? acc.balance : (acc.initialBalance || 0)));
     totalAssets += balance;
 
@@ -3692,5 +3693,320 @@ async function deleteFinanceDebt(id, personName) {
     alert('Error: ' + err.message);
   }
 }
+
+// ==========================================
+// MESES SIN INTERESES / CUOTAS (INSTALLMENTS)
+// ==========================================
+
+async function loadInstallmentsSummary() {
+  const token = authToken || localStorage.getItem('dhru_token') || localStorage.getItem('mega_auth_token');
+  const serverId = currentServerId || localStorage.getItem('currentServerId') || '1';
+  try {
+    const res = await fetch('/api/admin/finance/installments', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'X-Server-Id': serverId
+      }
+    });
+    if (!res.ok) return;
+    const d = await res.json();
+    if (!d.success) return;
+    const installments = d.installments || [];
+    const active = installments.filter(i => i.status === 'active');
+    
+    let totalPending = 0;
+    let nextMonthlyQuota = 0;
+    
+    active.forEach(i => {
+      const remainingQuotas = Math.max(0, (i.totalQuotas || 0) - (i.paidQuotas || 0));
+      const quota = parseFloat(i.quotaAmount) || ((parseFloat(i.totalAmount) || 0) / (i.totalQuotas || 1));
+      totalPending += quota * remainingQuotas;
+      nextMonthlyQuota += quota;
+    });
+
+    const elTotal = document.getElementById('financeInstallmentsTotalPending');
+    if (elTotal) elTotal.textContent = `$${totalPending.toFixed(2)}`;
+    const elQuota = document.getElementById('financeInstallmentsNextQuota');
+    if (elQuota) elQuota.textContent = `$${nextMonthlyQuota.toFixed(2)} / mes`;
+    const elActive = document.getElementById('financeInstallmentsActiveCount');
+    if (elActive) elActive.textContent = `${active.length} activos`;
+  } catch (err) {
+    console.error('Error al cargar resumen de cuotas/meses:', err);
+  }
+}
+
+async function loadInstallmentsManagerList() {
+  const token = authToken || localStorage.getItem('dhru_token') || localStorage.getItem('mega_auth_token');
+  const serverId = currentServerId || localStorage.getItem('currentServerId') || '1';
+  const container = document.getElementById('financeInstallmentsList');
+  if (!container) return;
+
+  container.innerHTML = '<div style="text-align:center; padding:1.5rem; color:var(--text-muted);"><i data-lucide="loader" class="animate-spin"></i> Cargando planes a meses...</div>';
+  if (window.lucide) lucide.createIcons();
+
+  try {
+    const res = await fetch('/api/admin/finance/installments', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'X-Server-Id': serverId
+      }
+    });
+    const d = await res.json();
+    if (!res.ok || !d.success) {
+      container.innerHTML = `<div style="color:var(--danger); padding:1rem;">${d.error || 'No se pudieron cargar los planes a meses.'}</div>`;
+      return;
+    }
+    renderInstallmentsList(d.installments || []);
+  } catch (err) {
+    container.innerHTML = `<div style="color:var(--danger); padding:1rem;">Error de conexión: ${err.message}</div>`;
+  }
+}
+
+function renderInstallmentsList(items) {
+  const container = document.getElementById('financeInstallmentsList');
+  if (!container) return;
+
+  if (!items.length) {
+    container.innerHTML = `
+      <div style="text-align:center; padding: 2rem; color: var(--text-muted); background: var(--bg-card); border-radius: 12px; border: 1px dashed var(--border);">
+        <i data-lucide="credit-card" style="width:36px; height:36px; margin:0 auto 0.5rem; opacity:0.5;"></i>
+        <p style="margin:0; font-weight:600;">No hay planes de meses registrados.</p>
+        <small>Registra compras a meses o disposiciones de tarjetas como Nu, BBVA o Mercado Pago.</small>
+      </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+    return;
+  }
+
+  container.innerHTML = items.map(inst => {
+    const isCompleted = inst.status === 'completed' || inst.paidQuotas >= inst.totalQuotas;
+    const progressPct = Math.min(100, Math.round(((inst.paidQuotas || 0) / (inst.totalQuotas || 1)) * 100));
+    const quotaVal = parseFloat(inst.quotaAmount) || ((parseFloat(inst.totalAmount) || 0) / (inst.totalQuotas || 1));
+    const remainingQuotas = Math.max(0, (inst.totalQuotas || 0) - (inst.paidQuotas || 0));
+    const remainingAmount = (quotaVal * remainingQuotas).toFixed(2);
+
+    return `
+      <div style="background: var(--bg-card); border: 1px solid ${isCompleted ? 'var(--border)' : 'rgba(130, 24, 252, 0.25)'}; border-radius: 12px; padding: 1.25rem; margin-bottom: 0.85rem; box-shadow: 0 2px 8px rgba(0,0,0,0.03); position: relative;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.6rem; flex-wrap:wrap; gap:0.5rem;">
+          <div>
+            <span style="display:inline-block; font-size:0.75rem; font-weight:700; text-transform:uppercase; padding:2px 8px; border-radius:6px; background: rgba(130, 24, 252, 0.12); color: #8218fc; margin-bottom:4px;">
+              ${inst.accountName || 'Tarjeta / Cuenta'}
+            </span>
+            <h4 style="margin:0; font-size:1.05rem; font-weight:700; color:var(--text);">${escapeHtml(inst.title)}</h4>
+            ${inst.referenceNumber ? `<small style="color:var(--text-muted); font-size:0.75rem;">Ref: ${escapeHtml(inst.referenceNumber)}</small>` : ''}
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:1.2rem; font-weight:800; color:var(--text);">$${parseFloat(inst.totalAmount || 0).toFixed(2)}</div>
+            <span style="font-size:0.8rem; font-weight:700; color:${isCompleted ? '#10b981' : '#f59e0b'};">
+              ${isCompleted ? '✓ Pagado Completo' : `${inst.paidQuotas}/${inst.totalQuotas} mensualidades`}
+            </span>
+          </div>
+        </div>
+
+        <!-- Barra de progreso -->
+        <div style="background: var(--bg); border-radius: 999px; height: 8px; overflow: hidden; margin-bottom: 0.75rem; border: 1px solid var(--border);">
+          <div style="width: ${progressPct}%; height: 100%; background: linear-gradient(90deg, #8218fc, #6366f1); border-radius: 999px; transition: width 0.3s ease;"></div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; color:var(--text-muted); flex-wrap:wrap; gap:0.5rem;">
+          <div>
+            <span>Mensualidad: <strong style="color:var(--text);">$${quotaVal.toFixed(2)}</strong></span>
+            ${inst.dueDay ? `<span style="margin-left:8px;">• Pagar el día: <strong style="color:var(--text);">${inst.dueDay}</strong></span>` : ''}
+            <div style="font-size:0.78rem; margin-top:2px;">Restante: <strong style="color:#ef4444;">$${remainingAmount}</strong> (${remainingQuotas} pendientes)</div>
+          </div>
+          <div style="display:flex; gap:0.5rem;">
+            ${!isCompleted ? `
+              <button onclick="promptPayInstallment('${inst.id}', '${escapeHtml(inst.title)}', ${quotaVal}, ${inst.paidQuotas + 1})" class="btn" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-weight:600; padding: 6px 12px; font-size: 0.85rem; border-radius: 8px; cursor: pointer;">
+                ✓ Abonar Mensualidad
+              </button>
+            ` : ''}
+            <button onclick="deleteInstallmentPlan('${inst.id}', '${escapeHtml(inst.title)}')" class="btn" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.25); font-weight:600; padding: 6px 10px; font-size: 0.85rem; border-radius: 8px; cursor: pointer;">
+              🗑️
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+  if (window.lucide) lucide.createIcons();
+}
+
+async function promptPayInstallment(id, title, defaultAmount, nextQuotaNum) {
+  const amountStr = prompt(`Registrar pago de la mensualidad #${nextQuotaNum} para "${title}":`, defaultAmount.toFixed(2));
+  if (!amountStr) return;
+  const amount = parseFloat(amountStr);
+  if (isNaN(amount) || amount <= 0) {
+    alert('Monto inválido.');
+    return;
+  }
+  const token = authToken || localStorage.getItem('dhru_token') || localStorage.getItem('mega_auth_token');
+  const serverId = currentServerId || localStorage.getItem('currentServerId') || '1';
+
+  try {
+    const res = await fetch(`/api/admin/finance/installments/${encodeURIComponent(id)}/pay`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'X-Server-Id': serverId
+      },
+      body: JSON.stringify({ amount })
+    });
+    const d = await res.json();
+    if (res.ok && d.success) {
+      alert(`✅ Mensualidad registrada con éxito. Progreso: ${d.paidQuotas}/${d.totalQuotas}`);
+      await loadInstallmentsManagerList();
+      await loadInstallmentsSummary();
+      loadFinanceDashboard();
+    } else {
+      alert(d.error || 'Error al procesar el pago.');
+    }
+  } catch (err) {
+    alert('Error: ' + err.message);
+  }
+}
+
+async function deleteInstallmentPlan(id, title) {
+  if (!confirm(`¿Eliminar definitivamente el plan a meses "${title}"?`)) return;
+  const token = authToken || localStorage.getItem('dhru_token') || localStorage.getItem('mega_auth_token');
+  const serverId = currentServerId || localStorage.getItem('currentServerId') || '1';
+  try {
+    const res = await fetch(`/api/admin/finance/installments/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'X-Server-Id': serverId
+      }
+    });
+    const d = await res.json();
+    if (res.ok && (d.success !== false)) {
+      await loadInstallmentsManagerList();
+      await loadInstallmentsSummary();
+    } else {
+      alert(d.error || 'Error al eliminar el plan');
+    }
+  } catch (err) {
+    alert('Error: ' + err.message);
+  }
+}
+
+// ==========================================
+// EFECTIVO SEMANAL: PASAJE Y COMIDA EN LA UNI
+// ==========================================
+
+async function quickRecordCollegeAllowance() {
+  const amountStr = prompt('🎒 Ingresar monto recibido en efectivo para pasajes y comida de la universidad:', '300.00');
+  if (!amountStr) return;
+  const amount = parseFloat(amountStr);
+  if (isNaN(amount) || amount <= 0) {
+    alert('Monto inválido.');
+    return;
+  }
+
+  const notes = prompt('Nota o concepto (ej. Pasaje semana 1 uni):', 'Pasaje y comida de la universidad') || 'Pasaje y comida semanal universidad';
+
+  const token = authToken || localStorage.getItem('dhru_token') || localStorage.getItem('mega_auth_token');
+  const serverId = currentServerId || localStorage.getItem('currentServerId') || '1';
+
+  try {
+    const res = await fetch('/api/admin/finance/college-allowance', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'X-Server-Id': serverId
+      },
+      body: JSON.stringify({
+        amount,
+        notes,
+        targetAccount: 'acc_cash'
+      })
+    });
+    const d = await res.json();
+    if (res.ok && d.success) {
+      alert(`✅ Registrado con éxito en Efectivo: $${amount.toFixed(2)} para pasaje y comida.`);
+      loadFinanceDashboard();
+    } else {
+      alert(d.error || 'Error al registrar el efectivo');
+    }
+  } catch (err) {
+    alert('Error: ' + err.message);
+  }
+}
+
+// Event Listeners y Exposición Global
+document.addEventListener('DOMContentLoaded', () => {
+  const btnToggleInstallments = document.getElementById('btnToggleInstallmentsManager');
+  const containerInstallments = document.getElementById('financeInstallmentsContainer');
+  if (btnToggleInstallments && containerInstallments) {
+    btnToggleInstallments.addEventListener('click', () => {
+      const isHidden = containerInstallments.style.display === 'none';
+      containerInstallments.style.display = isHidden ? 'block' : 'none';
+      if (isHidden) {
+        loadInstallmentsManagerList();
+      }
+    });
+  }
+
+  const btnCollegeAllowance = document.getElementById('btnQuickCollegeAllowance');
+  if (btnCollegeAllowance) {
+    btnCollegeAllowance.addEventListener('click', quickRecordCollegeAllowance);
+  }
+
+  const formNewInstallment = document.getElementById('formNewInstallment');
+  if (formNewInstallment) {
+    formNewInstallment.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const token = authToken || localStorage.getItem('dhru_token') || localStorage.getItem('mega_auth_token');
+      const serverId = currentServerId || localStorage.getItem('currentServerId') || '1';
+      
+      const payload = {
+        title: document.getElementById('newInstTitle')?.value || '',
+        accountId: document.getElementById('newInstAccount')?.value || 'acc_nu',
+        accountName: document.getElementById('newInstAccount')?.options[document.getElementById('newInstAccount')?.selectedIndex]?.text || 'Nu',
+        totalAmount: parseFloat(document.getElementById('newInstAmount')?.value || 0),
+        totalQuotas: parseInt(document.getElementById('newInstQuotas')?.value || 6, 10),
+        dueDay: parseInt(document.getElementById('newInstDueDay')?.value || 13, 10),
+        referenceNumber: document.getElementById('newInstRef')?.value || ''
+      };
+
+      if (!payload.title || isNaN(payload.totalAmount) || payload.totalAmount <= 0) {
+        alert('Por favor ingresa un título y monto total válidos');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/admin/finance/installments', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'X-Server-Id': serverId
+          },
+          body: JSON.stringify(payload)
+        });
+        const d = await res.json();
+        if (res.ok && d.success) {
+          alert('✅ Plan a meses registrado con éxito.');
+          formNewInstallment.reset();
+          await loadInstallmentsManagerList();
+          await loadInstallmentsSummary();
+          loadFinanceDashboard();
+        } else {
+          alert(d.error || 'Error al guardar el plan a meses');
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    });
+  }
+});
+
+window.promptPayInstallment = promptPayInstallment;
+window.deleteInstallmentPlan = deleteInstallmentPlan;
+window.quickRecordCollegeAllowance = quickRecordCollegeAllowance;
+window.loadInstallmentsSummary = loadInstallmentsSummary;
+window.loadInstallmentsManagerList = loadInstallmentsManagerList;
+
 
 

@@ -268,21 +268,34 @@ credentialsForm.addEventListener('submit', async (e) => {
     const ssc = document.getElementById('serverSwitchContainer');
     if (ssc) ssc.classList.remove('hidden');
 
+    // Sincronizar estado completo de la UI y botones
+    if (typeof window.checkPersistedSession === 'function') {
+      window.checkPersistedSession();
+    }
+
     if (authRole === 'admin') {
       btnAdminManage.classList.remove('hidden');
+      const btnAdminFinTop = document.getElementById('btnAdminFinanceTop');
+      if (btnAdminFinTop) btnAdminFinTop.classList.remove('hidden');
+      const tabFinanceEl = document.getElementById('tabFinance');
+      if (tabFinanceEl) tabFinanceEl.classList.remove('hidden');
       if (typeof btnAdminCoupons !== 'undefined' && btnAdminCoupons) btnAdminCoupons.classList.remove('hidden');
       btnBulkSavePrices.classList.remove('hidden');
       if (btnCustomTicket) btnCustomTicket.classList.remove('hidden');
       if (btnImportOrder) btnImportOrder.classList.remove('hidden');
     } else {
-      btnUserProfile.classList.remove('hidden');
+      if (btnUserProfile) btnUserProfile.classList.remove('hidden');
       if (btnCustomTicket) btnCustomTicket.classList.add('hidden');
       if (btnImportOrder) btnImportOrder.classList.remove('hidden');
       if (btnRechargesHistory) btnRechargesHistory.classList.remove('hidden');
     }
 
+    if (btnUserProfile) btnUserProfile.classList.remove('hidden');
     btnRechargeBalance.classList.remove('hidden'); // Shown for EVERYONE now
     btnWhatsappBot.classList.remove('hidden');
+    if (window.lucide) window.lucide.createIcons();
+
+    window.dispatchEvent(new CustomEvent('auth-change', { detail: { token: authToken, role: authRole, username: authUsername } }));
 
     syncProducts(false); // Carga ultrarrápida aprovechando el catálogo en caché
     updateAccountCredits();

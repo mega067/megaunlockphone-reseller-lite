@@ -940,3 +940,53 @@ exports.deleteDebt = (req, res) => {
   }
 };
 
+// --- PLANES DE COMPRAS Y PAGOS A MESES (NU, BANCOS, ETC.) ---
+exports.getInstallments = (req, res) => {
+  try {
+    const data = financeManager.getAllInstallments();
+    res.json({ success: true, ...data });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+};
+
+exports.saveInstallment = (req, res) => {
+  try {
+    const installment = financeManager.saveInstallment(req.body);
+    res.json({ success: true, installment });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+};
+
+exports.payInstallmentQuota = (req, res) => {
+  try {
+    const { quotas, account } = req.body;
+    const installment = financeManager.payInstallmentQuota(req.params.id, quotas || 1, account || 'Efectivo / Caja');
+    res.json({ success: true, installment });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+};
+
+exports.deleteInstallment = (req, res) => {
+  try {
+    const success = financeManager.deleteInstallment(req.params.id);
+    res.json({ success });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+};
+
+// --- INGRESO SEMANAL PASAJE & COMIDA UNIVERSIDAD ---
+exports.recordCollegeAllowance = (req, res) => {
+  try {
+    const { amount, notes, account } = req.body;
+    const entry = financeManager.recordCollegeAllowance(amount, notes, account);
+    res.json({ success: true, transaction: entry });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+};
+
+

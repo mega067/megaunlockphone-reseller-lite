@@ -126,6 +126,26 @@ const initTables = () => {
             createdAt TEXT,
             updatedAt TEXT
         );
+
+        /* Planes de Pago a Meses / Cuotas / Meses Sin Intereses (Nu, Bancos, etc.) */
+        CREATE TABLE IF NOT EXISTS FinanceInstallments (
+            id TEXT PRIMARY KEY,
+            accountId TEXT NOT NULL, /* ID de la cuenta, e.g. acc_nu */
+            accountName TEXT, /* Nombre de la cuenta, e.g. Nu Crédito */
+            title TEXT NOT NULL, /* e.g. Disposición de saldo Cuenta Nu */
+            totalAmount REAL NOT NULL DEFAULT 0, /* e.g. 383.56 */
+            totalQuotas INTEGER NOT NULL DEFAULT 1, /* e.g. 6 */
+            paidQuotas INTEGER NOT NULL DEFAULT 0, /* e.g. 0 */
+            quotaAmount REAL NOT NULL DEFAULT 0, /* e.g. 63.93 */
+            dueDay INTEGER DEFAULT 13, /* día de corte o pago del mes, e.g. 13 */
+            interestRate REAL DEFAULT 0, /* Tasa de interés si aplica */
+            referenceNumber TEXT, /* e.g. 6add1679-892a-4830-8bf9-793cd1f6112b */
+            status TEXT DEFAULT 'active', /* 'active' | 'completed' */
+            startDate TEXT, /* Fecha de inicio, e.g. 2026-10-15 */
+            notes TEXT,
+            createdAt TEXT,
+            updatedAt TEXT
+        );
     `);
 
     try {

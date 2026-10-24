@@ -69,6 +69,85 @@ async function financeBotCommands(context) {
     const isDebtsListCmd = ['/deudores', '!deudores', 'deudores', '/deudas', '!deudas', 'deudas'].includes(cmd);
     const isNewDebtCmd = ['/deudor', '!deudor', 'deudor', '/medeben', '!medeben', 'medeben', '/debo', '!debo', 'debo', '/prestamo', '!prestamo', 'prestamo'].includes(cmd);
     const isAbonoCmd = ['/abono', '!abono', 'abono', '/abonar', '!abonar', 'abonar'].includes(cmd);
+    const isInstallmentsCmd = ['/meses', '!meses', 'meses', '/cuotas', '!cuotas', 'cuotas', '/nu', '!nu', 'nu'].includes(cmd);
+    const isCollegeCmd = ['/pasaje', '!pasaje', 'pasaje', '/uni', '!uni', 'uni', '/comida', '!comida', 'comida_uni'].includes(cmd);
+
+    // NUEVO: REGISTRAR EFECTIVO DE UNIVERSIDAD (PASAJE Y COMIDA)
+    if (isCollegeCmd) {
+        let amount = null;
+        let notes = 'Pasaje y comida universidad';
+        if (args.length >= 2) {
+            const raw = parseFloat(args[1].replace('$', '').trim());
+            if (!isNaN(raw) && raw > 0) amount = raw;
+            if (args.length >= 3) notes = args.slice(2).join(' ').trim();
+        }
+
+        if (!amount) {
+            await sock.sendMessage(remoteJid, {
+                text: `🎒 *PASAJE Y COMIDA PARA LA UNIVERSIDAD*\n━━━━━━━━━━━━━━━━━━━━━━\nFormato rápido:\n*pasaje <Monto> [Detalle]*\n*uni <Monto> [Detalle]*\n\n_Ejemplo: pasaje 300 semana 2 uni_\n_Ejemplo: uni 150 pasajes metro y comida_`
+            });
+            return true;
+        }
+
+        try {
+            const result = financeManager.recordCollegeAllowance(amount, notes, 'acc_cash');
+            await sock.sendMessage(remoteJid, {
+                text: `🎒 *EFECTIVO UNIVERSIDAD REGISTRADO* 🎒\n` +
+                      `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                      `💵 *Monto:* $${amount.toFixed(2)} MXN\n` +
+                      `💼 *Destino:* Efectivo / Caja (acc_cash)\n` +
+                      `📝 *Concepto:* ${notes}\n` +
+                      `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                      `✅ Sumado a tu saldo disponible en efectivo y al historial de finanzas.`
+            });
+            return true;
+        } catch (err) {
+            await sock.sendMessage(remoteJid, { text: `❌ Error al registrar efectivo: ${err.message}` });
+            return true;
+        }
+    }
+
+    // NUEVO: CONSULTAR PLANES A MESES (NU / TARJETAS)
+    if (isInstallmentsCmd) {
+        const installments = financeManager.getAllInstallments();
+        if (!installments || installments.length === 0) {
+            await sock.sendMessage(remoteJid, {
+                text: `💳 *PLANES A MESES (NU / TARJETAS)*\n━━━━━━━━━━━━━━━━━━━━━━\n🎉 No tienes planes a meses ni cuotas pendientes registradas.`
+            });
+            return true;
+        }
+
+        const active = installments.filter(i => i.status === 'active');
+        let totalRemaining = 0;
+        let nextMonthTotal = 0;
+
+        active.forEach(i => {
+            const remQuotas = Math.max(0, (i.totalQuotas || 0) - (i.paidQuotas || 0));
+            const quota = parseFloat(i.quotaAmount) || ((parseFloat(i.totalAmount) || 0) / (i.totalQuotas || 1));
+            totalRemaining += quota * remQuotas;
+            nextMonthTotal += quota;
+        });
+
+        let msg = `💳 *PLANES A MESES / TARJETAS* 💳\n` +
+                  `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                  `⏳ *Pendiente Total:* $${totalRemaining.toFixed(2)} MXN\n` +
+                  `📅 *Cuota Mensual Total:* $${nextMonthTotal.toFixed(2)} MXN / mes\n` +
+                  `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+        installments.forEach((inst, idx) => {
+            const isCompleted = inst.status === 'completed' || inst.paidQuotas >= inst.totalQuotas;
+            const quota = parseFloat(inst.quotaAmount) || ((parseFloat(inst.totalAmount) || 0) / (inst.totalQuotas || 1));
+            const remQuotas = Math.max(0, (inst.totalQuotas || 0) - (inst.paidQuotas || 0));
+            msg += `${idx + 1}. *${inst.title}* (${inst.accountName || 'Tarjeta'})\n` +
+                   `   • Total: *$${parseFloat(inst.totalAmount || 0).toFixed(2)}*\n` +
+                   `   • Mensualidad: *$${quota.toFixed(2)}* (Día de pago: ${inst.dueDay || '-'})\n` +
+                   `   • Progreso: *${inst.paidQuotas}/${inst.totalQuotas} meses* ${isCompleted ? '✅ Pagado' : `(Restan ${remQuotas})`}\n\n`;
+        });
+
+        msg += `💡 _Para abonar una mensualidad usa el portal web en /finanzas_`;
+        await sock.sendMessage(remoteJid, { text: msg });
+        return true;
+    }
 
     // 0. LISTAR DEUDAS Y DEUDORES: /deudores o /deudas
     if (isDebtsListCmd) {

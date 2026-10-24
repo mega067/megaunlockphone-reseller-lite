@@ -61,6 +61,25 @@ app.get(['/digital-pass', '/digital-pass/'], (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'digitalpass', 'index.html'));
 });
 
+// Route for Dedicated Standalone Finance Portal (/finanzas)
+app.get(['/finanzas', '/finanzas/', '/finance'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'finanzas', 'index.html'));
+});
+
+// Public Modular Configuration Endpoint (For forks and addons)
+app.get('/api/modules-config', (req, res) => {
+  try {
+    const configPath = path.join(__dirname, 'modules.config.json');
+    if (fs.existsSync(configPath)) {
+      res.json(JSON.parse(fs.readFileSync(configPath, 'utf8')));
+    } else {
+      res.json({ success: true, modules: {} });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Helpers and Utilities for Legacy Routes
 const { readDB, writeDB } = require('./src/db');
 const { requireAuth, requireAdmin } = require('./src/auth');

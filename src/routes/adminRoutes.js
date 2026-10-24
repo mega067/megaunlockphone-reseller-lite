@@ -72,4 +72,14 @@ router.post('/admin/finance/debts', requireAuth, requireAdmin, adminController.s
 router.post('/admin/finance/debts/:id/pay', requireAuth, requireAdmin, adminController.recordDebtPayment);
 router.delete('/admin/finance/debts/:id', requireAuth, requireAdmin, adminController.deleteDebt);
 
+// Planes de Meses y Cuotas (Nu, Bancos, etc.)
+router.get('/admin/finance/installments', requireAuth, requireAdmin, adminController.getInstallments);
+router.post('/admin/finance/installments', requireAuth, requireAdmin, adminController.saveInstallment);
+router.post('/admin/finance/installments/:id/pay', requireAuth, requireAdmin, adminController.payInstallmentQuota);
+router.delete('/admin/finance/installments/:id', requireAuth, requireAdmin, adminController.deleteInstallment);
+
+// Ingreso Semanal para Pasaje y Comida de Universidad
+router.post('/admin/finance/college-allowance', requireAuth, requireAdmin, adminController.recordCollegeAllowance);
+
 module.exports = router;
+

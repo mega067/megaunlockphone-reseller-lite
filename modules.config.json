@@ -1,0 +1,46 @@
+{
+  "name": "MegaUnlockPhone Modular Architecture",
+  "version": "2.0.0",
+  "description": "Configuración de módulos para forks independientes. Activa o desactiva piezas del sistema sin romper la lógica central.",
+  "modules": {
+    "catalog": {
+      "enabled": true,
+      "label": "Catálogo de Servicios y Desbloqueos",
+      "route": "/"
+    },
+    "digitalPass": {
+      "enabled": true,
+      "label": "Portal DigitalPass (Streaming, AI & Software)",
+      "route": "/digital-pass"
+    },
+    "finance": {
+      "enabled": true,
+      "label": "Motor Financiero & Control de Ganancias",
+      "route": "/finanzas"
+    },
+    "debts": {
+      "enabled": true,
+      "label": "Gestión de Deudores & Cuentas por Cobrar/Pagar",
+      "parent": "finance"
+    },
+    "installments": {
+      "enabled": true,
+      "label": "Planes de Pagos a Meses & Tarjetas (Nu, MSI, etc.)",
+      "parent": "finance"
+    },
+    "collegeAllowance": {
+      "enabled": true,
+      "label": "Ingresos Semanales Universidad (Pasaje & Comida)",
+      "parent": "finance"
+    },
+    "whatsappBot": {
+      "enabled": true,
+      "label": "Demonio de Mensajería WhatsApp & Notificaciones",
+      "commands": ["pago", "recibido", "mesada", "deudor", "deudas", "abono", "meses"]
+    },
+    "paymentEngine": {
+      "enabled": true,
+      "label": "Motor de Recargas & Transacciones Bancarias (SPEI/MercadoPago/BBVA)"
+    }
+  }
+}
