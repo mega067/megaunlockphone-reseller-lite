@@ -204,16 +204,13 @@
       if (!res.ok || !d.success) return;
 
       const items = d.debts || [];
-      const pending = items.filter(x => x.status === 'pending');
-
-      const totalReceivable = pending.filter(x => x.type === 'receivable').reduce((s, x) => s + (parseFloat(x.amount) || 0), 0);
-      const totalPayable = pending.filter(x => x.type === 'payable').reduce((s, x) => s + (parseFloat(x.amount) || 0), 0);
+      const s = d.summary || {};
 
       const statRec = document.getElementById('statFinDebtsReceivable');
-      if (statRec) statRec.textContent = formatMoney(totalReceivable);
+      if (statRec) statRec.textContent = formatMoney(s.pendingReceivable || 0);
 
       const statPay = document.getElementById('statFinDebtsPayable');
-      if (statPay) statPay.textContent = `Por pagar: ${formatMoney(totalPayable)}`;
+      if (statPay) statPay.textContent = `Por pagar: ${formatMoney(s.pendingPayable || 0)}`;
 
       if (!items.length) {
         listCont.innerHTML = `
@@ -228,31 +225,43 @@
       listCont.innerHTML = items.map(debt => {
         const isRec = debt.type === 'receivable';
         const isSettled = debt.status === 'settled';
+        const isPartial = debt.status === 'partial';
+        const rem = parseFloat(debt.remainingAmount || debt.totalAmount || 0);
+        const tot = parseFloat(debt.totalAmount || 0);
+
         return `
           <div style="background: var(--bg); border: 1px solid ${isSettled ? 'var(--border)' : (isRec ? 'rgba(59, 130, 246, 0.25)' : 'rgba(239, 68, 68, 0.25)')}; border-radius: 12px; padding: 1rem; margin-bottom: 0.75rem;">
             <div style="display:flex; justify-content:space-between; align-items:flex-start;">
               <div>
                 <span style="font-size:0.7rem; font-weight:700; text-transform:uppercase; padding:2px 6px; border-radius:4px; background: ${isRec ? 'rgba(59, 130, 246, 0.12)' : 'rgba(239, 68, 68, 0.12)'}; color: ${isRec ? '#3b82f6' : '#ef4444'};">
-                  ${isRec ? 'Por Cobrar' : 'Por Pagar'}
+                  ${isRec ? 'Me Deben' : 'Yo Debo'}
                 </span>
                 <div style="font-size:0.95rem; font-weight:700; color:var(--text); margin-top:2px;">${escapeHtml(debt.personName)}</div>
-                <small style="color:var(--text-muted); font-size:0.75rem;">${escapeHtml(debt.notes || 'Sin nota')}</small>
+                <small style="color:var(--text-muted); font-size:0.75rem;">${escapeHtml(debt.concept || debt.notes || 'Préstamo/Deuda')}</small>
               </div>
               <div style="text-align:right;">
-                <div style="font-size:1.05rem; font-weight:800; color:${isRec ? '#3b82f6' : '#ef4444'};">${formatMoney(debt.amount)}</div>
-                <small style="color:${isSettled ? '#10b981' : '#f59e0b'}; font-weight:700;">${isSettled ? 'Saldada' : 'Pendiente'}</small>
+                <div style="font-size:1.05rem; font-weight:800; color:${isRec ? '#3b82f6' : '#ef4444'};">${formatMoney(rem)}</div>
+                <small style="color:${isSettled ? '#10b981' : (isPartial ? '#f59e0b' : 'var(--text-muted)')}; font-weight:700;">
+                  ${isSettled ? '✓ Liquidado' : (isPartial ? `Abonado (${formatMoney(debt.paidAmount)})` : `Total: ${formatMoney(tot)}`)}
+                </small>
               </div>
             </div>
             ${!isSettled ? `
               <div style="display:flex; justify-content:flex-end; gap:0.4rem; margin-top:0.5rem;">
-                <button onclick="window.finSettleDebt('${debt.id}', '${escapeHtml(debt.personName)}', ${debt.amount})" class="btn-fin-pill" style="background: rgba(16, 185, 129, 0.15); color: #10b981; padding: 4px 8px; font-size:0.75rem;">
-                  ✓ Saldar
+                <button onclick="window.finSettleDebt('${debt.id}', '${escapeHtml(debt.personName)}', ${rem})" class="btn-fin-pill" style="background: rgba(16, 185, 129, 0.15); color: #10b981; padding: 4px 8px; font-size:0.75rem;">
+                  ✓ Abonar / Saldar
                 </button>
                 <button onclick="window.finDeleteDebt('${debt.id}')" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.9rem;">
                   🗑️
                 </button>
               </div>
-            ` : ''}
+            ` : `
+              <div style="display:flex; justify-content:flex-end; margin-top:0.3rem;">
+                <button onclick="window.finDeleteDebt('${debt.id}')" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.8rem;">
+                  Eliminar registro 🗑️
+                </button>
+              </div>
+            `}
           </div>
         `;
       }).join('');
@@ -266,11 +275,11 @@
     if (!tbody) return;
 
     if (!items.length) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:1.5rem; color:var(--text-muted);">Sin movimientos contables recientes.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:1.5rem; color:var(--text-muted);">Sin movimientos contables recientes.</td></tr>';
       return;
     }
 
-    tbody.innerHTML = items.slice(0, 30).map(tx => {
+    tbody.innerHTML = items.slice(0, 40).map(tx => {
       const charged = parseFloat(tx.chargedAmount) || 0;
       const cost = parseFloat(tx.costAmount) || 0;
       const profit = parseFloat(tx.grossProfit) || (charged - cost);
@@ -280,10 +289,15 @@
         <tr style="border-bottom: 1px solid var(--border);">
           <td style="padding: 10px 12px; color:var(--text-muted); font-size:0.8rem;">${dateStr}</td>
           <td style="padding: 10px 12px; font-weight:600; color:var(--text);">${escapeHtml(tx.description || tx.orderId || 'Movimiento')}</td>
-          <td style="padding: 10px 12px; color:var(--text-muted); font-size:0.8rem;">${escapeHtml(tx.accountId || '-')}</td>
+          <td style="padding: 10px 12px; color:var(--text-muted); font-size:0.8rem;">${escapeHtml(tx.account || '-')}</td>
           <td style="padding: 10px 12px; text-align:right; color:#10b981; font-weight:600;">${formatMoney(charged)}</td>
           <td style="padding: 10px 12px; text-align:right; color:#ef4444;">${formatMoney(cost)}</td>
           <td style="padding: 10px 12px; text-align:right; font-weight:700; color:${profit >= 0 ? '#10b981' : '#ef4444'};">${formatMoney(profit)}</td>
+          <td style="padding: 10px 8px; text-align:center;">
+            <button onclick="window.finDeleteTx('${tx.id}')" title="Eliminar y revertir saldo" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.85rem; padding:2px;">
+              🗑️
+            </button>
+          </td>
         </tr>
       `;
     }).join('');
@@ -317,27 +331,162 @@
   };
 
   window.finSettleDebt = async function(id, person, amount) {
-    const promptVal = prompt(`Monto a liquidar/abonar para deuda de "${person}":`, amount.toFixed(2));
+    const promptVal = prompt(`Monto a liquidar o abonar para deuda de "${person}":`, amount.toFixed(2));
     if (!promptVal) return;
     const val = parseFloat(promptVal);
     if (isNaN(val) || val <= 0) return alert('Monto inválido.');
 
-    const res = await fetchWithAuth(`/api/admin/finance/debts/${encodeURIComponent(id)}/payment`, {
+    const accPrompt = prompt('¿En qué cuenta entra o sale el dinero? (Ej: Efectivo / Caja, Nu, BBVA):', 'acc_cash');
+
+    const res = await fetchWithAuth(`/api/admin/finance/debts/${encodeURIComponent(id)}/pay`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ amount: val })
+      body: JSON.stringify({ amount: val, account: accPrompt || undefined })
     });
-    if (res.ok) {
-      alert('✅ Abono/Liquidación completada.');
+    const d = await res.json();
+    if (res.ok && d.success) {
+      alert('✅ Abono / Liquidación registrada y sincronizada con el balance.');
       loadAllFinanceData();
+    } else {
+      alert(d.error || 'Error al procesar abono.');
     }
   };
 
   window.finDeleteDebt = async function(id) {
-    if (!confirm('¿Eliminar registro de deuda?')) return;
+    if (!confirm('¿Eliminar definitivamente el registro de deuda?')) return;
     const res = await fetchWithAuth(`/api/admin/finance/debts/${encodeURIComponent(id)}`, { method: 'DELETE' });
     if (res.ok) loadAllFinanceData();
   };
+
+  window.finDeleteTx = async function(id) {
+    if (!confirm('¿Eliminar este movimiento? Se revertirá automáticamente el impacto de saldo en las cuentas asociadas.')) return;
+    const res = await fetchWithAuth(`/api/admin/finance/transactions/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    const d = await res.json();
+    if (res.ok && d.success) {
+      alert('✅ Movimiento eliminado y saldos de cuentas revertidos correctamente.');
+      loadAllFinanceData();
+    } else {
+      alert(d.error || 'Error al eliminar');
+    }
+  };
+
+  // Botón Nueva Deuda
+  const btnNewDebt = document.getElementById('btnFinNewDebt');
+  if (btnNewDebt) {
+    btnNewDebt.addEventListener('click', async () => {
+      const type = prompt('Tipo de deuda:\n1. ME DEBEN (Por cobrar)\n2. YO DEBO (Por pagar)\n\nEscribe 1 o 2:', '1') === '2' ? 'payable' : 'receivable';
+      const personName = prompt(type === 'receivable' ? 'Nombre de la persona que te debe:' : 'Nombre de la persona a quien le debes:');
+      if (!personName || !personName.trim()) return;
+
+      const amountStr = prompt('Monto total de la deuda:', '500.00');
+      if (!amountStr) return;
+      const totalAmount = parseFloat(amountStr);
+      if (isNaN(totalAmount) || totalAmount <= 0) return alert('Monto inválido.');
+
+      const concept = prompt('Concepto o motivo:', 'Préstamo / Servicio') || 'Préstamo';
+
+      const res = await fetchWithAuth('/api/admin/finance/debts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type,
+          personName: personName.trim(),
+          totalAmount,
+          concept
+        })
+      });
+      const d = await res.json();
+      if (res.ok && d.success) {
+        alert('✅ Deuda registrada correctamente.');
+        loadAllFinanceData();
+      } else {
+        alert(d.error || 'Error al guardar deuda.');
+      }
+    });
+  }
+
+  // Botón Nuevo Plan a Meses
+  const btnNewInst = document.getElementById('btnFinNewInstallment');
+  if (btnNewInst) {
+    btnNewInst.addEventListener('click', async () => {
+      const title = prompt('Concepto o compra a meses (Ej. Laptop Nu, Seguro, etc.):');
+      if (!title || !title.trim()) return;
+
+      const totalStr = prompt('Monto total a pagar:', '1200.00');
+      if (!totalStr) return;
+      const totalAmount = parseFloat(totalStr);
+      if (isNaN(totalAmount) || totalAmount <= 0) return alert('Monto inválido.');
+
+      const quotasStr = prompt('Número total de mensualidades:', '6');
+      const totalQuotas = parseInt(quotasStr, 10) || 6;
+
+      const dueDayStr = prompt('Día de corte o pago de cada mes (1-31):', '13');
+      const dueDay = parseInt(dueDayStr, 10) || 13;
+
+      const card = prompt('Tarjeta o cuenta (Ej: Nu, BBVA, Mercado Pago):', 'Nu');
+
+      const res = await fetchWithAuth('/api/admin/finance/installments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: title.trim(),
+          totalAmount,
+          totalQuotas,
+          dueDay,
+          accountName: card || 'Tarjeta'
+        })
+      });
+      const d = await res.json();
+      if (res.ok && d.success) {
+        alert('✅ Plan a meses registrado exitosamente.');
+        loadAllFinanceData();
+      } else {
+        alert(d.error || 'Error al guardar.');
+      }
+    });
+  }
+
+  // Botón Registrar Movimiento Manual
+  const btnManualTx = document.getElementById('btnFinNewManualTx');
+  if (btnManualTx) {
+    btnManualTx.addEventListener('click', async () => {
+      const opt = prompt('Tipo de movimiento:\n1. Ingreso / Venta (+)\n2. Gasto (-)\n\nEscribe 1 o 2:', '1');
+      if (!opt) return;
+      const isIncome = opt === '1';
+
+      const desc = prompt(isIncome ? 'Concepto del ingreso (ej. Venta de servicio):' : 'Concepto del gasto (ej. Recarga de saldo):');
+      if (!desc || !desc.trim()) return;
+
+      const amountStr = prompt('Monto:', '100.00');
+      if (!amountStr) return;
+      const amount = parseFloat(amountStr);
+      if (isNaN(amount) || amount <= 0) return alert('Monto inválido.');
+
+      const account = prompt('Cuenta (Ej: acc_cash, acc_nu, acc_bbva):', 'acc_cash') || 'acc_cash';
+
+      const payload = {
+        type: isIncome ? 'income_manual' : 'expense_manual',
+        chargedAmount: isIncome ? amount : 0,
+        costAmount: isIncome ? 0 : amount,
+        account,
+        notes: desc.trim(),
+        serviceName: desc.trim()
+      };
+
+      const res = await fetchWithAuth('/api/admin/finance/record', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const d = await res.json();
+      if (res.ok && d.success) {
+        alert('✅ Movimiento registrado y sincronizado en balances.');
+        loadAllFinanceData();
+      } else {
+        alert(d.error || 'Error al registrar.');
+      }
+    });
+  }
 
   // Botón Pasaje / Comida Universidad
   const btnCollege = document.getElementById('btnFinCollegeQuick');

@@ -636,11 +636,76 @@ function getOrderFinanceDetails(orderId) {
 }
 
 /**
- * Eliminar una entrada del ledger
+ * Eliminar una entrada del ledger y revertir atómicamente el saldo en las cuentas asociadas
  */
 function deleteTransaction(id) {
-  const stmt = sqliteDb.prepare(`DELETE FROM FinanceLedger WHERE id = ?`);
-  const res = stmt.run(id);
+  const tx = sqliteDb.prepare('SELECT * FROM FinanceLedger WHERE id = ?').get(id);
+  if (!tx) return false;
+
+  const findAcc = (accName) => {
+    if (!accName) return null;
+    return sqliteDb.prepare(`
+      SELECT id FROM FinanceAccounts 
+      WHERE id = ? OR name = ? OR name LIKE ? OR ? LIKE ('%' || name || '%')
+      LIMIT 1
+    `).get(accName, accName, `%${accName}%`, accName);
+  };
+
+  const targetOrigin = findAcc(tx.account);
+  const targetDest = tx.destAccount ? findAcc(tx.destAccount) : null;
+  const costAmount = parseFloat(tx.costAmount) || 0;
+  const chargedAmount = parseFloat(tx.chargedAmount) || 0;
+
+  // Revertir impacto monetario en cuentas según el tipo
+  if (tx.type === 'expense_manual' && targetOrigin) {
+    // Al eliminar un gasto, se restituye el dinero
+    sqliteDb.prepare(`
+      UPDATE FinanceAccounts 
+      SET currentBalance = currentBalance + ?,
+          currentDebt = CASE WHEN type = 'credit' THEN MAX(0, currentDebt - ?) ELSE currentDebt END,
+          updatedAt = datetime('now')
+      WHERE id = ?
+    `).run(costAmount, costAmount, targetOrigin.id);
+  } else if ((tx.type === 'income_ticket' || tx.type === 'income_manual') && targetOrigin) {
+    // Al eliminar un ingreso, se descuenta el dinero que había entrado
+    sqliteDb.prepare(`
+      UPDATE FinanceAccounts 
+      SET currentBalance = currentBalance - ?,
+          currentDebt = CASE WHEN type = 'credit' THEN currentDebt + ? ELSE currentDebt END,
+          updatedAt = datetime('now')
+      WHERE id = ?
+    `).run(chargedAmount, chargedAmount, targetOrigin.id);
+  } else if (tx.type === 'transfer') {
+    // Revertir transferencia: origen vuelve a sumar, destino vuelve a restar
+    if (targetOrigin) {
+      sqliteDb.prepare(`
+        UPDATE FinanceAccounts 
+        SET currentBalance = currentBalance + ?,
+            currentDebt = CASE WHEN type = 'credit' THEN MAX(0, currentDebt - ?) ELSE currentDebt END,
+            updatedAt = datetime('now')
+        WHERE id = ?
+      `).run(costAmount, costAmount, targetOrigin.id);
+    }
+    if (targetDest) {
+      sqliteDb.prepare(`
+        UPDATE FinanceAccounts 
+        SET currentBalance = currentBalance - ?,
+            currentDebt = CASE WHEN type = 'credit' THEN currentDebt + ? ELSE currentDebt END,
+            updatedAt = datetime('now')
+        WHERE id = ?
+      `).run(costAmount, costAmount, targetDest.id);
+    }
+  }
+
+  // Eliminar el registro del libro contable
+  const res = sqliteDb.prepare(`DELETE FROM FinanceLedger WHERE id = ?`).run(id);
+
+  // Auto-backup de seguridad tras reversión
+  try {
+    const { createAutoBackup } = require('./backupEngine');
+    createAutoBackup(`DeleteTx_Revert_${id}`);
+  } catch (e) {}
+
   return res.changes > 0;
 }
 
