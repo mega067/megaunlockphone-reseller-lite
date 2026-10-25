@@ -9,12 +9,13 @@ async function otros(context) {
     const { sock, remoteJid, firstWord, text, args, msg, isGroup, wusers, wsettings } = context;
     const linkedUserId = context.linkedUserId != null ? context.linkedUserId : wusers[remoteJid];
     const users = readDB(USERS_FILE) || [];
-    let user = users.find(u => String(u.id) === String(linkedUserId));
+    const cleanId = String(linkedUserId || '').replace(/\.0+$/, '');
+    let user = users.find(u => String(u.id).replace(/\.0+$/, '') === cleanId || (cleanId && String(u.id) === cleanId));
 
     if (!user && linkedUserId) {
         try {
             const sqliteDb = require('../../src/database');
-            const row = sqliteDb.prepare("SELECT * FROM Users WHERE id = ?").get(String(linkedUserId));
+            const row = sqliteDb.prepare("SELECT * FROM Users WHERE id = ? OR id = ?").get(cleanId, String(linkedUserId));
             if (row) user = row;
         } catch (e) {}
     }

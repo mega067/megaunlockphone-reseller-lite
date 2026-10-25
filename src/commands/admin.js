@@ -7,13 +7,14 @@ async function admin(context) {
     const { sock, msg, remoteJid, firstWord, args, text, sessionManager, wusers, hasMedia } = context;
     const linkedUserId = context.linkedUserId != null ? context.linkedUserId : wusers[remoteJid];
     const users = readDB(USERS_FILE) || [];
-    let user = users.find(u => String(u.id) === String(linkedUserId));
+    const cleanId = String(linkedUserId || '').replace(/\.0+$/, '');
+    let user = users.find(u => String(u.id).replace(/\.0+$/, '') === cleanId || (cleanId && String(u.id) === cleanId));
 
     // Si no está en users.json, verificar en SQLite Users
     if (!user && linkedUserId) {
         try {
             const sqliteDb = require('../../src/database');
-            const row = sqliteDb.prepare("SELECT * FROM Users WHERE id = ?").get(String(linkedUserId));
+            const row = sqliteDb.prepare("SELECT * FROM Users WHERE id = ? OR id = ?").get(cleanId, String(linkedUserId));
             if (row) user = row;
         } catch (e) {}
     }
