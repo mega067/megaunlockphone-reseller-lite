@@ -592,10 +592,23 @@ function renderProductCards(items) {
         `;
       }
 
+      const resellerPriceNum = parseFloat(p.rawItem._RESELLER_COST || p.credit) || 0;
+      const resellerPriceDisplay = resellerPriceNum > 0 ? formatPrice(resellerPriceNum) : '<span style="color: #ef4444; font-weight: bold;">Sin precio</span>';
+
       adminPricesHtml = `
-        <div style="font-size: 0.8rem; margin-top: 5px; background: rgba(0,0,0,0.2); padding: 5px; border-radius: 4px;">
-          <div style="color: #10b981; margin-bottom: 2px;">Costo API: <strong>${realCostDisplay}</strong></div>
-          <div style="color: #c4b5fd;">Precio Cliente: <strong>${clientPriceDisplay}</strong></div>
+        <div style="font-size: 0.8rem; margin-top: 5px; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+            <span style="color: #94a3b8;">Costo API:</span>
+            <strong style="color: #10b981;">${realCostDisplay}</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+            <span style="color: #38bdf8;">💼 Precio Reseller:</span>
+            <strong style="color: #38bdf8;">${resellerPriceDisplay}</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+            <span style="color: #f472b6;">🛒 Precio Minorista / Cliente:</span>
+            <strong style="color: #f472b6;">${clientPriceDisplay}</strong>
+          </div>
           ${toggleBtnHtml}
           ${allowFreeBtnHtml}
         </div>
@@ -692,9 +705,18 @@ function renderProductCards(items) {
     
     let mainPriceHtml = '';
     if (authRole === 'admin' || authRole === 'colaborador') {
-      const resellerText = noPrice ? '<span style="color:#ef4444; font-weight: bold;">Sin precio asignado</span>' : formatPrice(p.rawItem._RESELLER_COST || p.credit);
+      const resellerVal = parseFloat(p.rawItem._RESELLER_COST || p.credit) || 0;
+      const clientVal = parseFloat(p.rawItem._CLIENT_PRICE) || 0;
+      const resellerText = resellerVal > 0 ? formatPrice(resellerVal) : '<span style="color:#ef4444; font-weight: bold;">Sin precio</span>';
+      const clientText = clientVal > 0 ? formatPrice(clientVal) : '<span style="color:#ef4444; font-weight: bold;">Sin asignar</span>';
       const adminNotice = noPrice ? '<div style="color: #ef4444; font-size: 0.75rem; margin-top: 3px; font-weight: bold;">⚠️ Sin precio en API ($0.00) - Asignar Manual</div>' : '';
-      mainPriceHtml = `Precio Reseller: ${resellerText}${adminNotice}`;
+      mainPriceHtml = `
+        <div style="display: flex; flex-direction: column; gap: 2px;">
+          <span style="font-size: 0.95rem; color: #38bdf8; font-weight: 700;">💼 Reseller: ${resellerText}</span>
+          <span style="font-size: 0.85rem; color: #f472b6; font-weight: 600;">🛒 Minorista / Cliente: ${clientText}</span>
+          ${adminNotice}
+        </div>
+      `;
     } else if (noPrice) {
       mainPriceHtml = `<span style="color: #f59e0b; font-weight: bold;">Precio a Consultar</span>`;
     } else {
