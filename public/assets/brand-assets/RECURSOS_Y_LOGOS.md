@@ -19,15 +19,25 @@ Este directorio contiene las referencias, URLs públicas e identidades visuales 
 
 ---
 
-## 🛠️ Logos Oficiales de las Herramientas GSM (URLs de Alta Resolución)
+## 🛠️ Logos y Cajas 3D Oficiales de las Herramientas GSM
 
-| Herramienta | Web Oficial | URL Directa de Logo / Icono |
+| Herramienta | Web Oficial | Asset Local de Alta Resolución / 3D Box |
 | :--- | :--- | :--- |
-| **UnlockTool** | [unlocktool.net](https://unlocktool.net/) | `https://unlocktool.net/images/logo.png` |
-| **TSM Tool Pro** | [tsm-tool.com](https://tsm-tool.com/) | `https://tsm-tool.com/assets/img/logo.png` |
+| **UnlockTool (3D Retail Box)** | [unlocktool.net](https://unlocktool.net/) | `public/assets/brand-assets/official-boxes/unlocktool_box_3d.png` |
+| **TSM Tool (3D Box & Software)** | [tsm-tool.com](https://tsm-tool.com/) | `public/assets/brand-assets/official-boxes/tsm_box_and_software.png` |
 | **Pandora Box / Tool** | [pandora-box.org](https://pandora-box.org/) | `https://gsmserver.com/nfs/product/889240/image/large/889240-pandora-box.jpg` |
 | **Octoplus / Octopus** | [octoplusbox.com](https://octoplusbox.com/) | `https://octoplusbox.com/wp-content/themes/octoplus/images/logo.png` |
 | **Pandonymus MDM** | Pandonymus Server | Icono de Panda cibernético con escudo de seguridad |
+
+---
+
+## 🖼️ Flyers Maestros Oficiales Generados
+
+- **Flyer Master 3D Boxes + QR Verificado:**
+  - Archivo Local: `public/assets/brand-assets/flyers/flyer_ultra_pro_boxes_qr_master.jpg`
+  - Carpeta PC: `/home/angel/MegaUnlockPhone_Flyers_Assets/flyer_ultra_pro_boxes_qr_master.jpg`
+  - URL Producción: `https://megaunlockphone-panel.alwaysdata.net/assets/brand-assets/flyers/flyer_ultra_pro_boxes_qr_master.jpg`
+
 
 ---
 
