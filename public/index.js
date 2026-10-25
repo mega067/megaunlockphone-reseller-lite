@@ -407,6 +407,10 @@ function checkPersistedSession() {
           }
         });
       }
+    } else if (impersonationBanner) {
+      impersonationBanner.classList.add('hidden');
+    }
+
     // Enrutamiento inteligente por Hash (#admin, #finanzas, #history)
     if (window.location.hash === '#admin' && authRole === 'admin' && tabAdmin) {
       setTimeout(() => tabAdmin.click(), 100);
