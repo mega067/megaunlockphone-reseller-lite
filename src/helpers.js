@@ -289,6 +289,7 @@ function logRecharge(userId, username, amount, type = 'MANUAL_ADMIN', adminUsern
         serviceName: `Recarga Saldo S${serverId} (${username || userId})`,
         chargedAmount: numAmount,
         costAmount: 0,
+        reinvestPercent: 100, // 100% fondo de saldo disponible para el usuario, 0 ganancia de bolsillo hasta que compre
         account: targetAccountName,
         category: 'servidores',
         notes: `Depósito cliente ${extra.trackingNumber ? 'Rastreo: ' + extra.trackingNumber : 'Ajuste Admin'}`
