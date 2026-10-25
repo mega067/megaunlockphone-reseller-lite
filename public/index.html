@@ -905,29 +905,32 @@
                 <span style="font-size: 0.85rem; color: #cbd5e1;">Control de cobros al cliente, costo neto de servidores, distribución de reinversión y saldo por banco (Nu, Revolut, etc.)</span>
               </div>
               <div class="finance-header-actions">
+                <button type="button" class="btn btn-primary btn-small" id="btnReturnToAdminPanel" style="background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none; color: white; font-weight: 700;">
+                  <i data-lucide="arrow-left"></i> Volver al Panel Admin
+                </button>
                 <button type="button" class="btn btn-secondary btn-small" id="btnToggleFinanceAccounts" style="background: rgba(168, 85, 247, 0.15); border-color: rgba(168, 85, 247, 0.4); color: #c084fc;">
                   <i data-lucide="credit-card"></i> Mis Cuentas & Tarjetas
                 </button>
                 <button type="button" class="btn btn-secondary btn-small" id="btnToggleInstallmentsManager" style="background: rgba(147, 51, 234, 0.18); border-color: rgba(147, 51, 234, 0.4); color: #c084fc;">
-                  <i data-lucide="layers"></i> Pagos a Meses / Nu (<span id="badgeInstallmentsCount">0</span>)
+                  <i data-lucide="layers"></i> Meses Nu (<span id="badgeInstallmentsCount">0</span>)
                 </button>
                 <button type="button" class="btn btn-secondary btn-small" id="btnToggleDebtsManager" style="background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.4); color: #f87171;">
-                  <i data-lucide="users"></i> Deudores & Deudas (<span id="badgeDebtsCount">0</span>)
+                  <i data-lucide="users"></i> Deudores (<span id="badgeDebtsCount">0</span>)
                 </button>
                 <button type="button" class="btn btn-secondary btn-small" id="btnQuickCollegeAllowance" style="background: rgba(14, 165, 233, 0.18); border-color: rgba(14, 165, 233, 0.4); color: #38bdf8;" title="Inyectar efectivo recibido semanal para transporte y comida en la uni">
-                  <i data-lucide="bus"></i> + Pasaje/Comida Uni
+                  <i data-lucide="bus"></i> + Uni
                 </button>
                 <button type="button" class="btn btn-secondary btn-small" id="btnToggleWeeklyAudit" style="background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.4); color: #fbbf24;">
-                  <i data-lucide="calendar-check"></i> Cierre Semanal
+                  <i data-lucide="calendar-check"></i> Cierre
                 </button>
                 <button type="button" class="btn btn-secondary btn-small" id="btnToggleFinanceConfig" style="background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.2); color: #f1f5f9;">
-                  <i data-lucide="sliders"></i> Configurar Reinversión
+                  <i data-lucide="sliders"></i> % Reinversión
                 </button>
-                <a href="/finanzas" target="_blank" class="btn btn-secondary btn-small" style="background: rgba(99, 102, 241, 0.15); border-color: rgba(99, 102, 241, 0.4); color: #a5b4fc; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;" title="Abrir portal financiero independiente a pantalla completa">
-                  <i data-lucide="external-link" style="width: 14px; height: 14px;"></i> Portal /finanzas
+                <a href="/finanzas" class="fin-direct-link btn btn-secondary btn-small" style="background: rgba(99, 102, 241, 0.15); border-color: rgba(99, 102, 241, 0.4); color: #a5b4fc; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;" title="Abrir portal financiero independiente limpio a pantalla completa">
+                  <i data-lucide="external-link" style="width: 14px; height: 14px;"></i> Abrir en Página Aparte
                 </a>
                 <button type="button" class="btn btn-primary btn-small" id="btnToggleAddManualExpense" style="background: linear-gradient(135deg, #059669, #10b981); border: none; color: white;">
-                  <i data-lucide="plus-circle"></i> Nuevo Ingreso / Gasto
+                  <i data-lucide="plus-circle"></i> Nuevo Movimiento
                 </button>
                 <button type="button" class="btn btn-secondary btn-small" id="btnReloadFinance" title="Recargar datos" style="padding: 6px 10px;">
                   <i data-lucide="refresh-cw" style="width: 14px; height: 14px;"></i>
@@ -3125,19 +3128,19 @@
   <div id="toastContainer" style="position: fixed; bottom: 20px; right: 20px; z-index: 999999; display: flex; flex-direction: column; gap: 10px; pointer-events: none;"></div>
 
   <!-- Scripts Modulares -->
-  <script src="/js/api.js?v=73" defer></script>
-  <script src="/js/utils.js?v=73" defer></script>
-  <script src="/js/notifications.js?v=85" defer></script>
-  <script src="/js/state.js?v=85" defer></script>
-  <script src="/js/ticket.js?v=85" defer></script>
-  <script src="/js/searchEngine.js?v=85" defer></script>
-  <script src="js/recharges.js?v=85" defer></script>
-  <script src="js/recharge.js?v=85" defer></script>
-  <script src="index.js?v=87" defer></script>
-  <script src="js/products.js?v=85" defer></script>
-  <script src="js/orders.js?v=85" defer></script>
-  <script src="js/warnings.js?v=85" defer></script>
-  <script src="js/admin.js?v=85" defer></script>
+  <script src="/js/api.js?v=88" defer></script>
+  <script src="/js/utils.js?v=88" defer></script>
+  <script src="/js/notifications.js?v=88" defer></script>
+  <script src="/js/state.js?v=88" defer></script>
+  <script src="/js/ticket.js?v=88" defer></script>
+  <script src="/js/searchEngine.js?v=88" defer></script>
+  <script src="js/recharges.js?v=88" defer></script>
+  <script src="js/recharge.js?v=88" defer></script>
+  <script src="index.js?v=88" defer></script>
+  <script src="js/products.js?v=88" defer></script>
+  <script src="js/orders.js?v=88" defer></script>
+  <script src="js/warnings.js?v=88" defer></script>
+  <script src="js/admin.js?v=88" defer></script>
     <div class="modal-overlay hidden" id="globalLoadingOverlay" style="z-index: 100000; flex-direction: column; text-align: center;">
       <div class="icon-spin" style="color: #3b82f6; margin-bottom: 1rem;">
         <i data-lucide="refresh-cw" style="width: 64px; height: 64px;"></i>

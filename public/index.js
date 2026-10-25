@@ -407,8 +407,13 @@ function checkPersistedSession() {
           }
         });
       }
-    } else if (impersonationBanner) {
-      impersonationBanner.classList.add('hidden');
+    // Enrutamiento inteligente por Hash (#admin, #finanzas, #history)
+    if (window.location.hash === '#admin' && authRole === 'admin' && tabAdmin) {
+      setTimeout(() => tabAdmin.click(), 100);
+    } else if (window.location.hash === '#finanzas' && authRole === 'admin' && tabFinance) {
+      setTimeout(() => tabFinance.click(), 100);
+    } else if (window.location.hash === '#history' && tabHistory) {
+      setTimeout(() => tabHistory.click(), 100);
     }
   } else {
     // Unauthenticated state (No session / Session dropped)

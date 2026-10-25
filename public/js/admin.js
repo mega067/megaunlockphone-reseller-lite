@@ -2632,6 +2632,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Botón Volver al Panel Admin desde Finanzas
+  const btnReturnAdmin = document.getElementById('btnReturnToAdminPanel');
+  if (btnReturnAdmin) {
+    btnReturnAdmin.addEventListener('click', () => {
+      const tabAdminEl = document.getElementById('tabAdmin');
+      if (tabAdminEl) tabAdminEl.click();
+    });
+  }
+
   // Toggle Gestor de Cuentas & Tarjetas
   const btnToggleAccs = document.getElementById('btnToggleFinanceAccounts');
   const accsContainer = document.getElementById('financeAccountsManagerContainer');
