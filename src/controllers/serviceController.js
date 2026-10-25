@@ -171,18 +171,27 @@ exports.getMarketSuggestions = (req, res) => {
     if (cost <= 0) continue;
     let reseller = 0;
     let retail = 0;
-    if (cost <= 400) {
+    if (cost <= 25) {
+      reseller = Math.round(cost + 3);
+      retail = Math.round(cost + 12);
+    } else if (cost <= 60) {
+      reseller = Math.round(cost + 5);
+      retail = Math.round(cost + 22);
+    } else if (cost <= 150) {
+      reseller = Math.round(cost + 10);
+      retail = Math.round(cost + 38);
+    } else if (cost <= 400) {
+      reseller = Math.round(cost + 18);
+      retail = Math.round(cost + 65);
+    } else if (cost <= 800) {
       reseller = Math.round(cost + 30);
-      retail = Math.round(cost + 120);
-    } else if (cost <= 900) {
-      reseller = Math.round(cost + 50);
+      retail = Math.round(cost + 105);
+    } else if (cost <= 1500) {
+      reseller = Math.round(cost + 45);
       retail = Math.round(cost + 160);
-    } else if (cost <= 1300) {
-      reseller = Math.round(cost + 80);
-      retail = Math.round(cost + 220);
     } else {
-      reseller = Math.round(cost + 120);
-      retail = Math.round(cost + 300);
+      reseller = Math.round(cost * 1.04);
+      retail = Math.round(cost * 1.12);
     }
     suggestions[sid] = {
       realCost: cost,

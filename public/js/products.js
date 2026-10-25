@@ -614,25 +614,32 @@ function renderProductCards(items) {
         </div>
       `;
       
-      // Sugerencia de mercado para minoristas (Facebook/GSM)
+      // Sugerencia de precios de apertura agresivos (captación de mercado con ganancia garantizada)
       const baseCost = realCostNum > 0 ? realCostNum : (parseFloat(p.credit) || 0);
       let suggestedRetail = 0;
       let suggestedReseller = 0;
       if (baseCost > 0) {
-        // Regla de mercado de reventa GSM:
-        // Margen estable minorista (Facebook/Talleres): +$150 a +$300 sobre costo o 20-30%
-        if (baseCost <= 400) {
+        if (baseCost <= 25) {
+          suggestedReseller = Math.round(baseCost + 3);
+          suggestedRetail = Math.round(baseCost + 12);
+        } else if (baseCost <= 60) {
+          suggestedReseller = Math.round(baseCost + 5);
+          suggestedRetail = Math.round(baseCost + 22);
+        } else if (baseCost <= 150) {
+          suggestedReseller = Math.round(baseCost + 10);
+          suggestedRetail = Math.round(baseCost + 38);
+        } else if (baseCost <= 400) {
+          suggestedReseller = Math.round(baseCost + 18);
+          suggestedRetail = Math.round(baseCost + 65);
+        } else if (baseCost <= 800) {
           suggestedReseller = Math.round(baseCost + 30);
-          suggestedRetail = Math.round(baseCost + 120);
-        } else if (baseCost <= 900) {
-          suggestedReseller = Math.round(baseCost + 50);
+          suggestedRetail = Math.round(baseCost + 105);
+        } else if (baseCost <= 1500) {
+          suggestedReseller = Math.round(baseCost + 45);
           suggestedRetail = Math.round(baseCost + 160);
-        } else if (baseCost <= 1300) {
-          suggestedReseller = Math.round(baseCost + 80);
-          suggestedRetail = Math.round(baseCost + 220);
         } else {
-          suggestedReseller = Math.round(baseCost + 120);
-          suggestedRetail = Math.round(baseCost + 300);
+          suggestedReseller = Math.round(baseCost * 1.04);
+          suggestedRetail = Math.round(baseCost * 1.12);
         }
       }
 
