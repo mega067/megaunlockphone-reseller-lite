@@ -614,32 +614,38 @@ function renderProductCards(items) {
         </div>
       `;
       
-      // Sugerencia de precios de apertura agresivos (captación de mercado con ganancia garantizada)
+      // Sugerencia calibrada con el estándar oficial de MegaUnlockPhone (Tuxpan Veracruz)
       const baseCost = realCostNum > 0 ? realCostNum : (parseFloat(p.credit) || 0);
       let suggestedRetail = 0;
       let suggestedReseller = 0;
       if (baseCost > 0) {
-        if (baseCost <= 25) {
-          suggestedReseller = Math.round(baseCost + 3);
-          suggestedRetail = Math.round(baseCost + 12);
-        } else if (baseCost <= 60) {
-          suggestedReseller = Math.round(baseCost + 5);
-          suggestedRetail = Math.round(baseCost + 22);
-        } else if (baseCost <= 150) {
+        if (baseCost <= 20) {
           suggestedReseller = Math.round(baseCost + 10);
-          suggestedRetail = Math.round(baseCost + 38);
-        } else if (baseCost <= 400) {
-          suggestedReseller = Math.round(baseCost + 18);
-          suggestedRetail = Math.round(baseCost + 65);
+          suggestedRetail = 50;
+        } else if (baseCost <= 40) {
+          suggestedReseller = Math.round(baseCost + 12);
+          suggestedRetail = Math.round(baseCost + 35);
+        } else if (baseCost <= 80) {
+          suggestedReseller = Math.round(baseCost + 16);
+          suggestedRetail = Math.round(baseCost + 50);
+        } else if (baseCost <= 160) {
+          suggestedReseller = Math.round(baseCost + 25);
+          suggestedRetail = Math.round(baseCost + 70);
+        } else if (baseCost <= 320) {
+          suggestedReseller = Math.round(baseCost + 52);
+          suggestedRetail = 399;
+        } else if (baseCost <= 500) {
+          suggestedReseller = Math.round(baseCost + 87);
+          suggestedRetail = 666;
         } else if (baseCost <= 800) {
-          suggestedReseller = Math.round(baseCost + 30);
-          suggestedRetail = Math.round(baseCost + 105);
-        } else if (baseCost <= 1500) {
-          suggestedReseller = Math.round(baseCost + 45);
-          suggestedRetail = Math.round(baseCost + 160);
+          suggestedReseller = Math.round(baseCost + 158);
+          suggestedRetail = 1050;
+        } else if (baseCost <= 1400) {
+          suggestedReseller = Math.round(baseCost + 200);
+          suggestedRetail = Math.round(baseCost + 420);
         } else {
-          suggestedReseller = Math.round(baseCost * 1.04);
-          suggestedRetail = Math.round(baseCost * 1.12);
+          suggestedReseller = Math.round(baseCost * 1.15);
+          suggestedRetail = Math.round(baseCost * 1.35);
         }
       }
 
