@@ -86,7 +86,7 @@ window.SearchEngine = {
       });
     }
 
-    // Handle Global Text Search (debounce)
+    // Handle Global Text Search (optimizado con índice de búsqueda rápido)
     if (globalProductSearch) {
       let searchTimeout;
       globalProductSearch.addEventListener('input', (e) => {
@@ -118,23 +118,36 @@ window.SearchEngine = {
              this.config.callbacks.renderProducts(this.getProducts());
              return;
           }
-          const queryWords = q.split(/\s+/);
-          let filtered = this.getProducts().filter(p => {
-             const searchString = (String(p.service) + " " + String(p.serviceid) + " " + (p.group || "")).toLowerCase();
-             return queryWords.every(word => searchString.includes(word));
-          });
+          const queryWords = q.split(/\s+/).filter(Boolean);
+          const allProds = this.getProducts();
+
+          const filtered = [];
+          for (let i = 0; i < allProds.length; i++) {
+             const p = allProds[i];
+             if (!p._searchIndex) {
+               p._searchIndex = `${p.service || ''} ${p.serviceid || ''} ${p.group || ''}`.toLowerCase();
+             }
+             let matchesAll = true;
+             for (let j = 0; j < queryWords.length; j++) {
+               if (!p._searchIndex.includes(queryWords[j])) {
+                 matchesAll = false;
+                 break;
+               }
+             }
+             if (matchesAll) {
+               filtered.push(p);
+             }
+          }
           
-          // Sort by relevance (exact matches first)
+          // Ordenar exact matches primero
           filtered.sort((a, b) => {
-             const strA = (String(a.service) + " " + String(a.serviceid)).toLowerCase();
-             const strB = (String(b.service) + " " + String(b.serviceid)).toLowerCase();
-             const exactA = strA.includes(q) ? 1 : 0;
-             const exactB = strB.includes(q) ? 1 : 0;
+             const exactA = (a._searchIndex && a._searchIndex.includes(q)) ? 1 : 0;
+             const exactB = (b._searchIndex && b._searchIndex.includes(q)) ? 1 : 0;
              return exactB - exactA;
           });
           
           this.renderResults(filtered, `Resultados para "${q}"`);
-        }, 300);
+        }, 120);
       });
     }
   },

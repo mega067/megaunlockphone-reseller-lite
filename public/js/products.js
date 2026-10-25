@@ -465,9 +465,12 @@ function renderProducts(products, stayOnCurrentView = false) {
     return a[0].localeCompare(b[0]);
   });
 
+  const catFragment = document.createDocumentFragment();
+
   for (const [groupName, items] of entries) {
     const tile = document.createElement('div');
     tile.className = 'category-tile';
+    tile.dataset.groupName = groupName;
     
     const isHot = items.length > 0 && items.some(i => i.groupIsHot) ? true : isHotCategory(groupName);
     const customLogo = items.length > 0 ? (items.find(i => i.groupLogo)?.groupLogo || items[0].groupLogo) : null;
@@ -517,11 +520,26 @@ function renderProducts(products, stayOnCurrentView = false) {
       <span class="category-count">${items.length} Servicios</span>
     `;
     
-    tile.addEventListener('click', () => {
-      showCategoryProducts(groupName, items);
+    catFragment.appendChild(tile);
+  }
+
+  categoriesGrid.appendChild(catFragment);
+
+  if (!categoriesGrid.dataset.delegationBound) {
+    categoriesGrid.dataset.delegationBound = 'true';
+    categoriesGrid.addEventListener('click', (e) => {
+      const tile = e.target.closest('.category-tile');
+      if (tile && tile.dataset.groupName) {
+        const gName = tile.dataset.groupName;
+        const currentGrouped = window.MegaApp && window.MegaApp.State && window.MegaApp.State.g_categorizedGroups ? window.MegaApp.State.g_categorizedGroups : grouped;
+        const items = currentGrouped[gName] || productsList.filter(p => (p.group || 'Otros Servicios') === gName);
+        showCategoryProducts(gName, items);
+      }
     });
-    
-    categoriesGrid.appendChild(tile);
+  }
+
+  if (window.MegaApp && window.MegaApp.State) {
+    window.MegaApp.State.g_categorizedGroups = grouped;
   }
   
   if (!stayOnCurrentView) {
@@ -551,14 +569,32 @@ function showCategoryProducts(groupName, items) {
   renderProductCards(items);
 }
 
+// Helper puro de cálculo de sugerencias calibrado con MegaUnlockPhone
+function getSuggestedPricing(baseCost) {
+  if (baseCost <= 0) return { suggestedRetail: 0, suggestedReseller: 0 };
+  if (baseCost <= 20) return { suggestedRetail: 50, suggestedReseller: Math.round(baseCost + 10) };
+  if (baseCost <= 40) return { suggestedRetail: Math.round(baseCost + 35), suggestedReseller: Math.round(baseCost + 12) };
+  if (baseCost <= 80) return { suggestedRetail: Math.round(baseCost + 50), suggestedReseller: Math.round(baseCost + 16) };
+  if (baseCost <= 160) return { suggestedRetail: Math.round(baseCost + 70), suggestedReseller: Math.round(baseCost + 25) };
+  if (baseCost <= 320) return { suggestedRetail: 399, suggestedReseller: Math.round(baseCost + 52) };
+  if (baseCost <= 500) return { suggestedRetail: 666, suggestedReseller: Math.round(baseCost + 87) };
+  if (baseCost <= 800) return { suggestedRetail: 1050, suggestedReseller: Math.round(baseCost + 158) };
+  if (baseCost <= 1400) return { suggestedRetail: Math.round(baseCost + 420), suggestedReseller: Math.round(baseCost + 200) };
+  return { suggestedRetail: Math.round(baseCost * 1.35), suggestedReseller: Math.round(baseCost * 1.15) };
+}
+
 function renderProductCards(items) {
   productsBody.innerHTML = '';
-  
+  if (!items || items.length === 0) return;
+
   let favorites = [];
   try {
     favorites = JSON.parse(localStorage.getItem('mega_favorites') || '[]');
   } catch (e) {}
-  
+
+  const isPrivileged = (authRole === 'admin' || authRole === 'colaborador');
+  const fragment = document.createDocumentFragment();
+
   items.forEach(p => {
     const isFreeAllowed = !!p.rawItem._ALLOW_FREE;
     const hasCustomPrice = p.rawItem._CUSTOM_RESELLER !== undefined || p.rawItem._CUSTOM_CLIENT !== undefined;
@@ -568,7 +604,7 @@ function renderProductCards(items) {
     
     let adminPricesHtml = '';
     let adminCustomPriceHtml = '';
-    if (authRole === 'admin' || authRole === 'colaborador') {
+    if (isPrivileged) {
       const realCostNum = parseFloat(p.rawItem._REAL_COST) || 0;
       const realCostDisplay = realCostNum > 0 ? formatPrice(p.rawItem._REAL_COST) : '<span style="color: #ef4444; font-weight: bold;">Sin costo API ($0.00)</span>';
       
@@ -584,7 +620,6 @@ function renderProductCards(items) {
 
       let allowFreeBtnHtml = '';
       if (realCostNum <= 0) {
-        const isFreeAllowed = !!p.rawItem._ALLOW_FREE;
         allowFreeBtnHtml = `
           <button type="button" class="btn btn-secondary btn-toggle-allow-free" data-id="${escapeHtml(p.serviceid)}" data-allowed="${isFreeAllowed ? 'true' : 'false'}" style="margin-top: 6px; width: 100%; border: 1px dashed ${isFreeAllowed ? '#10b981' : '#f59e0b'}; color: ${isFreeAllowed ? '#10b981' : '#f59e0b'}; font-size: 0.75rem; padding: 6px;">
             <i data-lucide="${isFreeAllowed ? 'check-circle' : 'gift'}" style="width: 14px;"></i> ${isFreeAllowed ? 'GRATUITO ACTIVADO (PERMITIDO)' : 'ACTIVAR COMPRA GRATUITA'}
@@ -614,40 +649,8 @@ function renderProductCards(items) {
         </div>
       `;
       
-      // Sugerencia calibrada con el estándar oficial de MegaUnlockPhone (Tuxpan Veracruz)
       const baseCost = realCostNum > 0 ? realCostNum : (parseFloat(p.credit) || 0);
-      let suggestedRetail = 0;
-      let suggestedReseller = 0;
-      if (baseCost > 0) {
-        if (baseCost <= 20) {
-          suggestedReseller = Math.round(baseCost + 10);
-          suggestedRetail = 50;
-        } else if (baseCost <= 40) {
-          suggestedReseller = Math.round(baseCost + 12);
-          suggestedRetail = Math.round(baseCost + 35);
-        } else if (baseCost <= 80) {
-          suggestedReseller = Math.round(baseCost + 16);
-          suggestedRetail = Math.round(baseCost + 50);
-        } else if (baseCost <= 160) {
-          suggestedReseller = Math.round(baseCost + 25);
-          suggestedRetail = Math.round(baseCost + 70);
-        } else if (baseCost <= 320) {
-          suggestedReseller = Math.round(baseCost + 52);
-          suggestedRetail = 399;
-        } else if (baseCost <= 500) {
-          suggestedReseller = Math.round(baseCost + 87);
-          suggestedRetail = 666;
-        } else if (baseCost <= 800) {
-          suggestedReseller = Math.round(baseCost + 158);
-          suggestedRetail = 1050;
-        } else if (baseCost <= 1400) {
-          suggestedReseller = Math.round(baseCost + 200);
-          suggestedRetail = Math.round(baseCost + 420);
-        } else {
-          suggestedReseller = Math.round(baseCost * 1.15);
-          suggestedRetail = Math.round(baseCost * 1.35);
-        }
-      }
+      const { suggestedRetail, suggestedReseller } = getSuggestedPricing(baseCost);
 
       adminCustomPriceHtml = `
         <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
@@ -717,7 +720,7 @@ function renderProductCards(items) {
     card.className = 'product-card' + (p.rawItem._DISABLED ? ' disabled-card' : '');
     
     let mainPriceHtml = '';
-    if (authRole === 'admin' || authRole === 'colaborador') {
+    if (isPrivileged) {
       const resellerVal = parseFloat(p.rawItem._RESELLER_COST || p.credit) || 0;
       const clientVal = parseFloat(p.rawItem._CLIENT_PRICE) || 0;
       const resellerText = resellerVal > 0 ? formatPrice(resellerVal) : '<span style="color:#ef4444; font-weight: bold;">Sin precio</span>';
@@ -746,7 +749,7 @@ function renderProductCards(items) {
           <i data-lucide="clock"></i> <span>${escapeHtml(p.time)}</span>
         </div>
         <div class="detail-row" style="align-items: flex-start; flex-direction: column;">
-          <div style="margin-bottom: ${authRole === 'admin' || authRole === 'colaborador' ? '5px' : '0'};">
+          <div style="margin-bottom: ${isPrivileged ? '5px' : '0'};">
             <i data-lucide="dollar-sign" style="width: 14px; display: inline-block;"></i> 
             <strong style="color: #fff;">${mainPriceHtml}</strong>
           </div>
@@ -758,7 +761,7 @@ function renderProductCards(items) {
         <button type="button" class="btn-action-fav" data-id="${escapeHtml(p.serviceid)}" title="Favorito">
           <i data-lucide="star" style="${favorites.includes(String(p.serviceid)) ? 'color: gold; fill: gold;' : ''}"></i>
         </button>
-        ${(authRole === 'admin' || authRole === 'colaborador') ? `
+        ${isPrivileged ? `
           <button type="button" class="btn-action-flyer" data-id="${escapeHtml(p.serviceid)}" title="Añadir a Flyer Publicitario con IA" style="background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; border-radius: 6px; padding: 6px 8px; cursor: pointer;">
             <i data-lucide="sparkles" style="width: 14px; height: 14px;"></i>
           </button>
@@ -787,189 +790,145 @@ function renderProductCards(items) {
         </div>
       </div>
     `;
-    productsBody.appendChild(card);
+    fragment.appendChild(card);
   });
 
-  lucide.createIcons();
+  productsBody.appendChild(fragment);
+  if (window.lucide) window.lucide.createIcons();
+}
 
-  document.querySelectorAll('.btn-action-buy:not(.btn-consult-price)').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const serviceId = btn.getAttribute('data-id');
-      openPurchaseModal(serviceId);
-    });
-  });
+// Delegación central de eventos para productsBody: ¡cero lag al interactuar con miles de tarjetas!
+if (productsBody && !productsBody.dataset.delegationBound) {
+  productsBody.dataset.delegationBound = 'true';
 
-  document.querySelectorAll('.btn-consult-price').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const sName = btn.getAttribute('data-service') || 'este servicio';
+  productsBody.addEventListener('click', async (e) => {
+    // 1. Comprar
+    const btnBuy = e.target.closest('.btn-action-buy:not(.btn-consult-price)');
+    if (btnBuy && !btnBuy.disabled) {
+      const serviceId = btnBuy.getAttribute('data-id');
+      if (serviceId) openPurchaseModal(serviceId);
+      return;
+    }
+
+    // 2. Consultar precio
+    const btnConsult = e.target.closest('.btn-consult-price');
+    if (btnConsult) {
+      const sName = btnConsult.getAttribute('data-service') || 'este servicio';
       const msg = encodeURIComponent(`Hola, me interesa consultar precio y disponibilidad para el servicio: ${sName}`);
       window.open(`https://wa.me/522216936720?text=${msg}`, '_blank');
-    });
-  });
+      return;
+    }
 
-  document.querySelectorAll('.btn-action-details').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const serviceId = btn.getAttribute('data-id');
+    // 3. Ver/Ocultar Detalles
+    const btnDetails = e.target.closest('.btn-action-details');
+    if (btnDetails) {
+      const serviceId = btnDetails.getAttribute('data-id');
       const extraDiv = document.getElementById(`extra_${serviceId}`);
       if (extraDiv) {
         extraDiv.classList.toggle('hidden');
         const isHidden = extraDiv.classList.contains('hidden');
-        btn.innerHTML = isHidden ? '<i data-lucide="info"></i> Detalles' : '<i data-lucide="chevron-up"></i> Ocultar';
-        lucide.createIcons();
+        btnDetails.innerHTML = isHidden ? '<i data-lucide="info"></i> Detalles' : '<i data-lucide="chevron-up"></i> Ocultar';
+        if (window.lucide) window.lucide.createIcons();
       }
-    });
-  });
+      return;
+    }
 
-  document.querySelectorAll('.btn-action-flyer').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const serviceId = btn.getAttribute('data-id');
-      if (window.MegaApp && window.MegaApp.FlyerPrompt) {
+    // 4. Agregar a Flyer IA
+    const btnFlyer = e.target.closest('.btn-action-flyer');
+    if (btnFlyer) {
+      const serviceId = btnFlyer.getAttribute('data-id');
+      if (serviceId && window.MegaApp && window.MegaApp.FlyerPrompt) {
         window.MegaApp.FlyerPrompt.addProductDirect(serviceId);
       }
-    });
-  });
+      return;
+    }
 
-  document.querySelectorAll('.btn-action-fav').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const serviceId = btn.getAttribute('data-id');
+    // 5. Favoritos
+    const btnFav = e.target.closest('.btn-action-fav');
+    if (btnFav) {
+      const serviceId = btnFav.getAttribute('data-id');
       let currentFavs = [];
       try {
         currentFavs = JSON.parse(localStorage.getItem('mega_favorites') || '[]');
-      } catch(e) {}
+      } catch(err) {}
       
       const idx = currentFavs.indexOf(String(serviceId));
       if (idx > -1) {
         currentFavs.splice(idx, 1);
-        btn.innerHTML = '<i data-lucide="star"></i>';
+        btnFav.innerHTML = '<i data-lucide="star"></i>';
       } else {
         currentFavs.push(String(serviceId));
-        btn.innerHTML = '<i data-lucide="star" style="color: gold; fill: gold;"></i>';
+        btnFav.innerHTML = '<i data-lucide="star" style="color: gold; fill: gold;"></i>';
       }
       localStorage.setItem('mega_favorites', JSON.stringify(currentFavs));
-      lucide.createIcons();
-      
-      // If we are currently viewing the Favorites category, and we removed it, we might want to refresh, but it's fine as is.
-    });
-  });
+      if (window.lucide) window.lucide.createIcons();
+      return;
+    }
 
-  // Custom Price Form Listeners (Admin only)
-  if (authRole === 'admin' || authRole === 'colaborador') {
-    document.querySelectorAll('.custom-price-form').forEach(form => {
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const serviceId = form.getAttribute('data-id');
-        const resellerPrice = form.querySelector('.custom-reseller-input').value;
-        const clientPrice = form.querySelector('.custom-client-input').value;
-        
-        try {
-          const res = await fetch('/api/admin/product-price', {
-            method: 'POST',
-            headers: { 'X-Server-Id': currentServerId, 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-            body: JSON.stringify({ serviceid: serviceId, resellerPrice, clientPrice })
-          });
-          if (res.ok) {
-            alert('Precio manual guardado correctamente.');
-            if (window.clearFrontendCatalogCache) window.clearFrontendCatalogCache();
-            await syncProducts(false);
-          } else {
-            const errText = await res.text();
-            alert(`Error al guardar el precio manual. Código: ${res.status}. Detalles: ${errText}`);
-          }
-        } catch (err) {
-          alert('Error de conexión.');
+    // 6. Sugerencia recomendada de mercado
+    const btnApplySugg = e.target.closest('.btn-apply-suggested');
+    if (btnApplySugg) {
+      const serviceId = btnApplySugg.getAttribute('data-id');
+      const rPrice = btnApplySugg.getAttribute('data-reseller');
+      const cPrice = btnApplySugg.getAttribute('data-retail');
+      const form = productsBody.querySelector(`.custom-price-form[data-id="${serviceId}"]`);
+      if (form) {
+        const rInput = form.querySelector('.custom-reseller-input');
+        const cInput = form.querySelector('.custom-client-input');
+        if (rInput) rInput.value = rPrice;
+        if (cInput) cInput.value = cPrice;
+        btnApplySugg.style.background = 'rgba(56,189,248,0.25)';
+        btnApplySugg.textContent = '✅ Aplicado';
+      }
+      return;
+    }
+
+    // 7. Restablecer precio automático
+    const btnReset = e.target.closest('.btn-reset-price');
+    if (btnReset) {
+      const serviceId = btnReset.getAttribute('data-id');
+      if (!confirm('¿Estás seguro de restablecer el precio para usar el cálculo automático global?')) return;
+      try {
+        const res = await fetch(`/api/admin/product-price/${serviceId}`, {
+          method: 'DELETE',
+          headers: { 'X-Server-Id': currentServerId, 'Authorization': `Bearer ${authToken}` }
+        });
+        if (res.ok) {
+          alert('Precio restablecido a automático.');
+          if (window.clearFrontendCatalogCache) window.clearFrontendCatalogCache();
+          await syncProducts(false);
+        } else {
+          alert('Error al restablecer.');
         }
-      });
-    });
+      } catch (err) {
+        alert('Error de conexión.');
+      }
+      return;
+    }
 
-    // Click listener para sugerencias recomendadas de mercado minorista
-    document.querySelectorAll('.btn-apply-suggested').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const serviceId = btn.getAttribute('data-id');
-        const rPrice = btn.getAttribute('data-reseller');
-        const cPrice = btn.getAttribute('data-retail');
-        const form = document.querySelector(`.custom-price-form[data-id="${serviceId}"]`);
-        if (form) {
-          const rInput = form.querySelector('.custom-reseller-input');
-          const cInput = form.querySelector('.custom-client-input');
-          if (rInput) rInput.value = rPrice;
-          if (cInput) cInput.value = cPrice;
-          btn.style.background = 'rgba(56,189,248,0.25)';
-          btn.textContent = '✅ Aplicado';
-        }
-      });
-    });
+    // 8. Precios por Usuario
+    const btnUserPrices = e.target.closest('.btn-user-prices');
+    if (btnUserPrices) {
+      const serviceId = btnUserPrices.getAttribute('data-id');
+      const serviceTitle = btnUserPrices.getAttribute('data-title');
+      openUserPricesModal(serviceId, serviceTitle);
+      return;
+    }
 
-    document.querySelectorAll('.btn-reset-price').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const serviceId = btn.getAttribute('data-id');
-        if (!confirm('¿Estás seguro de restablecer el precio para usar el cálculo automático global?')) return;
-        try {
-          const res = await fetch(`/api/admin/product-price/${serviceId}`, {
-            method: 'DELETE',
-            headers: { 'X-Server-Id': currentServerId, 'Authorization': `Bearer ${authToken}` }
-          });
-          if (res.ok) {
-            alert('Precio restablecido a automático.');
-            if (window.clearFrontendCatalogCache) window.clearFrontendCatalogCache();
-            await syncProducts(false);
-          } else {
-            alert('Error al restablecer.');
-          }
-        } catch (err) {
-          alert('Error de conexión.');
-        }
-      });
-    });
+    // 9. Advertencia de servicio
+    const btnWarn = e.target.closest('.btn-admin-warning');
+    if (btnWarn) {
+      const serviceId = btnWarn.getAttribute('data-id');
+      const warningContentText = btnWarn.getAttribute('data-warning');
+      openWarningModal(serviceId, warningContentText);
+      return;
+    }
 
-    document.querySelectorAll('.custom-group-form').forEach(form => {
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const serviceId = form.getAttribute('data-id');
-        const customGroup = form.querySelector('.custom-group-input').value;
-        const submitBtn = form.querySelector('button');
-        submitBtn.disabled = true;
-        
-        try {
-          const res = await fetch('/api/admin/custom-group', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Server-Id': currentServerId, 'Authorization': `Bearer ${authToken}` },
-            body: JSON.stringify({ serviceid: serviceId, customGroup })
-          });
-          if (res.ok) {
-            alert('Grupo personalizado asignado exitosamente.');
-            await syncProducts(true);
-          } else {
-            alert('Error al asignar el grupo.');
-          }
-        } catch (err) {
-          alert('Error de red.');
-        } finally {
-          submitBtn.disabled = false;
-        }
-      });
-    });
-
-    document.querySelectorAll('.btn-user-prices').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const serviceId = btn.getAttribute('data-id');
-        const serviceTitle = btn.getAttribute('data-title');
-        openUserPricesModal(serviceId, serviceTitle);
-      });
-    });
-
-    document.querySelectorAll('.btn-admin-warning').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const serviceId = btn.getAttribute('data-id');
-        const warningContentText = btn.getAttribute('data-warning');
-        openWarningModal(serviceId, warningContentText);
-      });
-    });
-  }
-
-  document.querySelectorAll('.btn-toggle-service').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const serviceId = btn.getAttribute('data-id');
-      const isDisabled = btn.getAttribute('data-disabled') === 'true';
+    // 10. Apagar / Encender Servicio
+    const btnToggle = e.target.closest('.btn-toggle-service');
+    if (btnToggle) {
+      const serviceId = btnToggle.getAttribute('data-id');
+      const isDisabled = btnToggle.getAttribute('data-disabled') === 'true';
       const newStatus = !isDisabled;
       if (!confirm(`¿Estás seguro de que deseas ${newStatus ? 'APAGAR' : 'ENCENDER'} este servicio para los clientes?`)) return;
       
@@ -990,13 +949,14 @@ function renderProductCards(items) {
       } catch (err) {
         alert('Error de conexión.');
       }
-    });
-  });
+      return;
+    }
 
-  document.querySelectorAll('.btn-toggle-allow-free').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const serviceId = btn.getAttribute('data-id');
-      const isAllowed = btn.getAttribute('data-allowed') === 'true';
+    // 11. Toggle Compra Gratuita
+    const btnAllowFree = e.target.closest('.btn-toggle-allow-free');
+    if (btnAllowFree) {
+      const serviceId = btnAllowFree.getAttribute('data-id');
+      const isAllowed = btnAllowFree.getAttribute('data-allowed') === 'true';
       const newStatus = !isAllowed;
       if (!confirm(`¿Deseas ${newStatus ? 'PERMITIR' : 'BLOQUEAR'} la compra de este servicio sin costo API ($0.00)?`)) return;
 
@@ -1018,7 +978,71 @@ function renderProductCards(items) {
       } catch (err) {
         alert('Error de conexión.');
       }
-    });
+      return;
+    }
+  });
+
+  // Delegación de formularios en productsBody (Guardar Precio Manual y Grupo Personalizado)
+  productsBody.addEventListener('submit', async (e) => {
+    // A. Guardar precio manual
+    const priceForm = e.target.closest('.custom-price-form');
+    if (priceForm) {
+      e.preventDefault();
+      const serviceId = priceForm.getAttribute('data-id');
+      const rInput = priceForm.querySelector('.custom-reseller-input');
+      const cInput = priceForm.querySelector('.custom-client-input');
+      const resellerPrice = rInput ? rInput.value : '';
+      const clientPrice = cInput ? cInput.value : '';
+
+      try {
+        const res = await fetch('/api/admin/product-price', {
+          method: 'POST',
+          headers: { 'X-Server-Id': currentServerId, 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+          body: JSON.stringify({ serviceid: serviceId, resellerPrice, clientPrice })
+        });
+        if (res.ok) {
+          alert('Precio manual guardado correctamente.');
+          if (window.clearFrontendCatalogCache) window.clearFrontendCatalogCache();
+          await syncProducts(false);
+        } else {
+          const errText = await res.text();
+          alert(`Error al guardar el precio manual. Código: ${res.status}. Detalles: ${errText}`);
+        }
+      } catch (err) {
+        alert('Error de conexión.');
+      }
+      return;
+    }
+
+    // B. Guardar grupo personalizado
+    const groupForm = e.target.closest('.custom-group-form');
+    if (groupForm) {
+      e.preventDefault();
+      const serviceId = groupForm.getAttribute('data-id');
+      const customGroupInput = groupForm.querySelector('.custom-group-input');
+      const customGroup = customGroupInput ? customGroupInput.value : '';
+      const submitBtn = groupForm.querySelector('button');
+      if (submitBtn) submitBtn.disabled = true;
+
+      try {
+        const res = await fetch('/api/admin/custom-group', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Server-Id': currentServerId, 'Authorization': `Bearer ${authToken}` },
+          body: JSON.stringify({ serviceid: serviceId, customGroup })
+        });
+        if (res.ok) {
+          alert('Grupo personalizado asignado exitosamente.');
+          await syncProducts(true);
+        } else {
+          alert('Error al asignar el grupo.');
+        }
+      } catch (err) {
+        alert('Error de red.');
+      } finally {
+        if (submitBtn) submitBtn.disabled = false;
+      }
+      return;
+    }
   });
 }
 
