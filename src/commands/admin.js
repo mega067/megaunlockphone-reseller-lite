@@ -345,18 +345,33 @@ async function admin(context) {
 
             if (session.targetUserId === 'todos') {
                 const recipients = getBroadcastRecipients();
+                const { randomBroadcastDelay } = require('../whatsappEngine');
                 let sentCount = 0;
-                await sock.sendMessage(remoteJid, { text: `🚀 *Iniciando transmisión masiva a ${recipients.length} destinatarios...*\n_Por favor espera unos momentos._` });
+                await sock.sendMessage(remoteJid, { text: `🚀 *Iniciando transmisión masiva segura a ${recipients.length} destinatarios...*\n_Se aplicará delay aleatorio de 3.5s a 7s por cliente para proteger tu número de bloqueos._` });
                 
-                for (const jid of recipients) {
+                for (let i = 0; i < recipients.length; i++) {
+                    const jid = recipients[i];
                     try {
+                        try {
+                            await sock.sendPresenceUpdate('composing', jid);
+                            await new Promise(r => setTimeout(r, Math.floor(1000 + Math.random() * 1500)));
+                            await sock.sendPresenceUpdate('paused', jid);
+                        } catch (_) {}
+
                         await sock.sendMessage(jid, messagePayload);
                         sentCount++;
+
+                        if (i < recipients.length - 1) {
+                            await randomBroadcastDelay();
+                            if ((i + 1) % 5 === 0) {
+                                await new Promise(r => setTimeout(r, Math.floor(4000 + Math.random() * 4000)));
+                            }
+                        }
                     } catch (sendErr) {
                         console.error(`[BROADCAST ERROR] Falló envío a ${jid}:`, sendErr.message);
                     }
                 }
-                await sock.sendMessage(remoteJid, { text: `✅ *DIFUSIÓN COMPLETADA*\n━━━━━━━━━━━━━━━━━━━━━━\nTransmisión entregada exitosamente a *${sentCount}* clientes.` });
+                await sock.sendMessage(remoteJid, { text: `✅ *DIFUSIÓN COMPLETADA*\n━━━━━━━━━━━━━━━━━━━━━━\nTransmisión entregada exitosamente a *${sentCount}* clientes con protección anti-baneo.` });
             } else {
                 let targetJid = null;
                 for (const jid in wusers) {
@@ -429,18 +444,36 @@ async function admin(context) {
         const messagePayload = await extractMediaPayload(captionHeader);
 
         const recipients = getBroadcastRecipients();
-        await sock.sendMessage(remoteJid, { text: `🚀 *Iniciando transmisión masiva a ${recipients.length} usuarios...*` });
+        const { randomBroadcastDelay } = require('../whatsappEngine');
+        await sock.sendMessage(remoteJid, { text: `🚀 *Iniciando transmisión masiva segura a ${recipients.length} usuarios...*\n_Se aplicará delay aleatorio de 3.5s a 7s por usuario para proteger contra bloqueos de WhatsApp._` });
         
         let sentCount = 0;
-        for (const jid of recipients) {
+        for (let i = 0; i < recipients.length; i++) {
+            const jid = recipients[i];
             try {
+                // Simular presencia de escritura previa para parecer humano
+                try {
+                    await sock.sendPresenceUpdate('composing', jid);
+                    await new Promise(r => setTimeout(r, Math.floor(1000 + Math.random() * 1500)));
+                    await sock.sendPresenceUpdate('paused', jid);
+                } catch (_) {}
+
                 await sock.sendMessage(jid, messagePayload);
                 sentCount++;
+
+                // Aplicar delay dinámico aleatorio solo si faltan más por enviar
+                if (i < recipients.length - 1) {
+                    await randomBroadcastDelay();
+                    // Cada 5 envíos consecutivos, agregar una pausa de descanso de 4 a 8 segundos
+                    if ((i + 1) % 5 === 0) {
+                        await new Promise(r => setTimeout(r, Math.floor(4000 + Math.random() * 4000)));
+                    }
+                }
             } catch (err) {
                 console.error(`[MSGALL FAIL] ${jid}:`, err.message);
             }
         }
-        await sock.sendMessage(remoteJid, { text: `✅ *DIFUSIÓN COMPLETADA*\n━━━━━━━━━━━━━━━━━━━━━━\nSe ha transmitido el mensaje multimedia a *${sentCount}* usuarios registrados.` });
+        await sock.sendMessage(remoteJid, { text: `✅ *DIFUSIÓN COMPLETADA*\n━━━━━━━━━━━━━━━━━━━━━━\nSe ha transmitido el comunicado a *${sentCount}* usuarios con protección anti-baneo.` });
         return true;
     }
 
@@ -482,15 +515,30 @@ async function admin(context) {
             const captionHeader = `📢 *COMUNICADO OFICIAL • MEGAUNLOCKPHONE* 🌐\n━━━━━━━━━━━━━━━━━━━━━━\n${restText}\n━━━━━━━━━━━━━━━━━━━━━━\n🛡️ _Equipo de Administración MegaUnlock_`;
             const messagePayload = await extractMediaPayload(captionHeader);
             const recipients = getBroadcastRecipients();
-            await sock.sendMessage(remoteJid, { text: `🚀 Transmitiendo a ${recipients.length} usuarios...` });
+            const { randomBroadcastDelay } = require('../whatsappEngine');
+            await sock.sendMessage(remoteJid, { text: `🚀 Transmitiendo de forma segura a ${recipients.length} usuarios con delay inteligente...` });
             let sentCount = 0;
-            for (const jid of recipients) {
+            for (let i = 0; i < recipients.length; i++) {
+                const jid = recipients[i];
                 try {
+                    try {
+                        await sock.sendPresenceUpdate('composing', jid);
+                        await new Promise(r => setTimeout(r, Math.floor(1000 + Math.random() * 1500)));
+                        await sock.sendPresenceUpdate('paused', jid);
+                    } catch (_) {}
+
                     await sock.sendMessage(jid, messagePayload);
                     sentCount++;
+
+                    if (i < recipients.length - 1) {
+                        await randomBroadcastDelay();
+                        if ((i + 1) % 5 === 0) {
+                            await new Promise(r => setTimeout(r, Math.floor(4000 + Math.random() * 4000)));
+                        }
+                    }
                 } catch (e) {}
             }
-            await sock.sendMessage(remoteJid, { text: `✅ Transmitido exitosamente a ${sentCount} usuarios.` });
+            await sock.sendMessage(remoteJid, { text: `✅ Transmitido exitosamente a ${sentCount} usuarios con protección anti-baneo.` });
             return true;
         }
 

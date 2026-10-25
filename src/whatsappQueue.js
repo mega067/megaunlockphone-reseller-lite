@@ -10,6 +10,7 @@ module.exports = {
   getEngineTimestamp: engine.getEngineTimestamp,
   ENGINE_CONFIG: engine.ENGINE_CONFIG,
   randomThrottleDelay: engine.randomThrottleDelay,
+  randomBroadcastDelay: engine.randomBroadcastDelay,
   callBotApi: engine.callBotApi
 };
 

@@ -117,14 +117,41 @@ El archivo [whatsappBot.js](file:///home/angel/Projects/REPOS/dhru-client-web/wh
 3. **Cola de Despacho con Throttling y Reintentos Automáticos:**
    - Introduce una pausa aleatoria de seguridad de `1.2s` a `2.0s` entre envíos.
    - Si una entrega sufre de `Timeout` o error transitorio de socket, se aplica un mecanismo de **reintento exponencial (hasta 3 intentos)** volviendo a encolar el mensaje sin descartarlo.
-4. **Timeouts Extendidos para Redes Inestables:**
+## ⚡ 4. Robustez del Bot de WhatsApp (Anti-Fail / Anti-Esperando Mensaje)
+
+El archivo [whatsappBot.js](file:///home/angel/Projects/REPOS/dhru-client-web/whatsappBot.js) ha sido endurecido con los siguientes mecanismos industriales:
+
+1. **Gestión de Bloqueo por Instancia (`bot.lock` Process-Aware):**
+   - Comprueba si el proceso con el PID registrado en el candado sigue existiendo en el sistema operativo mediante `process.kill(pid, 0)`.
+   - Si el proceso anterior se cerró o se detuvo forzosamente, el archivo se auto-elimina de forma segura y permite el inicio inmediato.
+   - Cuenta con manejadores automáticos para `SIGINT`, `SIGTERM` y `exit`.
+2. **Prevención del Bug "Esperando el mensaje" / "Waiting for this message":**
+   - Antes de despachar cada mensaje, el bot envía un `presenceUpdate('available')` y `presenceUpdate('composing', jid)`. Esto fuerza a WhatsApp a intercambiar las llaves públicas de cifrado de la sesión de Signal antes del payload.
+   - Tras el envío, emite `presenceUpdate('paused', jid)`.
+3. **Difusión Masiva Segura Anti-Baneo (`msgall` / Transmisión Masiva):**
+   - **Delays Humanizados y Jitter Dinámico:** En lugar de ráfagas automáticas, entre cada destinatario se aplica un retardo aleatorio de `3.5s` a `7.0s` (`randomBroadcastDelay` en [src/whatsappEngine.js](file:///home/angel/Projects/REPOS/dhru-client-web/src/whatsappEngine.js)).
+   - **Simulación de Escritura Real (`composing`):** Antes de enviar a cada cliente, el bot simula entre `1.0s` y `2.5s` de escritura real en el chat individual y luego pausa la presencia.
+   - **Pausas de Descanso por Lotes:** Cada 5 mensajes enviados de forma continua, el bot toma una pausa de enfriamiento adicional aleatoria de `4.0s` a `8.0s`.
+4. **Resolución Híbrida de Identidad de Administrador (`cleanId`):**
+   - Soporta identificadores WhatsApp tanto `@s.whatsapp.net` como los modernos `@lid`.
+   - Normaliza automáticamente representaciones flotantes (`'1.0'` -> `'1'`) generadas por parsers JSON o bases heredadas.
+   - Si un usuario no existe en `users.json`, consulta automáticamente la tabla `Users` en SQLite para garantizar que los permisos de administrador no se pierdan.
+5. **Timeouts Extendidos para Redes Inestables:**
    - `connectTimeoutMs: 300000` (5 minutos)
    - `defaultQueryTimeoutMs: 300000`
    - `keepAliveIntervalMs: 10000` (pings cada 10 segundos para mantener el túnel TCP activo).
 
 ---
 
-## 📂 5. Limpieza y Reorganización de Archivos
+## 💰 5. Módulo Contable & Finanzas Independiente (`/finanzas`)
+- **Portal Dedicado:** Accesible directamente desde `https://megaunlockphone-panel.alwaysdata.net/finanzas`.
+- **Cero Ganancia en Traspasos:** Las transferencias entre cuentas propias (`transfer`) tienen estrictamente `grossProfit = 0`, `reinvestAmount = 0` y `netProfit = 0`.
+- **Navegación Intuitiva:** Cuenta con botón destacado **"Volver al Panel Admin"** con enrutamiento inteligente por hash (`/#admin`, `/#finanzas`, `/#history`).
+- **Control de Meses Sin Intereses (Nu/Tarjetas):** Cálculo automático de mensualidades indicando únicamente monto total y plazos.
+
+---
+
+## 📂 6. Limpieza y Reorganización de Archivos
 
 Se retiraron todos los scripts de prueba, parches y migraciones temporales obsoletas de la raíz del proyecto y se almacenaron en:
 📁 [scripts/archive/](file:///home/angel/Projects/REPOS/dhru-client-web/scripts/archive/)
@@ -138,31 +165,37 @@ La raíz del proyecto ahora permanece exclusivamente con archivos operativos ese
 
 ---
 
-## 📜 6. Historial de Commits y Enlaces de Git
+## 🤖 7. Protocolo de Relevo para Nuevos Agentes IA (Continuity & Context)
+Cuando retomes este proyecto o continúes una sesión:
+1. **Comprobar Sintaxis Primero:** Ejecuta siempre `node --check` sobre cualquier archivo JS antes de hacer commit o deploy.
+2. **Evitar Sobreescribir `data/` en Producción:** `deploy.sh` tiene `--exclude 'data'` para no borrar la base de datos real de clientes ni historiales SQLite.
+3. **Manejo de Procesos del Bot:**
+   - AlwaysData corre el bot a través de su pestaña **Web > Services** usando `./start_bot.sh`.
+   - Nunca dejes un proceso `node whatsappBot.js` corriendo por SSH si el servicio de AlwaysData está activo, o habrá colisión de sesión (Status 440 Replaced).
+4. **Validación de Usuarios y Admin:**
+   - Compara siempre usando `String(u.id).replace(/\.0+$/, '') === cleanId`.
+   - Consulta [src/database.js](file:///home/angel/Projects/REPOS/dhru-client-web/src/database.js) como fuente autoritativa ante dudas entre SQLite y JSON.
+
+---
+
+## 📜 8. Historial de Commits y Enlaces de Git
 
 Historial reciente de versiones desplegadas en producción:
 
 | Commit Hash | Tipo | Descripción | Enlace en GitHub |
 |---|---|---|---|
+| `65bac07` | `fix` | Normalizar cleanId para float-strings '1.0' en linkedUserId de admin | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/65bac07) |
+| `57b757b` | `fix` | Vincular y comparar admin por SQLite/JSON con soporte de IDs mixtos | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/57b757b) |
+| `aacea42` | `feat` | Robustecer resolución de admin en lid/jid y detallar opciones en /comandos | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/aacea42) |
+| `ac0d29f` | `fix` | Restaurar llave de cierre en checkSession para ejecución de login y botones | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/ac0d29f) |
+| `6ebc7bf` | `feat` | Separar finanzas en portal limpio con botón para volver al admin y v88 móvil | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/6ebc7bf) |
 | `6450e6a` | `fix` | Botón X de cierre en esquina superior y toggle ocultar IMEI discreto | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/6450e6a) |
 | `babab4c` | `fix` | Mostrar nombre de grupo real del proveedor en modal de compra | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/babab4c) |
-| `21f33c6` | `refactor` | Tarjetas limpias sin insignias redundantes y lógica de precio atada al grupo real | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/21f33c6) |
-| `6496b5f` | `feat` | Aislamiento estricto: comisiones basadas en grupo real, custom solo visual | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/6496b5f) |
-| `ab0e38d` | `feat` | IP Whitelist con auto-binding en primera conexión y controles en Perfil | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/ab0e38d) |
-| `e5f009f` | `feat` | Documentación interactiva DHRU Fusion en Perfil y fix de solapamiento | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/e5f009f) |
-| `0889c72` | `docs` | Mapa de arquitectura completa, gestión de APIKEYS y modularidad | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/0889c72) |
-| `c6ad8e9` | `fix` | Bloqueo de bot process-aware con auto-limpieza en salida | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/c6ad8e9) |
-| `3b6572c` | `fix` | Optimización completa de vista móvil (cards, cuadrículas y botones) | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/3b6572c) |
-| `d2e0660` | `fix` | Paleta azul cielo suave del logo y presentación pulida en login | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/d2e0660) |
-| `ae07051` | `feat` | Tema claro por defecto idéntico al logo con switch a modo oscuro | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/ae07051) |
-| `072ea65` | `feat` | Carrusel con logos SVG oficiales de Streaming e Inteligencia Artificial | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/072ea65) |
-| `528904b` | `feat` | Implementación de ruta y portal dedicado `/digital-pass` | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/528904b) |
-| `a0f8ff0` | `feat` | Sincronización automática de órdenes en tiempo real y reembolsos | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/a0f8ff0) |
-| `9511b8d` | `fix` | Mostrar 0.00 créditos en interfaz cuando no hay sesión activa | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/9511b8d) |
+| `21f33c6` | `refactor` | Tarjetas limpias sin insignias redundantes y lógica de precio atada al grupo | [Ver Commit](https://github.com/mega067/MegaUnlockPhone/commit/21f33c6) |
 
 ---
 
-## 🛠️ 7. Guía Rápida para el Agente (Comandos de Referencia)
+## 🛠️ 9. Guía Rápida para el Agente (Comandos de Referencia)
 
 1. **Para sincronizar cambios con AlwaysData:**
    ```bash

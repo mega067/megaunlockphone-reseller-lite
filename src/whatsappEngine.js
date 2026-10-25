@@ -11,10 +11,15 @@ const QUEUE_FILE = path.join(__dirname, '..', 'queue.json');
 
 // Configuration for engine throttling and safe delays
 const ENGINE_CONFIG = {
-  minDelayMs: 1200,
-  maxDelayMs: 2000,
+  minDelayMs: 1500,
+  maxDelayMs: 3000,
+  // Tiempos humanizados para difusiones masivas (msgall) con variaciones aleatorias para proteger contra bloqueos
+  broadcastMinDelayMs: 3500,  // Mínimo 3.5 segundos entre mensajes
+  broadcastMaxDelayMs: 7000,  // Máximo 7.0 segundos con variación humana
+  typingMinDelayMs: 1000,     // Simular que está escribiendo
+  typingMaxDelayMs: 2500,
   maxRetries: 3,
-  retryDelayMs: 3000,
+  retryDelayMs: 4000,
   timeZone: 'America/Mexico_City',
   supportUrl: 'https://wa.me/522216936720'
 };
@@ -111,10 +116,21 @@ function enqueueWhatsAppAdmin(message) {
 }
 
 /**
- * Safe delay helper
+ * Safe delay helper para mensajes estándar
  */
 function randomThrottleDelay(min = ENGINE_CONFIG.minDelayMs, max = ENGINE_CONFIG.maxDelayMs) {
   const ms = Math.floor(min + Math.random() * (max - min));
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Safe delay para difusiones masivas con variación y jitter humano
+ * Entre 3.5s y 7.0s por defecto, con pausas aleatorias adicionales
+ */
+function randomBroadcastDelay(min = ENGINE_CONFIG.broadcastMinDelayMs, max = ENGINE_CONFIG.broadcastMaxDelayMs) {
+  // Jitter aleatorio adicional de hasta 1.5s
+  const jitter = Math.floor(Math.random() * 1500);
+  const ms = Math.floor(min + Math.random() * (max - min)) + jitter;
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
@@ -153,5 +169,6 @@ module.exports = {
   enqueueWhatsApp,
   enqueueWhatsAppAdmin,
   randomThrottleDelay,
+  randomBroadcastDelay,
   callBotApi
 };
