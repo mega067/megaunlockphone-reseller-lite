@@ -564,6 +564,33 @@
     btnRefresh.addEventListener('click', loadAllFinanceData);
   }
 
+  // Manejo de Pestañas Segmentadas (Sin saturar al usuario)
+  function initTabs() {
+    const tabBtns = document.querySelectorAll('.fin-tab-btn');
+    tabBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetId = btn.getAttribute('data-tab');
+        if (!targetId) return;
+
+        tabBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        document.querySelectorAll('.fin-panel').forEach(panel => {
+          panel.classList.remove('active');
+        });
+
+        const activePanel = document.getElementById(targetId);
+        if (activePanel) {
+          activePanel.classList.add('active');
+        }
+        if (window.lucide) lucide.createIcons();
+      });
+    });
+  }
+
   // Inicializar al cargar
-  document.addEventListener('DOMContentLoaded', loadAllFinanceData);
+  document.addEventListener('DOMContentLoaded', () => {
+    initTabs();
+    loadAllFinanceData();
+  });
 })();

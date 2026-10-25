@@ -5,225 +5,336 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=3">
   <link rel="icon" type="image/png" href="/favicon.png?v=3">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-  <title>Portal Financiero & Tesorería | MegaUnlockPhone</title>
+  <title>Tesorería & Finanzas | MegaUnlockPhone</title>
+  <!-- Google Fonts: Inter & Outfit -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet" crossorigin="anonymous">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet" crossorigin="anonymous">
   <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <link rel="stylesheet" href="/index.css?v=80">
+  <link rel="stylesheet" href="/index.css?v=85">
   <style>
-    .fin-standalone-container {
-      max-width: 1280px;
-      margin: 0 auto;
-      padding: 1.5rem 1rem 4rem;
+    :root {
+      --fin-accent: #10b981;
+      --fin-accent-glow: rgba(16, 185, 129, 0.2);
     }
-    .fin-hero-bar {
+    body {
+      background: #090d16;
+      color: #f1f5f9;
+      font-family: 'Inter', -apple-system, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    .fin-shell {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1.25rem 1rem 4rem;
+    }
+    
+    /* Top Navigation Bar */
+    .fin-topbar {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 1rem 1.5rem;
-      margin-bottom: 2rem;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.04);
-      backdrop-filter: blur(10px);
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 18px;
+      padding: 0.85rem 1.4rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
       flex-wrap: wrap;
-      gap: 1rem;
+      gap: 0.8rem;
     }
-    .fin-brand {
+    .fin-brand-box {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
+      gap: 0.85rem;
     }
-    .fin-brand-icon {
-      width: 44px;
-      height: 44px;
+    .fin-brand-badge {
+      width: 42px;
+      height: 42px;
       border-radius: 12px;
       background: linear-gradient(135deg, #10b981, #059669);
       display: flex;
       align-items: center;
       justify-content: center;
       color: white;
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
     }
-    .fin-stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 1.25rem;
-      margin-bottom: 2rem;
-    }
-    .fin-stat-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 1.25rem 1.5rem;
+
+    /* Smart Balance Hub */
+    .fin-balance-hero {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(99, 102, 241, 0.08));
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: 20px;
+      padding: 1.6rem 2rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1.2rem;
       position: relative;
       overflow: hidden;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.02);
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
-    .fin-stat-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(0,0,0,0.06);
-    }
-    .fin-stat-card .fin-glow {
-      position: absolute;
-      top: -20px;
-      right: -20px;
-      width: 80px;
-      height: 80px;
-      border-radius: 50%;
-      filter: blur(25px);
-      opacity: 0.15;
-    }
-    .fin-section-title {
-      font-family: 'Outfit', sans-serif;
-      font-size: 1.35rem;
+    .fin-hero-title {
+      font-size: 0.85rem;
       font-weight: 700;
-      color: var(--text);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #94a3b8;
+      margin-bottom: 0.3rem;
+    }
+    .fin-hero-amount {
+      font-family: 'Outfit', sans-serif;
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: #ffffff;
+      line-height: 1.1;
+    }
+    .fin-quick-stats {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .fin-quick-stat-item {
+      border-left: 3px solid rgba(255, 255, 255, 0.15);
+      padding-left: 0.9rem;
+    }
+    .fin-quick-stat-item.green { border-color: #10b981; }
+    .fin-quick-stat-item.amber { border-color: #f59e0b; }
+    .fin-quick-stat-item.blue { border-color: #38bdf8; }
+
+    /* Segmented Tab Controls */
+    .fin-tab-nav {
+      display: flex;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 4px;
+      margin-bottom: 1.5rem;
+      gap: 4px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .fin-tab-btn {
+      flex: 1;
+      min-width: 140px;
+      padding: 0.65rem 1rem;
+      border-radius: 10px;
+      border: none;
+      background: transparent;
+      color: #94a3b8;
+      font-weight: 600;
+      font-size: 0.9rem;
       display: flex;
       align-items: center;
+      justify-content: center;
       gap: 0.5rem;
-      margin-bottom: 1.25rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
     }
-    .fin-grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1.5rem;
-      margin-bottom: 2rem;
+    .fin-tab-btn:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.04);
     }
-    @media (max-width: 900px) {
-      .fin-grid-2 {
-        grid-template-columns: 1fr;
-      }
+    .fin-tab-btn.active {
+      background: #1e293b;
+      color: #10b981;
+      font-weight: 700;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     }
-    .btn-fin-pill {
+
+    /* Content Panels */
+    .fin-panel {
+      display: none;
+      animation: finFadeIn 0.25s ease-out;
+    }
+    .fin-panel.active {
+      display: block;
+    }
+    @keyframes finFadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Cards & Components */
+    .fin-card {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.2rem;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+    .fin-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.2rem;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+    }
+    .fin-card-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #f8fafc;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    /* Buttons */
+    .fin-btn {
       display: inline-flex;
       align-items: center;
-      gap: 0.5rem;
-      padding: 0.55rem 1.2rem;
+      gap: 0.45rem;
+      padding: 0.55rem 1.1rem;
       border-radius: 999px;
       font-weight: 600;
-      font-size: 0.88rem;
+      font-size: 0.85rem;
       cursor: pointer;
+      border: none;
       text-decoration: none;
       transition: all 0.2s ease;
-      border: none;
+    }
+    .fin-btn-primary {
+      background: #10b981;
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+    .fin-btn-primary:hover {
+      background: #059669;
+    }
+    .fin-btn-soft {
+      background: rgba(255, 255, 255, 0.06);
+      color: #e2e8f0;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    .fin-btn-soft:hover {
+      background: rgba(255, 255, 255, 0.1);
     }
   </style>
 </head>
 <body>
-  <div class="background-decor">
-    <div class="glow-orb orb-1"></div>
-    <div class="glow-orb orb-2"></div>
-  </div>
-
-  <div class="fin-standalone-container">
+  <div class="fin-shell">
     <!-- Top Bar Navigation -->
-    <header class="fin-hero-bar">
-      <div class="fin-brand">
-        <div class="fin-brand-icon">
-          <i data-lucide="wallet-cards" style="width:24px; height:24px;"></i>
+    <header class="fin-topbar">
+      <div class="fin-brand-box">
+        <div class="fin-brand-badge">
+          <i data-lucide="shield-check" style="width:22px; height:22px;"></i>
         </div>
         <div>
-          <h1 style="margin:0; font-size:1.3rem; font-family:'Outfit',sans-serif; font-weight:800; color:var(--text);">Tesorería & Finanzas</h1>
-          <p style="margin:0; font-size:0.8rem; color:var(--text-muted);">Módulo Autónomo de Billeteras, Meses sin Intereses y Contabilidad</p>
+          <h1 style="margin:0; font-size:1.15rem; font-family:'Outfit',sans-serif; font-weight:800; color:#f8fafc;">Tesorería & Billeteras</h1>
+          <p style="margin:0; font-size:0.75rem; color:#94a3b8;">Centro Unificado de Control Financiero</p>
         </div>
       </div>
-      <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
-        <button id="btnFinCollegeQuick" class="btn-fin-pill" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">
-          <i data-lucide="backpack" style="width:16px; height:16px;"></i> + Pasaje/Comida Uni
+      <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
+        <button id="btnFinCollegeQuick" class="fin-btn fin-btn-soft" style="color:#10b981; border-color:rgba(16,185,129,0.3);">
+          <i data-lucide="backpack" style="width:15px; height:15px;"></i> + Pasaje Uni
         </button>
-        <button id="btnFinRefreshAll" class="btn-fin-pill" style="background: var(--bg); color: var(--text); border: 1px solid var(--border);">
-          <i data-lucide="rotate-cw" style="width:16px; height:16px;"></i> Actualizar
+        <button id="btnFinRefreshAll" class="fin-btn fin-btn-soft">
+          <i data-lucide="rotate-cw" style="width:15px; height:15px;"></i> Actualizar
         </button>
-        <a href="/" class="btn-fin-pill" style="background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(130, 24, 252, 0.25);">
-          <i data-lucide="arrow-left" style="width:16px; height:16px;"></i> Volver al Catálogo
+        <a href="/" class="fin-btn fin-btn-primary">
+          <i data-lucide="arrow-left" style="width:15px; height:15px;"></i> Catálogo
         </a>
       </div>
     </header>
 
-    <!-- Global KPI Cards -->
-    <div class="fin-stats-grid">
-      <div class="fin-stat-card">
-        <div class="fin-glow" style="background: #10b981;"></div>
-        <div style="font-size:0.82rem; font-weight:600; text-transform:uppercase; color:var(--text-muted); margin-bottom:0.35rem;">
-          Patrimonio Neto Total
-        </div>
-        <div id="statFinNetWorth" style="font-size:1.85rem; font-weight:800; color:#10b981; font-family:'Outfit',sans-serif;">$0.00</div>
-        <small style="color:var(--text-muted); font-size:0.75rem;">Suma en tiempo real de todas tus cuentas</small>
+    <!-- Smart Balance Hub (Hero) -->
+    <div class="fin-balance-hero">
+      <div>
+        <div class="fin-hero-title">Patrimonio Neto Disponible</div>
+        <div class="fin-hero-amount" id="statFinNetWorth">$0.00</div>
+        <small style="color:#94a3b8; font-size:0.75rem;">Suma en tiempo real en cuentas bancarias, efectivo y ahorros</small>
       </div>
-
-      <div class="fin-stat-card">
-        <div class="fin-glow" style="background: #8218fc;"></div>
-        <div style="font-size:0.82rem; font-weight:600; text-transform:uppercase; color:var(--text-muted); margin-bottom:0.35rem;">
-          Ganancias Totales Acumuladas
+      <div class="fin-quick-stats">
+        <div class="fin-quick-stat-item green">
+          <div style="font-size:0.72rem; color:#94a3b8; text-transform:uppercase; font-weight:700;">Ganancias Negocio</div>
+          <div id="statFinGrossProfit" style="font-size:1.25rem; font-weight:800; color:#10b981;">$0.00</div>
         </div>
-        <div id="statFinGrossProfit" style="font-size:1.85rem; font-weight:800; color:var(--primary); font-family:'Outfit',sans-serif;">$0.00</div>
-        <small style="color:var(--text-muted); font-size:0.75rem;">Margen neto recaudado del negocio</small>
-      </div>
-
-      <div class="fin-stat-card">
-        <div class="fin-glow" style="background: #f59e0b;"></div>
-        <div style="font-size:0.82rem; font-weight:600; text-transform:uppercase; color:var(--text-muted); margin-bottom:0.35rem;">
-          Meses por Pagar (Nu / Tarjetas)
+        <div class="fin-quick-stat-item amber">
+          <div style="font-size:0.72rem; color:#94a3b8; text-transform:uppercase; font-weight:700;">Meses por Pagar</div>
+          <div id="statFinInstallmentsPending" style="font-size:1.25rem; font-weight:800; color:#f59e0b;">$0.00</div>
+          <div id="statFinInstallmentsNextQuota" style="font-size:0.7rem; color:#94a3b8;">Próxima: $0.00/mes</div>
         </div>
-        <div id="statFinInstallmentsPending" style="font-size:1.85rem; font-weight:800; color:#f59e0b; font-family:'Outfit',sans-serif;">$0.00</div>
-        <div id="statFinInstallmentsNextQuota" style="font-size:0.8rem; font-weight:700; color:var(--text-muted);">Próxima mensualidad: $0.00</div>
-      </div>
-
-      <div class="fin-stat-card">
-        <div class="fin-glow" style="background: #3b82f6;"></div>
-        <div style="font-size:0.82rem; font-weight:600; text-transform:uppercase; color:var(--text-muted); margin-bottom:0.35rem;">
-          Deudas por Cobrar
+        <div class="fin-quick-stat-item blue">
+          <div style="font-size:0.72rem; color:#94a3b8; text-transform:uppercase; font-weight:700;">Me Deben (Por Cobrar)</div>
+          <div id="statFinDebtsReceivable" style="font-size:1.25rem; font-weight:800; color:#38bdf8;">$0.00</div>
+          <div id="statFinDebtsPayable" style="font-size:0.7rem; color:#ef4444;">Debo: $0.00</div>
         </div>
-        <div id="statFinDebtsReceivable" style="font-size:1.85rem; font-weight:800; color:#3b82f6; font-family:'Outfit',sans-serif;">$0.00</div>
-        <small id="statFinDebtsPayable" style="color:#ef4444; font-size:0.75rem; font-weight:600;">Por pagar: $0.00</small>
       </div>
     </div>
 
-    <!-- Section 1: Cuentas y Tarjetas Activas -->
-    <section style="margin-bottom: 2.5rem;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
-        <h2 class="fin-section-title" style="margin:0;">
-          <i data-lucide="building-2" style="color:var(--primary);"></i> Cuentas Bancarias & Efectivo
-        </h2>
-        <button id="btnFinTransferMoney" class="btn-fin-pill" style="background: var(--bg-card); color: var(--text); border: 1px solid var(--border);">
-          <i data-lucide="arrow-left-right" style="width:15px; height:15px;"></i> Transferir entre Cuentas
-        </button>
-      </div>
-      <div id="finAccountsGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;">
-        <!-- Se llena dinámicamente -->
-      </div>
-    </section>
+    <!-- Segmented Navigation Tabs (Organización Inteligente sin saturar) -->
+    <nav class="fin-tab-nav">
+      <button class="fin-tab-btn active" data-tab="tab-accounts">
+        <i data-lucide="building-2" style="width:16px; height:16px;"></i> Mis Cuentas
+      </button>
+      <button class="fin-tab-btn" data-tab="tab-installments">
+        <i data-lucide="credit-card" style="width:16px; height:16px;"></i> Meses Sin Intereses
+      </button>
+      <button class="fin-tab-btn" data-tab="tab-debts">
+        <i data-lucide="hand-coins" style="width:16px; height:16px;"></i> Deudores & Préstamos
+      </button>
+      <button class="fin-tab-btn" data-tab="tab-ledger">
+        <i data-lucide="receipt" style="width:16px; height:16px;"></i> Movimientos & Gastos
+      </button>
+    </nav>
 
-    <!-- Section 2: Meses sin Intereses & Deudas Grid -->
-    <div class="fin-grid-2">
-      <!-- Columna Izquierda: Meses sin Intereses (Nu, BBVA, etc.) -->
-      <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem; box-shadow: 0 4px 15px rgba(0,0,0,0.02);">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
-          <h3 style="margin:0; font-size:1.15rem; font-family:'Outfit',sans-serif; font-weight:700; color:var(--text); display:flex; align-items:center; gap:0.5rem;">
-            <i data-lucide="credit-card" style="color:#8218fc;"></i> Planes a Meses (Nu / Tarjetas)
-          </h3>
-          <button id="btnFinNewInstallment" class="btn-fin-pill" style="background: rgba(130, 24, 252, 0.12); color: #8218fc; padding: 4px 10px; font-size:0.8rem;">
-            + Nuevo Plan
+    <!-- Pestaña 1: Cuentas Bancarias & Efectivo -->
+    <div id="tab-accounts" class="fin-panel active">
+      <div class="fin-card">
+        <div class="fin-card-header">
+          <h2 class="fin-card-title">
+            <i data-lucide="landmark" style="color:#10b981;"></i> Billeteras, Bancos & Caja
+          </h2>
+          <button id="btnFinTransferMoney" class="fin-btn fin-btn-soft">
+            <i data-lucide="arrow-left-right" style="width:14px; height:14px;"></i> Traspaso entre Cuentas
+          </button>
+        </div>
+        <div id="finAccountsGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem;">
+          <!-- Cuentas renderizadas dinámicamente -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Pestaña 2: Meses Sin Intereses (Nu, BBVA, etc.) -->
+    <div id="tab-installments" class="fin-panel">
+      <div class="fin-card">
+        <div class="fin-card-header">
+          <div>
+            <h2 class="fin-card-title">
+              <i data-lucide="credit-card" style="color:#8218fc;"></i> Planes a Meses / Tarjetas
+            </h2>
+            <small style="color:#94a3b8; font-size:0.75rem;">Monitorea tus compras diferidas, fechas de corte y mensualidades fijas</small>
+          </div>
+          <button id="btnFinNewInstallment" class="fin-btn fin-btn-primary">
+            <i data-lucide="plus" style="width:14px; height:14px;"></i> Nuevo Plan a Meses
           </button>
         </div>
         <div id="finInstallmentsContainerList">
           <!-- Lista de mensualidades -->
         </div>
       </div>
+    </div>
 
-      <!-- Columna Derecha: Cuentas por Cobrar y Pagar (Deudas) -->
-      <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem; box-shadow: 0 4px 15px rgba(0,0,0,0.02);">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
-          <h3 style="margin:0; font-size:1.15rem; font-family:'Outfit',sans-serif; font-weight:700; color:var(--text); display:flex; align-items:center; gap:0.5rem;">
-            <i data-lucide="hand-coins" style="color:#3b82f6;"></i> Deudores y Cuentas por Cobrar
-          </h3>
-          <button id="btnFinNewDebt" class="btn-fin-pill" style="background: rgba(59, 130, 246, 0.12); color: #3b82f6; padding: 4px 10px; font-size:0.8rem;">
-            + Registrar Deuda
+    <!-- Pestaña 3: Deudores & Préstamos -->
+    <div id="tab-debts" class="fin-panel">
+      <div class="fin-card">
+        <div class="fin-card-header">
+          <div>
+            <h2 class="fin-card-title">
+              <i data-lucide="hand-coins" style="color:#38bdf8;"></i> Control de Deudores & Acreedores
+            </h2>
+            <small style="color:#94a3b8; font-size:0.75rem;">Gestiona a quién le prestaste y deudas pendientes con liquidación automática</small>
+          </div>
+          <button id="btnFinNewDebt" class="fin-btn fin-btn-primary">
+            <i data-lucide="plus" style="width:14px; height:14px;"></i> Registrar Deuda
           </button>
         </div>
         <div id="finDebtsContainerList">
@@ -232,37 +343,42 @@
       </div>
     </div>
 
-    <!-- Section 3: Historial y Libro Contable (Ledger) -->
-    <section style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem; box-shadow: 0 4px 15px rgba(0,0,0,0.02);">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; flex-wrap:wrap; gap:1rem;">
-        <h3 style="margin:0; font-size:1.15rem; font-family:'Outfit',sans-serif; font-weight:700; color:var(--text); display:flex; align-items:center; gap:0.5rem;">
-          <i data-lucide="receipt" style="color:#10b981;"></i> Libro de Movimientos Contables
-        </h3>
-        <button id="btnFinNewManualTx" class="btn-fin-pill" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">
-          + Registrar Movimiento
-        </button>
+    <!-- Pestaña 4: Movimientos Contables & Gastos Divididos -->
+    <div id="tab-ledger" class="fin-panel">
+      <div class="fin-card">
+        <div class="fin-card-header">
+          <div>
+            <h2 class="fin-card-title">
+              <i data-lucide="receipt" style="color:#10b981;"></i> Libro de Movimientos Contables
+            </h2>
+            <small style="color:#94a3b8; font-size:0.75rem;">Registro de ingresos, compras divididas (efectivo + tarjeta) y reversión atómica</small>
+          </div>
+          <button id="btnFinNewManualTx" class="fin-btn fin-btn-primary">
+            <i data-lucide="plus" style="width:14px; height:14px;"></i> + Registrar Movimiento / Gasto
+          </button>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="table" style="width:100%; border-collapse:collapse; font-size:0.88rem;">
+            <thead>
+              <tr style="border-bottom: 2px solid rgba(255,255,255,0.08); text-align:left; color:#94a3b8;">
+                <th style="padding: 10px 12px;">Fecha</th>
+                <th style="padding: 10px 12px;">Concepto / Detalle</th>
+                <th style="padding: 10px 12px;">Cuenta</th>
+                <th style="padding: 10px 12px; text-align:right;">Cobrado</th>
+                <th style="padding: 10px 12px; text-align:right;">Costo</th>
+                <th style="padding: 10px 12px; text-align:right;">Margen Neto</th>
+                <th style="padding: 10px 8px; text-align:center;">Acción</th>
+              </tr>
+            </thead>
+            <tbody id="finLedgerTbody">
+              <!-- Movimientos -->
+            </tbody>
+          </table>
+        </div>
       </div>
-      <div style="overflow-x:auto;">
-        <table class="table" style="width:100%; border-collapse:collapse; font-size:0.9rem;">
-          <thead>
-            <tr style="border-bottom: 2px solid var(--border); text-align:left; color:var(--text-muted);">
-              <th style="padding: 10px 12px;">Fecha</th>
-              <th style="padding: 10px 12px;">Concepto / Detalle</th>
-              <th style="padding: 10px 12px;">Cuenta</th>
-              <th style="padding: 10px 12px; text-align:right;">Cobrado</th>
-              <th style="padding: 10px 12px; text-align:right;">Costo</th>
-              <th style="padding: 10px 12px; text-align:right;">Ganancia Neta</th>
-              <th style="padding: 10px 8px; text-align:center;">Acción</th>
-            </tr>
-          </thead>
-          <tbody id="finLedgerTbody">
-            <!-- Movimientos -->
-          </tbody>
-        </table>
-      </div>
-    </section>
+    </div>
   </div>
 
-  <script src="/finanzas/finanzas.js?v=12"></script>
+  <script src="/finanzas/finanzas.js?v=15"></script>
 </body>
 </html>
