@@ -1,3 +1,59 @@
 {
-  "1": {}
+  "server1": {
+    "6": {
+      "resellerPrice": 380,
+      "clientPrice": 490,
+      "note": "UnlockTool 03 Months"
+    },
+    "7": {
+      "resellerPrice": 560,
+      "clientPrice": 690,
+      "note": "UnlockTool 06 Months"
+    },
+    "8": {
+      "resellerPrice": 920,
+      "clientPrice": 1050,
+      "note": "UnlockTool 12 Months"
+    },
+    "9": {
+      "resellerPrice": 1050,
+      "clientPrice": 1250,
+      "note": "TSM-Tool Pro 1 Year"
+    },
+    "10": {
+      "resellerPrice": 790,
+      "clientPrice": 950,
+      "note": "TSM-Tool Pro 6 Months"
+    },
+    "11": {
+      "resellerPrice": 540,
+      "clientPrice": 670,
+      "note": "TSM-Tool Pro 3 Months"
+    },
+    "25": {
+      "resellerPrice": 1450,
+      "clientPrice": 1690,
+      "note": "Pandora Box 1 Year Digital License"
+    },
+    "26": {
+      "resellerPrice": 1390,
+      "clientPrice": 1590,
+      "note": "Pandora Box 1 Year Renew"
+    },
+    "675": {
+      "resellerPrice": 1350,
+      "clientPrice": 1550,
+      "note": "Octoplus FRP 1 Year Digital License"
+    },
+    "676": {
+      "resellerPrice": 1020,
+      "clientPrice": 1190,
+      "note": "Octoplus FRP 6 Month Digital License"
+    },
+    "677": {
+      "resellerPrice": 580,
+      "clientPrice": 690,
+      "note": "Octoplus FRP 3 Month Digital License"
+    }
+  }
 }

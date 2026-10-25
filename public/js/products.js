@@ -601,19 +601,54 @@ function renderProductCards(items) {
         </div>
       `;
       
+      // Sugerencia de mercado para minoristas (Facebook/GSM)
+      const baseCost = realCostNum > 0 ? realCostNum : (parseFloat(p.credit) || 0);
+      let suggestedRetail = 0;
+      let suggestedReseller = 0;
+      if (baseCost > 0) {
+        // Regla de mercado de reventa GSM:
+        // Margen estable minorista (Facebook/Talleres): +$150 a +$300 sobre costo o 20-30%
+        if (baseCost <= 400) {
+          suggestedReseller = Math.round(baseCost + 30);
+          suggestedRetail = Math.round(baseCost + 120);
+        } else if (baseCost <= 900) {
+          suggestedReseller = Math.round(baseCost + 50);
+          suggestedRetail = Math.round(baseCost + 160);
+        } else if (baseCost <= 1300) {
+          suggestedReseller = Math.round(baseCost + 80);
+          suggestedRetail = Math.round(baseCost + 220);
+        } else {
+          suggestedReseller = Math.round(baseCost + 120);
+          suggestedRetail = Math.round(baseCost + 300);
+        }
+      }
+
       adminCustomPriceHtml = `
         <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
-          <h4 style="margin-top: 0; margin-bottom: 10px; color: #f472b6; font-size: 0.9rem; display: flex; align-items: center; gap: 5px;">
-            <i data-lucide="edit-3" style="width: 14px; height: 14px;"></i> Asignar Precio Manual
-          </h4>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <h4 style="margin: 0; color: #f472b6; font-size: 0.9rem; display: flex; align-items: center; gap: 5px;">
+              <i data-lucide="edit-3" style="width: 14px; height: 14px;"></i> Asignar Precio Manual
+            </h4>
+            ${suggestedRetail > 0 ? `
+              <button type="button" class="btn btn-secondary btn-apply-suggested" data-id="${escapeHtml(p.serviceid)}" data-reseller="${suggestedReseller}" data-retail="${suggestedRetail}" style="font-size: 0.72rem; padding: 2px 7px; color: #38bdf8; border-color: rgba(56,189,248,0.4);" title="Aplicar recomendación basada en mercado minorista (Facebook/GSM)">
+                💡 Sugerido: $${suggestedRetail}
+              </button>
+            ` : ''}
+          </div>
+          ${suggestedRetail > 0 ? `
+            <div style="font-size: 0.73rem; color: #94a3b8; margin-bottom: 8px; display: flex; justify-content: space-between; background: rgba(56,189,248,0.06); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(56,189,248,0.15);">
+              <span>🛒 Ref. Mercado / FB: <strong>$${suggestedRetail} MXN</strong></span>
+              <span>💼 Reseller Web: <strong>$${suggestedReseller} MXN</strong></span>
+            </div>
+          ` : ''}
           <form class="custom-price-form" data-id="${escapeHtml(p.serviceid)}" style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: end; width: 100%;">
             <div class="input-group" style="margin-bottom: 0; min-width: 0;">
               <label style="font-size: 0.75rem; margin-bottom: 3px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Precio Reseller</label>
-              <input type="number" step="0.01" class="custom-reseller-input admin-price-input" data-id="${escapeHtml(p.serviceid)}" data-type="reseller" value="${p.rawItem._CUSTOM_RESELLER !== undefined ? escapeHtml(p.rawItem._CUSTOM_RESELLER) : ''}" placeholder="${escapeHtml(p.credit)}" style="padding: 6px; font-size: 0.85rem; width: 100%; box-sizing: border-box;" required>
+              <input type="number" step="0.01" class="custom-reseller-input admin-price-input" data-id="${escapeHtml(p.serviceid)}" data-type="reseller" value="${p.rawItem._CUSTOM_RESELLER !== undefined ? escapeHtml(p.rawItem._CUSTOM_RESELLER) : ''}" placeholder="${suggestedReseller || escapeHtml(p.credit)}" style="padding: 6px; font-size: 0.85rem; width: 100%; box-sizing: border-box;" required>
             </div>
             <div class="input-group" style="margin-bottom: 0; min-width: 0;">
-              <label style="font-size: 0.75rem; margin-bottom: 3px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Precio Cliente</label>
-              <input type="number" step="0.01" class="custom-client-input admin-price-input" data-id="${escapeHtml(p.serviceid)}" data-type="client" value="${p.rawItem._CUSTOM_CLIENT !== undefined ? escapeHtml(p.rawItem._CUSTOM_CLIENT) : ''}" placeholder="${escapeHtml(p.rawItem._CLIENT_PRICE || '0')}" style="padding: 6px; font-size: 0.85rem; width: 100%; box-sizing: border-box;" required>
+              <label style="font-size: 0.75rem; margin-bottom: 3px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Precio Cliente / FB</label>
+              <input type="number" step="0.01" class="custom-client-input admin-price-input" data-id="${escapeHtml(p.serviceid)}" data-type="client" value="${p.rawItem._CUSTOM_CLIENT !== undefined ? escapeHtml(p.rawItem._CUSTOM_CLIENT) : ''}" placeholder="${suggestedRetail || escapeHtml(p.rawItem._CLIENT_PRICE || '0')}" style="padding: 6px; font-size: 0.85rem; width: 100%; box-sizing: border-box;" required>
             </div>
             <div style="display: flex; gap: 5px;">
               <button type="submit" class="btn btn-primary" style="padding: 6px 10px; font-size: 0.8rem;" title="Guardar Precio Fijo">
@@ -793,6 +828,24 @@ function renderProductCards(items) {
           }
         } catch (err) {
           alert('Error de conexión.');
+        }
+      });
+    });
+
+    // Click listener para sugerencias recomendadas de mercado minorista
+    document.querySelectorAll('.btn-apply-suggested').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const serviceId = btn.getAttribute('data-id');
+        const rPrice = btn.getAttribute('data-reseller');
+        const cPrice = btn.getAttribute('data-retail');
+        const form = document.querySelector(`.custom-price-form[data-id="${serviceId}"]`);
+        if (form) {
+          const rInput = form.querySelector('.custom-reseller-input');
+          const cInput = form.querySelector('.custom-client-input');
+          if (rInput) rInput.value = rPrice;
+          if (cInput) cInput.value = cPrice;
+          btn.style.background = 'rgba(56,189,248,0.25)';
+          btn.textContent = '✅ Aplicado';
         }
       });
     });
