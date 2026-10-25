@@ -256,28 +256,36 @@ exports.processOrder = async (req, res) => {
               'Content-Type': 'application/x-www-form-urlencoded',
               'User-Agent': 'Dhru-Fusion-Web-Client/1.0'
           }, 
-          timeout: 20000
+          httpsAgent: ipv4Agent,
+          timeout: 25000
         });
         return response.data;
       };
 
-      // If resolvedImei contains letters (e.g. Apple Serial 'FFMYJN6EHFLR'), prioritize SN and BOTH tags!
+      // Si es numérico estándar (15 dígitos), enviar estrictamente IMEI_ONLY primero
+      // Si tiene letras (Serial Apple), probar IMEI_ONLY, SN_ONLY, SERIAL_ONLY y luego combinados
       const paramModes = isAlphaSerial 
-        ? ['SN_ONLY', 'BOTH', 'IMEI_ONLY', 'SERIAL_ONLY']
-        : ['IMEI_ONLY', 'BOTH', 'SN_ONLY'];
+        ? ['IMEI_ONLY', 'SN_ONLY', 'SERIAL_ONLY', 'BOTH']
+        : ['IMEI_ONLY', 'SN_ONLY', 'BOTH'];
 
       const combinations = [];
-      // Only try secondary action if the provider or service actually supports it
       const shouldTrySecondary = (serviceType === 'SERVER' || serviceType === 'server');
       
       for (const mode of paramModes) {
+        // 1. Probar siempre llamada estándar con XML limpio base64
         combinations.push({ action: primaryAction, xml: customXmlBase64, mode });
-        if (customXmlRaw !== customXmlBase64) {
+        // 2. Probar sin campos custom si los hubiere
+        if (customXmlBase64) {
+          combinations.push({ action: primaryAction, xml: '', mode });
+        }
+        // 3. Probar con XML raw
+        if (customXmlRaw && customXmlRaw !== customXmlBase64) {
           combinations.push({ action: primaryAction, xml: customXmlRaw, mode });
         }
         if (shouldTrySecondary) {
           combinations.push({ action: secondaryAction, xml: customXmlBase64, mode });
-          if (customXmlRaw !== customXmlBase64) {
+          if (customXmlBase64) combinations.push({ action: secondaryAction, xml: '', mode });
+          if (customXmlRaw && customXmlRaw !== customXmlBase64) {
             combinations.push({ action: secondaryAction, xml: customXmlRaw, mode });
           }
         }
