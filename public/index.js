@@ -526,20 +526,20 @@ async function updateAccountCredits() {
             available: parseFloat(available)
           };
           creditsBalanceText.innerHTML = `
-            <div style="display: flex; gap: 12px; font-size: 0.8rem; text-align: left; align-items: center;">
-              <div style="display: flex; flex-direction: column;">
-                <span style="color: #10b981; font-weight: 700; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px;">Real</span>
-                <span style="color: white;">$${rawCredits.toFixed(2)} <span style="font-size:0.7rem;color:rgba(255,255,255,0.5)">MXN</span></span>
+            <div style="display: flex; gap: 8px; font-size: 0.78rem; text-align: left; align-items: center; white-space: nowrap;">
+              <div style="display: flex; flex-direction: column; line-height: 1.1;">
+                <span style="color: #10b981; font-weight: 700; font-size: 0.65rem; text-transform: uppercase;">Real</span>
+                <span style="color: white; font-weight: 600;">$${rawCredits.toFixed(2)}</span>
               </div>
-              <div style="width: 1px; height: 24px; background: rgba(255,255,255,0.15);"></div>
-              <div style="display: flex; flex-direction: column;">
-                <span style="color: #c4b5fd; font-weight: 700; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px;">Cedido</span>
-                <span style="color: white;">$${assigned} <span style="font-size:0.7rem;color:rgba(255,255,255,0.5)">MXN</span></span>
+              <div style="width: 1px; height: 18px; background: rgba(255,255,255,0.15);"></div>
+              <div style="display: flex; flex-direction: column; line-height: 1.1;">
+                <span style="color: #c4b5fd; font-weight: 700; font-size: 0.65rem; text-transform: uppercase;">Cedido</span>
+                <span style="color: white; font-weight: 600;">$${assigned}</span>
               </div>
-              <div style="width: 1px; height: 24px; background: rgba(255,255,255,0.15);"></div>
-              <div style="display: flex; flex-direction: column;">
-                <span style="color: #22d3ee; font-weight: 700; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px;">Disp</span>
-                <span style="color: white;">$${available} <span style="font-size:0.7rem;color:rgba(255,255,255,0.5)">MXN</span></span>
+              <div style="width: 1px; height: 18px; background: rgba(255,255,255,0.15);"></div>
+              <div style="display: flex; flex-direction: column; line-height: 1.1;">
+                <span style="color: #22d3ee; font-weight: 700; font-size: 0.65rem; text-transform: uppercase;">Disp</span>
+                <span style="color: white; font-weight: 600;">$${available}</span>
               </div>
             </div>
           `;

@@ -98,15 +98,15 @@ h1, h2, h3, h4 { color: var(--text-primary); font-family: var(--font-display); f
 
 /* Header Marquee */
 .header-marquee-container {
-  flex: 1 1 240px;
-  min-width: 180px;
-  max-width: 100%;
+  flex: 0 1 360px;
+  min-width: 120px;
+  max-width: 420px;
   overflow: hidden;
   position: relative;
-  height: 48px;
+  height: 44px;
   display: flex;
   align-items: center;
-  margin: 0 0.75rem;
+  margin: 0 0.5rem;
   background: rgba(0, 0, 0, 0.45);
   border: 1px solid rgba(56, 189, 248, 0.25);
   border-radius: var(--radius-sm);
@@ -185,12 +185,15 @@ h1, h2, h3, h4 { color: var(--text-primary); font-family: var(--font-display); f
 .header-right-meta { 
   display: flex; 
   align-items: center; 
-  gap: 0.45rem; 
-  flex-wrap: nowrap; 
+  gap: 0.35rem; 
+  flex-wrap: wrap; 
   justify-content: flex-end; 
+  max-width: 100%;
 }
 .header-right-meta .btn {
   white-space: nowrap;
+  padding: 6px 10px;
+  font-size: 0.8rem;
 }
 .connection-status { 
   display: inline-flex; 
