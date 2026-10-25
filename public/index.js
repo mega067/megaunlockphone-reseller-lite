@@ -2127,20 +2127,60 @@ orderForm.addEventListener('submit', async (e) => {
 // Ticket Generator Modal & Html2Canvas Logic
 // -------------------------------------------------------------
 
-function applyTicketSettings() {
+async function applyTicketSettings() {
   if (typeof customTicketSettings !== 'undefined' && customTicketSettings) {
     const dynamicLogo = document.getElementById('ticketDynamicLogo');
     const previewLogo = document.getElementById('configLogoPreview');
     if (dynamicLogo) {
       dynamicLogo.style.display = 'block';
-      dynamicLogo.crossOrigin = 'anonymous';
+      
+      // Resuelve la URL del logo con cache-buster obligatorio
+      let targetLogoUrl = '';
       if (previewLogo && previewLogo.src && previewLogo.src.startsWith('data:image')) {
-        // Use local base64 preview immediately for perfect sync
-        dynamicLogo.src = previewLogo.src;
+        targetLogoUrl = previewLogo.src;
       } else if (customTicketSettings.logoExt) {
-        dynamicLogo.src = `/logos/${authUserId}${customTicketSettings.logoExt}?t=${Date.now()}`;
+        targetLogoUrl = `/logos/${authUserId}${customTicketSettings.logoExt}?t=${Date.now()}`;
       } else {
-        dynamicLogo.src = '/favicon-192.png';
+        targetLogoUrl = `/favicon-192.png?v=${Date.now()}`;
+      }
+
+      // Para iOS Safari / WebKit: Las imágenes dentro de SVG <foreignObject> fallan si no están en Base64 inline.
+      // Convertimos el recurso a Data URL antes de capturar el DOM con htmlToImage.
+      if (targetLogoUrl.startsWith('data:image')) {
+        dynamicLogo.src = targetLogoUrl;
+      } else {
+        try {
+          const resp = await fetch(targetLogoUrl, { cache: 'no-store' });
+          if (resp.ok) {
+            const blob = await resp.blob();
+            const base64Data = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result);
+              reader.onerror = reject;
+              reader.readAsDataURL(blob);
+            });
+            dynamicLogo.src = base64Data;
+          } else {
+            dynamicLogo.src = targetLogoUrl;
+          }
+        } catch (fetchErr) {
+          console.warn('[Ticket Logo Preload Fallback]', fetchErr);
+          dynamicLogo.src = targetLogoUrl;
+        }
+      }
+
+      // Asegurar decodificación en memoria antes de renderizar (evita logo en blanco en móviles)
+      try {
+        if (dynamicLogo.decode) {
+          await dynamicLogo.decode();
+        } else if (!dynamicLogo.complete) {
+          await new Promise((resolve) => {
+            dynamicLogo.onload = resolve;
+            dynamicLogo.onerror = resolve;
+          });
+        }
+      } catch (decodeErr) {
+        console.warn('[Ticket Logo Decode Warning]', decodeErr);
       }
     }
     
@@ -2529,8 +2569,8 @@ btnGenerateTicketFinal.addEventListener('click', async () => {
       }
     }
 
-    // Bring template to view momentarily
-    applyTicketSettings();
+    // Bring template to view momentarily and wait for logo preloading/decoding
+    await applyTicketSettings();
     ticketTemplateContainer.style.opacity = '1';
 
     // Copy to Clipboard (Modern approach with Promise to preserve user gesture)
@@ -2561,11 +2601,15 @@ btnGenerateTicketFinal.addEventListener('click', async () => {
         return blob;
       };
       
-      // This tells the browser: "We are putting a promise in the clipboard right now due to a user click"
-      const clipboardItem = new ClipboardItem({ 'image/png': makeImagePromise() });
-      await navigator.clipboard.write([clipboardItem]);
-      
-      btnGenerateTicketFinal.innerHTML = '<i data-lucide="check"></i><span>¡Copiado!</span>';
+      // Check if ClipboardItem & write are supported (iOS Safari requires graceful fallback)
+      if (navigator.clipboard && navigator.clipboard.write && typeof ClipboardItem !== 'undefined') {
+        const clipboardItem = new ClipboardItem({ 'image/png': makeImagePromise() });
+        await navigator.clipboard.write([clipboardItem]);
+        btnGenerateTicketFinal.innerHTML = '<i data-lucide="check"></i><span>¡Copiado!</span>';
+      } else {
+        await makeImagePromise();
+        btnGenerateTicketFinal.innerHTML = '<i data-lucide="check"></i><span>¡Listo!</span>';
+      }
       lucide.createIcons();
 
       // Registro automático en el Gestor de Finanzas / Punto de Venta (POS) - EXCLUSIVO ADMIN
@@ -2741,7 +2785,7 @@ if (btnGenerateCustomTicket) {
         ticketPassVal.textContent = customTicketPass.value.trim() || '---';
       }
 
-      applyTicketSettings();
+      await applyTicketSettings();
       ticketTemplateContainer.style.opacity = '1';
 
       const makeImagePromise = async () => {
@@ -2755,10 +2799,14 @@ if (btnGenerateCustomTicket) {
         return blob;
       };
       
-      const clipboardItem = new ClipboardItem({ 'image/png': makeImagePromise() });
-      await navigator.clipboard.write([clipboardItem]);
-      
-      btnGenerateCustomTicket.innerHTML = '<i data-lucide="check"></i><span>¡Copiado!</span>';
+      if (navigator.clipboard && navigator.clipboard.write && typeof ClipboardItem !== 'undefined') {
+        const clipboardItem = new ClipboardItem({ 'image/png': makeImagePromise() });
+        await navigator.clipboard.write([clipboardItem]);
+        btnGenerateCustomTicket.innerHTML = '<i data-lucide="check"></i><span>¡Copiado!</span>';
+      } else {
+        await makeImagePromise();
+        btnGenerateCustomTicket.innerHTML = '<i data-lucide="check"></i><span>¡Listo!</span>';
+      }
       lucide.createIcons();
       
       // Cierra el modal de custom ticket y muestra el preview normal para que lo vean
