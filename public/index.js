@@ -414,8 +414,8 @@ function checkPersistedSession() {
     // Enrutamiento inteligente por Hash (#admin, #finanzas, #history)
     if (window.location.hash === '#admin' && authRole === 'admin' && tabAdmin) {
       setTimeout(() => tabAdmin.click(), 100);
-    } else if (window.location.hash === '#finanzas' && authRole === 'admin' && tabFinance) {
-      setTimeout(() => tabFinance.click(), 100);
+    } else if (window.location.hash === '#finanzas' && authRole === 'admin') {
+      window.location.href = '/finanzas';
     } else if (window.location.hash === '#history' && tabHistory) {
       setTimeout(() => tabHistory.click(), 100);
     }
@@ -2885,13 +2885,7 @@ if (btnAdminManage) {
 const btnAdminFinTop = document.getElementById('btnAdminFinanceTop');
 if (btnAdminFinTop) {
   btnAdminFinTop.addEventListener('click', () => {
-    if (tabFinance) {
-      tabFinance.click();
-    } else if (tabAdmin) {
-      tabAdmin.click();
-    }
-    const finSec = document.getElementById('financeSection');
-    if (finSec) setTimeout(() => finSec.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+    window.location.href = '/finanzas';
   });
 }
 

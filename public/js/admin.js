@@ -1089,16 +1089,7 @@ if (btnAdminTabGroups) {
 
 if (btnAdminTabFinance) {
   btnAdminTabFinance.addEventListener('click', () => {
-    const tabFin = document.getElementById('tabFinance');
-    if (tabFin) {
-      tabFin.click();
-      return;
-    }
-    document.querySelectorAll('.admin-sub-tab').forEach(t => t.classList.remove('active'));
-    btnAdminTabFinance.classList.add('active');
-    const finSec = document.getElementById('financeSection');
-    if (finSec) finSec.classList.remove('hidden');
-    loadFinanceDashboard();
+    window.location.href = '/finanzas';
   });
 }
 

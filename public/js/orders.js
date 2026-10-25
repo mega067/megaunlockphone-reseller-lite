@@ -468,42 +468,11 @@ if (tabAdmin) {
   });
 }
 
-// TAB INDEPENDIENTE: FINANZAS Y GANANCIAS (PANTALLA COMPLETA LIMPIA PARA NÚMEROS)
+// TAB INDEPENDIENTE: FINANZAS Y GANANCIAS (PORTAL LIMPIO EN PÁGINA APARTE)
 const tabFinanceBtn = document.getElementById('tabFinance');
 if (tabFinanceBtn) {
-  tabFinanceBtn.addEventListener('click', async () => {
-    tabFinanceBtn.classList.add('active');
-    if (tabCatalog) tabCatalog.classList.remove('active');
-    if (tabHistory) tabHistory.classList.remove('active');
-    if (tabAdmin) tabAdmin.classList.remove('active');
-    if (tabProfile) tabProfile.classList.remove('active');
-
-    const financeSection = document.getElementById('financeSection');
-    if (financeSection) financeSection.classList.remove('hidden');
-
-    if (productsSection) productsSection.classList.add('hidden');
-    if (historySection) historySection.classList.add('hidden');
-    if (adminSection) adminSection.classList.add('hidden');
-    if (profileSection) profileSection.classList.add('hidden');
-    const rechargeSection = document.getElementById('rechargeSection');
-    if (rechargeSection) rechargeSection.classList.add('hidden');
-    if (typeof rechargesSection !== 'undefined' && rechargesSection) rechargesSection.classList.add('hidden');
-
-    // Ocultar barra de servidores para evitar distracciones innecesarias al hacer números
-    const ssc = document.getElementById('serverSwitchContainer');
-    if (ssc) ssc.classList.add('hidden');
-
-    // Ocultar botón flotante de guardar precios en finanzas
-    const bsp = document.getElementById('btnBulkSavePrices');
-    if (bsp) bsp.classList.add('hidden');
-    document.body.classList.add('viewing-finance');
-
-    if (typeof loadFinanceDashboard === 'function') {
-      await loadFinanceDashboard();
-    }
-    setTimeout(() => {
-      if (financeSection) financeSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 50);
+  tabFinanceBtn.addEventListener('click', () => {
+    window.location.href = '/finanzas';
   });
 }
 
