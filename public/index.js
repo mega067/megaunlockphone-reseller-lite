@@ -314,6 +314,8 @@ function checkPersistedSession() {
       const btnAdminFinTop = document.getElementById('btnAdminFinanceTop');
       if (btnAdminFinTop) btnAdminFinTop.classList.remove('hidden');
       if (typeof btnAdminCoupons !== 'undefined' && btnAdminCoupons) btnAdminCoupons.classList.remove('hidden');
+      const btnFlyerGen = document.getElementById('btnFlyerPromptGen');
+      if (btnFlyerGen) btnFlyerGen.classList.remove('hidden');
       if (btnImportOrder) btnImportOrder.classList.remove('hidden');
       if (btnBulkSavePrices) btnBulkSavePrices.classList.remove('hidden');
       if (btnCustomTicket) btnCustomTicket.classList.remove('hidden');
@@ -427,6 +429,8 @@ function checkPersistedSession() {
     const btnAdminFinTop = document.getElementById('btnAdminFinanceTop');
     if (btnAdminFinTop) btnAdminFinTop.classList.add('hidden');
     if (typeof btnAdminCoupons !== 'undefined' && btnAdminCoupons) btnAdminCoupons.classList.add('hidden');
+    const btnFlyerGen = document.getElementById('btnFlyerPromptGen');
+    if (btnFlyerGen) btnFlyerGen.classList.add('hidden');
     if (typeof btnCustomTicket !== 'undefined' && btnCustomTicket) btnCustomTicket.classList.add('hidden');
     if (typeof btnImportOrder !== 'undefined' && btnImportOrder) btnImportOrder.classList.add('hidden');
     if (typeof btnBulkSavePrices !== 'undefined' && btnBulkSavePrices) btnBulkSavePrices.classList.add('hidden');

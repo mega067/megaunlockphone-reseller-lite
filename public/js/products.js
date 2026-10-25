@@ -758,6 +758,11 @@ function renderProductCards(items) {
         <button type="button" class="btn-action-fav" data-id="${escapeHtml(p.serviceid)}" title="Favorito">
           <i data-lucide="star" style="${favorites.includes(String(p.serviceid)) ? 'color: gold; fill: gold;' : ''}"></i>
         </button>
+        ${(authRole === 'admin' || authRole === 'colaborador') ? `
+          <button type="button" class="btn-action-flyer" data-id="${escapeHtml(p.serviceid)}" title="Añadir a Flyer Publicitario con IA" style="background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; border-radius: 6px; padding: 6px 8px; cursor: pointer;">
+            <i data-lucide="sparkles" style="width: 14px; height: 14px;"></i>
+          </button>
+        ` : ''}
         <button type="button" class="btn-action-details" data-id="${escapeHtml(p.serviceid)}">
           <i data-lucide="info"></i> Detalles
         </button>
@@ -811,6 +816,15 @@ function renderProductCards(items) {
         const isHidden = extraDiv.classList.contains('hidden');
         btn.innerHTML = isHidden ? '<i data-lucide="info"></i> Detalles' : '<i data-lucide="chevron-up"></i> Ocultar';
         lucide.createIcons();
+      }
+    });
+  });
+
+  document.querySelectorAll('.btn-action-flyer').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const serviceId = btn.getAttribute('data-id');
+      if (window.MegaApp && window.MegaApp.FlyerPrompt) {
+        window.MegaApp.FlyerPrompt.addProductDirect(serviceId);
       }
     });
   });

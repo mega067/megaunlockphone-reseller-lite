@@ -124,6 +124,11 @@
           <span>Promos</span>
         </button>
 
+        <button type="button" class="btn btn-secondary btn-small hidden" id="btnFlyerPromptGen" style="background: rgba(56, 189, 248, 0.18); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8;" title="Generador de Prompts para Flyers con Gemini">
+          <i data-lucide="sparkles"></i>
+          <span style="font-weight: 700;">Flyer AI</span>
+        </button>
+
         <button type="button" class="btn btn-secondary btn-small hidden" id="btnWhatsappBot" style="background: rgba(37, 211, 102, 0.15); border: 1px solid rgba(37, 211, 102, 0.3); color: #25D366;" title="Bot de WhatsApp">
           <i data-lucide="message-circle"></i>
           <span style="font-weight: 700;">BOT</span>
@@ -2485,6 +2490,88 @@
 
 
 
+  <!-- Flyer AI Prompt Generator Modal -->
+  <div id="flyerPromptModal" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1050; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(8px);">
+    <div style="background: #0f172a; border: 1px solid rgba(56,189,248,0.3); border-radius: 16px; width: 95%; max-width: 850px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.8);">
+      <!-- Header -->
+      <div style="padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; background: linear-gradient(90deg, rgba(56,189,248,0.15), rgba(236,72,153,0.15));">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 34px; height: 34px; border-radius: 8px; background: rgba(56,189,248,0.2); display: flex; align-items: center; justify-content: center; color: #38bdf8;">
+            <i data-lucide="sparkles" style="width: 20px; height: 20px;"></i>
+          </div>
+          <div>
+            <h3 style="margin: 0; color: #fff; font-size: 1.15rem; font-weight: 700;">Generador de Prompts para Flyers con Gemini</h3>
+            <p style="margin: 0; font-size: 0.75rem; color: #94a3b8;">Crea anuncios publicitarios profesionales seleccionando productos con precios y slot de QR inviolable</p>
+          </div>
+        </div>
+        <button id="btnCloseFlyerPromptModal" type="button" style="background: none; border: none; color: #94a3b8; cursor: pointer; padding: 6px; border-radius: 6px;" title="Cerrar"><i data-lucide="x"></i></button>
+      </div>
+
+      <!-- Body -->
+      <div style="padding: 20px 24px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 16px;">
+        <!-- Selector de productos -->
+        <div>
+          <label style="font-size: 0.85rem; font-weight: 700; color: #38bdf8; display: block; margin-bottom: 6px;">
+            1. Selecciona o busca productos para incluir en el flyer:
+          </label>
+          <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+            <input type="text" id="flyerProductSearchInput" placeholder="Buscar por nombre o ID (ej: UnlockTool, TSM, Pandora, 6H)..." style="flex: 1; background: #1e293b; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 8px 12px; color: #fff; font-size: 0.85rem;">
+            <button type="button" id="btnClearFlyerSelection" class="btn btn-secondary btn-small" style="font-size: 0.75rem;">Limpiar selección</button>
+          </div>
+          <div id="flyerProductSearchResults" style="max-height: 140px; overflow-y: auto; background: #090e17; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 6px; display: flex; flex-direction: column; gap: 4px;">
+            <!-- Resultados dinámicos -->
+          </div>
+        </div>
+
+        <!-- Productos Seleccionados -->
+        <div>
+          <label style="font-size: 0.82rem; font-weight: 700; color: #f472b6; display: flex; justify-content: space-between; margin-bottom: 6px;">
+            <span>Productos en el anuncio:</span>
+            <span id="flyerSelectedCount" style="color: #94a3b8; font-weight: normal;">0 seleccionados</span>
+          </label>
+          <div id="flyerSelectedList" style="display: flex; flex-wrap: wrap; gap: 6px; min-height: 42px; background: rgba(0,0,0,0.25); border: 1px dashed rgba(255,255,255,0.15); border-radius: 8px; padding: 8px;">
+            <span style="font-size: 0.8rem; color: #64748b;">No has seleccionado productos. Elige arriba o pulsa en cualquier tarjeta de la web.</span>
+          </div>
+        </div>
+
+        <!-- Configuración de Reglas y QR -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: rgba(56,189,248,0.05); border: 1px solid rgba(56,189,248,0.2); border-radius: 8px; padding: 12px;">
+          <div>
+            <label style="font-size: 0.78rem; font-weight: 700; color: #38bdf8; display: block; margin-bottom: 4px;">Formato de Imagen</label>
+            <select id="flyerAspectRatio" style="width: 100%; background: #1e293b; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 6px 10px; color: #fff; font-size: 0.8rem;">
+              <option value="3:4" selected>Vertical 3:4 (Facebook / Post largo)</option>
+              <option value="9:16">Vertical 9:16 (Historias / Reels / WhatsApp Status)</option>
+              <option value="1:1">Cuadrado 1:1 (Instagram / Post tradicional)</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size: 0.78rem; font-weight: 700; color: #38bdf8; display: block; margin-bottom: 4px;">Medidas Exactas de Espacio para QR</label>
+            <div style="font-size: 0.75rem; color: #cbd5e1; background: #090e17; padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);">
+              📐 <strong>Cuadro neón vacío:</strong> 190x190 px en esquina inferior izquierda (con margen 40px)
+            </div>
+          </div>
+        </div>
+
+        <!-- Prompt Generado -->
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label style="font-size: 0.82rem; font-weight: 700; color: #34d399;">Prompt Maestro Listo para Gemini:</label>
+            <button type="button" id="btnCopyFlyerPrompt" class="btn btn-primary btn-small" style="padding: 4px 12px; font-size: 0.78rem; display: flex; align-items: center; gap: 5px;">
+              <i data-lucide="copy" style="width: 14px; height: 14px;"></i> Copiar Prompt
+            </button>
+          </div>
+          <textarea id="flyerGeneratedPrompt" rows="8" readonly style="width: 100%; background: #090e17; border: 1px solid rgba(52,211,153,0.3); border-radius: 8px; padding: 12px; color: #e2e8f0; font-family: monospace; font-size: 0.8rem; resize: vertical; box-sizing: border-box;"></textarea>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div style="padding: 12px 24px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3);">
+        <span style="font-size: 0.75rem; color: #94a3b8;">💡 El prompt prohíbe explícitamente a Gemini dibujar QRs falsos y reserva el slot con medidas exactas.</span>
+        <button type="button" id="btnApplyFlyerDefaults" class="btn btn-secondary btn-small" style="font-size: 0.78rem;">Cargar UnlockTool + TSM</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Admin Floating Bulk Save Button -->
   <button id="btnBulkSavePrices" class="btn btn-primary hidden" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 100; box-shadow: 0 4px 15px rgba(236,72,153,0.4); border-radius: 50px; padding: 12px 24px; font-weight: bold; display: flex; align-items: center; gap: 8px;">
     <i data-lucide="save"></i> <span class="bulk-btn-text">Guardar Todos los Precios</span>
@@ -3141,6 +3228,7 @@
   <script src="js/orders.js?v=90" defer></script>
   <script src="js/warnings.js?v=90" defer></script>
   <script src="js/admin.js?v=90" defer></script>
+  <script src="js/flyerPrompt.js?v=91" defer></script>
     <div class="modal-overlay hidden" id="globalLoadingOverlay" style="z-index: 100000; flex-direction: column; text-align: center;">
       <div class="icon-spin" style="color: #3b82f6; margin-bottom: 1rem;">
         <i data-lucide="refresh-cw" style="width: 64px; height: 64px;"></i>
