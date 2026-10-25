@@ -5,7 +5,7 @@ const USERS_FILE = path.join(DATA_DIR, 'users.json');
 
 async function admin(context) {
     const { sock, msg, remoteJid, firstWord, args, text, sessionManager, wusers, hasMedia } = context;
-    const linkedUserId = wusers[remoteJid];
+    const linkedUserId = context.linkedUserId || wusers[remoteJid];
     const users = readDB(USERS_FILE) || [];
     const user = users.find(u => u.id === linkedUserId);
 

@@ -7,7 +7,7 @@ const WHATSAPP_SETTINGS_FILE = path.join(DATA_DIR, 'whatsapp_settings.json');
 
 async function otros(context) {
     const { sock, remoteJid, firstWord, text, args, msg, isGroup, wusers, wsettings } = context;
-    const linkedUserId = wusers[remoteJid];
+    const linkedUserId = context.linkedUserId || wusers[remoteJid];
     const users = readDB(USERS_FILE) || [];
     const user = users.find(u => u.id === linkedUserId);
 
@@ -537,21 +537,27 @@ async function otros(context) {
         if (user && user.role === 'admin') {
             helpText += `\n\n👑 *CONSOLA DE ADMINISTRADOR* 🛡️\n` +
             `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-            `• */msg <ID|Usuario> <Texto>* ➔ Mensaje a usuario (admite fotos/videos)\n` +
-            `• */msgall <Texto>* ➔ Difusión masiva a TODOS los clientes (fotos/videos)\n` +
-            `• */msggrup <Texto>* ➔ Anuncio al grupo oficial (fotos/videos)\n` +
-            `• */addmoney <ID> <Servidor> <Monto>* ➔ Recargar saldo a revendedor\n` +
-            `• */pago <Monto> [Concepto]* ➔ Registrar gasto (comida, pasaje, etc.) con selección de cuenta\n` +
-            `• */recibido <Monto> [Concepto]* ➔ Registrar dinero recibido a cuenta o efectivo\n` +
-            `• */mesada <Monto>* ➔ Registrar mesada o apoyo para pasajes/comida\n` +
-            `• */deudores* ➔ Ver lista de personas que te deben y a quiénes les debes\n` +
-            `• */deudor <Nombre> <Monto>* ➔ Registrar a alguien que te debe dinero\n` +
-            `• */debo <Nombre> <Monto>* ➔ Registrar a quién le debes dinero\n` +
+            `📨 *MENSAJERÍA & DIFUSIÓN (Directo o con Menú):*\n` +
+            `• *msg* ➔ Abre el menú guiado con lista de tus clientes para elegir a quién escribir\n` +
+            `• *msg <ID|Usuario> <Texto>* ➔ Envía mensaje directo (o adjunta foto/video con este texto)\n` +
+            `• *msgall* ➔ Abre asistente para redactar difusión general a toda tu clientela\n` +
+            `• *msgall <Texto>* ➔ Envía comunicado masivo a TODOS los clientes registrados\n` +
+            `• *msggrup <Texto>* ➔ Publica anuncio oficial en el grupo de WhatsApp\n\n` +
+            `💰 *SALDOS & CRÉDITOS:*\n` +
+            `• */addmoney <ID> <Servidor 1|2|3> <Monto>* ➔ Recargar saldo a revendedor\n` +
+            `• */setprice* ➔ Modificador de márgenes y precios\n\n` +
+            `📊 *FINANZAS & GASTOS:*\n` +
+            `• */pago <Monto> [Concepto]* ➔ Registrar gasto (comida, pasaje, etc.)\n` +
+            `• */recibido <Monto> [Concepto]* ➔ Registrar dinero recibido en efectivo o banco\n` +
+            `• */mesada <Monto>* ➔ Registrar apoyo de pasaje o comida uni\n` +
+            `• */deudores* ➔ Ver quién te debe y a quién le debes\n` +
+            `• */deudor <Nombre> <Monto>* ➔ Registrar persona que te debe dinero\n` +
+            `• */debo <Nombre> <Monto>* ➔ Registrar dinero que debes pagar\n` +
             `• */abono <Nombre> <Monto>* ➔ Registrar abono o liquidación de deuda\n` +
-            `• */finanzas* (o */ganancias*) ➔ Resumen contable de bolsillo y bancos\n` +
-            `• */setprice* ➔ Modificador de márgenes y precios\n` +
-            `• */historial* ➔ Últimos 10 pedidos globales\n` +
-            `• */sync* ➔ Forzar sincronización de pedidos con proveedores\n` +
+            `• */finanzas* (o */ganancias*) ➔ Resumen contable de patrimonio\n\n` +
+            `🔄 *SISTEMA & PEDIDOS:*\n` +
+            `• */historial* ➔ Ver últimas órdenes globales de todos los clientes\n` +
+            `• */sync* ➔ Forzar sincronización de pedidos con servidores proveedores\n` +
             `━━━━━━━━━━━━━━━━━━━━━━━━━━`;
         } else {
             helpText += `\n_💡 Tip: Puedes adjuntarme el comprobante o consultar tu IMEI directamente en cualquier momento._`;

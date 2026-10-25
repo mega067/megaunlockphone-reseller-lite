@@ -432,12 +432,22 @@ async function connectToWhatsApp() {
         wusers = readDB(WHATSAPP_USERS_FILE) || {};
         wsettings = readDB(WHATSAPP_SETTINGS_FILE) || { adminGroupId: null };
         
-        // Auto-vincular por número de teléfono si el remitente no está registrado aún
+        // Auto-vincular y resolver ID de usuario vinculado (soportando @lid y @s.whatsapp.net)
         const rawDigits = remoteJid.split('@')[0].replace(/\D/g, '');
-        let isUserLinked = !!(wusers[remoteJid] || Object.keys(wusers).some(k => {
-            const kDigits = k.split('@')[0].replace(/\D/g, '');
-            return kDigits === rawDigits || kDigits.endsWith(rawDigits) || rawDigits.endsWith(kDigits);
-        }));
+        let resolvedLinkedUserId = wusers[remoteJid] || null;
+
+        if (!resolvedLinkedUserId) {
+            for (const [key, val] of Object.entries(wusers)) {
+                const kDigits = key.split('@')[0].replace(/\D/g, '');
+                if (kDigits === rawDigits || (rawDigits.length >= 10 && kDigits.endsWith(rawDigits)) || (kDigits.length >= 10 && rawDigits.endsWith(kDigits))) {
+                    resolvedLinkedUserId = val;
+                    wusers[remoteJid] = val; // Mapear alias directo
+                    break;
+                }
+            }
+        }
+
+        let isUserLinked = !!resolvedLinkedUserId;
 
         if (!isUserLinked && !isGroup && rawDigits.length >= 10) {
             try {
@@ -452,6 +462,7 @@ async function connectToWhatsApp() {
                     const matchedUser = matchingUsers[0];
                     wusers[remoteJid] = matchedUser.id;
                     writeDB(WHATSAPP_USERS_FILE, wusers);
+                    resolvedLinkedUserId = matchedUser.id;
                     isUserLinked = true;
                     console.log(`[AUTO-LINK] WhatsApp ${remoteJid} auto-vinculado con usuario ${matchedUser.username} (${matchedUser.id})`);
                 }
@@ -473,7 +484,8 @@ async function connectToWhatsApp() {
             wusers,
             wsettings,
             sessionManager,
-            hasMedia
+            hasMedia,
+            linkedUserId: resolvedLinkedUserId
         };
 
         // Reacción inmediata con emoji para dar feedback de procesamiento
