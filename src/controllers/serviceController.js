@@ -150,3 +150,46 @@ exports.setUserProductPrices = (req, res) => {
   incrementCatalogVersion();
   res.json({ success: true });
 };
+
+exports.getCustomPrices = (req, res) => {
+  const serverId = getServerId(req);
+  const serverKey = 'server' + serverId;
+  const allCustomPrices = readDB('custom_prices.json') || {};
+  res.json({ success: true, serverKey, customPrices: allCustomPrices[serverKey] || {} });
+};
+
+exports.getMarketSuggestions = (req, res) => {
+  const serverId = getServerId(req);
+  const prices = readDB('prices_' + serverId + '.json') || {};
+  const allCustomPrices = readDB('custom_prices.json') || {};
+  const serverKey = 'server' + serverId;
+  const serverCustom = allCustomPrices[serverKey] || {};
+
+  const suggestions = {};
+  for (const [sid, costVal] of Object.entries(prices)) {
+    const cost = parseFloat(costVal) || 0;
+    if (cost <= 0) continue;
+    let reseller = 0;
+    let retail = 0;
+    if (cost <= 400) {
+      reseller = Math.round(cost + 30);
+      retail = Math.round(cost + 120);
+    } else if (cost <= 900) {
+      reseller = Math.round(cost + 50);
+      retail = Math.round(cost + 160);
+    } else if (cost <= 1300) {
+      reseller = Math.round(cost + 80);
+      retail = Math.round(cost + 220);
+    } else {
+      reseller = Math.round(cost + 120);
+      retail = Math.round(cost + 300);
+    }
+    suggestions[sid] = {
+      realCost: cost,
+      suggestedReseller: reseller,
+      suggestedRetail: retail,
+      currentCustom: serverCustom[sid] || null
+    };
+  }
+  res.json({ success: true, count: Object.keys(suggestions).length, suggestions });
+};

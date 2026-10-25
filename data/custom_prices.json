@@ -30,6 +30,16 @@
       "clientPrice": 670,
       "note": "TSM-Tool Pro 3 Months"
     },
+    "17": {
+      "resellerPrice": 75,
+      "clientPrice": 130,
+      "note": "Pandonymus Panda MDM Maker PRO - Renta 6 Horas"
+    },
+    "18": {
+      "resellerPrice": 250,
+      "clientPrice": 350,
+      "note": "SERVER BOX RENTA 1 MES (Sigma, Z3X, Octoplus, NCK)"
+    },
     "25": {
       "resellerPrice": 1450,
       "clientPrice": 1690,
@@ -39,6 +49,21 @@
       "resellerPrice": 1390,
       "clientPrice": 1590,
       "note": "Pandora Box 1 Year Renew"
+    },
+    "221": {
+      "resellerPrice": 35,
+      "clientPrice": 70,
+      "note": "RENTA TSM TOOL 3 HRS"
+    },
+    "223": {
+      "resellerPrice": 28,
+      "clientPrice": 60,
+      "note": "RENTA UNLOCKTOOL 6 HRS"
+    },
+    "233": {
+      "resellerPrice": 280,
+      "clientPrice": 390,
+      "note": "RENTA PANDORA 48 HRS"
     },
     "675": {
       "resellerPrice": 1350,
