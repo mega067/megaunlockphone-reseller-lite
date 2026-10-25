@@ -5,43 +5,62 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=3">
   <link rel="icon" type="image/png" href="/favicon.png?v=3">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-  <title>Tesorería & Finanzas | MegaUnlockPhone</title>
+  <title>Tesorería & Finanzas Personales | MegaUnlockPhone</title>
   <!-- Google Fonts: Inter & Outfit -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet" crossorigin="anonymous">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet" crossorigin="anonymous">
   <script src="https://unpkg.com/lucide@latest"></script>
-  <link rel="stylesheet" href="/index.css?v=85">
   <style>
     :root {
+      --fin-bg: #070b14;
+      --fin-card-bg: rgba(15, 23, 42, 0.78);
+      --fin-card-border: rgba(255, 255, 255, 0.08);
       --fin-accent: #10b981;
-      --fin-accent-glow: rgba(16, 185, 129, 0.2);
+      --fin-accent-hover: #059669;
+      --fin-accent-glow: rgba(16, 185, 129, 0.25);
+      --fin-purple: #8b5cf6;
+      --fin-purple-glow: rgba(139, 92, 246, 0.2);
+      --fin-blue: #38bdf8;
+      --fin-amber: #f59e0b;
+      --fin-rose: #f43f5e;
+      --fin-text-main: #f8fafc;
+      --fin-text-muted: #94a3b8;
+      --fin-text-sub: #64748b;
+    }
+    * {
+      box-sizing: border-box;
     }
     body {
-      background: #090d16;
-      color: #f1f5f9;
-      font-family: 'Inter', -apple-system, sans-serif;
+      background: radial-gradient(circle at 15% 10%, rgba(16, 185, 129, 0.06), transparent 35%),
+                  radial-gradient(circle at 85% 15%, rgba(99, 102, 241, 0.07), transparent 35%),
+                  var(--fin-bg);
+      color: var(--fin-text-main);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       margin: 0;
       padding: 0;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
     }
     .fin-shell {
-      max-width: 1200px;
+      max-width: 1240px;
       margin: 0 auto;
-      padding: 1.25rem 1rem 4rem;
+      padding: 1.2rem 1rem 4rem;
     }
     
-    /* Top Navigation Bar */
+    /* Top Navigation Bar - Ultra limpia, sin interferencias de banners */
     .fin-topbar {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: rgba(15, 23, 42, 0.85);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 18px;
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--fin-card-border);
+      border-radius: 20px;
       padding: 0.85rem 1.4rem;
-      margin-bottom: 1.5rem;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      margin-bottom: 1.4rem;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
       flex-wrap: wrap;
       gap: 0.8rem;
     }
@@ -51,99 +70,111 @@
       gap: 0.85rem;
     }
     .fin-brand-badge {
-      width: 42px;
-      height: 42px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, #10b981, #059669);
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #10b981, #047857);
       display: flex;
       align-items: center;
       justify-content: center;
       color: white;
-      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+      box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
     }
 
     /* Smart Balance Hub */
     .fin-balance-hero {
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(99, 102, 241, 0.08));
-      border: 1px solid rgba(16, 185, 129, 0.3);
-      border-radius: 20px;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.14), rgba(99, 102, 241, 0.08) 50%, rgba(15, 23, 42, 0.7));
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      border-radius: 22px;
       padding: 1.6rem 2rem;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.4rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
       flex-wrap: wrap;
-      gap: 1.2rem;
+      gap: 1.4rem;
       position: relative;
       overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
     }
     .fin-hero-title {
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: #94a3b8;
+      letter-spacing: 0.06em;
+      color: #a7f3d0;
       margin-bottom: 0.3rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
     }
     .fin-hero-amount {
       font-family: 'Outfit', sans-serif;
-      font-size: 2.5rem;
-      font-weight: 800;
+      font-size: clamp(2.1rem, 4vw, 2.85rem);
+      font-weight: 900;
       color: #ffffff;
-      line-height: 1.1;
+      line-height: 1.05;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.3);
     }
     .fin-quick-stats {
       display: flex;
-      gap: 1.5rem;
+      gap: 1.4rem;
       flex-wrap: wrap;
     }
     .fin-quick-stat-item {
       border-left: 3px solid rgba(255, 255, 255, 0.15);
       padding-left: 0.9rem;
+      min-width: 130px;
     }
     .fin-quick-stat-item.green { border-color: #10b981; }
     .fin-quick-stat-item.amber { border-color: #f59e0b; }
     .fin-quick-stat-item.blue { border-color: #38bdf8; }
+    .fin-quick-stat-item.purple { border-color: #a855f7; }
 
     /* Segmented Tab Controls */
     .fin-tab-nav {
       display: flex;
-      background: rgba(15, 23, 42, 0.9);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 14px;
-      padding: 4px;
-      margin-bottom: 1.5rem;
-      gap: 4px;
+      background: rgba(15, 23, 42, 0.92);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--fin-card-border);
+      border-radius: 16px;
+      padding: 5px;
+      margin-bottom: 1.4rem;
+      gap: 5px;
       overflow-x: auto;
       scrollbar-width: none;
     }
+    .fin-tab-nav::-webkit-scrollbar {
+      display: none;
+    }
     .fin-tab-btn {
       flex: 1;
-      min-width: 140px;
-      padding: 0.65rem 1rem;
-      border-radius: 10px;
+      min-width: 145px;
+      padding: 0.7rem 1.1rem;
+      border-radius: 12px;
       border: none;
       background: transparent;
-      color: #94a3b8;
+      color: var(--fin-text-muted);
       font-weight: 600;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 0.5rem;
+      gap: 0.55rem;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       white-space: nowrap;
     }
     .fin-tab-btn:hover {
       color: #ffffff;
-      background: rgba(255, 255, 255, 0.04);
+      background: rgba(255, 255, 255, 0.05);
     }
     .fin-tab-btn.active {
       background: #1e293b;
-      color: #10b981;
+      color: #34d399;
       font-weight: 700;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(16, 185, 129, 0.3);
     }
 
     /* Content Panels */
@@ -155,59 +186,64 @@
       display: block;
     }
     @keyframes finFadeIn {
-      from { opacity: 0; transform: translateY(4px); }
+      from { opacity: 0; transform: translateY(6px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
     /* Cards & Components */
     .fin-card {
-      background: rgba(15, 23, 42, 0.7);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 16px;
-      padding: 1.25rem 1.5rem;
-      margin-bottom: 1.2rem;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      background: var(--fin-card-bg);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--fin-card-border);
+      border-radius: 20px;
+      padding: 1.4rem 1.6rem;
+      margin-bottom: 1.3rem;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
     }
     .fin-card-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 1.2rem;
+      margin-bottom: 1.3rem;
       flex-wrap: wrap;
-      gap: 0.6rem;
+      gap: 0.8rem;
     }
     .fin-card-title {
       font-family: 'Outfit', sans-serif;
-      font-size: 1.15rem;
-      font-weight: 700;
-      color: #f8fafc;
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--fin-text-main);
       margin: 0;
       display: flex;
       align-items: center;
-      gap: 0.6rem;
+      gap: 0.65rem;
     }
 
     /* Buttons */
     .fin-btn {
       display: inline-flex;
       align-items: center;
-      gap: 0.45rem;
-      padding: 0.55rem 1.1rem;
-      border-radius: 999px;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.6rem 1.15rem;
+      border-radius: 12px;
       font-weight: 600;
-      font-size: 0.85rem;
+      font-size: 0.86rem;
       cursor: pointer;
       border: none;
       text-decoration: none;
       transition: all 0.2s ease;
+      white-space: nowrap;
     }
     .fin-btn-primary {
-      background: #10b981;
+      background: linear-gradient(135deg, #10b981, #059669);
       color: #ffffff;
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
     }
     .fin-btn-primary:hover {
-      background: #059669;
+      background: linear-gradient(135deg, #059669, #047857);
+      transform: translateY(-1px);
     }
     .fin-btn-soft {
       background: rgba(255, 255, 255, 0.06);
@@ -215,31 +251,145 @@
       border: 1px solid rgba(255, 255, 255, 0.12);
     }
     .fin-btn-soft:hover {
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.11);
+      color: #ffffff;
+    }
+    .fin-btn-purple {
+      background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(139, 92, 246, 0.35);
+    }
+    .fin-btn-purple:hover {
+      background: linear-gradient(135deg, #7c3aed, #6d28d9);
+      transform: translateY(-1px);
+    }
+
+    /* Modal Styles */
+    .fin-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.78);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      padding: 1rem;
+      animation: finFadeIn 0.2s ease-out;
+    }
+    .fin-modal-overlay.active {
+      display: flex;
+    }
+    .fin-modal-card {
+      background: #0f172a;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 22px;
+      width: 100%;
+      max-width: 520px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 1.7rem;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+      position: relative;
+    }
+    .fin-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.3rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 0.8rem;
+    }
+    .fin-modal-close {
+      background: rgba(255, 255, 255, 0.08);
+      border: none;
+      color: var(--fin-text-muted);
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .fin-modal-close:hover {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+    }
+    .fin-form-group {
+      margin-bottom: 1.1rem;
+    }
+    .fin-form-group label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #cbd5e1;
+      margin-bottom: 0.35rem;
+    }
+    .fin-input, .fin-select {
+      width: 100%;
+      background: rgba(2, 6, 23, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      padding: 0.65rem 0.9rem;
+      color: #ffffff;
+      font-family: inherit;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .fin-input:focus, .fin-select:focus {
+      border-color: #10b981;
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+    }
+    .fin-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.8rem;
+    }
+    @media (max-width: 600px) {
+      .fin-grid-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+    .fin-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 6px;
     }
   </style>
 </head>
 <body>
   <div class="fin-shell">
-    <!-- Top Bar Navigation -->
+    <!-- Top Bar Navigation Independiente -->
     <header class="fin-topbar">
       <div class="fin-brand-box">
         <div class="fin-brand-badge">
-          <i data-lucide="shield-check" style="width:22px; height:22px;"></i>
+          <i data-lucide="wallet-cards" style="width:24px; height:24px;"></i>
         </div>
         <div>
-          <h1 style="margin:0; font-size:1.15rem; font-family:'Outfit',sans-serif; font-weight:800; color:#f8fafc;">Tesorería & Billeteras</h1>
-          <p style="margin:0; font-size:0.75rem; color:#94a3b8;">Centro Unificado de Control Financiero</p>
+          <h1 style="margin:0; font-size:1.2rem; font-family:'Outfit',sans-serif; font-weight:800; color:#f8fafc; letter-spacing:-0.02em;">Tesorería & Finanzas</h1>
+          <p style="margin:0; font-size:0.75rem; color:var(--fin-text-muted);">Control Integral: Negocio, Gastos Personales y Servicios</p>
         </div>
       </div>
       <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
-        <button id="btnFinCollegeQuick" class="fin-btn fin-btn-soft" style="color:#10b981; border-color:rgba(16,185,129,0.3);">
-          <i data-lucide="backpack" style="width:15px; height:15px;"></i> + Pasaje Uni
+        <button id="btnFinCollegeQuick" class="fin-btn fin-btn-soft" style="color:#10b981; border-color:rgba(16,185,129,0.35);">
+          <i data-lucide="backpack" style="width:15px; height:15px;"></i> + Apoyo Semanal Uni
         </button>
         <button id="btnFinRefreshAll" class="fin-btn fin-btn-soft">
           <i data-lucide="rotate-cw" style="width:15px; height:15px;"></i> Actualizar
         </button>
-        <a href="/#admin" class="fin-btn fin-btn-primary" style="background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none; color: white;">
+        <a href="/#admin" class="fin-btn fin-btn-purple">
           <i data-lucide="shield" style="width:15px; height:15px;"></i> Volver al Panel Admin
         </a>
         <a href="/" class="fin-btn fin-btn-soft">
@@ -248,35 +398,46 @@
       </div>
     </header>
 
-    <!-- Smart Balance Hub (Hero) -->
+    <!-- Smart Balance Hub (Hero Ejecutivo) -->
     <div class="fin-balance-hero">
       <div>
-        <div class="fin-hero-title">Patrimonio Neto Disponible</div>
+        <div class="fin-hero-title">
+          <i data-lucide="sparkles" style="width:15px; height:15px;"></i> Patrimonio Neto Disponible
+        </div>
         <div class="fin-hero-amount" id="statFinNetWorth">$0.00</div>
-        <small style="color:#94a3b8; font-size:0.75rem;">Suma en tiempo real en cuentas bancarias, efectivo y ahorros</small>
+        <small style="color:#94a3b8; font-size:0.78rem;">Suma en tiempo real en bancos, tarjetas, efectivo y billeteras</small>
       </div>
       <div class="fin-quick-stats">
         <div class="fin-quick-stat-item green">
-          <div style="font-size:0.72rem; color:#94a3b8; text-transform:uppercase; font-weight:700;">Ganancias Negocio</div>
+          <div style="font-size:0.72rem; color:var(--fin-text-muted); text-transform:uppercase; font-weight:700;">Ganancias Negocio</div>
           <div id="statFinGrossProfit" style="font-size:1.25rem; font-weight:800; color:#10b981;">$0.00</div>
+          <small id="statFinGrossCount" style="font-size:0.7rem; color:var(--fin-text-sub);">0 transacciones</small>
+        </div>
+        <div class="fin-quick-stat-item purple">
+          <div style="font-size:0.72rem; color:var(--fin-text-muted); text-transform:uppercase; font-weight:700;">Recargas Móviles</div>
+          <div id="statFinMobileEst" style="font-size:1.25rem; font-weight:800; color:#c084fc;">$0.00</div>
+          <div id="statFinMobileAlert" style="font-size:0.7rem; color:#94a3b8;">0 por renovar</div>
         </div>
         <div class="fin-quick-stat-item amber">
-          <div style="font-size:0.72rem; color:#94a3b8; text-transform:uppercase; font-weight:700;">Meses por Pagar</div>
+          <div style="font-size:0.72rem; color:var(--fin-text-muted); text-transform:uppercase; font-weight:700;">Meses sin Intereses</div>
           <div id="statFinInstallmentsPending" style="font-size:1.25rem; font-weight:800; color:#f59e0b;">$0.00</div>
           <div id="statFinInstallmentsNextQuota" style="font-size:0.7rem; color:#94a3b8;">Próxima: $0.00/mes</div>
         </div>
         <div class="fin-quick-stat-item blue">
-          <div style="font-size:0.72rem; color:#94a3b8; text-transform:uppercase; font-weight:700;">Me Deben (Por Cobrar)</div>
+          <div style="font-size:0.72rem; color:var(--fin-text-muted); text-transform:uppercase; font-weight:700;">Cuentas por Cobrar</div>
           <div id="statFinDebtsReceivable" style="font-size:1.25rem; font-weight:800; color:#38bdf8;">$0.00</div>
-          <div id="statFinDebtsPayable" style="font-size:0.7rem; color:#ef4444;">Debo: $0.00</div>
+          <div id="statFinDebtsPayable" style="font-size:0.7rem; color:#f43f5e;">Debo: $0.00</div>
         </div>
       </div>
     </div>
 
-    <!-- Segmented Navigation Tabs (Organización Inteligente sin saturar) -->
+    <!-- Segmented Navigation Tabs -->
     <nav class="fin-tab-nav">
       <button class="fin-tab-btn active" data-tab="tab-accounts">
         <i data-lucide="building-2" style="width:16px; height:16px;"></i> Mis Cuentas
+      </button>
+      <button class="fin-tab-btn" data-tab="tab-mobile">
+        <i data-lucide="smartphone" style="width:16px; height:16px;"></i> Recargas & Telefonía
       </button>
       <button class="fin-tab-btn" data-tab="tab-installments">
         <i data-lucide="credit-card" style="width:16px; height:16px;"></i> Meses Sin Intereses
@@ -285,7 +446,10 @@
         <i data-lucide="hand-coins" style="width:16px; height:16px;"></i> Deudores & Préstamos
       </button>
       <button class="fin-tab-btn" data-tab="tab-ledger">
-        <i data-lucide="receipt" style="width:16px; height:16px;"></i> Movimientos & Gastos
+        <i data-lucide="receipt" style="width:16px; height:16px;"></i> Gastos & Movimientos
+      </button>
+      <button class="fin-tab-btn" data-tab="tab-settings">
+        <i data-lucide="sliders" style="width:16px; height:16px;"></i> Configuración
       </button>
     </nav>
 
@@ -293,12 +457,20 @@
     <div id="tab-accounts" class="fin-panel active">
       <div class="fin-card">
         <div class="fin-card-header">
-          <h2 class="fin-card-title">
-            <i data-lucide="landmark" style="color:#10b981;"></i> Billeteras, Bancos & Caja
-          </h2>
-          <button id="btnFinTransferMoney" class="fin-btn fin-btn-soft">
-            <i data-lucide="arrow-left-right" style="width:14px; height:14px;"></i> Traspaso entre Cuentas
-          </button>
+          <div>
+            <h2 class="fin-card-title">
+              <i data-lucide="landmark" style="color:#10b981;"></i> Billeteras, Bancos & Efectivo
+            </h2>
+            <small style="color:var(--fin-text-muted); font-size:0.78rem;">Saldos sincronizados automáticamente ante cualquier compra, recarga o abono</small>
+          </div>
+          <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+            <button id="btnFinNewAccount" class="fin-btn fin-btn-primary">
+              <i data-lucide="plus" style="width:14px; height:14px;"></i> Nueva Cuenta
+            </button>
+            <button id="btnFinTransferMoney" class="fin-btn fin-btn-soft">
+              <i data-lucide="arrow-left-right" style="width:14px; height:14px;"></i> Traspaso entre Cuentas
+            </button>
+          </div>
         </div>
         <div id="finAccountsGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem;">
           <!-- Cuentas renderizadas dinámicamente -->
@@ -306,7 +478,27 @@
       </div>
     </div>
 
-    <!-- Pestaña 2: Meses Sin Intereses (Nu, BBVA, etc.) -->
+    <!-- Pestaña 2: Recargas Telefónicas & Planes Móviles (Nuevo) -->
+    <div id="tab-mobile" class="fin-panel">
+      <div class="fin-card">
+        <div class="fin-card-header">
+          <div>
+            <h2 class="fin-card-title">
+              <i data-lucide="smartphone" style="color:#c084fc;"></i> Control & Previsión de Recargas Telefónicas
+            </h2>
+            <small style="color:var(--fin-text-muted); font-size:0.78rem;">Ajusta monto, días de vigencia (15, 26, 30 días) y monitorea el gasto sin imprevistos</small>
+          </div>
+          <button id="btnFinNewMobilePlan" class="fin-btn fin-btn-primary" style="background: linear-gradient(135deg, #a855f7, #7e22ce);">
+            <i data-lucide="plus" style="width:14px; height:14px;"></i> Nuevo Plan Móvil
+          </button>
+        </div>
+        <div id="finMobilePlansContainerList">
+          <!-- Lista de planes móviles y recargas -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Pestaña 3: Meses Sin Intereses (Nu, BBVA, etc.) -->
     <div id="tab-installments" class="fin-panel">
       <div class="fin-card">
         <div class="fin-card-header">
@@ -314,7 +506,7 @@
             <h2 class="fin-card-title">
               <i data-lucide="credit-card" style="color:#8218fc;"></i> Planes a Meses / Tarjetas
             </h2>
-            <small style="color:#94a3b8; font-size:0.75rem;">Monitorea tus compras diferidas, fechas de corte y mensualidades fijas</small>
+            <small style="color:var(--fin-text-muted); font-size:0.78rem;">Monitorea tus compras diferidas, fechas de corte y mensualidades fijas</small>
           </div>
           <button id="btnFinNewInstallment" class="fin-btn fin-btn-primary">
             <i data-lucide="plus" style="width:14px; height:14px;"></i> Nuevo Plan a Meses
@@ -326,7 +518,7 @@
       </div>
     </div>
 
-    <!-- Pestaña 3: Deudores & Préstamos -->
+    <!-- Pestaña 4: Deudores & Préstamos -->
     <div id="tab-debts" class="fin-panel">
       <div class="fin-card">
         <div class="fin-card-header">
@@ -334,7 +526,7 @@
             <h2 class="fin-card-title">
               <i data-lucide="hand-coins" style="color:#38bdf8;"></i> Control de Deudores & Acreedores
             </h2>
-            <small style="color:#94a3b8; font-size:0.75rem;">Gestiona a quién le prestaste y deudas pendientes con liquidación automática</small>
+            <small style="color:var(--fin-text-muted); font-size:0.78rem;">Gestiona a quién le prestaste y deudas pendientes con liquidación automática</small>
           </div>
           <button id="btnFinNewDebt" class="fin-btn fin-btn-primary">
             <i data-lucide="plus" style="width:14px; height:14px;"></i> Registrar Deuda
@@ -346,7 +538,7 @@
       </div>
     </div>
 
-    <!-- Pestaña 4: Movimientos Contables & Gastos Divididos -->
+    <!-- Pestaña 5: Movimientos Contables & Gastos Divididos -->
     <div id="tab-ledger" class="fin-panel">
       <div class="fin-card">
         <div class="fin-card-header">
@@ -354,16 +546,16 @@
             <h2 class="fin-card-title">
               <i data-lucide="receipt" style="color:#10b981;"></i> Libro de Movimientos Contables
             </h2>
-            <small style="color:#94a3b8; font-size:0.75rem;">Registro de ingresos, compras divididas (efectivo + tarjeta) y reversión atómica</small>
+            <small style="color:var(--fin-text-muted); font-size:0.78rem;">Registro de ingresos, compras personales y pagos divididos</small>
           </div>
           <button id="btnFinNewManualTx" class="fin-btn fin-btn-primary">
             <i data-lucide="plus" style="width:14px; height:14px;"></i> + Registrar Movimiento / Gasto
           </button>
         </div>
         <div style="overflow-x:auto;">
-          <table class="table" style="width:100%; border-collapse:collapse; font-size:0.88rem;">
+          <table style="width:100%; border-collapse:collapse; font-size:0.88rem;">
             <thead>
-              <tr style="border-bottom: 2px solid rgba(255,255,255,0.08); text-align:left; color:#94a3b8;">
+              <tr style="border-bottom: 2px solid rgba(255,255,255,0.08); text-align:left; color:var(--fin-text-muted);">
                 <th style="padding: 10px 12px;">Fecha</th>
                 <th style="padding: 10px 12px;">Concepto / Detalle</th>
                 <th style="padding: 10px 12px;">Cuenta</th>
@@ -380,8 +572,324 @@
         </div>
       </div>
     </div>
+
+    <!-- Pestaña 6: Configuración Financiera -->
+    <div id="tab-settings" class="fin-panel">
+      <div class="fin-card" style="max-width:700px; margin:0 auto;">
+        <div class="fin-card-header">
+          <div>
+            <h2 class="fin-card-title">
+              <i data-lucide="sliders" style="color:#10b981;"></i> Configuración y Parámetros
+            </h2>
+            <small style="color:var(--fin-text-muted); font-size:0.78rem;">Ajuste de porcentajes de reinversión para compras automáticas de servidores</small>
+          </div>
+        </div>
+        <form id="formFinSettings">
+          <div class="fin-form-group">
+            <label for="setFinReinvestPercent">Porcentaje de Reinversión por Defecto (%)</label>
+            <input type="number" id="setFinReinvestPercent" class="fin-input" min="0" max="100" step="1" value="50">
+            <small style="color:var(--fin-text-sub); font-size:0.75rem;">Determina cuánto margen de cada venta se destina a recargar los servidores de desbloqueo.</small>
+          </div>
+          <div class="fin-form-group">
+            <label for="setFinEmergencyTarget">Meta de Fondo de Emergencia (MXN)</label>
+            <input type="number" id="setFinEmergencyTarget" class="fin-input" min="0" step="100" value="5000">
+          </div>
+          <button type="submit" class="fin-btn fin-btn-primary" style="width:100%; justify-content:center; margin-top:0.5rem;">
+            <i data-lucide="save" style="width:15px; height:15px;"></i> Guardar Configuración
+          </button>
+        </form>
+      </div>
+    </div>
   </div>
 
-  <script src="/finanzas/finanzas.js?v=15"></script>
+  <!-- MODALES FORMULARIOS LIMPIOS Y PROFESIONALES (Sin prompts nativos feos) -->
+
+  <!-- Modal 1: Plan Móvil / Recargas -->
+  <div id="modalMobilePlan" class="fin-modal-overlay">
+    <div class="fin-modal-card">
+      <div class="fin-modal-header">
+        <h3 id="modalMobilePlanTitle" style="margin:0; font-size:1.15rem; font-family:'Outfit',sans-serif; color:#f8fafc;">Nuevo Plan Telefónico</h3>
+        <button class="fin-modal-close" onclick="window.finCloseModal('modalMobilePlan')"><i data-lucide="x" style="width:16px; height:16px;"></i></button>
+      </div>
+      <form id="formMobilePlan">
+        <input type="hidden" id="mplanId">
+        <div class="fin-grid-2">
+          <div class="fin-form-group">
+            <label>Compañía / Operador *</label>
+            <select id="mplanCarrier" class="fin-select" required>
+              <option value="Telcel">Telcel</option>
+              <option value="AT&T">AT&T</option>
+              <option value="Movistar">Movistar</option>
+              <option value="Bait">Bait</option>
+              <option value="CFE TEIT">CFE Internet (TEIT)</option>
+              <option value="Virgin Mobile">Virgin Mobile</option>
+              <option value="Otro">Otro</option>
+            </select>
+          </div>
+          <div class="fin-form-group">
+            <label>Número de Línea (Opcional)</label>
+            <input type="text" id="mplanPhone" class="fin-input" placeholder="Ej: 52221xxxxxxx">
+          </div>
+        </div>
+        <div class="fin-form-group">
+          <label>Nombre del Paquete *</label>
+          <input type="text" id="mplanName" class="fin-input" placeholder="Ej: Paquete Amigo Sin Límite 200" required>
+        </div>
+        <div class="fin-grid-2">
+          <div class="fin-form-group">
+            <label>Monto de Recarga (MXN) *</label>
+            <input type="number" id="mplanAmount" class="fin-input" min="10" step="1" placeholder="200" required>
+          </div>
+          <div class="fin-form-group">
+            <label>Duración / Vigencia (Días) *</label>
+            <input type="number" id="mplanDuration" class="fin-input" min="1" max="365" placeholder="30" value="30" required>
+          </div>
+        </div>
+        <div class="fin-grid-2">
+          <div class="fin-form-group">
+            <label>Última Recarga</label>
+            <input type="date" id="mplanLastDate" class="fin-input">
+          </div>
+          <div class="fin-form-group">
+            <label>Cuenta de Pago Habitual</label>
+            <select id="mplanAccount" class="fin-select">
+              <!-- Cuentas cargadas dinámicamente -->
+            </select>
+          </div>
+        </div>
+        <div class="fin-form-group">
+          <label>Notas adicionales</label>
+          <input type="text" id="mplanNotes" class="fin-input" placeholder="Ej: Recargar antes de las 11:59 pm">
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:0.6rem; margin-top:1.2rem;">
+          <button type="button" class="fin-btn fin-btn-soft" onclick="window.finCloseModal('modalMobilePlan')">Cancelar</button>
+          <button type="submit" class="fin-btn fin-btn-primary">Guardar Plan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 2: Registrar Movimiento / Gasto (Personal o Dividido) -->
+  <div id="modalManualTx" class="fin-modal-overlay">
+    <div class="fin-modal-card">
+      <div class="fin-modal-header">
+        <h3 style="margin:0; font-size:1.15rem; font-family:'Outfit',sans-serif; color:#f8fafc;">Registrar Movimiento Contable</h3>
+        <button class="fin-modal-close" onclick="window.finCloseModal('modalManualTx')"><i data-lucide="x" style="width:16px; height:16px;"></i></button>
+      </div>
+      <form id="formManualTx">
+        <div class="fin-form-group">
+          <label>Tipo de Operación</label>
+          <select id="txType" class="fin-select" onchange="window.finToggleTxFields()">
+            <option value="expense_simple">Gasto Simple (-)</option>
+            <option value="expense_split">Gasto Dividido (Efectivo + Tarjeta/Transferencia)</option>
+            <option value="income_simple">Ingreso / Venta (+)</option>
+          </select>
+        </div>
+        <div class="fin-form-group">
+          <label>Concepto / Detalle *</label>
+          <input type="text" id="txConcept" class="fin-input" placeholder="Ej: Despensa, Comida, Compra herramienta..." required>
+        </div>
+        <div class="fin-form-group">
+          <label>Monto Total (MXN) *</label>
+          <input type="number" id="txTotalAmount" class="fin-input" min="1" step="0.5" placeholder="100.00" required>
+        </div>
+        
+        <!-- Bloque para Pago Simple -->
+        <div id="txSimpleAccountBlock" class="fin-form-group">
+          <label>Cuenta de Cargo / Abono</label>
+          <select id="txAccount" class="fin-select">
+            <!-- Cuentas dinámicas -->
+          </select>
+        </div>
+
+        <!-- Bloque para Gasto Dividido -->
+        <div id="txSplitBlock" style="display:none; background:rgba(255,255,255,0.03); border:1px dashed rgba(255,255,255,0.12); border-radius:12px; padding:0.9rem; margin-bottom:1rem;">
+          <div style="font-size:0.8rem; font-weight:700; color:#38bdf8; margin-bottom:0.6rem;">División de Saldo:</div>
+          <div class="fin-grid-2">
+            <div class="fin-form-group">
+              <label>Monto en Efectivo</label>
+              <input type="number" id="txSplitCash" class="fin-input" min="0" step="0.5" placeholder="0.00">
+            </div>
+            <div class="fin-form-group">
+              <label>Monto en Tarjeta / Banco</label>
+              <input type="number" id="txSplitBank" class="fin-input" min="0" step="0.5" placeholder="0.00">
+            </div>
+          </div>
+          <div class="fin-form-group">
+            <label>Cuenta Bancaria / Tarjeta Restante</label>
+            <select id="txSplitAccount" class="fin-select">
+              <!-- Cuentas dinámicas -->
+            </select>
+          </div>
+        </div>
+
+        <div class="fin-form-group">
+          <label>Categoría</label>
+          <select id="txCategory" class="fin-select">
+            <option value="comida">Comida / Alimentos</option>
+            <option value="transporte">Transporte / Pasaje</option>
+            <option value="telefonia">Telefonía & Recargas</option>
+            <option value="servicios">Servicios / Facturas</option>
+            <option value="servidores">Servidores GSM</option>
+            <option value="gustos">Gustos / Personales</option>
+            <option value="otros">Otros Gastos</option>
+          </select>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:0.6rem; margin-top:1.2rem;">
+          <button type="button" class="fin-btn fin-btn-soft" onclick="window.finCloseModal('modalManualTx')">Cancelar</button>
+          <button type="submit" class="fin-btn fin-btn-primary">Registrar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 3: Traspaso entre Cuentas Propias -->
+  <div id="modalTransfer" class="fin-modal-overlay">
+    <div class="fin-modal-card">
+      <div class="fin-modal-header">
+        <h3 style="margin:0; font-size:1.15rem; font-family:'Outfit',sans-serif; color:#f8fafc;">Traspaso entre Cuentas Propias</h3>
+        <button class="fin-modal-close" onclick="window.finCloseModal('modalTransfer')"><i data-lucide="x" style="width:16px; height:16px;"></i></button>
+      </div>
+      <form id="formTransfer">
+        <div class="fin-form-group">
+          <label>Cuenta Origen (Sale el dinero)</label>
+          <select id="transferFrom" class="fin-select" required></select>
+        </div>
+        <div class="fin-form-group">
+          <label>Cuenta Destino (Entra el dinero)</label>
+          <select id="transferTo" class="fin-select" required></select>
+        </div>
+        <div class="fin-form-group">
+          <label>Monto a Transferir (MXN) *</label>
+          <input type="number" id="transferAmount" class="fin-input" min="1" step="0.5" placeholder="500.00" required>
+        </div>
+        <div class="fin-form-group">
+          <label>Motivo o Nota</label>
+          <input type="text" id="transferNotes" class="fin-input" placeholder="Ej: Retiro de cajero a efectivo">
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:0.6rem; margin-top:1.2rem;">
+          <button type="button" class="fin-btn fin-btn-soft" onclick="window.finCloseModal('modalTransfer')">Cancelar</button>
+          <button type="submit" class="fin-btn fin-btn-primary">Efectuar Traspaso</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 4: Nueva Cuenta / Tarjeta -->
+  <div id="modalNewAccount" class="fin-modal-overlay">
+    <div class="fin-modal-card">
+      <div class="fin-modal-header">
+        <h3 style="margin:0; font-size:1.15rem; font-family:'Outfit',sans-serif; color:#f8fafc;">Nueva Billetera / Cuenta</h3>
+        <button class="fin-modal-close" onclick="window.finCloseModal('modalNewAccount')"><i data-lucide="x" style="width:16px; height:16px;"></i></button>
+      </div>
+      <form id="formNewAccount">
+        <div class="fin-form-group">
+          <label>Nombre de la Cuenta *</label>
+          <input type="text" id="accName" class="fin-input" placeholder="Ej: Nu Crédito, BBVA Ahorro, Efectivo..." required>
+        </div>
+        <div class="fin-grid-2">
+          <div class="fin-form-group">
+            <label>Tipo de Cuenta</label>
+            <select id="accType" class="fin-select">
+              <option value="bank">Banco / Débito</option>
+              <option value="card">Tarjeta de Crédito</option>
+              <option value="cash">Efectivo / Caja</option>
+              <option value="emergency">Fondo Emergencia</option>
+              <option value="investment">Inversión / Cetes</option>
+            </select>
+          </div>
+          <div class="fin-form-group">
+            <label>Saldo Inicial (MXN)</label>
+            <input type="number" id="accBalance" class="fin-input" step="0.5" value="0.00">
+          </div>
+        </div>
+        <div class="fin-form-group">
+          <label>Descripción corta</label>
+          <input type="text" id="accDesc" class="fin-input" placeholder="Ej: Tarjeta física principal">
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:0.6rem; margin-top:1.2rem;">
+          <button type="button" class="fin-btn fin-btn-soft" onclick="window.finCloseModal('modalNewAccount')">Cancelar</button>
+          <button type="submit" class="fin-btn fin-btn-primary">Crear Cuenta</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 5: Nueva Deuda / Préstamo -->
+  <div id="modalNewDebt" class="fin-modal-overlay">
+    <div class="fin-modal-card">
+      <div class="fin-modal-header">
+        <h3 style="margin:0; font-size:1.15rem; font-family:'Outfit',sans-serif; color:#f8fafc;">Registrar Deuda / Préstamo</h3>
+        <button class="fin-modal-close" onclick="window.finCloseModal('modalNewDebt')"><i data-lucide="x" style="width:16px; height:16px;"></i></button>
+      </div>
+      <form id="formNewDebt">
+        <div class="fin-form-group">
+          <label>Tipo de Registro *</label>
+          <select id="debtType" class="fin-select">
+            <option value="receivable">ME DEBEN (Cuenta por cobrar)</option>
+            <option value="payable">YO DEBO (Cuenta por pagar)</option>
+          </select>
+        </div>
+        <div class="fin-form-group">
+          <label>Nombre de la Persona *</label>
+          <input type="text" id="debtPerson" class="fin-input" placeholder="Ej: Juan Pérez" required>
+        </div>
+        <div class="fin-form-group">
+          <label>Monto Total (MXN) *</label>
+          <input type="number" id="debtAmount" class="fin-input" min="1" step="1" placeholder="500.00" required>
+        </div>
+        <div class="fin-form-group">
+          <label>Concepto o Motivo</label>
+          <input type="text" id="debtConcept" class="fin-input" placeholder="Ej: Préstamo personal o servicio pendiente">
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:0.6rem; margin-top:1.2rem;">
+          <button type="button" class="fin-btn fin-btn-soft" onclick="window.finCloseModal('modalNewDebt')">Cancelar</button>
+          <button type="submit" class="fin-btn fin-btn-primary">Guardar Deuda</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 6: Nuevo Plan a Meses -->
+  <div id="modalNewInstallment" class="fin-modal-overlay">
+    <div class="fin-modal-card">
+      <div class="fin-modal-header">
+        <h3 style="margin:0; font-size:1.15rem; font-family:'Outfit',sans-serif; color:#f8fafc;">Nuevo Plan a Meses Sin Intereses</h3>
+        <button class="fin-modal-close" onclick="window.finCloseModal('modalNewInstallment')"><i data-lucide="x" style="width:16px; height:16px;"></i></button>
+      </div>
+      <form id="formNewInstallment">
+        <div class="fin-form-group">
+          <label>Concepto de la Compra *</label>
+          <input type="text" id="instTitle" class="fin-input" placeholder="Ej: Laptop Nu, Seguro, Teléfono..." required>
+        </div>
+        <div class="fin-grid-2">
+          <div class="fin-form-group">
+            <label>Monto Total (MXN) *</label>
+            <input type="number" id="instTotal" class="fin-input" min="10" step="1" placeholder="1200.00" required>
+          </div>
+          <div class="fin-form-group">
+            <label>Plazo en Meses *</label>
+            <input type="number" id="instQuotas" class="fin-input" min="1" max="48" value="6" required>
+          </div>
+        </div>
+        <div class="fin-grid-2">
+          <div class="fin-form-group">
+            <label>Tarjeta / Cuenta</label>
+            <input type="text" id="instCard" class="fin-input" placeholder="Ej: Nu, BBVA" value="Nu">
+          </div>
+          <div class="fin-form-group">
+            <label>Día de Pago del Mes</label>
+            <input type="number" id="instDueDay" class="fin-input" min="1" max="31" value="13">
+          </div>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:0.6rem; margin-top:1.2rem;">
+          <button type="button" class="fin-btn fin-btn-soft" onclick="window.finCloseModal('modalNewInstallment')">Cancelar</button>
+          <button type="submit" class="fin-btn fin-btn-primary">Crear Plan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/finanzas/finanzas.js?v=16"></script>
 </body>
 </html>

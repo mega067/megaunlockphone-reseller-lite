@@ -146,6 +146,24 @@ const initTables = () => {
             createdAt TEXT,
             updatedAt TEXT
         );
+
+        /* Control y Previsión de Recargas Telefónicas / Planes Móviles */
+        CREATE TABLE IF NOT EXISTS FinanceMobilePlans (
+            id TEXT PRIMARY KEY,
+            phoneNumber TEXT, /* Número o línea, ej: 52221xxxxxxx */
+            carrier TEXT NOT NULL, /* Telcel, AT&T, Movistar, Bait, CFE TEIT, etc. */
+            planName TEXT, /* Paquete Amigo Sin Límite 200, Paquete 100, etc. */
+            amount REAL NOT NULL DEFAULT 0, /* Costo de la recarga */
+            durationDays INTEGER NOT NULL DEFAULT 30, /* Días de vigencia del paquete (ej: 15, 26, 30) */
+            lastRechargeDate TEXT, /* Última fecha que se recargó YYYY-MM-DD */
+            nextRenewalDate TEXT, /* Fecha calculada de vencimiento */
+            preferredAccount TEXT DEFAULT 'acc_cash', /* Cuenta con la que se paga habitualmente */
+            autoRemind INTEGER DEFAULT 1, /* Alerta de renovación */
+            notes TEXT,
+            status TEXT DEFAULT 'active', /* 'active' | 'paused' */
+            createdAt TEXT,
+            updatedAt TEXT
+        );
     `);
 
     try {

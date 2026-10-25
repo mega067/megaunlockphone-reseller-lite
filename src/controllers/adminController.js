@@ -981,9 +981,47 @@ exports.deleteInstallment = (req, res) => {
 // --- INGRESO SEMANAL PASAJE & COMIDA UNIVERSIDAD ---
 exports.recordCollegeAllowance = (req, res) => {
   try {
-    const { amount, notes, account } = req.body;
-    const entry = financeManager.recordCollegeAllowance(amount, notes, account);
+    const { amount, notes, account, targetAccount } = req.body;
+    const entry = financeManager.recordCollegeAllowance(amount, notes, account || targetAccount);
     res.json({ success: true, transaction: entry });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+};
+
+// --- CONTROL DE RECARGAS TELEFÓNICAS Y PLANES MÓVILES ---
+exports.getMobilePlans = (req, res) => {
+  try {
+    const data = financeManager.getAllMobilePlans();
+    res.json({ success: true, ...data });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+};
+
+exports.saveMobilePlan = (req, res) => {
+  try {
+    const plan = financeManager.saveMobilePlan(req.body);
+    res.json({ success: true, plan });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+};
+
+exports.executeMobileRecharge = (req, res) => {
+  try {
+    const { account, amount } = req.body;
+    const plan = financeManager.executeMobileRecharge(req.params.id, account, amount);
+    res.json({ success: true, plan });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+};
+
+exports.deleteMobilePlan = (req, res) => {
+  try {
+    const success = financeManager.deleteMobilePlan(req.params.id);
+    res.json({ success });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }

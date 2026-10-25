@@ -1036,6 +1036,142 @@ function recordCollegeAllowance(amount, notes = 'Pasaje y comida semanal uni', t
   });
 }
 
+/**
+ * --- CONTROL Y PREVISIÓN DE RECARGAS TELEFÓNICAS ---
+ */
+function getAllMobilePlans() {
+  const plans = sqliteDb.prepare(`
+    SELECT * FROM FinanceMobilePlans 
+    ORDER BY CASE status WHEN 'active' THEN 1 ELSE 2 END, nextRenewalDate ASC
+  `).all();
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  let totalMonthlyEstimated = 0;
+  let renewalsDueSoon = 0;
+
+  const enriched = plans.map(p => {
+    // Calcular días restantes hasta la siguiente renovación
+    let daysRemaining = null;
+    let isExpired = false;
+    let isDueSoon = false;
+
+    if (p.nextRenewalDate) {
+      const diffMs = new Date(p.nextRenewalDate + 'T00:00:00') - new Date(todayStr + 'T00:00:00');
+      daysRemaining = Math.round(diffMs / (1000 * 60 * 60 * 24));
+      if (daysRemaining <= 0) isExpired = true;
+      else if (daysRemaining <= 3) isDueSoon = true;
+    }
+
+    if (p.status === 'active') {
+      renewalsDueSoon += (isExpired || isDueSoon) ? 1 : 0;
+      // Proyección mensual normalizada (30 días)
+      const duration = Math.max(1, p.durationDays || 30);
+      totalMonthlyEstimated += (p.amount / duration) * 30;
+    }
+
+    return {
+      ...p,
+      daysRemaining,
+      isExpired,
+      isDueSoon
+    };
+  });
+
+  return {
+    plans: enriched,
+    summary: {
+      totalPlans: plans.length,
+      activePlans: plans.filter(p => p.status === 'active').length,
+      renewalsDueSoon,
+      totalMonthlyEstimated: parseFloat(totalMonthlyEstimated.toFixed(2))
+    }
+  };
+}
+
+function saveMobilePlan(data) {
+  const id = data.id || ('mplan_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6));
+  const carrier = String(data.carrier || 'Telcel').trim();
+  const phoneNumber = data.phoneNumber ? String(data.phoneNumber).trim() : '';
+  const planName = data.planName ? String(data.planName).trim() : 'Recarga Móvil';
+  const amount = Math.max(0, parseFloat(data.amount) || 0);
+  const durationDays = Math.max(1, parseInt(data.durationDays) || 30);
+  const preferredAccount = data.preferredAccount || 'acc_cash';
+  const autoRemind = data.autoRemind !== undefined ? (data.autoRemind ? 1 : 0) : 1;
+  const notes = data.notes ? String(data.notes).trim() : '';
+  const status = data.status || 'active';
+
+  let lastRechargeDate = data.lastRechargeDate ? String(data.lastRechargeDate).slice(0, 10) : new Date().toISOString().slice(0, 10);
+  
+  // Calcular próxima fecha de renovación sumando durationDays
+  let nextRenewalDate = data.nextRenewalDate ? String(data.nextRenewalDate).slice(0, 10) : null;
+  if (!nextRenewalDate && lastRechargeDate) {
+    const d = new Date(lastRechargeDate + 'T12:00:00');
+    d.setDate(d.getDate() + durationDays);
+    nextRenewalDate = d.toISOString().slice(0, 10);
+  }
+
+  const existing = sqliteDb.prepare('SELECT id FROM FinanceMobilePlans WHERE id = ?').get(id);
+  if (existing) {
+    sqliteDb.prepare(`
+      UPDATE FinanceMobilePlans 
+      SET carrier = ?, phoneNumber = ?, planName = ?, amount = ?, durationDays = ?,
+          lastRechargeDate = ?, nextRenewalDate = ?, preferredAccount = ?, autoRemind = ?,
+          notes = ?, status = ?, updatedAt = datetime('now')
+      WHERE id = ?
+    `).run(carrier, phoneNumber, planName, amount, durationDays, lastRechargeDate, nextRenewalDate, preferredAccount, autoRemind, notes, status, id);
+  } else {
+    sqliteDb.prepare(`
+      INSERT INTO FinanceMobilePlans (
+        id, carrier, phoneNumber, planName, amount, durationDays,
+        lastRechargeDate, nextRenewalDate, preferredAccount, autoRemind,
+        notes, status, createdAt, updatedAt
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+    `).run(id, carrier, phoneNumber, planName, amount, durationDays, lastRechargeDate, nextRenewalDate, preferredAccount, autoRemind, notes, status);
+  }
+
+  return sqliteDb.prepare('SELECT * FROM FinanceMobilePlans WHERE id = ?').get(id);
+}
+
+function executeMobileRecharge(planId, accountUsed, customAmount) {
+  const plan = sqliteDb.prepare('SELECT * FROM FinanceMobilePlans WHERE id = ?').get(planId);
+  if (!plan) throw new Error('Plan de recarga no encontrado');
+
+  const payAccount = accountUsed || plan.preferredAccount || 'acc_cash';
+  const rechargeAmount = customAmount !== undefined ? Math.max(0, parseFloat(customAmount) || 0) : plan.amount;
+  if (rechargeAmount <= 0) throw new Error('El monto de la recarga debe ser mayor a 0');
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const nextD = new Date(todayStr + 'T12:00:00');
+  nextD.setDate(nextD.getDate() + (plan.durationDays || 30));
+  const newRenewalDate = nextD.toISOString().slice(0, 10);
+
+  // 1. Actualizar fechas del plan
+  sqliteDb.prepare(`
+    UPDATE FinanceMobilePlans 
+    SET lastRechargeDate = ?, nextRenewalDate = ?, updatedAt = datetime('now')
+    WHERE id = ?
+  `).run(todayStr, newRenewalDate, planId);
+
+  // 2. Registrar el gasto contable en FinanceLedger
+  recordTransaction({
+    type: 'expense_manual',
+    category: 'telefonia',
+    serviceName: `Recarga Móvil: ${plan.carrier} ${plan.planName || ''} (${plan.phoneNumber || 'Línea'})`,
+    chargedAmount: 0,
+    costAmount: rechargeAmount,
+    account: payAccount,
+    notes: `Recarga de $${rechargeAmount} válida por ${plan.durationDays} días. Próxima renovación: ${newRenewalDate}. Ref: ${plan.id}`,
+    recordedBy: 'Admin'
+  });
+
+  return sqliteDb.prepare('SELECT * FROM FinanceMobilePlans WHERE id = ?').get(planId);
+}
+
+function deleteMobilePlan(id) {
+  const stmt = sqliteDb.prepare('DELETE FROM FinanceMobilePlans WHERE id = ?');
+  return stmt.run(id).changes > 0;
+}
+
 module.exports = {
   getFinanceConfig,
   updateFinanceConfig,
@@ -1056,6 +1192,10 @@ module.exports = {
   saveInstallment,
   payInstallmentQuota,
   deleteInstallment,
-  recordCollegeAllowance
+  recordCollegeAllowance,
+  getAllMobilePlans,
+  saveMobilePlan,
+  executeMobileRecharge,
+  deleteMobilePlan
 };
 

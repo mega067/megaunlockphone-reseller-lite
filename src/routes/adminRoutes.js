@@ -53,10 +53,13 @@ router.post('/admin/notify-unlinked-bot', requireAuth, requireAdmin, adminContro
 
 // Finanzas y Control de Ganancias
 router.get('/admin/finance', requireAuth, requireAdmin, adminController.getFinanceSummary);
+router.get('/admin/finance/dashboard', requireAuth, requireAdmin, adminController.getFinanceSummary);
 router.get('/admin/finance/order/:orderId', requireAuth, requireAdmin, adminController.getOrderFinanceDetails);
 router.post('/admin/finance/config', requireAuth, requireAdmin, adminController.updateFinanceConfig);
 router.post('/admin/finance/transaction', requireAuth, requireAdmin, adminController.addFinanceTransaction);
+router.post('/admin/finance/record', requireAuth, requireAdmin, adminController.addFinanceTransaction);
 router.delete('/admin/finance/transaction/:id', requireAuth, requireAdmin, adminController.deleteFinanceTransaction);
+router.delete('/admin/finance/transactions/:id', requireAuth, requireAdmin, adminController.deleteFinanceTransaction);
 
 // Cuentas Bancarias / Tarjetas / Inversión / Emergencia
 router.get('/admin/finance/accounts', requireAuth, requireAdmin, adminController.getFinanceAccounts);
@@ -80,6 +83,12 @@ router.delete('/admin/finance/installments/:id', requireAuth, requireAdmin, admi
 
 // Ingreso Semanal para Pasaje y Comida de Universidad
 router.post('/admin/finance/college-allowance', requireAuth, requireAdmin, adminController.recordCollegeAllowance);
+
+// Control y Previsión de Recargas Telefónicas / Planes Móviles
+router.get('/admin/finance/mobile-plans', requireAuth, requireAdmin, adminController.getMobilePlans);
+router.post('/admin/finance/mobile-plans', requireAuth, requireAdmin, adminController.saveMobilePlan);
+router.post('/admin/finance/mobile-plans/:id/recharge', requireAuth, requireAdmin, adminController.executeMobileRecharge);
+router.delete('/admin/finance/mobile-plans/:id', requireAuth, requireAdmin, adminController.deleteMobilePlan);
 
 module.exports = router;
 
