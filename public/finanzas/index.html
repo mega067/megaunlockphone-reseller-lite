@@ -355,9 +355,60 @@
       grid-template-columns: 1fr 1fr;
       gap: 0.8rem;
     }
-    @media (max-width: 600px) {
+    @media (max-width: 768px) {
+      .fin-shell {
+        padding: 0.75rem 0.6rem 3rem;
+      }
+      .fin-topbar {
+        padding: 0.8rem 1rem;
+        border-radius: 16px;
+      }
+      .fin-balance-hero {
+        padding: 1.25rem 1.1rem;
+        border-radius: 18px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+      }
+      .fin-hero-amount {
+        font-size: 2.2rem;
+      }
+      .fin-quick-stats {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.85rem;
+      }
+      .fin-quick-stat-item {
+        min-width: 0;
+        padding-left: 0.7rem;
+      }
+      .fin-tab-nav {
+        margin-bottom: 1rem;
+        padding: 4px;
+      }
+      .fin-tab-btn {
+        min-width: 125px;
+        padding: 0.6rem 0.8rem;
+        font-size: 0.82rem;
+      }
+      .fin-card {
+        padding: 1rem 1.1rem;
+        border-radius: 16px;
+      }
+      .fin-card-header {
+        margin-bottom: 1rem;
+      }
+      .fin-btn {
+        padding: 0.55rem 0.95rem;
+        font-size: 0.82rem;
+      }
       .fin-grid-2 {
         grid-template-columns: 1fr;
+      }
+      .fin-modal-card {
+        padding: 1.25rem 1.1rem;
+        border-radius: 18px;
       }
     }
     .fin-badge {
@@ -778,14 +829,15 @@
     </div>
   </div>
 
-  <!-- Modal 4: Nueva Cuenta / Tarjeta -->
+  <!-- Modal 4: Nueva / Editar Cuenta o Tarjeta -->
   <div id="modalNewAccount" class="fin-modal-overlay">
     <div class="fin-modal-card">
       <div class="fin-modal-header">
-        <h3 style="margin:0; font-size:1.15rem; font-family:'Outfit',sans-serif; color:#f8fafc;">Nueva Billetera / Cuenta</h3>
+        <h3 id="modalAccountTitle" style="margin:0; font-size:1.15rem; font-family:'Outfit',sans-serif; color:#f8fafc;">Billetera / Cuenta</h3>
         <button class="fin-modal-close" onclick="window.finCloseModal('modalNewAccount')"><i data-lucide="x" style="width:16px; height:16px;"></i></button>
       </div>
       <form id="formNewAccount">
+        <input type="hidden" id="accId">
         <div class="fin-form-group">
           <label>Nombre de la Cuenta *</label>
           <input type="text" id="accName" class="fin-input" placeholder="Ej: Nu Crédito, BBVA Ahorro, Efectivo..." required>
@@ -802,17 +854,18 @@
             </select>
           </div>
           <div class="fin-form-group">
-            <label>Saldo Inicial (MXN)</label>
-            <input type="number" id="accBalance" class="fin-input" step="0.5" value="0.00">
+            <label>Saldo Actual Disponible (MXN) *</label>
+            <input type="number" id="accBalance" class="fin-input" step="0.5" value="0.00" required>
+            <small style="color:var(--fin-text-sub); font-size:0.75rem;">Monto real que tienes ahorita en tu cuenta.</small>
           </div>
         </div>
         <div class="fin-form-group">
-          <label>Descripción corta</label>
-          <input type="text" id="accDesc" class="fin-input" placeholder="Ej: Tarjeta física principal">
+          <label>Descripción o Notas (Opcional)</label>
+          <input type="text" id="accDesc" class="fin-input" placeholder="Ej: Cuenta principal para pagos">
         </div>
         <div style="display:flex; justify-content:flex-end; gap:0.6rem; margin-top:1.2rem;">
           <button type="button" class="fin-btn fin-btn-soft" onclick="window.finCloseModal('modalNewAccount')">Cancelar</button>
-          <button type="submit" class="fin-btn fin-btn-primary">Crear Cuenta</button>
+          <button type="submit" class="fin-btn fin-btn-primary" id="btnSubmitAccount">Guardar Cuenta</button>
         </div>
       </form>
     </div>
@@ -893,6 +946,6 @@
     </div>
   </div>
 
-  <script src="/finanzas/finanzas.js?v=90"></script>
+  <script src="/finanzas/finanzas.js?v=91"></script>
 </body>
 </html>

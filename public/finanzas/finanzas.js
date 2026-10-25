@@ -160,13 +160,18 @@
               <span class="fin-badge" style="background:${badgeBg}; color:${badgeColor};">${escapeHtml(acc.type || 'Cuenta')}</span>
               <h3 style="margin:4px 0 0; font-size:1.1rem; font-weight:700; color:#f8fafc;">${escapeHtml(acc.name)}</h3>
             </div>
-            <button onclick="window.finDeleteAccount('${acc.id}', '${escapeHtml(acc.name)}')" title="Archivar cuenta" style="background:none; border:none; color:var(--fin-text-sub); cursor:pointer; font-size:0.85rem; padding:4px;">
-              🗑️
-            </button>
+            <div style="display:flex; align-items:center; gap:4px;">
+              <button onclick="window.finOpenEditAccount('${acc.id}')" title="Editar cuenta y saldo" style="background:rgba(255,255,255,0.06); border:none; border-radius:8px; color:#cbd5e1; cursor:pointer; font-size:0.85rem; padding:5px 8px;">
+                ✏️
+              </button>
+              <button onclick="window.finDeleteAccount('${acc.id}', '${escapeHtml(acc.name)}')" title="Archivar cuenta" style="background:rgba(255,255,255,0.06); border:none; border-radius:8px; color:var(--fin-text-sub); cursor:pointer; font-size:0.85rem; padding:5px 8px;">
+                🗑️
+              </button>
+            </div>
           </div>
           <div style="margin-bottom:0.75rem;">
             <div style="font-size:1.65rem; font-weight:800; color:#ffffff; font-family:'Outfit',sans-serif;">${formatMoney(balance)}</div>
-            <small style="color:var(--fin-text-muted); font-size:0.75rem;">${isCard ? 'Línea de saldo/uso' : 'Saldo disponible'}</small>
+            <small style="color:var(--fin-text-muted); font-size:0.75rem;">${isCard ? 'Línea de saldo/uso' : 'Saldo actual disponible'}</small>
           </div>
           <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px dashed rgba(255,255,255,0.08); padding-top:0.6rem; font-size:0.78rem;">
             <span style="color:var(--fin-text-muted);">Movimientos / Margen:</span>
@@ -622,6 +627,29 @@
     if (res.ok) loadAllFinanceData();
   };
 
+  window.finOpenNewAccount = function() {
+    document.getElementById('formNewAccount').reset();
+    document.getElementById('accId').value = '';
+    document.getElementById('modalAccountTitle').textContent = 'Nueva Billetera / Cuenta';
+    document.getElementById('btnSubmitAccount').textContent = 'Crear Cuenta';
+    window.finOpenModal('modalNewAccount');
+  };
+
+  window.finOpenEditAccount = function(id) {
+    const acc = cachedAccounts.find(a => a.id === id);
+    if (!acc) return;
+
+    document.getElementById('accId').value = acc.id;
+    document.getElementById('modalAccountTitle').textContent = `Editar Cuenta: ${acc.name}`;
+    document.getElementById('accName').value = acc.name || '';
+    document.getElementById('accType').value = acc.type || 'bank';
+    document.getElementById('accBalance').value = acc.balance !== undefined ? acc.balance : (acc.currentBalance || 0);
+    document.getElementById('accDesc').value = acc.description || '';
+    document.getElementById('btnSubmitAccount').textContent = 'Guardar Cambios';
+
+    window.finOpenModal('modalNewAccount');
+  };
+
   window.finDeleteAccount = async function(id, name) {
     if (!confirm(`¿Archivar la cuenta "${name}"? No se eliminarán sus registros históricos.`)) return;
     const res = await fetchWithAuth(`/api/admin/finance/accounts/${encodeURIComponent(id)}`, { method: 'DELETE' });
@@ -691,10 +719,7 @@
 
   const btnNewAcc = document.getElementById('btnFinNewAccount');
   if (btnNewAcc) {
-    btnNewAcc.addEventListener('click', () => {
-      document.getElementById('formNewAccount').reset();
-      window.finOpenModal('modalNewAccount');
-    });
+    btnNewAcc.addEventListener('click', window.finOpenNewAccount);
   }
 
   const btnNewDebt = document.getElementById('btnFinNewDebt');
@@ -844,15 +869,21 @@
     });
   }
 
-  // 4. Guardar Nueva Cuenta
+  // 4. Guardar / Editar Cuenta
   const formNewAccount = document.getElementById('formNewAccount');
   if (formNewAccount) {
     formNewAccount.addEventListener('submit', async (e) => {
       e.preventDefault();
+      const id = document.getElementById('accId').value || undefined;
+      const initialBalance = parseFloat(document.getElementById('accBalance').value) || 0;
+
       const payload = {
+        id,
         name: document.getElementById('accName').value.trim(),
         type: document.getElementById('accType').value,
-        initialBalance: parseFloat(document.getElementById('accBalance').value) || 0,
+        initialBalance,
+        currentBalance: initialBalance,
+        balance: initialBalance,
         description: document.getElementById('accDesc').value.trim()
       };
 
@@ -866,7 +897,7 @@
         window.finCloseModal('modalNewAccount');
         loadAllFinanceData();
       } else {
-        alert(d.error || 'Error al crear cuenta');
+        alert(d.error || 'Error al guardar cuenta');
       }
     });
   }
