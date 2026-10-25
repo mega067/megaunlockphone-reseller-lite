@@ -56,9 +56,17 @@ const CATEGORIES_INCOME = [
  */
 async function financeBotCommands(context) {
     const { sock, remoteJid, firstWord, args, text, sessionManager, wusers } = context;
-    const linkedUserId = wusers[remoteJid];
+    const linkedUserId = context.linkedUserId != null ? context.linkedUserId : wusers[remoteJid];
     const users = readDB(USERS_FILE) || [];
-    const user = users.find(u => u.id === linkedUserId);
+    let user = users.find(u => String(u.id) === String(linkedUserId));
+
+    if (!user && linkedUserId) {
+        try {
+            const sqliteDb = require('../database');
+            const row = sqliteDb.prepare("SELECT * FROM Users WHERE id = ?").get(String(linkedUserId));
+            if (row) user = row;
+        } catch (e) {}
+    }
 
     // Solo accesible por el administrador (dueño del negocio y finanzas)
     if (!user || user.role !== 'admin') return false;

@@ -434,9 +434,9 @@ async function connectToWhatsApp() {
         
         // Auto-vincular y resolver ID de usuario vinculado (soportando @lid y @s.whatsapp.net)
         const rawDigits = remoteJid.split('@')[0].replace(/\D/g, '');
-        let resolvedLinkedUserId = wusers[remoteJid] || null;
+        let resolvedLinkedUserId = wusers[remoteJid] != null ? wusers[remoteJid] : null;
 
-        if (!resolvedLinkedUserId) {
+        if (resolvedLinkedUserId == null) {
             for (const [key, val] of Object.entries(wusers)) {
                 const kDigits = key.split('@')[0].replace(/\D/g, '');
                 if (kDigits === rawDigits || (rawDigits.length >= 10 && kDigits.endsWith(rawDigits)) || (kDigits.length >= 10 && rawDigits.endsWith(kDigits))) {
@@ -447,29 +447,37 @@ async function connectToWhatsApp() {
             }
         }
 
-        let isUserLinked = !!resolvedLinkedUserId;
-
-        if (!isUserLinked && !isGroup && rawDigits.length >= 10) {
+        // Si aún no está mapeado en whatsapp_users.json, buscar en SQLite Users por teléfono
+        if (resolvedLinkedUserId == null && !isGroup && rawDigits.length >= 10) {
             try {
-                const users = readDB(USERS_FILE) || [];
-                const matchingUsers = users.filter(u => {
-                    if (!u.phone) return false;
-                    const uClean = String(u.phone).replace(/\D/g, '');
-                    return uClean === rawDigits || (uClean.length >= 10 && rawDigits.endsWith(uClean.slice(-10)));
-                });
-
-                if (matchingUsers.length === 1) {
-                    const matchedUser = matchingUsers[0];
-                    wusers[remoteJid] = matchedUser.id;
+                const sqliteDb = require('./src/database');
+                const row = sqliteDb.prepare("SELECT id, username FROM Users WHERE phone = ? OR phone LIKE ? LIMIT 1").get(rawDigits, `%${rawDigits.slice(-10)}`);
+                if (row) {
+                    resolvedLinkedUserId = row.id;
+                    wusers[remoteJid] = row.id;
                     writeDB(WHATSAPP_USERS_FILE, wusers);
-                    resolvedLinkedUserId = matchedUser.id;
-                    isUserLinked = true;
-                    console.log(`[AUTO-LINK] WhatsApp ${remoteJid} auto-vinculado con usuario ${matchedUser.username} (${matchedUser.id})`);
+                    console.log(`[AUTO-LINK SQLITE] WhatsApp ${remoteJid} auto-vinculado con usuario ${row.username} (${row.id})`);
                 }
-            } catch (autoLinkErr) {
-                console.error('[AUTO-LINK] Error auto-linking:', autoLinkErr);
+            } catch (sqlErr) {
+                // Fallback a users.json
+                try {
+                    const users = readDB(USERS_FILE) || [];
+                    const matchingUser = users.find(u => {
+                        if (!u.phone) return false;
+                        const uClean = String(u.phone).replace(/\D/g, '');
+                        return uClean === rawDigits || (uClean.length >= 10 && rawDigits.endsWith(uClean.slice(-10)));
+                    });
+                    if (matchingUser) {
+                        resolvedLinkedUserId = matchingUser.id;
+                        wusers[remoteJid] = matchingUser.id;
+                        writeDB(WHATSAPP_USERS_FILE, wusers);
+                        console.log(`[AUTO-LINK JSON] WhatsApp ${remoteJid} auto-vinculado con usuario ${matchingUser.username} (${matchingUser.id})`);
+                    }
+                } catch (e) {}
             }
         }
+
+        let isUserLinked = resolvedLinkedUserId != null;
 
         const context = {
             sock,

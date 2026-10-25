@@ -5,9 +5,18 @@ const USERS_FILE = path.join(DATA_DIR, 'users.json');
 
 async function admin(context) {
     const { sock, msg, remoteJid, firstWord, args, text, sessionManager, wusers, hasMedia } = context;
-    const linkedUserId = context.linkedUserId || wusers[remoteJid];
+    const linkedUserId = context.linkedUserId != null ? context.linkedUserId : wusers[remoteJid];
     const users = readDB(USERS_FILE) || [];
-    const user = users.find(u => u.id === linkedUserId);
+    let user = users.find(u => String(u.id) === String(linkedUserId));
+
+    // Si no está en users.json, verificar en SQLite Users
+    if (!user && linkedUserId) {
+        try {
+            const sqliteDb = require('../../src/database');
+            const row = sqliteDb.prepare("SELECT * FROM Users WHERE id = ?").get(String(linkedUserId));
+            if (row) user = row;
+        } catch (e) {}
+    }
 
     if (!user || user.role !== 'admin') return false;
 

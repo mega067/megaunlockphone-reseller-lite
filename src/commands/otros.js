@@ -7,9 +7,17 @@ const WHATSAPP_SETTINGS_FILE = path.join(DATA_DIR, 'whatsapp_settings.json');
 
 async function otros(context) {
     const { sock, remoteJid, firstWord, text, args, msg, isGroup, wusers, wsettings } = context;
-    const linkedUserId = context.linkedUserId || wusers[remoteJid];
+    const linkedUserId = context.linkedUserId != null ? context.linkedUserId : wusers[remoteJid];
     const users = readDB(USERS_FILE) || [];
-    const user = users.find(u => u.id === linkedUserId);
+    let user = users.find(u => String(u.id) === String(linkedUserId));
+
+    if (!user && linkedUserId) {
+        try {
+            const sqliteDb = require('../../src/database');
+            const row = sqliteDb.prepare("SELECT * FROM Users WHERE id = ?").get(String(linkedUserId));
+            if (row) user = row;
+        } catch (e) {}
+    }
 
     const cmd = firstWord.toLowerCase();
     
