@@ -1801,10 +1801,14 @@ function openPurchaseModal(serviceId) {
   
   // Apply Advanced validations if any
   imeiInput.removeAttribute('pattern'); // reset
+  imeiInput.removeAttribute('minlength');
+  imeiInput.removeAttribute('maxlength');
   if (raw && raw.CUSTOM) {
-    if (raw.CUSTOM.customlen) imeiInput.setAttribute('minlength', raw.CUSTOM.customlen);
-    if (raw.CUSTOM.maxlength) imeiInput.setAttribute('maxlength', raw.CUSTOM.maxlength);
-    if (raw.CUSTOM.regex) imeiInput.setAttribute('pattern', raw.CUSTOM.regex);
+    const minL = parseInt(raw.CUSTOM.customlen, 10);
+    const maxL = parseInt(raw.CUSTOM.maxlength, 10);
+    if (!isNaN(minL) && minL > 0) imeiInput.setAttribute('minlength', minL);
+    if (!isNaN(maxL) && maxL > 0) imeiInput.setAttribute('maxlength', maxL);
+    if (raw.CUSTOM.regex && String(raw.CUSTOM.regex).trim()) imeiInput.setAttribute('pattern', raw.CUSTOM.regex);
   }
   
   imeiAutoGenerate.dispatchEvent(new Event('change'));
