@@ -159,6 +159,29 @@ function recordTransaction(data) {
     grossProfit = chargedAmount - costAmount;
   }
 
+  // Soporte de Pagos Divididos / Conexión de Gastos Multi-Cuenta (Ej: parte en efectivo y parte en transferencia o tarjeta)
+  if (Array.isArray(data.splits) && data.splits.length > 0) {
+    const parentNotes = data.notes || data.serviceName || 'Gasto Dividido';
+    const recordedEntries = [];
+    data.splits.forEach((split, index) => {
+      const splitAmount = Math.max(0, parseFloat(split.amount) || 0);
+      if (splitAmount > 0) {
+        const splitAcc = split.account || data.account || 'Efectivo / Caja';
+        const entry = recordTransaction({
+          ...data,
+          splits: null, // Evitar recursión
+          costAmount: data.type === 'expense_manual' || (data.costAmount > 0 && !data.chargedAmount) ? splitAmount : 0,
+          chargedAmount: data.type === 'income_manual' || (data.chargedAmount > 0 && !data.costAmount) ? splitAmount : 0,
+          account: splitAcc,
+          notes: `${parentNotes} [División ${index + 1}/${data.splits.length}: $${splitAmount.toFixed(2)} vía ${splitAcc}]`,
+          serviceName: data.serviceName ? `${data.serviceName} (Parte ${index + 1})` : parentNotes
+        });
+        recordedEntries.push(entry);
+      }
+    });
+    return { success: true, count: recordedEntries.length, entries: recordedEntries };
+  }
+
   const reinvestPercent = data.reinvestPercent !== undefined 
     ? Math.max(0, Math.min(100, parseFloat(data.reinvestPercent))) 
     : config.reinvestPercent;
@@ -311,12 +334,13 @@ async function getFinanceSummary(filterOptions = {}) {
     FROM FinanceLedger
   `).get();
 
-  // Resumen de Gastos Personales por Categoría (Comida, Pasajes, Gustos, Servidores, etc.)
+  // Resumen de Gastos Personales por Categoría (Comida, Pasajes, Gustos, etc.)
   const categoryRows = sqliteDb.prepare(`
     SELECT 
       COALESCE(category, 'otros') as category,
       COUNT(*) as count,
-      COALESCE(SUM(costAmount), 0) as totalExpense,
+      COALESCE(SUM(CASE WHEN type IN ('expense_manual', 'transfer') THEN costAmount ELSE 0 END), 0) as totalExpense,
+      COALESCE(SUM(CASE WHEN type IN ('expense_manual', 'transfer') THEN costAmount ELSE 0 END), 0) as totalCost,
       COALESCE(SUM(chargedAmount), 0) as totalIncome
     FROM FinanceLedger
     GROUP BY category
@@ -916,12 +940,23 @@ function saveInstallment(data) {
   const totalAmount = Math.max(0, parseFloat(data.totalAmount) || 0);
   const totalQuotas = Math.max(1, parseInt(data.totalQuotas) || 1);
   const paidQuotas = Math.max(0, Math.min(totalQuotas, parseInt(data.paidQuotas) || 0));
-  const quotaAmount = Math.max(0, parseFloat(data.quotaAmount) || parseFloat((totalAmount / totalQuotas).toFixed(2)));
-  const dueDay = Math.max(1, Math.min(31, parseInt(data.dueDay) || 13));
+
+  // Cálculo automático del monto por mes: total / cuotas (con redondeo a 2 decimales)
+  let quotaAmount = parseFloat(data.quotaAmount);
+  if (!quotaAmount || isNaN(quotaAmount) || quotaAmount <= 0) {
+    quotaAmount = parseFloat((totalAmount / totalQuotas).toFixed(2));
+  }
+
+  // Fecha del primer pago o inicio
+  const rawFirstDate = data.firstPaymentDate || data.startDate || new Date().toISOString().slice(0, 10);
+  const parsedDate = new Date(rawFirstDate);
+  const detectedDueDay = !isNaN(parsedDate.getDate()) ? parsedDate.getDate() : 13;
+  const dueDay = Math.max(1, Math.min(31, parseInt(data.dueDay) || detectedDueDay));
+
   const interestRate = parseFloat(data.interestRate) || 0;
   const referenceNumber = data.referenceNumber ? String(data.referenceNumber).trim() : '';
   const status = paidQuotas >= totalQuotas ? 'completed' : 'active';
-  const startDate = data.startDate ? String(data.startDate).trim() : new Date().toISOString().slice(0, 10);
+  const startDate = rawFirstDate;
   const notes = data.notes ? String(data.notes).trim() : '';
 
   if (isUpdate) {

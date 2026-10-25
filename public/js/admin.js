@@ -2198,11 +2198,11 @@ function renderFinanceCategories(categories) {
 
   const list = Object.keys(catMeta).map(key => {
     const meta = catMeta[key];
-    const catData = (categories || []).find(c => c.category === key) || { totalCost: 0, count: 0 };
+    const catData = (categories || []).find(c => c.category === key) || { totalCost: 0, totalExpense: 0, count: 0 };
     return {
       key,
       ...meta,
-      total: parseFloat(catData.totalCost || 0),
+      total: parseFloat(catData.totalCost !== undefined ? catData.totalCost : (catData.totalExpense || 0)),
       count: parseInt(catData.count || 0, 10)
     };
   });

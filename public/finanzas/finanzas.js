@@ -405,25 +405,28 @@
     });
   }
 
-  // Botón Nuevo Plan a Meses
+  // Botón Nuevo Plan a Meses (Automático: Solo Total, Meses y Fecha)
   const btnNewInst = document.getElementById('btnFinNewInstallment');
   if (btnNewInst) {
     btnNewInst.addEventListener('click', async () => {
-      const title = prompt('Concepto o compra a meses (Ej. Laptop Nu, Seguro, etc.):');
+      const title = prompt('Concepto o compra a meses (Ej. Laptop Nu, Seguro, Disposición):');
       if (!title || !title.trim()) return;
 
-      const totalStr = prompt('Monto total a pagar:', '1200.00');
+      const totalStr = prompt('Monto total de la compra o pedido:', '1200.00');
       if (!totalStr) return;
       const totalAmount = parseFloat(totalStr);
       if (isNaN(totalAmount) || totalAmount <= 0) return alert('Monto inválido.');
 
-      const quotasStr = prompt('Número total de mensualidades:', '6');
+      const quotasStr = prompt('¿A cuántos meses / cuotas? (Ej. 3, 6, 12):', '6');
       const totalQuotas = parseInt(quotasStr, 10) || 6;
 
-      const dueDayStr = prompt('Día de corte o pago de cada mes (1-31):', '13');
-      const dueDay = parseInt(dueDayStr, 10) || 13;
+      const firstDateStr = prompt('Fecha de primer pago (YYYY-MM-DD o día del mes):', new Date().toISOString().slice(0, 10));
+      const card = prompt('Tarjeta o Banco (Ej: Nu, BBVA, Mercado Pago):', 'Nu');
 
-      const card = prompt('Tarjeta o cuenta (Ej: Nu, BBVA, Mercado Pago):', 'Nu');
+      // Cálculo automático de cuota mensual
+      const quotaPreview = (totalAmount / totalQuotas).toFixed(2);
+      const confirmMsg = `Confirmar registro de meses:\n• Concepto: ${title}\n• Total: $${totalAmount.toFixed(2)}\n• Mensualidades: ${totalQuotas} pagos de ~$${quotaPreview}/mes\n• Primer pago: ${firstDateStr || 'Hoy'}\n\n¿Guardar plan?`;
+      if (!confirm(confirmMsg)) return;
 
       const res = await fetchWithAuth('/api/admin/finance/installments', {
         method: 'POST',
@@ -432,13 +435,13 @@
           title: title.trim(),
           totalAmount,
           totalQuotas,
-          dueDay,
-          accountName: card || 'Tarjeta'
+          firstPaymentDate: firstDateStr || undefined,
+          accountName: card || 'Nu'
         })
       });
       const d = await res.json();
       if (res.ok && d.success) {
-        alert('✅ Plan a meses registrado exitosamente.');
+        alert(`✅ Plan a meses registrado con éxito.\nMensualidad automática: $${quotaPreview}/mes.`);
         loadAllFinanceData();
       } else {
         alert(d.error || 'Error al guardar.');
@@ -446,15 +449,56 @@
     });
   }
 
-  // Botón Registrar Movimiento Manual
+  // Botón Registrar Movimiento Manual (con soporte de pago dividido: efectivo + transferencia / tarjeta)
   const btnManualTx = document.getElementById('btnFinNewManualTx');
   if (btnManualTx) {
     btnManualTx.addEventListener('click', async () => {
-      const opt = prompt('Tipo de movimiento:\n1. Ingreso / Venta (+)\n2. Gasto (-)\n\nEscribe 1 o 2:', '1');
+      const opt = prompt('Tipo de movimiento:\n1. Ingreso / Venta (+)\n2. Gasto Simple (-)\n3. Gasto Dividido (Ej: parte en efectivo y parte en transferencia/tarjeta)\n\nEscribe 1, 2 o 3:', '2');
       if (!opt) return;
-      const isIncome = opt === '1';
 
-      const desc = prompt(isIncome ? 'Concepto del ingreso (ej. Venta de servicio):' : 'Concepto del gasto (ej. Recarga de saldo):');
+      if (opt === '3') {
+        // Gasto Dividido / Conexión Multi-Cuenta
+        const desc = prompt('Concepto del gasto dividido (ej. Compra herramienta / Servicio):');
+        if (!desc || !desc.trim()) return;
+
+        const totalStr = prompt('Monto total del gasto:', '500.00');
+        if (!totalStr) return;
+        const totalExpense = parseFloat(totalStr);
+        if (isNaN(totalExpense) || totalExpense <= 0) return alert('Monto inválido.');
+
+        const cashStr = prompt('¿Cuánto pagas en Efectivo?', (totalExpense / 2).toFixed(2));
+        const cashAmount = parseFloat(cashStr) || 0;
+        const bankAmount = Math.max(0, totalExpense - cashAmount);
+
+        const cardName = prompt(`¿De qué cuenta/tarjeta se paga el restante ($${bankAmount.toFixed(2)})? (Ej: acc_nu, acc_bbva, Nu Débito, BBVA):`, 'acc_nu') || 'acc_nu';
+
+        const payload = {
+          type: 'expense_manual',
+          serviceName: desc.trim(),
+          notes: desc.trim(),
+          splits: [
+            { account: 'Efectivo / Caja', amount: cashAmount },
+            { account: cardName, amount: bankAmount }
+          ]
+        };
+
+        const res = await fetchWithAuth('/api/admin/finance/record', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const d = await res.json();
+        if (res.ok && d.success) {
+          alert(`✅ Gasto dividido registrado con éxito:\n• $${cashAmount.toFixed(2)} en Efectivo\n• $${bankAmount.toFixed(2)} vía ${cardName}`);
+          loadAllFinanceData();
+        } else {
+          alert(d.error || 'Error al registrar.');
+        }
+        return;
+      }
+
+      const isIncome = opt === '1';
+      const desc = prompt(isIncome ? 'Concepto del ingreso (ej. Venta de servicio):' : 'Concepto del gasto (ej. Despensa / Compra):');
       if (!desc || !desc.trim()) return;
 
       const amountStr = prompt('Monto:', '100.00');
@@ -462,7 +506,7 @@
       const amount = parseFloat(amountStr);
       if (isNaN(amount) || amount <= 0) return alert('Monto inválido.');
 
-      const account = prompt('Cuenta (Ej: acc_cash, acc_nu, acc_bbva):', 'acc_cash') || 'acc_cash';
+      const account = prompt('Cuenta (Ej: acc_cash, acc_nu, acc_bbva, Efectivo, Nu, BBVA):', 'acc_cash') || 'acc_cash';
 
       const payload = {
         type: isIncome ? 'income_manual' : 'expense_manual',
