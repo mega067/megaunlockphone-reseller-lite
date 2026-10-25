@@ -1799,17 +1799,10 @@ function openPurchaseModal(serviceId) {
     imeiInput.removeAttribute('maxlength');
   }
   
-  // Apply Advanced validations if any
-  imeiInput.removeAttribute('pattern'); // reset
+  // Deslimitar campo: remover cualquier restricción de longitud o patrón para permitir escribir sin trabas
+  imeiInput.removeAttribute('pattern');
   imeiInput.removeAttribute('minlength');
   imeiInput.removeAttribute('maxlength');
-  if (raw && raw.CUSTOM) {
-    const minL = parseInt(raw.CUSTOM.customlen, 10);
-    const maxL = parseInt(raw.CUSTOM.maxlength, 10);
-    if (!isNaN(minL) && minL > 0) imeiInput.setAttribute('minlength', minL);
-    if (!isNaN(maxL) && maxL > 0) imeiInput.setAttribute('maxlength', maxL);
-    if (raw.CUSTOM.regex && String(raw.CUSTOM.regex).trim()) imeiInput.setAttribute('pattern', raw.CUSTOM.regex);
-  }
   
   imeiAutoGenerate.dispatchEvent(new Event('change'));
 
@@ -1905,14 +1898,8 @@ orderForm.addEventListener('submit', async (e) => {
   if (needsImei && !imeiInputGroup.classList.contains('hidden')) {
     imei = imeiInput.value.trim();
     
-    // If the field explicitly requested 15 digits (e.g. clean/blacklist), strictly enforce it.
-    // Otherwise, just enforce it's not empty, allowing 4-digit PINs or SNs.
-    if (imeiLabel.textContent.includes('(15 dígitos)')) {
-      if (!/^[A-Za-z0-9]{15}$/.test(imei)) {
-        alert('El IMEI debe tener exactamente 15 caracteres.');
-        return;
-      }
-    } else if (!imei) {
+    // Permitir cualquier longitud de IMEI, serial, cuenta o referencia sin trabas
+    if (!imei) {
       alert('Debes ingresar los datos solicitados.');
       return;
     }
