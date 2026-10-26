@@ -134,50 +134,60 @@
     .fin-quick-stat-item.blue { border-color: #38bdf8; }
     .fin-quick-stat-item.purple { border-color: #a855f7; }
 
-    /* Segmented Tab Controls */
+    /* Segmented Tab Controls (Touch-Optimized Horizontal Scroll) */
     .fin-tab-nav {
       display: flex;
+      flex-wrap: nowrap;
       background: rgba(15, 23, 42, 0.92);
-      backdrop-filter: blur(12px);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
       border: 1px solid var(--fin-card-border);
       border-radius: 16px;
-      padding: 5px;
+      padding: 6px;
       margin-bottom: 1.4rem;
-      gap: 5px;
+      gap: 8px;
       overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
       scrollbar-width: none;
+      scroll-snap-type: x mandatory;
+      touch-action: pan-x;
+      position: relative;
     }
     .fin-tab-nav::-webkit-scrollbar {
       display: none;
     }
     .fin-tab-btn {
-      flex: 1;
-      min-width: 145px;
-      padding: 0.7rem 1.1rem;
+      flex: 0 0 auto;
+      min-width: max-content;
+      padding: 0.7rem 1.15rem;
       border-radius: 12px;
-      border: none;
-      background: transparent;
+      border: 1px solid transparent;
+      background: rgba(255, 255, 255, 0.02);
       color: var(--fin-text-muted);
       font-weight: 600;
       font-size: 0.88rem;
-      display: flex;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 0.55rem;
       cursor: pointer;
       transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       white-space: nowrap;
+      scroll-snap-align: start;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
     }
     .fin-tab-btn:hover {
       color: #ffffff;
-      background: rgba(255, 255, 255, 0.05);
+      background: rgba(255, 255, 255, 0.06);
     }
     .fin-tab-btn.active {
       background: #1e293b;
       color: #34d399;
       font-weight: 700;
-      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
-      border: 1px solid rgba(16, 185, 129, 0.3);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(16, 185, 129, 0.4);
     }
 
     /* Content Panels */
@@ -393,20 +403,32 @@
       }
       .fin-tab-nav {
         margin-bottom: 1rem;
-        padding: 4px;
+        padding: 5px;
+        gap: 6px;
         -webkit-overflow-scrolling: touch;
+        border-radius: 14px;
       }
       .fin-tab-btn {
-        min-width: 110px;
-        padding: 0.6rem 0.75rem;
-        font-size: 0.8rem;
+        flex: 0 0 auto;
+        min-width: max-content;
+        padding: 0.55rem 0.85rem;
+        font-size: 0.82rem;
+        border-radius: 10px;
       }
       .fin-card {
-        padding: 1rem 1.1rem;
+        padding: 1rem 0.9rem;
         border-radius: 16px;
       }
       .fin-card-header {
         margin-bottom: 1rem;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+      }
+      .fin-card-header > div:last-child {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
       }
       .fin-btn {
         padding: 0.55rem 0.85rem;
@@ -414,6 +436,12 @@
       }
       .fin-grid-2 {
         grid-template-columns: 1fr;
+      }
+      .fin-table-scroll {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin: 0 -0.5rem;
+        padding: 0 0.5rem;
       }
       .fin-modal-card {
         padding: 1.25rem 1.1rem;
@@ -618,8 +646,8 @@
             <i data-lucide="plus" style="width:14px; height:14px;"></i> + Registrar Movimiento / Gasto
           </button>
         </div>
-        <div style="overflow-x:auto;">
-          <table style="width:100%; border-collapse:collapse; font-size:0.88rem;">
+        <div class="fin-table-scroll" style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
+          <table style="width:100%; min-width:650px; border-collapse:collapse; font-size:0.88rem;">
             <thead>
               <tr style="border-bottom: 2px solid rgba(255,255,255,0.08); text-align:left; color:var(--fin-text-muted);">
                 <th style="padding: 10px 12px;">Fecha</th>
@@ -958,6 +986,6 @@
     </div>
   </div>
 
-  <script src="/finanzas/finanzas.js?v=93"></script>
+  <script src="/finanzas/finanzas.js?v=98"></script>
 </body>
 </html>
