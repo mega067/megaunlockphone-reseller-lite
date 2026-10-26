@@ -12,6 +12,7 @@
 
   // Caché de cuentas disponibles para selectores en modales
   let cachedAccounts = [];
+  let cachedDebts = [];
 
   function formatMoney(num) {
     const val = parseFloat(num) || 0;
@@ -441,6 +442,8 @@
       if (!res.ok || !d.success) return;
 
       const items = d.debts || [];
+      cachedDebts = items;
+      populateDebtSelectOptions(items);
       const s = d.summary || {};
 
       const statRec = document.getElementById('statFinDebtsReceivable');
@@ -553,14 +556,80 @@
     }
   }
 
-  // --- TOGGLE CAMPOS DE MOVIMIENTO MANUAL ---
-  window.finToggleTxFields = function() {
-    const type = document.getElementById('txType').value;
+  // Poblar selector de deudas en el modal de movimientos
+  function populateDebtSelectOptions(debts) {
+    const sel = document.getElementById('txDebtId');
+    if (!sel) return;
+    const currentVal = sel.value;
+    const type = document.getElementById('txType')?.value;
+    
+    // Filtrar deudas pendientes o parciales
+    const isReceivable = type === 'debt_collect';
+    const isPayable = type === 'debt_pay';
+    const filterType = isReceivable ? 'receivable' : (isPayable ? 'payable' : null);
+
+    let filtered = debts.filter(d => d.status !== 'settled');
+    if (filterType) {
+      filtered = filtered.filter(d => d.type === filterType);
+    }
+
+    sel.innerHTML = `<option value="">-- Seleccionar Deuda Pendiente (${filtered.length}) --</option>` +
+      filtered.map(d => {
+        const rem = parseFloat(d.remainingAmount || d.totalAmount || 0);
+        return `<option value="${d.id}" data-type="${d.type}" data-remaining="${rem}" data-person="${escapeHtml(d.personName)}" data-concept="${escapeHtml(d.concept || '')}">
+          ${escapeHtml(d.personName)} - Resta: ${formatMoney(rem)} (${escapeHtml(d.concept || 'Deuda')})
+        </option>`;
+      }).join('');
+
+    if (currentVal) sel.value = currentVal;
+  }
+
+  // Al seleccionar una deuda del dropdown
+  window.finOnSelectDebtOption = function() {
+    const sel = document.getElementById('txDebtId');
+    const hint = document.getElementById('txDebtDetailsHint');
+    const conceptInput = document.getElementById('txConcept');
+    const totalInput = document.getElementById('txTotalAmount');
+    if (!sel) return;
+
+    const opt = sel.selectedOptions[0];
+    if (opt && opt.value) {
+      const remaining = parseFloat(opt.getAttribute('data-remaining')) || 0;
+      const person = opt.getAttribute('data-person') || '';
+      const concept = opt.getAttribute('data-concept') || '';
+      const type = document.getElementById('txType')?.value;
+
+      totalInput.value = remaining > 0 ? remaining.toFixed(2) : '';
+      if (type === 'debt_collect') {
+        conceptInput.value = `Abono/Cobro a ${person} (${concept || 'Deuda'})`;
+      } else if (type === 'debt_pay') {
+        conceptInput.value = `Pago realizado a ${person} (${concept || 'Deuda'})`;
+      }
+      if (hint) hint.innerHTML = `Saldo total pendiente: <strong style="color:#38bdf8;">${formatMoney(remaining)}</strong>`;
+      
+      // Auto dividir si está en modo split
+      const mode = document.getElementById('txPaymentMode')?.value;
+      if (mode === 'split' || type === 'expense_split') {
+        const cashInput = document.getElementById('txSplitCash');
+        const bankInput = document.getElementById('txSplitBank');
+        if (cashInput && bankInput) {
+          cashInput.value = (remaining / 2).toFixed(2);
+          bankInput.value = (remaining / 2).toFixed(2);
+        }
+      }
+    } else {
+      if (hint) hint.textContent = '';
+    }
+  };
+
+  // Toggle de modo de pago (Una sola cuenta vs Mixto/Dividido)
+  window.finTogglePaymentMode = function() {
+    const mode = document.getElementById('txPaymentMode')?.value || 'single';
     const splitBlock = document.getElementById('txSplitBlock');
     const simpleBlock = document.getElementById('txSimpleAccountBlock');
     const totalInput = document.getElementById('txTotalAmount');
 
-    if (type === 'expense_split') {
+    if (mode === 'split') {
       splitBlock.style.display = 'block';
       simpleBlock.style.display = 'none';
       const tot = parseFloat(totalInput.value) || 0;
@@ -571,6 +640,57 @@
     } else {
       splitBlock.style.display = 'none';
       simpleBlock.style.display = 'block';
+    }
+  };
+
+  // --- TOGGLE CAMPOS DE MOVIMIENTO MANUAL ---
+  window.finToggleTxFields = function() {
+    const type = document.getElementById('txType').value;
+    const splitBlock = document.getElementById('txSplitBlock');
+    const simpleBlock = document.getElementById('txSimpleAccountBlock');
+    const totalInput = document.getElementById('txTotalAmount');
+    const debtSelectBlock = document.getElementById('txDebtSelectBlock');
+    const modeGroup = document.getElementById('txPaymentMethodTypeGroup');
+    const accLabel = document.getElementById('txAccountLabel');
+    const categoryGroup = document.getElementById('txCategoryGroup');
+    const catSelect = document.getElementById('txCategory');
+
+    // Reset o mostrar bloque de deuda
+    if (type === 'debt_collect' || type === 'debt_pay') {
+      debtSelectBlock.style.display = 'block';
+      modeGroup.style.display = 'block';
+      categoryGroup.style.display = 'none';
+      if (catSelect) catSelect.value = 'deudas';
+
+      if (type === 'debt_collect') {
+        if (accLabel) accLabel.textContent = 'Cuenta donde entra el dinero (+ Cobro)';
+      } else {
+        if (accLabel) accLabel.textContent = 'Cuenta de donde sale el dinero (- Pago)';
+      }
+      populateDebtSelectOptions(cachedDebts);
+      window.finTogglePaymentMode();
+    } else if (type === 'expense_split') {
+      debtSelectBlock.style.display = 'none';
+      modeGroup.style.display = 'none';
+      categoryGroup.style.display = 'block';
+      splitBlock.style.display = 'block';
+      simpleBlock.style.display = 'none';
+      if (accLabel) accLabel.textContent = 'Cuenta de Cargo / Abono';
+      const tot = parseFloat(totalInput.value) || 0;
+      if (tot > 0) {
+        document.getElementById('txSplitCash').value = (tot / 2).toFixed(2);
+        document.getElementById('txSplitBank').value = (tot / 2).toFixed(2);
+      }
+    } else {
+      // Gasto simple o Ingreso simple
+      debtSelectBlock.style.display = 'none';
+      modeGroup.style.display = 'none';
+      categoryGroup.style.display = 'block';
+      splitBlock.style.display = 'none';
+      simpleBlock.style.display = 'block';
+      if (accLabel) {
+        accLabel.textContent = type === 'income_simple' ? 'Cuenta donde entra el dinero (+)' : 'Cuenta de donde sale el dinero (-)';
+      }
     }
   };
 
@@ -601,25 +721,23 @@
   };
 
   window.finSettleDebt = async function(id, person, amount) {
-    const valStr = prompt(`Monto a abonar o liquidar para "${person}":`, amount.toFixed(2));
-    if (!valStr) return;
-    const val = parseFloat(valStr);
-    if (isNaN(val) || val <= 0) return alert('Monto inválido.');
+    const debt = cachedDebts.find(d => d.id === id);
+    const isReceivable = debt ? debt.type === 'receivable' : true;
 
-    const acc = prompt('¿En qué cuenta entra o sale el dinero? (Ej: Efectivo / Caja, Nu, BBVA):', 'Efectivo / Caja');
-
-    const res = await fetchWithAuth(`/api/admin/finance/debts/${encodeURIComponent(id)}/pay`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ amount: val, account: acc || undefined })
-    });
-    const d = await res.json();
-    if (res.ok && d.success) {
-      alert('✅ Liquidación registrada y saldos sincronizados.');
-      loadAllFinanceData();
-    } else {
-      alert(d.error || 'Error al procesar abono.');
+    // Abrir el modal unificado configurado para esta deuda
+    const txType = document.getElementById('txType');
+    if (txType) {
+      txType.value = isReceivable ? 'debt_collect' : 'debt_pay';
+      window.finToggleTxFields();
     }
+
+    const txDebtId = document.getElementById('txDebtId');
+    if (txDebtId) {
+      txDebtId.value = id;
+      window.finOnSelectDebtOption();
+    }
+
+    window.finOpenModal('modalManualTx');
   };
 
   window.finDeleteDebt = async function(id) {
@@ -788,6 +906,87 @@
       const totalAmount = parseFloat(document.getElementById('txTotalAmount').value) || 0;
       const category = document.getElementById('txCategory').value;
 
+      // 2.A: Si es Cobro o Abono a una Deuda
+      if (type === 'debt_collect' || type === 'debt_pay') {
+        const debtId = document.getElementById('txDebtId').value;
+        const mode = document.getElementById('txPaymentMode')?.value || 'single';
+        let account = document.getElementById('txAccount').value;
+        let splits = null;
+
+        if (mode === 'split') {
+          const cashAmount = parseFloat(document.getElementById('txSplitCash').value) || 0;
+          const bankAmount = parseFloat(document.getElementById('txSplitBank').value) || 0;
+          const splitAcc = document.getElementById('txSplitAccount').value;
+
+          splits = [
+            { account: 'Efectivo / Caja', amount: cashAmount },
+            { account: splitAcc, amount: bankAmount }
+          ];
+          account = null;
+        }
+
+        // Si hay una deuda seleccionada de la base de datos, liquidarla o abonar
+        if (debtId) {
+          const resDebt = await fetchWithAuth(`/api/admin/finance/debts/${encodeURIComponent(debtId)}/pay`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amount: totalAmount, account, splits })
+          });
+          const dDebt = await resDebt.json();
+          if (resDebt.ok && dDebt.success) {
+            window.finCloseModal('modalManualTx');
+            formManualTx.reset();
+            window.finToggleTxFields();
+            loadAllFinanceData();
+            return;
+          } else {
+            alert(dDebt.error || 'Error al abonar a la deuda');
+            return;
+          }
+        } else {
+          // Si no seleccionó una deuda existente, registrarlo como movimiento contable directo de deuda
+          const isIncome = type === 'debt_collect';
+          let payload = {};
+          if (splits) {
+            payload = {
+              type: isIncome ? 'income_manual' : 'expense_manual',
+              category: 'deudas',
+              serviceName: concept || (isIncome ? 'Cobro de Deuda' : 'Pago de Deuda'),
+              notes: concept,
+              splits
+            };
+          } else {
+            payload = {
+              type: isIncome ? 'income_manual' : 'expense_manual',
+              category: 'deudas',
+              serviceName: concept || (isIncome ? 'Cobro de Deuda' : 'Pago de Deuda'),
+              notes: concept,
+              chargedAmount: isIncome ? totalAmount : 0,
+              costAmount: isIncome ? 0 : totalAmount,
+              account
+            };
+          }
+
+          const res = await fetchWithAuth('/api/admin/finance/record', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const d = await res.json();
+          if (res.ok && d.success) {
+            window.finCloseModal('modalManualTx');
+            formManualTx.reset();
+            window.finToggleTxFields();
+            loadAllFinanceData();
+            return;
+          } else {
+            alert(d.error || 'Error al registrar');
+            return;
+          }
+        }
+      }
+
+      // 2.B: Gasto normal, dividido o ingreso normal
       let payload = {};
 
       if (type === 'expense_split') {
@@ -828,6 +1027,8 @@
       const d = await res.json();
       if (res.ok && d.success) {
         window.finCloseModal('modalManualTx');
+        formManualTx.reset();
+        window.finToggleTxFields();
         loadAllFinanceData();
       } else {
         alert(d.error || 'Error al registrar');

@@ -923,8 +923,8 @@ exports.saveDebt = (req, res) => {
 
 exports.recordDebtPayment = (req, res) => {
   try {
-    const { amount, account } = req.body;
-    const debt = financeManager.recordDebtPayment(req.params.id, amount, account);
+    const { amount, account, splits } = req.body;
+    const debt = financeManager.recordDebtPayment(req.params.id, amount, account, splits);
     res.json({ success: true, debt });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });

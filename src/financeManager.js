@@ -827,7 +827,7 @@ function saveDebt(data) {
 /**
  * Registrar un abono o liquidación a una deuda y opcionalmente mover el dinero a una cuenta bancaria/caja
  */
-function recordDebtPayment(debtId, paymentAmount, accountName) {
+function recordDebtPayment(debtId, paymentAmount, accountName, splits = null) {
   const debt = sqliteDb.prepare('SELECT * FROM FinanceDebts WHERE id = ?').get(debtId);
   if (!debt) throw new Error('Registro de deuda no encontrado.');
 
@@ -850,16 +850,26 @@ function recordDebtPayment(debtId, paymentAmount, accountName) {
     WHERE id = ?
   `).run(newPaid, newRemaining, newStatus, debtId);
 
-  // Si se especificó una cuenta, registrar el movimiento en FinanceLedger y FinanceAccounts
-  if (accountName) {
-    const isReceivable = debt.type === 'receivable';
-    // Si me deben y me pagan: es un ingreso a mi cuenta (income_manual)
-    // Si yo debo y pago: es un gasto de mi cuenta (expense_manual)
-    const ledgerType = isReceivable ? 'income_manual' : 'expense_manual';
-    const noteText = isReceivable 
-      ? `Abono de ${debt.personName} a deuda #${debt.id.slice(-6)}: ${debt.concept || 'Deuda'}`
-      : `Pago realizado a ${debt.personName} por deuda #${debt.id.slice(-6)}: ${debt.concept || 'Deuda'}`;
+  const isReceivable = debt.type === 'receivable';
+  const ledgerType = isReceivable ? 'income_manual' : 'expense_manual';
+  const noteText = isReceivable 
+    ? `Abono de ${debt.personName} a deuda: ${debt.concept || 'Deuda'}`
+    : `Pago a ${debt.personName} por deuda: ${debt.concept || 'Deuda'}`;
 
+  // Si se proporcionó pago dividido (splits)
+  if (Array.isArray(splits) && splits.length > 0) {
+    recordTransaction({
+      type: ledgerType,
+      category: isReceivable ? 'otros' : 'servicios',
+      serviceName: noteText,
+      notes: noteText,
+      costAmount: isReceivable ? 0 : payment,
+      chargedAmount: isReceivable ? payment : 0,
+      splits: splits,
+      recordedBy: 'Admin'
+    });
+  } else if (accountName) {
+    // Pago con una cuenta simple
     recordTransaction({
       type: ledgerType,
       category: isReceivable ? 'otros' : 'servicios',

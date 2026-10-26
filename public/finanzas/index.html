@@ -775,38 +775,60 @@
           <label>Tipo de Operación</label>
           <select id="txType" class="fin-select" onchange="window.finToggleTxFields()">
             <option value="expense_simple">Gasto Simple (-)</option>
-            <option value="expense_split">Gasto Dividido (Efectivo + Tarjeta/Transferencia)</option>
+            <option value="expense_split">Gasto Dividido / Mixto (Efectivo + Banco)</option>
             <option value="income_simple">Ingreso / Venta (+)</option>
+            <option value="debt_collect">Cobrar Deuda a Favor (Alguien me paga)</option>
+            <option value="debt_pay">Pagar Deuda que Debo (Yo abono a quien le debo)</option>
           </select>
         </div>
+
+        <!-- Bloque selector de Deuda (si se selecciona Cobrar o Pagar Deuda) -->
+        <div id="txDebtSelectBlock" style="display:none; background:rgba(56, 189, 248, 0.08); border:1px solid rgba(56, 189, 248, 0.25); border-radius:12px; padding:0.9rem; margin-bottom:1rem;">
+          <div style="font-size:0.8rem; font-weight:700; color:#38bdf8; margin-bottom:0.5rem;">Seleccionar Registro de Deuda:</div>
+          <select id="txDebtId" class="fin-select" onchange="window.finOnSelectDebtOption()">
+            <option value="">-- Elige una deuda pendiente o escribe un nuevo abono --</option>
+          </select>
+          <div id="txDebtDetailsHint" style="font-size:0.75rem; color:#94a3b8; margin-top:4px;"></div>
+        </div>
+
         <div class="fin-form-group">
           <label>Concepto / Detalle *</label>
-          <input type="text" id="txConcept" class="fin-input" placeholder="Ej: Despensa, Comida, Compra herramienta..." required>
+          <input type="text" id="txConcept" class="fin-input" placeholder="Ej: Despensa, Comida, Abono de Juan..." required>
         </div>
+
         <div class="fin-form-group">
           <label>Monto Total (MXN) *</label>
-          <input type="number" id="txTotalAmount" class="fin-input" min="1" step="0.5" placeholder="100.00" required>
+          <input type="number" id="txTotalAmount" class="fin-input" min="0.01" step="any" placeholder="100.00" required>
+        </div>
+
+        <!-- Selector de Modo de Pago/Cobro: Una Cuenta vs Mixto -->
+        <div id="txPaymentMethodTypeGroup" class="fin-form-group" style="display:none;">
+          <label>Forma de Pago / Cobro</label>
+          <select id="txPaymentMode" class="fin-select" onchange="window.finTogglePaymentMode()">
+            <option value="single">Una sola cuenta (Efectivo o Banco)</option>
+            <option value="split">Mixto / Dividido (Parte en Efectivo + Parte en Banco/Tarjeta)</option>
+          </select>
         </div>
         
-        <!-- Bloque para Pago Simple -->
+        <!-- Bloque para Pago/Cobro Simple -->
         <div id="txSimpleAccountBlock" class="fin-form-group">
-          <label>Cuenta de Cargo / Abono</label>
+          <label id="txAccountLabel">Cuenta de Cargo / Abono</label>
           <select id="txAccount" class="fin-select">
             <!-- Cuentas dinámicas -->
           </select>
         </div>
 
-        <!-- Bloque para Gasto Dividido -->
-        <div id="txSplitBlock" style="display:none; background:rgba(255,255,255,0.03); border:1px dashed rgba(255,255,255,0.12); border-radius:12px; padding:0.9rem; margin-bottom:1rem;">
+        <!-- Bloque para Pago/Cobro Dividido / Mixto -->
+        <div id="txSplitBlock" style="display:none; background:rgba(255,255,255,0.03); border:1px dashed rgba(255,255,255,0.15); border-radius:12px; padding:0.9rem; margin-bottom:1rem;">
           <div style="font-size:0.8rem; font-weight:700; color:#38bdf8; margin-bottom:0.6rem;">División de Saldo:</div>
           <div class="fin-grid-2">
             <div class="fin-form-group">
               <label>Monto en Efectivo</label>
-              <input type="number" id="txSplitCash" class="fin-input" min="0" step="0.5" placeholder="0.00">
+              <input type="number" id="txSplitCash" class="fin-input" min="0" step="any" placeholder="0.00">
             </div>
             <div class="fin-form-group">
-              <label>Monto en Tarjeta / Banco</label>
-              <input type="number" id="txSplitBank" class="fin-input" min="0" step="0.5" placeholder="0.00">
+              <label>Monto en Banco / Tarjeta</label>
+              <input type="number" id="txSplitBank" class="fin-input" min="0" step="any" placeholder="0.00">
             </div>
           </div>
           <div class="fin-form-group">
@@ -817,7 +839,7 @@
           </div>
         </div>
 
-        <div class="fin-form-group">
+        <div class="fin-form-group" id="txCategoryGroup">
           <label>Categoría</label>
           <select id="txCategory" class="fin-select">
             <option value="comida">Comida / Alimentos</option>
@@ -826,7 +848,8 @@
             <option value="servicios">Servicios / Facturas</option>
             <option value="servidores">Servidores GSM</option>
             <option value="gustos">Gustos / Personales</option>
-            <option value="otros">Otros Gastos</option>
+            <option value="deudas">Abono / Liquidación Deuda</option>
+            <option value="otros">Otros Gastos / Ingresos</option>
           </select>
         </div>
         <div style="display:flex; justify-content:flex-end; gap:0.6rem; margin-top:1.2rem;">
@@ -1019,6 +1042,6 @@
     </div>
   </div>
 
-  <script src="/finanzas/finanzas.js?v=99"></script>
+  <script src="/finanzas/finanzas.js?v=101"></script>
 </body>
 </html>
