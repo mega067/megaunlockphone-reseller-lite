@@ -666,7 +666,9 @@
       splitBlock.style.display = 'block';
       simpleBlock.style.display = 'none';
       const tot = parseFloat(totalInput.value) || 0;
-      if (tot > 0) {
+      const cashVal = parseFloat(document.getElementById('txSplitCash')?.value) || 0;
+      const bankVal = parseFloat(document.getElementById('txSplitBank')?.value) || 0;
+      if (tot > 0 && cashVal === 0 && bankVal === 0) {
         document.getElementById('txSplitCash').value = (tot / 2).toFixed(2);
         document.getElementById('txSplitBank').value = (tot / 2).toFixed(2);
       }
@@ -675,6 +677,26 @@
       simpleBlock.style.display = 'block';
     }
   };
+
+  // Sincronización en vivo: al modificar efectivo o banco en modo mixto, recalcular el total
+  function initSplitSyncListeners() {
+    const cashInput = document.getElementById('txSplitCash');
+    const bankInput = document.getElementById('txSplitBank');
+    const totalInput = document.getElementById('txTotalAmount');
+
+    function syncFromSplits() {
+      const mode = document.getElementById('txPaymentMode')?.value;
+      const type = document.getElementById('txType')?.value;
+      if (mode === 'split' || type === 'expense_split') {
+        const c = parseFloat(cashInput?.value) || 0;
+        const b = parseFloat(bankInput?.value) || 0;
+        if (totalInput) totalInput.value = (c + b).toFixed(2);
+      }
+    }
+
+    if (cashInput) cashInput.addEventListener('input', syncFromSplits);
+    if (bankInput) bankInput.addEventListener('input', syncFromSplits);
+  }
 
   // --- TOGGLE CAMPOS DE MOVIMIENTO MANUAL ---
   window.finToggleTxFields = function() {
@@ -945,6 +967,7 @@
         const mode = document.getElementById('txPaymentMode')?.value || 'single';
         let account = document.getElementById('txAccount').value;
         let splits = null;
+        let actualPayAmount = totalAmount;
 
         if (mode === 'split') {
           const cashAmount = parseFloat(document.getElementById('txSplitCash').value) || 0;
@@ -956,6 +979,8 @@
             { account: splitAcc, amount: bankAmount }
           ];
           account = null;
+          // El abono real a la deuda debe ser la suma exacta de lo que se dio
+          actualPayAmount = cashAmount + bankAmount;
         }
 
         // Si hay una deuda seleccionada de la base de datos, liquidarla o abonar
@@ -963,7 +988,7 @@
           const resDebt = await fetchWithAuth(`/api/admin/finance/debts/${encodeURIComponent(debtId)}/pay`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ amount: totalAmount, account, splits })
+            body: JSON.stringify({ amount: actualPayAmount, account, splits })
           });
           const dDebt = await resDebt.json();
           if (resDebt.ok && dDebt.success) {
@@ -1311,6 +1336,7 @@
   // Inicializar al cargar
   document.addEventListener('DOMContentLoaded', () => {
     initTabs();
+    initSplitSyncListeners();
     loadAllFinanceData();
   });
 })();

@@ -726,6 +726,35 @@ function deleteTransaction(id) {
     }
   }
 
+  // Si la transacción estaba vinculada a una deuda (FinanceDebts), revertir el abono en la deuda
+  try {
+    let targetDebtId = tx.orderId && tx.orderId.startsWith('debt_') ? tx.orderId : null;
+    if (!targetDebtId && tx.serviceName) {
+      // Buscar coincidencia si serviceName menciona el nombre de la persona
+      const debts = sqliteDb.prepare('SELECT id, personName FROM FinanceDebts').all();
+      const match = debts.find(d => tx.serviceName.includes(d.personName) || (tx.notes && tx.notes.includes(d.personName)));
+      if (match) targetDebtId = match.id;
+    }
+
+    if (targetDebtId) {
+      const dRecord = sqliteDb.prepare('SELECT * FROM FinanceDebts WHERE id = ?').get(targetDebtId);
+      if (dRecord) {
+        const revertAmt = (costAmount > 0 ? costAmount : chargedAmount);
+        const newPaid = Math.max(0, (parseFloat(dRecord.paidAmount) || 0) - revertAmt);
+        const newRem = Math.max(0, (parseFloat(dRecord.totalAmount) || 0) - newPaid);
+        const newStatus = newPaid <= 0 ? 'pending' : (newRem <= 0.009 ? 'settled' : 'partial');
+
+        sqliteDb.prepare(`
+          UPDATE FinanceDebts 
+          SET paidAmount = ?, remainingAmount = ?, status = ?, updatedAt = datetime('now')
+          WHERE id = ?
+        `).run(newPaid, newRem, newStatus, targetDebtId);
+      }
+    }
+  } catch (dErr) {
+    console.warn('[DEBT REVERT ERR]', dErr.message);
+  }
+
   // Eliminar el registro del libro contable
   const res = sqliteDb.prepare(`DELETE FROM FinanceLedger WHERE id = ?`).run(id);
 
@@ -867,6 +896,7 @@ function recordDebtPayment(debtId, paymentAmount, accountName, splits = null) {
       type: ledgerType,
       category: isReceivable ? 'otros' : 'servicios',
       serviceName: noteText,
+      orderId: debtId,
       notes: noteText,
       costAmount: isReceivable ? 0 : payment,
       chargedAmount: isReceivable ? payment : 0,
@@ -879,6 +909,7 @@ function recordDebtPayment(debtId, paymentAmount, accountName, splits = null) {
       type: ledgerType,
       category: isReceivable ? 'otros' : 'servicios',
       serviceName: noteText,
+      orderId: debtId,
       chargedAmount: isReceivable ? payment : 0,
       costAmount: isReceivable ? 0 : payment,
       account: accountName,
