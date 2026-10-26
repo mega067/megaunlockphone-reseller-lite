@@ -1215,7 +1215,21 @@ function renderOrderHistory() {
       if (btnTicket) {
         btnTicket.addEventListener('click', () => {
           currentTicketData = item;
-          ticketClientPrice.value = '';
+          // Prellenar costo real del servidor y precio sugerido para POS
+          const itemCost = parseFloat(item.costCharged || item.realCost || item.price || 0);
+          const costDisp = document.getElementById('ticketCostDisplay');
+          if (costDisp) costDisp.textContent = `$${itemCost.toFixed(2)}`;
+
+          // Prellenar precio cobrado sugerido si no tiene ninguno (o calcular ganancia)
+          const suggestedPrice = itemCost > 0 ? (itemCost * 1.3).toFixed(0) : '';
+          ticketClientPrice.value = suggestedPrice;
+
+          const profit = (parseFloat(suggestedPrice) || 0) - itemCost;
+          const profitDisp = document.getElementById('ticketProfitDisplay');
+          if (profitDisp) {
+            profitDisp.textContent = `${profit >= 0 ? '+' : ''}$${profit.toFixed(2)}`;
+            profitDisp.style.color = profit >= 0 ? '#34d399' : '#ef4444';
+          }
 
           // Control de Punto de Venta (POS) y Registro Contable exclusivo del Administrador
           const posBox = document.getElementById('ticketPosProfitBox');
@@ -2134,14 +2148,15 @@ async function applyTicketSettings() {
     if (dynamicLogo) {
       dynamicLogo.style.display = 'block';
       
-      // Resuelve la URL del logo con cache-buster obligatorio
+      // Resuelve la URL del logo con cache-buster obligatorio y fallback inteligente
+      const currentUid = (currentTicketData && currentTicketData.userId) || authUserId || localStorage.getItem('dhru_uid') || '1';
       let targetLogoUrl = '';
       if (previewLogo && previewLogo.src && previewLogo.src.startsWith('data:image')) {
         targetLogoUrl = previewLogo.src;
       } else if (customTicketSettings.logoExt) {
-        targetLogoUrl = `/logos/${authUserId}${customTicketSettings.logoExt}?t=${Date.now()}`;
+        targetLogoUrl = `/logos/${currentUid}${customTicketSettings.logoExt}?t=${Date.now()}`;
       } else {
-        targetLogoUrl = `/favicon-192.png?v=${Date.now()}`;
+        targetLogoUrl = `/logo.png?v=${Date.now()}`;
       }
 
       // Para iOS Safari / WebKit: Las imágenes dentro de SVG <foreignObject> fallan si no están en Base64 inline.
@@ -2150,8 +2165,15 @@ async function applyTicketSettings() {
         dynamicLogo.src = targetLogoUrl;
       } else {
         try {
-          const resp = await fetch(targetLogoUrl, { cache: 'no-store' });
-          if (resp.ok) {
+          let resp = await fetch(targetLogoUrl, { cache: 'no-store' });
+          if (!resp.ok) {
+            // Fallback a logo.png o favicon-192 si el logo personalizado no existe
+            resp = await fetch(`/logo.png?v=${Date.now()}`, { cache: 'no-store' });
+            if (!resp.ok) {
+              resp = await fetch(`/favicon-192.png?v=${Date.now()}`, { cache: 'no-store' });
+            }
+          }
+          if (resp && resp.ok) {
             const blob = await resp.blob();
             const base64Data = await new Promise((resolve, reject) => {
               const reader = new FileReader();
@@ -2573,106 +2595,102 @@ btnGenerateTicketFinal.addEventListener('click', async () => {
     await applyTicketSettings();
     ticketTemplateContainer.style.opacity = '1';
 
-    // Copy to Clipboard (Modern approach with Promise to preserve user gesture)
+    let blob = null;
     try {
-      const makeImagePromise = async () => {
-        // Brutal optimization: Using html-to-image (modern) instead of html2canvas or dom-to-image.
-        // This avoids Firefox layout freezes, respects web fonts, and renders instantly using SVG foreignObject.
-        const blob = await htmlToImage.toBlob(ticketTemplate, {
-          backgroundColor: '#111116',
-          pixelRatio: 2, // Retina quality: text and logos will be ultra-crisp!
-          skipFonts: true,
-          style: {
-            transform: 'scale(1)',
-            transformOrigin: 'top left'
-          }
-        });
-        
-        ticketTemplateContainer.style.opacity = '0';
-        
-        // Show Preview immediately
-        const ticketPreviewContainer = document.getElementById('ticketPreviewContainer');
-        const ticketPreviewImg = document.getElementById('ticketPreviewImg');
-        if (ticketPreviewContainer && ticketPreviewImg) {
-          ticketPreviewImg.src = URL.createObjectURL(blob);
-          ticketPreviewContainer.classList.remove('hidden');
+      // 1. Renderizar la imagen con html-to-image garantizando alta calidad
+      blob = await htmlToImage.toBlob(ticketTemplate, {
+        backgroundColor: '#111116',
+        pixelRatio: 2, // Retina quality
+        skipFonts: true,
+        style: {
+          transform: 'scale(1)',
+          transformOrigin: 'top left'
         }
-        
-        return blob;
-      };
-      
-      // Check if ClipboardItem & write are supported (iOS Safari requires graceful fallback)
-      if (navigator.clipboard && navigator.clipboard.write && typeof ClipboardItem !== 'undefined') {
-        const clipboardItem = new ClipboardItem({ 'image/png': makeImagePromise() });
-        await navigator.clipboard.write([clipboardItem]);
-        btnGenerateTicketFinal.innerHTML = '<i data-lucide="check"></i><span>¡Copiado!</span>';
-      } else {
-        await makeImagePromise();
-        btnGenerateTicketFinal.innerHTML = '<i data-lucide="check"></i><span>¡Listo!</span>';
-      }
-      lucide.createIcons();
-
-      // Registro automático en el Gestor de Finanzas / Punto de Venta (POS) - EXCLUSIVO ADMIN
-      const registerCheck = document.getElementById('ticketRegisterFinanceCheck');
-      const accountSelect = document.getElementById('ticketPaymentAccount');
-      const chargedVal = parseFloat(ticketClientPrice.value) || 0;
-      const buyerPhoneInput = document.getElementById('ticketBuyerPhone');
-      const buyerNameInput = document.getElementById('ticketBuyerName');
-      const buyerPhone = buyerPhoneInput ? buyerPhoneInput.value.trim() : '';
-      const buyerName = buyerNameInput ? buyerNameInput.value.trim() : '';
-      const isAdminActor = (authRole === 'admin');
-      
-      if (isAdminActor && registerCheck && registerCheck.checked && chargedVal > 0 && currentTicketData && authToken) {
-        const itemCost = parseFloat(currentTicketData.costCharged || currentTicketData.realCost || currentTicketData.price || 0);
-        const selectedAcc = accountSelect ? accountSelect.value : 'General';
-        
-        let clientDetails = [];
-        if (buyerPhone) clientDetails.push(`Tel: ${buyerPhone}`);
-        if (buyerName) clientDetails.push(`Cliente: ${buyerName}`);
-        const clientSuffix = clientDetails.length > 0 ? ` | ${clientDetails.join(' - ')}` : '';
-
-        fetch('/api/admin/finance/transaction', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${authToken}`,
-            'X-Server-Id': currentServerId
-          },
-          body: JSON.stringify({
-            type: 'income_ticket',
-            orderId: currentTicketData.orderId,
-            serviceName: currentTicketData.serviceName,
-            chargedAmount: chargedVal,
-            costAmount: itemCost,
-            account: selectedAcc,
-            notes: `Ticket Web #${currentTicketData.orderId} (${selectedAcc})${clientSuffix}`
-          })
-        }).then(res => res.json()).then(resp => {
-          if (resp && resp.success && typeof loadFinanceDashboard === 'function') {
-            loadFinanceDashboard();
-          }
-        }).catch(err => console.warn('[AUTO FINANCE RECORD ERR]', err));
-      }
-      
-      setTimeout(() => {
-         btnGenerateTicketFinal.removeAttribute('disabled');
-         btnGenerateTicketFinal.innerHTML = originalBtnHTML;
-         lucide.createIcons();
-      }, 3000);
-      
-    } catch (clipboardErr) {
-      console.error('Clipboard copy failed:', clipboardErr);
-      // Sometimes the clipboard error is just "NotAllowedError" or "Document is not focused"
-      // Let's fallback to showing the preview and a smaller alert
-      alert('Tu navegador requiere permiso manual. Haz clic derecho en la imagen de abajo y selecciona "Copiar imagen".');
-      
+      });
+    } catch (renderErr) {
+      console.error('[Ticket Render Error]:', renderErr);
+      alert('Error al generar la imagen del ticket. Revisa la consola.');
       btnGenerateTicketFinal.removeAttribute('disabled');
       btnGenerateTicketFinal.innerHTML = originalBtnHTML;
       lucide.createIcons();
+      return;
+    } finally {
+      ticketTemplateContainer.style.opacity = '0';
     }
+
+    // 2. Mostrar Vista Previa en pantalla inmediatamente (100% visible en iPhone y navegadores móviles)
+    const ticketPreviewContainer = document.getElementById('ticketPreviewContainer');
+    const ticketPreviewImg = document.getElementById('ticketPreviewImg');
+    if (ticketPreviewContainer && ticketPreviewImg && blob) {
+      ticketPreviewImg.src = URL.createObjectURL(blob);
+      ticketPreviewContainer.classList.remove('hidden');
+    }
+
+    // 3. Intento de copia al portapapeles (tolerante a restricciones de iOS Safari)
+    try {
+      if (blob && navigator.clipboard && navigator.clipboard.write && typeof ClipboardItem !== 'undefined') {
+        const item = new ClipboardItem({ 'image/png': blob });
+        await navigator.clipboard.write([item]);
+        btnGenerateTicketFinal.innerHTML = '<i data-lucide="check"></i><span>¡Copiado!</span>';
+      } else {
+        btnGenerateTicketFinal.innerHTML = '<i data-lucide="check"></i><span>¡Generado!</span>';
+      }
+    } catch (clipErr) {
+      console.warn('[Clipboard Restricted - Mobile Mode]', clipErr);
+      btnGenerateTicketFinal.innerHTML = '<i data-lucide="image"></i><span>¡Ver Abajo!</span>';
+    }
+    lucide.createIcons();
+
+    // 4. Registro automático en el Gestor de Finanzas / POS (Exclusivo Admin) - SIEMPRE SE EJECUTA
+    const registerCheck = document.getElementById('ticketRegisterFinanceCheck');
+    const accountSelect = document.getElementById('ticketPaymentAccount');
+    const chargedVal = parseFloat(ticketClientPrice.value) || 0;
+    const buyerPhoneInput = document.getElementById('ticketBuyerPhone');
+    const buyerNameInput = document.getElementById('ticketBuyerName');
+    const buyerPhone = buyerPhoneInput ? buyerPhoneInput.value.trim() : '';
+    const buyerName = buyerNameInput ? buyerNameInput.value.trim() : '';
+    const isAdminActor = (authRole === 'admin');
+
+    if (isAdminActor && registerCheck && registerCheck.checked && chargedVal > 0 && currentTicketData && authToken) {
+      const itemCost = parseFloat(currentTicketData.costCharged || currentTicketData.realCost || currentTicketData.price || 0);
+      const selectedAcc = accountSelect ? accountSelect.value : 'General';
+      
+      let clientDetails = [];
+      if (buyerPhone) clientDetails.push(`Tel: ${buyerPhone}`);
+      if (buyerName) clientDetails.push(`Cliente: ${buyerName}`);
+      const clientSuffix = clientDetails.length > 0 ? ` | ${clientDetails.join(' - ')}` : '';
+
+      fetch('/api/admin/finance/transaction', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`,
+          'X-Server-Id': currentServerId
+        },
+        body: JSON.stringify({
+          type: 'income_ticket',
+          orderId: currentTicketData.orderId,
+          serviceName: currentTicketData.serviceName,
+          chargedAmount: chargedVal,
+          costAmount: itemCost,
+          account: selectedAcc,
+          notes: `Ticket Web #${currentTicketData.orderId} (${selectedAcc})${clientSuffix}`
+        })
+      }).then(res => res.json()).then(resp => {
+        if (resp && resp.success) {
+          if (typeof loadFinanceDashboard === 'function') loadFinanceDashboard();
+        }
+      }).catch(err => console.warn('[AUTO FINANCE RECORD ERR]', err));
+    }
+
+    setTimeout(() => {
+      btnGenerateTicketFinal.removeAttribute('disabled');
+      btnGenerateTicketFinal.innerHTML = originalBtnHTML;
+      lucide.createIcons();
+    }, 2500);
   } catch (err) {
     console.error('Error rendering ticket:', err);
-    alert('Hubo un error al generar la imagen. Revisa la consola.');
+    alert('Hubo un error al generar la imagen.');
     btnGenerateTicketFinal.removeAttribute('disabled');
     btnGenerateTicketFinal.innerHTML = originalBtnHTML;
     lucide.createIcons();
@@ -2809,6 +2827,33 @@ if (btnGenerateCustomTicket) {
       }
       lucide.createIcons();
       
+      // Registro automático en el Gestor de Finanzas / POS si hay precio ingresado
+      const chargedCustom = parseFloat(customTicketPrice.value) || 0;
+      if (authRole === 'admin' && chargedCustom > 0 && authToken) {
+        const manualId = customTicketOrderId.value.trim() || String(Math.floor(Math.random() * 90000) + 10000);
+        fetch('/api/admin/finance/transaction', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`,
+            'X-Server-Id': currentServerId
+          },
+          body: JSON.stringify({
+            type: 'income_ticket',
+            orderId: manualId,
+            serviceName: title,
+            chargedAmount: chargedCustom,
+            costAmount: 0,
+            account: 'General',
+            notes: `Ticket Manual #${manualId} - ${title}`
+          })
+        }).then(res => res.json()).then(resp => {
+          if (resp && resp.success && typeof loadFinanceDashboard === 'function') {
+            loadFinanceDashboard();
+          }
+        }).catch(err => console.warn('[CUSTOM TICKET FINANCE ERR]', err));
+      }
+      
       // Cierra el modal de custom ticket y muestra el preview normal para que lo vean
       setTimeout(() => {
          btnGenerateCustomTicket.removeAttribute('disabled');
@@ -2833,7 +2878,7 @@ if (btnGenerateCustomTicket) {
       
     } catch (clipboardErr) {
       console.error('Clipboard copy failed:', clipboardErr);
-      alert('Copia exitosa, pero el navegador bloqueó el portapapeles. El ticket se mostrará en pantalla.');
+      alert('Ticket generado. Se mostrará en pantalla.');
       btnGenerateCustomTicket.removeAttribute('disabled');
       btnGenerateCustomTicket.innerHTML = originalBtnHTML;
       lucide.createIcons();

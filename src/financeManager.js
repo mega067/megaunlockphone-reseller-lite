@@ -745,7 +745,7 @@ function getAllDebts(filterType) {
       sql += ' WHERE type = ?';
       params.push(filterType);
     }
-    sql += ' ORDER BY CASE WHEN status = "settled" THEN 1 ELSE 0 END, createdAt DESC';
+    sql += " ORDER BY CASE WHEN status = 'settled' THEN 1 ELSE 0 END, createdAt DESC";
     const debts = sqliteDb.prepare(sql).all(...params);
 
     // Totales calculados
