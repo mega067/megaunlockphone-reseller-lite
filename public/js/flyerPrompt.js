@@ -65,12 +65,17 @@
         });
       }
 
-      // Cambiar tipo de tarifa (Minorista vs Reseller vs Ambos)
+      // Cambiar tipo de tarifa global (Minorista vs Reseller vs Personalizado)
       const priceTypeSelect = document.getElementById('flyerPriceType');
       if (priceTypeSelect) {
         priceTypeSelect.addEventListener('change', () => {
-          this.renderSelectedProducts();
-          this.generatePrompt();
+          const val = priceTypeSelect.value;
+          if (val === 'retail' || val === 'reseller') {
+            this.applyGlobalTariff(val);
+          } else {
+            this.renderSelectedProducts();
+            this.generatePrompt();
+          }
         });
       }
 
@@ -226,6 +231,8 @@
           group: prod.group,
           retailPrice: clientPrice > 0 ? clientPrice : resellerPrice,
           resellerPrice: resellerPrice,
+          chosenType: 'retail', // 'retail', 'reseller', o 'custom'
+          customPrice: null,
           time: prod.time || 'Inmediato',
           rawItem: raw
         });
@@ -253,12 +260,33 @@
           group: prod.group,
           retailPrice: clientPrice > 0 ? clientPrice : resellerPrice,
           resellerPrice: resellerPrice,
+          chosenType: 'retail',
+          customPrice: null,
           time: prod.time || 'Inmediato',
           rawItem: raw
         });
       }
 
       this.openModal();
+    },
+
+    setProductPriceType(serviceId, type) {
+      const p = this.selectedProducts.find(item => String(item.serviceid) === String(serviceId));
+      if (!p) return;
+      p.chosenType = type;
+      this.renderSelectedProducts();
+      this.generatePrompt();
+    },
+
+    setProductCustomPrice(serviceId, customVal) {
+      const p = this.selectedProducts.find(item => String(item.serviceid) === String(serviceId));
+      if (!p) return;
+      const val = parseFloat(customVal);
+      if (!isNaN(val) && val >= 0) {
+        p.customPrice = val;
+        p.chosenType = 'custom';
+      }
+      this.generatePrompt();
     },
 
     loadDefaultBundle() {
@@ -283,6 +311,8 @@
             group: match.group,
             retailPrice: clientPrice > 0 ? clientPrice : resellerPrice,
             resellerPrice: resellerPrice,
+            chosenType: 'retail',
+            customPrice: null,
             time: match.time || 'Inmediato',
             rawItem: raw
           });
@@ -292,15 +322,15 @@
       // Si por alguna razón el catálogo no tiene esas palabras clave aún cargadas en memoria, inyectar el preset estándar
       if (this.selectedProducts.length === 0) {
         this.selectedProducts = [
-          { serviceid: 'UT-6H', service: 'UnlockTool Renta 6 Horas', retailPrice: 50, resellerPrice: 25 },
-          { serviceid: 'UT-3M', service: 'UnlockTool Licencia 3 Meses', retailPrice: 399, resellerPrice: 350 },
-          { serviceid: 'UT-6M', service: 'UnlockTool Licencia 6 Meses', retailPrice: 666, resellerPrice: 580 },
-          { serviceid: 'UT-12M', service: 'UnlockTool Licencia 12 Meses', retailPrice: 1050, resellerPrice: 940 },
-          { serviceid: 'TSM-3H', service: 'TSM Tool Renta 3 Horas', retailPrice: 50, resellerPrice: 20 },
-          { serviceid: 'TSM-6H', service: 'TSM Tool Renta 6 Horas', retailPrice: 70, resellerPrice: 32 },
-          { serviceid: 'TSM-3M', service: 'TSM Tool Licencia 3 Meses', retailPrice: 680, resellerPrice: 590 },
-          { serviceid: 'TSM-6M', service: 'TSM Tool Licencia 6 Meses', retailPrice: 975, resellerPrice: 850 },
-          { serviceid: 'TSM-12M', service: 'TSM Tool Licencia 12 Meses', retailPrice: 1289, resellerPrice: 1150 }
+          { serviceid: 'UT-6H', service: 'UnlockTool Renta 6 Horas', retailPrice: 50, resellerPrice: 25, chosenType: 'retail' },
+          { serviceid: 'UT-3M', service: 'UnlockTool Licencia 3 Meses', retailPrice: 399, resellerPrice: 350, chosenType: 'retail' },
+          { serviceid: 'UT-6M', service: 'UnlockTool Licencia 6 Meses', retailPrice: 666, resellerPrice: 580, chosenType: 'retail' },
+          { serviceid: 'UT-12M', service: 'UnlockTool Licencia 12 Meses', retailPrice: 1050, resellerPrice: 940, chosenType: 'retail' },
+          { serviceid: 'TSM-3H', service: 'TSM Tool Renta 3 Horas', retailPrice: 50, resellerPrice: 20, chosenType: 'retail' },
+          { serviceid: 'TSM-6H', service: 'TSM Tool Renta 6 Horas', retailPrice: 70, resellerPrice: 32, chosenType: 'retail' },
+          { serviceid: 'TSM-3M', service: 'TSM Tool Licencia 3 Meses', retailPrice: 680, resellerPrice: 590, chosenType: 'retail' },
+          { serviceid: 'TSM-6M', service: 'TSM Tool Licencia 6 Meses', retailPrice: 975, resellerPrice: 850, chosenType: 'retail' },
+          { serviceid: 'TSM-12M', service: 'TSM Tool Licencia 12 Meses', retailPrice: 1289, resellerPrice: 1150, chosenType: 'retail' }
         ];
       }
 
@@ -311,8 +341,8 @@
     renderSelectedProducts() {
       const container = document.getElementById('flyerSelectedList');
       const countEl = document.getElementById('flyerSelectedCount');
-      const priceTypeEl = document.getElementById('flyerPriceType');
-      const priceType = priceTypeEl ? priceTypeEl.value : 'retail';
+      const globalPriceTypeEl = document.getElementById('flyerPriceType');
+      const globalType = globalPriceTypeEl ? globalPriceTypeEl.value : 'manual';
       if (!container) return;
 
       if (countEl) {
@@ -324,27 +354,54 @@
         return;
       }
 
-      container.innerHTML = this.selectedProducts.map((p, idx) => {
-        let displayBadge = '';
-        if (priceType === 'reseller') {
-          displayBadge = `<span style="color: #38bdf8; font-weight: bold; background: rgba(56,189,248,0.15); padding: 1px 6px; border-radius: 4px;">💼 Reseller: $${p.resellerPrice.toFixed(0)} MXN</span>`;
-        } else if (priceType === 'both') {
-          displayBadge = `
-            <span style="color: #f472b6; font-weight: bold; background: rgba(244,114,182,0.15); padding: 1px 6px; border-radius: 4px;">🛒 $${p.retailPrice.toFixed(0)}</span>
-            <span style="color: #38bdf8; font-weight: bold; background: rgba(56,189,248,0.15); padding: 1px 6px; border-radius: 4px;">💼 $${p.resellerPrice.toFixed(0)}</span>
-          `;
-        } else {
-          displayBadge = `<span style="color: #34d399; font-weight: bold; background: rgba(52,211,153,0.15); padding: 1px 6px; border-radius: 4px;">🛒 Minorista: $${p.retailPrice.toFixed(0)} MXN</span>`;
-        }
+      container.innerHTML = `
+        <div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+          ${this.selectedProducts.map((p, idx) => {
+            const activeType = p.chosenType || 'retail';
+            let effectiveVal = p.retailPrice;
+            if (activeType === 'reseller') effectiveVal = p.resellerPrice;
+            else if (activeType === 'custom' && p.customPrice !== null) effectiveVal = p.customPrice;
 
-        return `
-          <div style="background: rgba(15, 23, 42, 0.95); border: 1px solid #38bdf8; border-radius: 6px; padding: 6px 10px; display: inline-flex; align-items: center; gap: 8px; font-size: 0.78rem;">
-            <span style="color: #fff; font-weight: 600;">${p.service}</span>
-            ${displayBadge}
-            <button type="button" onclick="MegaApp.FlyerPrompt.toggleProduct('${p.serviceid}')" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 0 4px; font-weight: bold; font-size: 0.9rem;" title="Eliminar">✕</button>
-          </div>
-        `;
-      }).join('');
+            return `
+              <div style="background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(56,189,248,0.3); border-radius: 8px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 0.8rem;">
+                <div style="flex: 1; min-width: 0;">
+                  <div style="color: #fff; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${p.service}</div>
+                  <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 2px;">
+                    Base minorista: <strong style="color: #f472b6;">$${p.retailPrice.toFixed(0)}</strong> | Base reseller: <strong style="color: #38bdf8;">$${p.resellerPrice.toFixed(0)}</strong>
+                  </div>
+                </div>
+
+                <!-- Selectores de Precio por Item -->
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <button type="button" onclick="MegaApp.FlyerPrompt.setProductPriceType('${p.serviceid}', 'retail')" style="background: ${activeType === 'retail' ? '#ec4899' : 'rgba(255,255,255,0.06)'}; color: ${activeType === 'retail' ? '#fff' : '#cbd5e1'}; border: 1px solid ${activeType === 'retail' ? '#ec4899' : 'rgba(255,255,255,0.1)'}; border-radius: 4px; padding: 3px 8px; font-size: 0.72rem; cursor: pointer; font-weight: 600;">
+                    🛒 Minorista ($${p.retailPrice.toFixed(0)})
+                  </button>
+                  <button type="button" onclick="MegaApp.FlyerPrompt.setProductPriceType('${p.serviceid}', 'reseller')" style="background: ${activeType === 'reseller' ? '#0284c7' : 'rgba(255,255,255,0.06)'}; color: ${activeType === 'reseller' ? '#fff' : '#cbd5e1'}; border: 1px solid ${activeType === 'reseller' ? '#0284c7' : 'rgba(255,255,255,0.1)'}; border-radius: 4px; padding: 3px 8px; font-size: 0.72rem; cursor: pointer; font-weight: 600;">
+                    💼 Reseller ($${p.resellerPrice.toFixed(0)})
+                  </button>
+                  
+                  <!-- Input Precio Manual -->
+                  <div style="display: flex; align-items: center; background: #090e17; border: 1px solid ${activeType === 'custom' ? '#10b981' : 'rgba(255,255,255,0.15)'}; border-radius: 4px; padding: 1px 4px;">
+                    <span style="font-size: 0.72rem; color: #10b981; font-weight: bold;">$</span>
+                    <input type="number" step="1" value="${effectiveVal.toFixed(0)}" onchange="MegaApp.FlyerPrompt.setProductCustomPrice('${p.serviceid}', this.value)" style="width: 58px; background: transparent; border: none; color: #fff; font-size: 0.75rem; font-weight: bold; padding: 2px 4px; outline: none;" title="Precio personalizado para este flyer">
+                  </div>
+
+                  <button type="button" onclick="MegaApp.FlyerPrompt.toggleProduct('${p.serviceid}')" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 2px 6px; font-weight: bold; font-size: 1rem;" title="Eliminar de anuncio">✕</button>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    },
+
+    applyGlobalTariff(type) {
+      if (!type) return;
+      this.selectedProducts.forEach(p => {
+        p.chosenType = type;
+      });
+      this.renderSelectedProducts();
+      this.generatePrompt();
     },
 
     generatePrompt() {
@@ -352,24 +409,29 @@
       const ratioEl = document.getElementById('flyerAspectRatio');
       const ratio = ratioEl ? ratioEl.value : '3:4';
       const priceTypeEl = document.getElementById('flyerPriceType');
-      const priceType = priceTypeEl ? priceTypeEl.value : 'retail';
+      const priceType = priceTypeEl ? priceTypeEl.value : 'custom';
 
       if (!promptEl) return;
 
-      // Agrupar items y formatear según el tipo de tarifa seleccionada
+      // Agrupar items y formatear según la tarifa individual elegida para cada uno
       const productLines = this.selectedProducts.map(p => {
-        if (priceType === 'reseller') {
-          return `- ${p.service}: $${p.resellerPrice.toFixed(0)} MXN (Precio Reseller / Mayorista - Entrega Automática)`;
-        } else if (priceType === 'both') {
-          return `- ${p.service}: Minorista $${p.retailPrice.toFixed(0)} MXN | Reseller $${p.resellerPrice.toFixed(0)} MXN`;
-        } else {
-          return `- ${p.service}: $${p.retailPrice.toFixed(0)} MXN (Minorista / Cliente Final - Entrega Automática)`;
+        const activeType = p.chosenType || 'retail';
+        let priceVal = p.retailPrice;
+        let badge = '(Minorista)';
+        if (activeType === 'reseller') {
+          priceVal = p.resellerPrice;
+          badge = '(Precio Mayorista / Reseller)';
+        } else if (activeType === 'custom' && p.customPrice !== null) {
+          priceVal = p.customPrice;
+          badge = '(Oferta Especial)';
         }
+
+        return `- ${p.service}: $${priceVal.toFixed(0)} MXN ${badge} (Entrega Automática / Inmediata)`;
       }).join('\n');
 
       const tariffHeader = priceType === 'reseller' 
         ? 'TABLA DE PRECIOS EXCLUSIVOS RESELLER / MAYORISTA' 
-        : (priceType === 'both' ? 'LISTA DE PRECIOS CLIENTE Y RESELLER' : 'LISTA DE PRECIOS AL PÚBLICO / MINORISTA');
+        : (priceType === 'retail' ? 'LISTA DE PRECIOS AL PÚBLICO / MINORISTA' : 'TABLA DE PRECIOS Y OFERTAS EXCLUSIVAS');
 
       const fullPrompt = 
 `Genera una imagen publicitaria de calidad ultra premium y comercial (Cyberpunk / Modern High-Tech Style) con relación de aspecto ${ratio}.
