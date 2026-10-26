@@ -71,6 +71,7 @@
         cachedAccounts = dataDash.accounts || [];
         renderGlobalMetrics(dataDash);
         renderAccounts(cachedAccounts);
+        renderFinanceServerBalances(dataDash.serverBalances || []);
         renderLedger(dataDash.recent || []);
         populateAccountSelects(cachedAccounts);
         renderConfigSettings(dataDash.config || {});
@@ -307,7 +308,79 @@
     }).join('');
   }
 
-  // --- SECCIÓN: RECARGAS TELEFÓNICAS & PLANES MÓVILES ---
+  function renderFinanceServerBalances(servers) {
+    const container = document.getElementById('finServersGrid');
+    const badge = document.getElementById('finTotalServerBalanceBadge');
+    if (!container) return;
+
+    if (!servers || servers.length === 0) {
+      container.innerHTML = '<div style="color:var(--fin-text-muted); font-size:0.85rem; padding:10px;">No hay servidores configurados.</div>';
+      if (badge) badge.textContent = 'Total Servidores: $0.00 MXN';
+      return;
+    }
+
+    let totalServerMxn = 0;
+    const serverColors = {
+      '1': { brand: 'MEGA-SERVER', color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.08)', border: 'rgba(56, 189, 248, 0.3)', icon: 'zap' },
+      '2': { brand: 'POPI-GSM', color: '#fbbf24', bg: 'rgba(251, 191, 36, 0.08)', border: 'rgba(251, 191, 36, 0.3)', icon: 'shield' },
+      '3': { brand: 'OMEGA-SERVER', color: '#f43f5e', bg: 'rgba(244, 63, 94, 0.08)', border: 'rgba(244, 63, 94, 0.3)', icon: 'flame' }
+    };
+
+    container.innerHTML = servers.map(srv => {
+      const sId = String(srv.id);
+      const meta = serverColors[sId] || { color: '#818cf8', bg: 'rgba(129, 140, 248, 0.08)', border: 'rgba(129, 140, 248, 0.3)', icon: 'server' };
+      const isOnline = srv.status === 'online';
+      const isEnabled = srv.enabled !== false;
+      
+      if (isEnabled && isOnline) {
+        totalServerMxn += parseFloat(srv.creditMxn || 0);
+      }
+
+      const statusPill = !isEnabled
+        ? '<span style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; font-size: 0.65rem; padding: 2px 7px; border-radius: 999px; font-weight: 700;">APAGADO</span>'
+        : (isOnline 
+            ? '<span style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-size: 0.65rem; padding: 2px 7px; border-radius: 999px; font-weight: 800; display: inline-flex; align-items: center; gap: 4px;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #10b981;"></span> EN LÍNEA</span>'
+            : `<span title="${escapeHtml(srv.statusMsg || 'Error')}" style="background: rgba(239, 68, 68, 0.2); color: #f87171; font-size: 0.65rem; padding: 2px 7px; border-radius: 999px; font-weight: 700; cursor: help; display: inline-flex; align-items: center; gap: 4px;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #ef4444;"></span> ERROR</span>`);
+
+      return `
+        <div style="background: ${meta.bg}; border: 1px solid ${meta.border}; border-radius: 14px; padding: 14px 16px; position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <span style="font-weight: 800; font-size: 0.95rem; color: #f8fafc; display: flex; align-items: center; gap: 6px;">
+                <i data-lucide="${meta.icon}" style="width: 16px; height: 16px; color: ${meta.color};"></i> ${escapeHtml(srv.name)}
+              </span>
+              ${statusPill}
+            </div>
+            <div style="font-size: 1.5rem; font-weight: 900; color: #ffffff; font-family: 'Outfit', sans-serif; letter-spacing: -0.5px;">
+              $${parseFloat(srv.creditMxn || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <span style="font-size: 0.72rem; color: #94a3b8; font-weight: normal; margin-left: 2px;">MXN</span>
+            </div>
+            ${srv.currency === 'USD' ? `
+              <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;">
+                Saldo DHRU original: <b style="color: #cbd5e1; font-family: monospace;">$${parseFloat(srv.creditRaw || 0).toFixed(2)} USD</b>
+              </div>
+            ` : ''}
+          </div>
+
+          <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed rgba(255,255,255,0.1); font-size: 0.72rem; display: flex; justify-content: space-between; color: #cbd5e1;">
+            <span>Cedido a clientes: <b style="color: #c4b5fd;">$${parseFloat(srv.assigned || 0).toFixed(2)}</b></span>
+            <span>Disponible: <b style="color: #22d3ee;">$${parseFloat(srv.available || 0).toFixed(2)}</b></span>
+          </div>
+
+          ${!isOnline && isEnabled && srv.statusMsg ? `
+            <div style="margin-top: 8px; font-size: 0.7rem; color: #fca5a5; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.25); padding: 5px 8px; border-radius: 6px; word-break: break-word;">
+              ⚠️ ${escapeHtml(srv.statusMsg)}
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
+
+    if (badge) {
+      badge.textContent = `Total Servidores: $${totalServerMxn.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN`;
+    }
+    if (window.lucide) lucide.createIcons();
+  }
   async function loadMobilePlans() {
     const listCont = document.getElementById('finMobilePlansContainerList');
     if (!listCont) return;
@@ -2539,6 +2612,16 @@
         } catch (err) {
           alert('Error de conexión al procesar compensación');
         }
+      });
+    }
+    // Botón para refrescar servidores
+    const btnRefServers = document.getElementById('btnFinRefreshServers');
+    if (btnRefServers) {
+      btnRefServers.addEventListener('click', async () => {
+        btnRefServers.innerHTML = '<i data-lucide="loader" style="width:13px; height:13px; animation:spin 1s linear infinite;"></i> Consultando...';
+        await loadAllFinanceData();
+        btnRefServers.innerHTML = '<i data-lucide="refresh-cw" style="width:13px; height:13px;"></i> Actualizar Servidores';
+        if (window.lucide) lucide.createIcons();
       });
     }
   });

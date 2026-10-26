@@ -598,6 +598,29 @@
           <!-- Cuentas renderizadas dinámicamente -->
         </div>
       </div>
+
+      <!-- Saldos en Servidores GSM Externos (Conexión Directa en Tiempo Real) -->
+      <div class="fin-card" style="border-color: rgba(99, 102, 241, 0.3); background: linear-gradient(145deg, rgba(15, 23, 42, 0.9), rgba(99, 102, 241, 0.05));">
+        <div class="fin-card-header">
+          <div>
+            <h2 class="fin-card-title">
+              <i data-lucide="server" style="color: #6366f1;"></i> Saldos en Servidores GSM Externos
+            </h2>
+            <small style="color:var(--fin-text-muted); font-size:0.78rem;">Conexión directa vía API a tus proveedores (LatamGSM, Popi, Unlockerfast / Omega)</small>
+          </div>
+          <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
+            <span id="finTotalServerBalanceBadge" style="font-size: 0.85rem; font-weight: 800; color: #818cf8; background: rgba(99, 102, 241, 0.15); padding: 5px 12px; border-radius: 999px; border: 1px solid rgba(99, 102, 241, 0.35);">
+              Total Servidores: $0.00 MXN
+            </span>
+            <button id="btnFinRefreshServers" class="fin-btn fin-btn-soft" style="padding: 0.45rem 0.8rem; font-size: 0.78rem;" title="Consultar saldo en tiempo real">
+              <i data-lucide="refresh-cw" style="width:13px; height:13px;"></i> Actualizar Servidores
+            </button>
+          </div>
+        </div>
+        <div id="finServersGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+          <!-- Servidores renderizados dinámicamente -->
+        </div>
+      </div>
     </div>
 
     <!-- Pestaña 2: Recargas Telefónicas & Planes Móviles (Nuevo) -->

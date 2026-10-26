@@ -269,48 +269,76 @@ function logRecharge(userId, username, amount, type = 'MANUAL_ADMIN', adminUsern
   } catch(e) {}
 
   // Sincronizar automáticamente con el Módulo de Finanzas:
-  // Distinguir si el cliente transfirió a la cuenta bancaria del admin (saldo cedible) o directo al proveedor/servidor
+  // Distinguir si es una recarga propia del admin fondeando el servidor, un cliente transfiriendo a cuenta personal, o directo al proveedor
   if (numAmount > 0) {
     try {
       const financeManager = require('./financeManager');
-      const isDirectServer = !!extra.isDirectProvider || String(extra.receiverBankName || '').toLowerCase().includes('proveedor');
-      
-      let targetAccountName = 'Server (DHRU / Fondos)';
+      const isAdminDeposit = String(userId) === '1' || username === 'Angel' || String(username).toLowerCase().includes('admin');
+      const isDirectServer = !!extra.isDirectProvider 
+        || String(extra.receiverBankName || '').toLowerCase().includes('proveedor')
+        || String(extra.receiverBankName || '').toLowerCase().includes('afirme'); // Afirme es la cuenta de Unlockerfast (Omega Server 3)
+
+      let senderAccountName = 'Nu Débito / Cuenta';
+      if (extra.senderBankName) {
+        const sBank = String(extra.senderBankName).toUpperCase();
+        if (sBank.includes('NU')) senderAccountName = 'Nu Débito / Cuenta';
+        else if (sBank.includes('REVOLUT') || sBank.includes('STP')) senderAccountName = 'Revolut';
+        else if (sBank.includes('BBVA')) senderAccountName = 'BBVA';
+        else if (sBank.includes('MERCADO')) senderAccountName = 'Mercado Pago';
+        else if (sBank.includes('EFECTIVO')) senderAccountName = 'Efectivo / Caja';
+      }
+
+      let receiverAccountName = 'Server (DHRU / Fondos)';
       let isPersonalIncome = false;
 
       if (!isDirectServer && extra.receiverBankName) {
-        // El cliente transfirió a una cuenta personal del admin (Nu Débito, Revolut, BBVA, etc.)
         const rBank = String(extra.receiverBankName).toUpperCase();
         if (rBank.includes('NU')) {
-          targetAccountName = 'Nu Débito / Cuenta';
+          receiverAccountName = 'Nu Débito / Cuenta';
           isPersonalIncome = true;
         } else if (rBank.includes('REVOLUT') || rBank.includes('STP')) {
-          targetAccountName = 'Revolut';
+          receiverAccountName = 'Revolut';
           isPersonalIncome = true;
         } else if (rBank.includes('BBVA')) {
-          targetAccountName = 'BBVA';
+          receiverAccountName = 'BBVA';
           isPersonalIncome = true;
         } else if (rBank.includes('MERCADO')) {
-          targetAccountName = 'Mercado Pago';
+          receiverAccountName = 'Mercado Pago';
           isPersonalIncome = true;
         } else if (rBank.includes('EFECTIVO')) {
-          targetAccountName = 'Efectivo / Caja';
+          receiverAccountName = 'Efectivo / Caja';
           isPersonalIncome = true;
         }
       }
 
-      financeManager.recordTransaction({
-        type: 'income_ticket',
-        serviceName: `Recarga Saldo S${serverId} (${username || userId})`,
-        chargedAmount: numAmount,
-        costAmount: 0,
-        // Si el dinero entra a tu cuenta personal para ceder créditos, el dinero es tuyo (0% reinversión forzada para no inflar la Cajita)
-        // Si fue directo al servidor, es 100% fondo del servidor
-        reinvestPercent: isPersonalIncome ? 0 : 100,
-        account: targetAccountName,
-        category: 'servidores',
-        notes: `Recarga ${isPersonalIncome ? 'en cuenta personal del admin' : 'directa al servidor'} | ${extra.trackingNumber ? 'Rastreo: ' + extra.trackingNumber : 'Ajuste Admin'}`
-      });
+      // Si el Administrador fondea el servidor con su propio banco (ej: Nu -> Afirme / Omega S3):
+      // Es un TRASPASO de capital propio (Nu Débito -> Server Fondos), NO una ganancia ni ingreso de cliente.
+      if (isAdminDeposit && isDirectServer) {
+        financeManager.recordTransaction({
+          type: 'transfer',
+          serviceName: `Fondeo de Servidor S${serverId} (${extra.receiverBankName || 'Proveedor GSM'})`,
+          chargedAmount: 0,
+          costAmount: numAmount,
+          grossProfit: 0,
+          reinvestPercent: 0,
+          account: senderAccountName,
+          destAccount: 'Server (DHRU / Fondos)',
+          category: 'servidores',
+          notes: `Fondeo de servidor desde ${senderAccountName} hacia servidor GSM S${serverId} | ${extra.trackingNumber ? 'Rastreo: ' + extra.trackingNumber : 'SPEI'}`
+        });
+      } else {
+        // Recarga de cliente ordinario
+        financeManager.recordTransaction({
+          type: 'income_ticket',
+          serviceName: `Recarga Saldo S${serverId} (${username || userId})`,
+          chargedAmount: numAmount,
+          costAmount: 0,
+          reinvestPercent: isPersonalIncome ? 0 : 100,
+          account: receiverAccountName,
+          category: 'servidores',
+          notes: `Recarga ${isPersonalIncome ? 'en cuenta personal del admin' : 'directa al servidor'} | ${extra.trackingNumber ? 'Rastreo: ' + extra.trackingNumber : 'Ajuste Admin'}`
+        });
+      }
     } catch(finErr) {
       console.warn('[FINANCE RECHARGE SYNC ERR]', finErr.message);
     }
