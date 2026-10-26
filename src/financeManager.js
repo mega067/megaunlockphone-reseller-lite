@@ -207,15 +207,16 @@ function recordTransaction(data) {
     return { success: true, count: recordedEntries.length, entries: recordedEntries };
   }
 
-  const reinvestPercent = data.reinvestPercent !== undefined 
-    ? Math.max(0, Math.min(100, parseFloat(data.reinvestPercent))) 
-    : config.reinvestPercent;
+  const isBusinessSale = (type === 'income_ticket' || category === 'servidores' || category === 'ventas');
+  const reinvestPercent = isBusinessSale 
+    ? (data.reinvestPercent !== undefined ? Math.max(0, Math.min(100, parseFloat(data.reinvestPercent))) : config.reinvestPercent)
+    : 0;
 
   let reinvestAmount = 0;
   let netProfit = 0;
 
   if (grossProfit > 0) {
-    reinvestAmount = Math.round((grossProfit * (reinvestPercent / 100)) * 100) / 100;
+    reinvestAmount = isBusinessSale ? Math.round((grossProfit * (reinvestPercent / 100)) * 100) / 100 : 0;
     netProfit = Math.round((grossProfit - reinvestAmount) * 100) / 100;
   } else {
     reinvestAmount = 0;
@@ -525,10 +526,20 @@ async function getFinanceSummary(filterOptions = {}) {
   // Resumen de saldos reales en servidores GSM externos
   const serverBalances = await queryAllServerCredits();
 
+  // Obtener saldo real depositado actualmente en cajitas Nu / cuentas de ahorro
+  const cajitaAccounts = sqliteDb.prepare(`
+    SELECT COALESCE(SUM(currentBalance), 0) as totalInSavings
+    FROM FinanceAccounts
+    WHERE isArchived = 0 AND (type = 'savings' OR LOWER(name) LIKE '%cajita%')
+  `).get();
+  const cajitaActualBalance = parseFloat(cajitaAccounts?.totalInSavings || 0);
+
   const totalTicketServerCost = parseFloat(totalRow.totalTicketServerCost || 0);
   const totalReinvest = parseFloat(totalRow.totalReinvest || 0);
-  // Fondo de Cajita para reponer el servidor: Costo gastado en servidores que hay que reponer + margen de reinversión
-  const totalCajitaServerFund = parseFloat((totalTicketServerCost + totalReinvest).toFixed(2));
+  // Fondo meta total que las ventas del negocio exigen apartar (costo consumido + utilidades de reinversión)
+  const cajitaTargetFund = parseFloat((totalTicketServerCost + totalReinvest).toFixed(2));
+  // Monto pendiente que aún no has movido a tu Cajita Nu
+  const cajitaPendingToMove = Math.max(0, parseFloat((cajitaTargetFund - cajitaActualBalance).toFixed(2)));
 
   return {
     config,
@@ -540,7 +551,10 @@ async function getFinanceSummary(filterOptions = {}) {
       totalReinvest: totalRow.totalReinvest,
       totalNetProfit: totalRow.totalNetProfit,
       totalTicketServerCost: totalTicketServerCost,
-      totalCajitaServerFund: totalCajitaServerFund
+      totalCajitaServerFund: cajitaTargetFund,
+      cajitaActualBalance: cajitaActualBalance,
+      cajitaTargetFund: cajitaTargetFund,
+      cajitaPendingToMove: cajitaPendingToMove
     },
     categories: categoryRows,
     accounts: enrichedAccounts,

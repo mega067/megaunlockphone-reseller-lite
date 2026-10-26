@@ -334,17 +334,17 @@ async function otros(context) {
 
                 let finMsg = `📊 *Registro Contable Guardado* 📊\n` +
                              `━━━━━━━━━━━━━━━━━━━━━━\n` +
-                             `🏦 *Cuenta de Destino:* ${selectedAccount}\n` +
-                             `💲 *Cobrado al Cliente:* $${chargedAmount.toFixed(2)} MXN\n` +
+                             `🏦 *Cobrado en:* ${selectedAccount} ($${chargedAmount.toFixed(2)} MXN)\n` +
                              `📉 *Costo del Servidor:* $${costAmount.toFixed(2)} MXN\n` +
                              `💰 *Ganancia Bruta:* $${recorded.grossProfit.toFixed(2)} MXN\n` +
                              `━━━━━━━━━━━━━━━━━━━━━━\n` +
-                             `📦 *Apartar en Cajita Nu:* $${totalToApartar.toFixed(2)} MXN\n` +
-                             `   ↳ _Recuperar inversión Servidor: $${costAmount.toFixed(2)}_\n` +
-                             `   ↳ _Fondo Reinversión (${recorded.reinvestPercent}%): $${recorded.reinvestAmount.toFixed(2)}_\n` +
-                             `💵 *Tu Ganancia Real (Bolsillo):* $${recorded.netProfit.toFixed(2)} MXN\n` +
+                             `🔔 *ACCIÓN PENDIENTE:* \n` +
+                             `📦 *Mueve a tu Cajita Nu:* 👉 *$${totalToApartar.toFixed(2)} MXN*\n` +
+                             `   ↳ _$${costAmount.toFixed(2)} para no descapitalizar el servidor_\n` +
+                             `   ↳ _$${recorded.reinvestAmount.toFixed(2)} de reinversión (${recorded.reinvestPercent}%)_\n` +
+                             `💵 *Tu Ganancia Libre (Bolsillo):* $${recorded.netProfit.toFixed(2)} MXN\n` +
                              `━━━━━━━━━━━━━━━━━━━━━━\n` +
-                             `_¡Registrado exitosamente en tu Panel de Finanzas!_ 🚀`;
+                             `⚠️ _Recuerda: No te gastes los $${totalToApartar.toFixed(2)}. Pásalos a tu Cajita Nu en la app bancaria para que tu servidor siempre tenga saldo._ 🚀`;
                 await sock.sendMessage(remoteJid, { text: finMsg });
             }
 
