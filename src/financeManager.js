@@ -304,7 +304,7 @@ function recordTransaction(data) {
         sqliteDb.prepare(`
           UPDATE FinanceAccounts 
           SET currentBalance = currentBalance - ?,
-              currentDebt = CASE WHEN type = 'credit' THEN currentDebt + ? ELSE currentDebt END,
+              currentDebt = CASE WHEN type IN ('card', 'credit') THEN currentDebt + ? ELSE currentDebt END,
               updatedAt = datetime('now') 
           WHERE id = ?
         `).run(costAmount, costAmount, targetOrigin.id);
@@ -315,7 +315,7 @@ function recordTransaction(data) {
         sqliteDb.prepare(`
           UPDATE FinanceAccounts 
           SET currentBalance = currentBalance + ?,
-              currentDebt = CASE WHEN type = 'credit' THEN MAX(0, currentDebt - ?) ELSE currentDebt END,
+              currentDebt = CASE WHEN type IN ('card', 'credit') THEN MAX(0, currentDebt - ?) ELSE currentDebt END,
               updatedAt = datetime('now') 
           WHERE id = ?
         `).run(chargedAmount, chargedAmount, targetOrigin.id);
@@ -325,7 +325,7 @@ function recordTransaction(data) {
         sqliteDb.prepare(`
           UPDATE FinanceAccounts 
           SET currentBalance = currentBalance - ?,
-              currentDebt = CASE WHEN type = 'credit' THEN currentDebt + ? ELSE currentDebt END,
+              currentDebt = CASE WHEN type IN ('card', 'credit') THEN currentDebt + ? ELSE currentDebt END,
               updatedAt = datetime('now') 
           WHERE id = ?
         `).run(costAmount, costAmount, targetOrigin.id);
@@ -333,7 +333,7 @@ function recordTransaction(data) {
       sqliteDb.prepare(`
         UPDATE FinanceAccounts 
         SET currentBalance = currentBalance + ?,
-            currentDebt = CASE WHEN type = 'credit' THEN MAX(0, currentDebt - ?) ELSE currentDebt END,
+            currentDebt = CASE WHEN type IN ('card', 'credit') THEN MAX(0, currentDebt - ?) ELSE currentDebt END,
             updatedAt = datetime('now') 
         WHERE id = ?
       `).run(costAmount, costAmount, targetDest.id);
@@ -790,7 +790,7 @@ function deleteTransaction(id) {
     sqliteDb.prepare(`
       UPDATE FinanceAccounts 
       SET currentBalance = currentBalance + ?,
-          currentDebt = CASE WHEN type = 'credit' THEN MAX(0, currentDebt - ?) ELSE currentDebt END,
+          currentDebt = CASE WHEN type IN ('card', 'credit') THEN MAX(0, currentDebt - ?) ELSE currentDebt END,
           updatedAt = datetime('now')
       WHERE id = ?
     `).run(costAmount, costAmount, targetOrigin.id);
@@ -799,7 +799,7 @@ function deleteTransaction(id) {
     sqliteDb.prepare(`
       UPDATE FinanceAccounts 
       SET currentBalance = currentBalance - ?,
-          currentDebt = CASE WHEN type = 'credit' THEN currentDebt + ? ELSE currentDebt END,
+          currentDebt = CASE WHEN type IN ('card', 'credit') THEN currentDebt + ? ELSE currentDebt END,
           updatedAt = datetime('now')
       WHERE id = ?
     `).run(chargedAmount, chargedAmount, targetOrigin.id);
@@ -809,7 +809,7 @@ function deleteTransaction(id) {
       sqliteDb.prepare(`
         UPDATE FinanceAccounts 
         SET currentBalance = currentBalance + ?,
-            currentDebt = CASE WHEN type = 'credit' THEN MAX(0, currentDebt - ?) ELSE currentDebt END,
+            currentDebt = CASE WHEN type IN ('card', 'credit') THEN MAX(0, currentDebt - ?) ELSE currentDebt END,
             updatedAt = datetime('now')
         WHERE id = ?
       `).run(costAmount, costAmount, targetOrigin.id);
@@ -818,7 +818,7 @@ function deleteTransaction(id) {
       sqliteDb.prepare(`
         UPDATE FinanceAccounts 
         SET currentBalance = currentBalance - ?,
-            currentDebt = CASE WHEN type = 'credit' THEN currentDebt + ? ELSE currentDebt END,
+            currentDebt = CASE WHEN type IN ('card', 'credit') THEN currentDebt + ? ELSE currentDebt END,
             updatedAt = datetime('now')
         WHERE id = ?
       `).run(costAmount, costAmount, targetDest.id);
@@ -1260,7 +1260,31 @@ function payInstallmentQuota(installmentId, quotaCount = 1, paymentAccount = 'Ef
     paymentAccount
   }, 'Admin');
 
-  // Registrar el gasto contable en FinanceLedger y descontar de la cuenta con la que se pagó la mensualidad
+  // 1. Reducir la deuda en la tarjeta de crédito que emitió el plan a plazos
+  try {
+    const cardId = item.accountId;
+    const cardName = item.accountName;
+    const targetCard = sqliteDb.prepare(`
+      SELECT * FROM FinanceAccounts 
+      WHERE (id = ? OR name = ? OR name LIKE ? OR ? LIKE ('%' || name || '%')) 
+        AND type IN ('card', 'credit') AND isArchived = 0
+      LIMIT 1
+    `).get(cardId, cardName, `%${cardName}%`, cardName);
+
+    if (targetCard) {
+      sqliteDb.prepare(`
+        UPDATE FinanceAccounts 
+        SET currentDebt = MAX(0, currentDebt - ?),
+            currentBalance = currentBalance + ?,
+            updatedAt = datetime('now')
+        WHERE id = ?
+      `).run(paidAmount, paidAmount, targetCard.id);
+    }
+  } catch (cardPayErr) {
+    console.warn('[INSTALLMENT CARD AMORTIZE ERR]', cardPayErr.message);
+  }
+
+  // 2. Registrar el gasto contable en FinanceLedger y descontar de la cuenta con la que se pagó la mensualidad (ej: Nu Débito o Efectivo)
   if (paymentAccount) {
     recordTransaction({
       type: 'expense_manual',
