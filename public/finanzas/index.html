@@ -14,6 +14,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet" crossorigin="anonymous">
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
       --fin-bg: #070b14;
@@ -554,6 +555,9 @@
       <button class="fin-tab-btn" data-tab="tab-installments">
         <i data-lucide="credit-card" style="width:16px; height:16px;"></i> Tarjetas & Plazos
       </button>
+      <button class="fin-tab-btn" data-tab="tab-investments">
+        <i data-lucide="trending-up" style="width:16px; height:16px; color:#10b981;"></i> Inversiones & Rendimiento
+      </button>
       <button class="fin-tab-btn" data-tab="tab-debts">
         <i data-lucide="hand-coins" style="width:16px; height:16px;"></i> Deudores & Préstamos
       </button>
@@ -629,6 +633,89 @@
         </div>
         <div id="finInstallmentsContainerList">
           <!-- Lista de mensualidades -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Pestaña: Inversiones, Valuación y Plusvalía / Minusvalía -->
+    <div id="tab-investments" class="fin-panel">
+      <!-- Resumen Superior de Inversiones -->
+      <div class="fin-grid-4" style="margin-bottom: 1.2rem;">
+        <div class="fin-card" style="padding: 1.1rem; border-color: rgba(16, 185, 129, 0.25);">
+          <div style="font-size:0.75rem; color:var(--fin-text-muted); text-transform:uppercase; font-weight:700;">Capital Neto Invertido</div>
+          <div id="statFinInvCapital" style="font-size:1.6rem; font-weight:800; color:#f8fafc; font-family:'Outfit',sans-serif; margin-top:4px;">$0.00</div>
+          <small style="color:var(--fin-text-sub); font-size:0.72rem;">Aportaciones acumuladas</small>
+        </div>
+        <div class="fin-card" style="padding: 1.1rem; border-color: rgba(56, 189, 248, 0.25);">
+          <div style="font-size:0.75rem; color:var(--fin-text-muted); text-transform:uppercase; font-weight:700;">Valor Real del Portafolio</div>
+          <div id="statFinInvCurrentValue" style="font-size:1.6rem; font-weight:800; color:#38bdf8; font-family:'Outfit',sans-serif; margin-top:4px;">$0.00</div>
+          <small style="color:var(--fin-text-sub); font-size:0.72rem;">Último corte de valuación</small>
+        </div>
+        <div class="fin-card" style="padding: 1.1rem; border-color: rgba(139, 92, 246, 0.25);">
+          <div style="font-size:0.75rem; color:var(--fin-text-muted); text-transform:uppercase; font-weight:700;">Rendimiento Neto (P&L)</div>
+          <div id="statFinInvNetReturn" style="font-size:1.6rem; font-weight:800; color:#10b981; font-family:'Outfit',sans-serif; margin-top:4px;">$0.00</div>
+          <small id="statFinInvReturnLabel" style="color:#10b981; font-size:0.75rem; font-weight:700;">Plusvalía: 0.00%</small>
+        </div>
+        <div class="fin-card" style="padding: 1.1rem; border-color: rgba(245, 158, 11, 0.25);">
+          <div style="font-size:0.75rem; color:var(--fin-text-muted); text-transform:uppercase; font-weight:700;">Cortes Registrados</div>
+          <div id="statFinInvSnapshotsCount" style="font-size:1.6rem; font-weight:800; color:#f59e0b; font-family:'Outfit',sans-serif; margin-top:4px;">0</div>
+          <small id="statFinInvLastDate" style="color:var(--fin-text-sub); font-size:0.72rem;">Sin cortes aún</small>
+        </div>
+      </div>
+
+      <!-- Gráfica de Evolución Temporal (Valor vs Capital Invertido) -->
+      <div class="fin-card" style="margin-bottom: 1.2rem;">
+        <div class="fin-card-header">
+          <div>
+            <h2 class="fin-card-title">
+              <i data-lucide="trending-up" style="color:#10b981;"></i> Evolución Temporal del Portafolio
+            </h2>
+            <small style="color:var(--fin-text-muted); font-size:0.78rem;">Gráfica histórica interactiva de valuación real vs aportaciones con Plusvalía / Minusvalía</small>
+          </div>
+          <div style="display:flex; gap:0.5rem;">
+            <button id="btnFinNewInvestmentLog" class="fin-btn fin-btn-primary">
+              <i data-lucide="plus" style="width:14px; height:14px;"></i> + Registrar Corte / Valuación
+            </button>
+          </div>
+        </div>
+        <div style="position:relative; width:100%; height:320px; max-height:360px; padding:0.5rem 0;">
+          <canvas id="chartInvestmentGrowth"></canvas>
+          <div id="chartInvestmentEmpty" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); text-align:center; color:var(--fin-text-muted);">
+            <i data-lucide="line-chart" style="width:36px; height:36px; margin-bottom:8px; opacity:0.5;"></i>
+            <div>Aún no hay registros de inversión suficientes para trazar la gráfica.</div>
+            <small style="color:var(--fin-text-sub);">Registra tu primer corte de valuación o inyección de saldo.</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla Historial de Cortes de Valuación e Inyecciones -->
+      <div class="fin-card">
+        <div class="fin-card-header">
+          <div>
+            <h2 class="fin-card-title">
+              <i data-lucide="calendar" style="color:#38bdf8;"></i> Historial Periódico de Valuaciones
+            </h2>
+            <small style="color:var(--fin-text-muted); font-size:0.78rem;">Bitácora de cortes semanales/mensuales, inyecciones de dinero y resultado neto</small>
+          </div>
+        </div>
+        <div class="fin-table-scroll" style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
+          <table style="width:100%; min-width:760px; border-collapse:collapse; font-size:0.84rem;">
+            <thead>
+              <tr style="border-bottom: 2px solid rgba(255,255,255,0.08); text-align:left; color:var(--fin-text-muted);">
+                <th style="padding: 10px 12px; width:120px;">Fecha</th>
+                <th style="padding: 10px 12px;">Cuenta / Plataforma</th>
+                <th style="padding: 10px 12px; text-align:right;">Capital Invertido</th>
+                <th style="padding: 10px 12px; text-align:right;">Valor Real</th>
+                <th style="padding: 10px 12px; text-align:right;">Inyección (+)/Retiro(-)</th>
+                <th style="padding: 10px 12px; text-align:right;">Plusvalía / Minusvalía</th>
+                <th style="padding: 10px 12px; text-align:right;">Rendimiento %</th>
+                <th style="padding: 10px 8px; text-align:center; width:50px;">Acción</th>
+              </tr>
+            </thead>
+            <tbody id="finInvestmentsTbody">
+              <tr><td colspan="8" style="text-align:center; padding:2rem; color:var(--fin-text-muted);">Cargando registros de inversión...</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -1118,6 +1205,84 @@
     </div>
   </div>
 
-  <script src="/finanzas/finanzas.js?v=108"></script>
+  <!-- Modal: Registrar Corte / Valuación / Inyección de Inversión -->
+  <div id="modalNewInvestmentLog" class="fin-modal-overlay">
+    <div class="fin-modal-card">
+      <div class="fin-modal-header">
+        <h3 class="fin-modal-title" style="color:#10b981;">
+          <i data-lucide="trending-up"></i> Registrar Corte de Inversión
+        </h3>
+        <button class="fin-modal-close" onclick="window.finCloseModal('modalNewInvestmentLog')">&times;</button>
+      </div>
+      <form id="formNewInvestmentLog">
+        <div class="fin-grid-2">
+          <div class="fin-form-group">
+            <label>Cuenta de Inversión *</label>
+            <select id="invAccountId" class="fin-select" required>
+              <!-- Cuentas tipo investment -->
+            </select>
+          </div>
+          <div class="fin-form-group">
+            <label>Fecha de Corte / Valuación *</label>
+            <input type="date" id="invDate" class="fin-input" required>
+          </div>
+        </div>
+
+        <div class="fin-grid-2">
+          <div class="fin-form-group">
+            <label>Valor Actual del Portafolio (MXN) *</label>
+            <input type="number" id="invCurrentValue" class="fin-input" step="0.01" min="0" placeholder="Ej: 10500.50" required>
+            <small style="color:var(--fin-text-sub); font-size:0.75rem;">Balance total que marca la app hoy (Revolut, Cetes, etc.)</small>
+          </div>
+          <div class="fin-form-group">
+            <label>Capital Invertido Base (Opcional)</label>
+            <input type="number" id="invInvestedCapital" class="fin-input" step="0.01" min="0" placeholder="Dejar vacío para cálculo auto">
+            <small style="color:var(--fin-text-sub); font-size:0.75rem;">Si lo dejas vacío, toma el último corte + inyecciones</small>
+          </div>
+        </div>
+
+        <!-- Inyección de nuevo dinero (opcional) -->
+        <div style="background:rgba(16, 185, 129, 0.08); border:1px solid rgba(16, 185, 129, 0.25); border-radius:12px; padding:0.9rem; margin-bottom:1rem;">
+          <div style="font-weight:700; color:#10b981; font-size:0.82rem; margin-bottom:0.4rem;">
+            ¿Inyectaste o retiraste dinero en esta fecha?
+          </div>
+          <div class="fin-grid-2">
+            <div class="fin-form-group" style="margin-bottom:0;">
+              <label>Monto Inyectado (+) (Opcional)</label>
+              <input type="number" id="invInjectedAmount" class="fin-input" step="0.01" min="0" placeholder="Ej: 500.00">
+            </div>
+            <div class="fin-form-group" style="margin-bottom:0;">
+              <label>Cuenta Origen de donde salió el dinero</label>
+              <select id="invSourceAccount" class="fin-select">
+                <option value="">-- No registrar traspaso contable --</option>
+                <!-- Cuentas bancarias o efectivo -->
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Vista previa de Plusvalía / Minusvalía calculada en tiempo real -->
+        <div id="invPreviewBox" style="display:none; background:rgba(15, 23, 42, 0.8); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:0.85rem; margin-bottom:1rem; text-align:center;">
+          <div style="font-size:0.75rem; color:var(--fin-text-muted); text-transform:uppercase;">Resultado Estimado del Corte:</div>
+          <div id="invPreviewReturn" style="font-size:1.35rem; font-weight:800; margin-top:2px;">$0.00</div>
+          <small id="invPreviewPct" style="font-weight:700; font-size:0.78rem;">0.00%</small>
+        </div>
+
+        <div class="fin-form-group">
+          <label>Notas / Plataforma</label>
+          <input type="text" id="invNotes" class="fin-input" placeholder="Ej: Corte semanal Revolut, ganancia de intereses, etc.">
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:0.6rem; margin-top:1.2rem;">
+          <button type="button" class="fin-btn fin-btn-soft" onclick="window.finCloseModal('modalNewInvestmentLog')">Cancelar</button>
+          <button type="submit" class="fin-btn fin-btn-primary" style="background: linear-gradient(135deg, #10b981, #059669);">
+            <i data-lucide="check" style="width:14px; height:14px;"></i> Guardar Corte de Inversión
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/finanzas/finanzas.js?v=109"></script>
 </body>
 </html>

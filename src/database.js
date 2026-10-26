@@ -164,6 +164,24 @@ const initTables = () => {
             createdAt TEXT,
             updatedAt TEXT
         );
+
+        /* Historial de Inversiones: Snapshots periódicos, aportaciones, retiros y plusvalía / minusvalía */
+        CREATE TABLE IF NOT EXISTS FinanceInvestmentLogs (
+            id TEXT PRIMARY KEY,
+            accountId TEXT NOT NULL, /* ID de la cuenta, ej: acc_investment */
+            accountName TEXT, /* Nombre de la cuenta, ej: Revolut Cuenta Inversión */
+            date TEXT NOT NULL, /* Fecha del corte o valuación YYYY-MM-DD */
+            investedCapital REAL NOT NULL DEFAULT 0, /* Capital neto aportado acumulado */
+            currentValue REAL NOT NULL DEFAULT 0, /* Valor o balance real actual del portafolio */
+            netReturn REAL DEFAULT 0, /* Plusvalía (+) o Minusvalía (-) en monto monetario */
+            returnPercentage REAL DEFAULT 0, /* Rendimiento porcentual % */
+            injectedAmount REAL DEFAULT 0, /* Nueva inyección o aporte registrado en esta fecha */
+            withdrawnAmount REAL DEFAULT 0, /* Retiro registrado en esta fecha si aplica */
+            platform TEXT, /* e.g. Revolut, CetesDirecto, GBM, Nu, etc. */
+            notes TEXT, /* Notas u observaciones */
+            createdAt TEXT,
+            updatedAt TEXT
+        );
     `);
 
     try {

@@ -1596,6 +1596,197 @@ function deleteMobilePlan(id) {
   return res.changes > 0;
 }
 
+// ========================================================
+// SECCIÓN: REGISTROS Y SEGUIMIENTO DE CUENTAS DE INVERSIÓN
+// ========================================================
+
+/**
+ * Obtener todos los registros y snapshots de inversiones ordenados cronológicamente
+ */
+function getAllInvestmentLogs(accountId = null) {
+  let query = 'SELECT * FROM FinanceInvestmentLogs';
+  const params = [];
+  if (accountId) {
+    query += ' WHERE accountId = ? OR accountName = ?';
+    params.push(accountId, accountId);
+  }
+  query += ' ORDER BY date ASC, createdAt ASC';
+  const logs = sqliteDb.prepare(query).all(...params);
+
+  // Calcular métricas consolidadas
+  let totalInvested = 0;
+  let latestValue = 0;
+  let totalNetReturn = 0;
+  let returnPercentage = 0;
+
+  if (logs.length > 0) {
+    const latest = logs[logs.length - 1];
+    totalInvested = parseFloat(latest.investedCapital) || 0;
+    latestValue = parseFloat(latest.currentValue) || 0;
+    totalNetReturn = parseFloat(latest.netReturn) || (latestValue - totalInvested);
+    returnPercentage = totalInvested > 0 ? parseFloat(((totalNetReturn / totalInvested) * 100).toFixed(2)) : 0;
+  }
+
+  return {
+    logs,
+    summary: {
+      totalInvested,
+      currentValue: latestValue,
+      netReturn: parseFloat(totalNetReturn.toFixed(2)),
+      returnPercentage,
+      isProfit: totalNetReturn >= 0
+    }
+  };
+}
+
+/**
+ * Guardar o registrar un corte de valuación / inyección de capital en inversión
+ */
+function saveInvestmentLog(data) {
+  const id = data.id || `inv_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
+  const accountId = data.accountId || 'acc_investment';
+  const accountName = data.accountName || 'Revolut Cuenta Inversión';
+  const date = data.date || new Date().toISOString().split('T')[0];
+  const injectedAmount = parseFloat(data.injectedAmount) || 0;
+  const withdrawnAmount = parseFloat(data.withdrawnAmount) || 0;
+  const platform = data.platform || 'Revolut';
+  const notes = data.notes || '';
+
+  // Obtener el registro previo más reciente para arrastrar el capital acumulado
+  const lastLog = sqliteDb.prepare(`
+    SELECT * FROM FinanceInvestmentLogs 
+    WHERE accountId = ? AND id != ?
+    ORDER BY date DESC, createdAt DESC 
+    LIMIT 1
+  `).get(accountId, id);
+
+  // Capital invertido base
+  let previousInvested = lastLog ? parseFloat(lastLog.investedCapital || 0) : 0;
+  let investedCapital = data.investedCapital !== undefined && data.investedCapital !== null && data.investedCapital !== ''
+    ? parseFloat(data.investedCapital)
+    : (previousInvested + injectedAmount - withdrawnAmount);
+
+  // Si no se proporcionó investedCapital explícito y no había previo, usar injectedAmount o currentValue
+  if (investedCapital <= 0 && injectedAmount > 0) {
+    investedCapital = injectedAmount;
+  }
+
+  // Valor actual registrado en la plataforma
+  const currentValue = parseFloat(data.currentValue) || 0;
+  if (investedCapital <= 0 && currentValue > 0 && !previousInvested) {
+    investedCapital = currentValue;
+  }
+
+  // Plusvalía (+) o Minusvalía (-) = Valor actual - Capital invertido
+  const netReturn = parseFloat((currentValue - investedCapital).toFixed(2));
+  const returnPercentage = investedCapital > 0 
+    ? parseFloat(((netReturn / investedCapital) * 100).toFixed(2)) 
+    : 0;
+
+  const existing = sqliteDb.prepare('SELECT id FROM FinanceInvestmentLogs WHERE id = ?').get(id);
+
+  if (existing) {
+    sqliteDb.prepare(`
+      UPDATE FinanceInvestmentLogs 
+      SET accountId = ?, accountName = ?, date = ?, investedCapital = ?, currentValue = ?,
+          netReturn = ?, returnPercentage = ?, injectedAmount = ?, withdrawnAmount = ?,
+          platform = ?, notes = ?, updatedAt = datetime('now')
+      WHERE id = ?
+    `).run(
+      accountId, accountName, date, investedCapital, currentValue,
+      netReturn, returnPercentage, injectedAmount, withdrawnAmount,
+      platform, notes, id
+    );
+  } else {
+    sqliteDb.prepare(`
+      INSERT INTO FinanceInvestmentLogs (
+        id, accountId, accountName, date, investedCapital, currentValue,
+        netReturn, returnPercentage, injectedAmount, withdrawnAmount,
+        platform, notes, createdAt, updatedAt
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+    `).run(
+      id, accountId, accountName, date, investedCapital, currentValue,
+      netReturn, returnPercentage, injectedAmount, withdrawnAmount,
+      platform, notes
+    );
+  }
+
+  // Sincronizar el saldo de la cuenta de inversión en FinanceAccounts
+  try {
+    sqliteDb.prepare(`
+      UPDATE FinanceAccounts 
+      SET currentBalance = ?, updatedAt = datetime('now') 
+      WHERE id = ? OR name = ? OR type = 'investment'
+    `).run(currentValue, accountId, accountName);
+  } catch (syncErr) {
+    console.warn('[INVESTMENT ACC BALANCE SYNC ERR]', syncErr.message);
+  }
+
+  // Si hubo inyección de dinero y se indicó registrar movimiento contable
+  if (data.sourceAccount && injectedAmount > 0) {
+    recordTransaction({
+      type: 'transfer',
+      serviceName: `Aporte a Inversión (${platform}): ${accountName}`,
+      chargedAmount: 0,
+      costAmount: injectedAmount,
+      account: data.sourceAccount,
+      destAccount: accountName,
+      category: 'inversiones',
+      notes: `Inyección de capital para portafolio de inversión. Fecha de corte: ${date}. ${notes}`,
+      recordedBy: 'Admin'
+    });
+  }
+
+  logAuditTrail(existing ? 'FINANCE_INVESTMENT_LOG_UPDATED' : 'FINANCE_INVESTMENT_LOG_CREATED', {
+    id,
+    date,
+    platform,
+    investedCapital,
+    currentValue,
+    netReturn,
+    returnPercentage,
+    injectedAmount
+  }, 'Admin');
+
+  return sqliteDb.prepare('SELECT * FROM FinanceInvestmentLogs WHERE id = ?').get(id);
+}
+
+/**
+ * Eliminar un registro de inversión
+ */
+function deleteInvestmentLog(id) {
+  const existing = sqliteDb.prepare('SELECT * FROM FinanceInvestmentLogs WHERE id = ?').get(id);
+  if (!existing) return false;
+
+  const res = sqliteDb.prepare('DELETE FROM FinanceInvestmentLogs WHERE id = ?').run(id);
+
+  if (res.changes > 0) {
+    // Restaurar el balance de la cuenta al último registro disponible
+    try {
+      const remaining = sqliteDb.prepare(`
+        SELECT currentValue FROM FinanceInvestmentLogs 
+        WHERE accountId = ? 
+        ORDER BY date DESC, createdAt DESC 
+        LIMIT 1
+      `).get(existing.accountId);
+
+      const newBal = remaining ? parseFloat(remaining.currentValue) : 0;
+      sqliteDb.prepare(`
+        UPDATE FinanceAccounts 
+        SET currentBalance = ?, updatedAt = datetime('now') 
+        WHERE id = ?
+      `).run(newBal, existing.accountId);
+    } catch (e) {}
+
+    logAuditTrail('FINANCE_INVESTMENT_LOG_DELETED', {
+      id,
+      deletedRecord: existing
+    }, 'Admin');
+  }
+
+  return res.changes > 0;
+}
+
 module.exports = {
   getFinanceConfig,
   updateFinanceConfig,
@@ -1620,6 +1811,9 @@ module.exports = {
   getAllMobilePlans,
   saveMobilePlan,
   executeMobileRecharge,
-  deleteMobilePlan
+  deleteMobilePlan,
+  getAllInvestmentLogs,
+  saveInvestmentLog,
+  deleteInvestmentLog
 };
 

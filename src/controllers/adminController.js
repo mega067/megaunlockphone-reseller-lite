@@ -1033,4 +1033,34 @@ exports.deleteMobilePlan = (req, res) => {
   }
 };
 
+// --- CONTROL DE INVERSIONES & VALUACIONES ---
+
+exports.getInvestmentLogs = (req, res) => {
+  try {
+    const accountId = req.query.accountId || null;
+    const data = financeManager.getAllInvestmentLogs(accountId);
+    res.json({ success: true, ...data });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+};
+
+exports.saveInvestmentLog = (req, res) => {
+  try {
+    const log = financeManager.saveInvestmentLog(req.body);
+    res.json({ success: true, log });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+};
+
+exports.deleteInvestmentLog = (req, res) => {
+  try {
+    const success = financeManager.deleteInvestmentLog(req.params.id);
+    res.json({ success });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+};
+
 

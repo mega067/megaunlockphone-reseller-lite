@@ -14,6 +14,8 @@
   let cachedAccounts = [];
   let cachedDebts = [];
   let cachedInstallments = [];
+  let cachedInvestments = [];
+  let investmentChart = null;
 
   function formatMoney(num) {
     const val = parseFloat(num) || 0;
@@ -80,7 +82,10 @@
       // 3. Meses sin intereses
       await loadInstallments();
 
-      // 4. Deudas
+      // 4. Inversiones & Rendimiento (Plusvalía / Minusvalía / Gráfica)
+      await loadInvestments();
+
+      // 5. Deudas
       await loadDebts();
 
       if (window.lucide) lucide.createIcons();
@@ -641,6 +646,278 @@
     }
   }
 
+  // --- SECCIÓN: INVERSIONES, RENDIMIENTO Y PLUSVALÍA / MINUSVALÍA ---
+  async function loadInvestments() {
+    const tbody = document.getElementById('finInvestmentsTbody');
+    if (!tbody) return;
+
+    try {
+      const res = await fetchWithAuth('/api/admin/finance/investments');
+      const d = await res.json();
+      if (!res.ok || !d.success) return;
+
+      const items = d.logs || [];
+      cachedInvestments = items;
+      const s = d.summary || {};
+
+      // Actualizar Métricas Superiores
+      const statCap = document.getElementById('statFinInvCapital');
+      if (statCap) statCap.textContent = formatMoney(s.totalInvested || 0);
+
+      const statVal = document.getElementById('statFinInvCurrentValue');
+      if (statVal) statVal.textContent = formatMoney(s.currentValue || 0);
+
+      const statRet = document.getElementById('statFinInvNetReturn');
+      const statLabel = document.getElementById('statFinInvReturnLabel');
+      if (statRet) {
+        statRet.textContent = `${s.netReturn >= 0 ? '+' : ''}${formatMoney(s.netReturn || 0)}`;
+        statRet.style.color = s.netReturn >= 0 ? '#10b981' : '#f43f5e';
+      }
+      if (statLabel) {
+        statLabel.textContent = s.netReturn >= 0 
+          ? `Plusvalía: +${(s.returnPercentage || 0).toFixed(2)}%` 
+          : `Minusvalía: ${(s.returnPercentage || 0).toFixed(2)}%`;
+        statLabel.style.color = s.netReturn >= 0 ? '#10b981' : '#f43f5e';
+      }
+
+      const statCount = document.getElementById('statFinInvSnapshotsCount');
+      if (statCount) statCount.textContent = items.length;
+
+      const statLastDate = document.getElementById('statFinInvLastDate');
+      if (statLastDate) {
+        if (items.length > 0) {
+          const last = items[items.length - 1];
+          statLastDate.textContent = `Último: ${last.date} (${last.platform || 'Revolut'})`;
+        } else {
+          statLastDate.textContent = 'Sin cortes aún';
+        }
+      }
+
+      // Renderizar Gráfica
+      renderInvestmentChart(items);
+
+      // Renderizar Tabla
+      if (!items.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:2rem; color:var(--fin-text-muted);">Sin cortes ni valuaciones de inversión registradas aún. Haz clic en <strong>+ Registrar Corte</strong>.</td></tr>';
+        return;
+      }
+
+      // Mostrar en la tabla en orden inverso (más reciente arriba)
+      const reversed = [...items].reverse();
+      tbody.innerHTML = reversed.map(log => {
+        const netRet = parseFloat(log.netReturn || 0);
+        const retPct = parseFloat(log.returnPercentage || 0);
+        const isProfit = netRet >= 0;
+        const injected = parseFloat(log.injectedAmount || 0);
+        const withdrawn = parseFloat(log.withdrawnAmount || 0);
+
+        let deltaStr = '-';
+        if (injected > 0 && withdrawn > 0) {
+          deltaStr = `<span style="color:#10b981;">+${formatMoney(injected)}</span> / <span style="color:#f43f5e;">-${formatMoney(withdrawn)}</span>`;
+        } else if (injected > 0) {
+          deltaStr = `<span style="color:#10b981; font-weight:600;">+${formatMoney(injected)}</span>`;
+        } else if (withdrawn > 0) {
+          deltaStr = `<span style="color:#f43f5e; font-weight:600;">-${formatMoney(withdrawn)}</span>`;
+        }
+
+        return `
+          <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+            <td style="padding: 10px 12px; font-weight:600; color:#f8fafc;">
+              ${escapeHtml(log.date)}
+            </td>
+            <td style="padding: 10px 12px; color:var(--fin-text-muted);">
+              <span class="fin-badge" style="background:rgba(16, 185, 129, 0.12); color:#10b981; font-size:0.75rem;">
+                ${escapeHtml(log.platform || 'Revolut')}
+              </span>
+              ${log.notes ? `<div style="font-size:0.75rem; color:var(--fin-text-sub); margin-top:2px;">${escapeHtml(log.notes)}</div>` : ''}
+            </td>
+            <td style="padding: 10px 12px; text-align:right; color:#94a3b8; font-weight:600;">
+              ${formatMoney(log.investedCapital)}
+            </td>
+            <td style="padding: 10px 12px; text-align:right; font-weight:700; color:#38bdf8;">
+              ${formatMoney(log.currentValue)}
+            </td>
+            <td style="padding: 10px 12px; text-align:right;">
+              ${deltaStr}
+            </td>
+            <td style="padding: 10px 12px; text-align:right; font-weight:700; color:${isProfit ? '#10b981' : '#f43f5e'};">
+              ${isProfit ? '+' : ''}${formatMoney(netRet)}
+            </td>
+            <td style="padding: 10px 12px; text-align:right; font-weight:700; color:${isProfit ? '#10b981' : '#f43f5e'};">
+              ${isProfit ? '+' : ''}${retPct.toFixed(2)}%
+            </td>
+            <td style="padding: 10px 8px; text-align:center;">
+              <button onclick="window.finDeleteInvestmentLog('${log.id}')" title="Eliminar corte" style="background:none; border:none; color:var(--fin-text-sub); cursor:pointer; font-size:0.9rem; padding:3px;">
+                🗑️
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    } catch (err) {
+      console.error('Error cargando inversiones:', err);
+    }
+  }
+
+  function renderInvestmentChart(items) {
+    const canvas = document.getElementById('chartInvestmentGrowth');
+    const emptyMsg = document.getElementById('chartInvestmentEmpty');
+    if (!canvas) return;
+
+    if (!items || items.length === 0) {
+      if (emptyMsg) emptyMsg.style.display = 'block';
+      if (investmentChart) {
+        investmentChart.destroy();
+        investmentChart = null;
+      }
+      return;
+    }
+
+    if (emptyMsg) emptyMsg.style.display = 'none';
+
+    // Preparar series de datos cronológicas
+    const labels = items.map(i => i.date);
+    const investedData = items.map(i => parseFloat(i.investedCapital) || 0);
+    const valueData = items.map(i => parseFloat(i.currentValue) || 0);
+
+    // Destruir instancia previa de Chart.js si existe
+    if (investmentChart) {
+      investmentChart.destroy();
+    }
+
+    // Inicializar nuevo gráfico con Chart.js
+    if (typeof Chart === 'undefined') {
+      console.warn('Chart.js no está cargado aún en la ventana.');
+      return;
+    }
+
+    const ctx = canvas.getContext('2d');
+    
+    // Gradiente sutil para el valor del portafolio
+    const gradientVal = ctx.createLinearGradient(0, 0, 0, 300);
+    gradientVal.addColorStop(0, 'rgba(16, 185, 129, 0.35)');
+    gradientVal.addColorStop(1, 'rgba(16, 185, 129, 0.00)');
+
+    investmentChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Valor Real del Portafolio',
+            data: valueData,
+            borderColor: '#10b981',
+            backgroundColor: gradientVal,
+            borderWidth: 2.5,
+            fill: true,
+            tension: 0.35,
+            pointBackgroundColor: '#10b981',
+            pointBorderColor: '#ffffff',
+            pointRadius: 4,
+            pointHoverRadius: 6
+          },
+          {
+            label: 'Capital Neto Invertido',
+            data: investedData,
+            borderColor: '#64748b',
+            borderDash: [5, 5],
+            borderWidth: 2,
+            fill: false,
+            tension: 0.1,
+            pointBackgroundColor: '#64748b',
+            pointRadius: 3,
+            pointHoverRadius: 5
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false
+        },
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
+            labels: {
+              color: '#94a3b8',
+              font: { family: 'Inter', size: 12, weight: 600 },
+              usePointStyle: true,
+              boxWidth: 8
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+            titleColor: '#f8fafc',
+            bodyColor: '#cbd5e1',
+            borderColor: 'rgba(255, 255, 255, 0.1)',
+            borderWidth: 1,
+            padding: 10,
+            callbacks: {
+              label: function(context) {
+                let label = context.dataset.label || '';
+                if (label) label += ': ';
+                label += formatMoney(context.parsed.y);
+                return label;
+              },
+              afterBody: function(tooltipItems) {
+                if (tooltipItems.length >= 2) {
+                  const val = tooltipItems[0].parsed.y;
+                  const inv = tooltipItems[1].parsed.y;
+                  const diff = val - inv;
+                  const pct = inv > 0 ? ((diff / inv) * 100).toFixed(2) : 0;
+                  const tag = diff >= 0 ? 'Plusvalía' : 'Minusvalía';
+                  return `\n${tag}: ${diff >= 0 ? '+' : ''}${formatMoney(diff)} (${pct}%)`;
+                }
+                return '';
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: { color: '#64748b', font: { family: 'Inter', size: 11 } }
+          },
+          y: {
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: {
+              color: '#64748b',
+              font: { family: 'Inter', size: 11 },
+              callback: function(val) {
+                return '$' + val.toLocaleString('es-MX');
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // Poblar selector de cuentas de inversión en el modal
+  function populateInvestmentModalSelects(accounts) {
+    const accSel = document.getElementById('invAccountId');
+    const srcSel = document.getElementById('invSourceAccount');
+    if (!accSel) return;
+
+    // Cuentas de tipo inversión o que tengan 'inver' en el nombre
+    const invAccounts = accounts.filter(a => a.type === 'investment' || a.name.toLowerCase().includes('inver') || a.id === 'acc_investment');
+    const targetAccounts = invAccounts.length > 0 ? invAccounts : accounts;
+
+    accSel.innerHTML = targetAccounts.map(a => {
+      return `<option value="${a.id}" data-name="${escapeHtml(a.name)}">${escapeHtml(a.name)} (Actual: ${formatMoney(a.balance || a.currentBalance || 0)})</option>`;
+    }).join('');
+
+    if (srcSel) {
+      // Cuentas de donde puede salir dinero para fondear la inversión
+      const bankOrCash = accounts.filter(a => a.type !== 'investment');
+      srcSel.innerHTML = '<option value="">-- No registrar traspaso contable (Solo actualizar valuación) --</option>' +
+        bankOrCash.map(a => `<option value="${escapeHtml(a.name)}">${escapeHtml(a.name)} (${formatMoney(a.balance || 0)})</option>`).join('');
+    }
+  }
+
   // --- SECCIÓN: LIBRO CONTABLE & MOVIMIENTOS ---
   function renderLedger(items) {
     const tbody = document.getElementById('finLedgerTbody');
@@ -1046,6 +1323,42 @@
     if (!confirm('¿Eliminar definitivamente el registro de deuda?')) return;
     const res = await fetchWithAuth(`/api/admin/finance/debts/${encodeURIComponent(id)}`, { method: 'DELETE' });
     if (res.ok) loadAllFinanceData();
+  };
+
+  // --- ACCIONES DE INVERSIÓN ---
+
+  window.finOpenNewInvestmentLog = function() {
+    const form = document.getElementById('formNewInvestmentLog');
+    if (form) form.reset();
+    populateInvestmentModalSelects(cachedAccounts);
+
+    const dateInput = document.getElementById('invDate');
+    if (dateInput) {
+      dateInput.value = new Date().toISOString().split('T')[0];
+    }
+
+    // Si ya hay cortes previos, sugerir el capital acumulado
+    const capInput = document.getElementById('invInvestedCapital');
+    if (capInput && cachedInvestments.length > 0) {
+      const last = cachedInvestments[cachedInvestments.length - 1];
+      capInput.value = (parseFloat(last.investedCapital) || 0).toFixed(2);
+    }
+
+    const previewBox = document.getElementById('invPreviewBox');
+    if (previewBox) previewBox.style.display = 'none';
+
+    window.finOpenModal('modalNewInvestmentLog');
+  };
+
+  window.finDeleteInvestmentLog = async function(id) {
+    if (!confirm('¿Eliminar este corte de valuación de inversión?')) return;
+    const res = await fetchWithAuth(`/api/admin/finance/investments/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    const d = await res.json();
+    if (res.ok && d.success) {
+      loadAllFinanceData();
+    } else {
+      alert(d.error || 'Error al eliminar registro');
+    }
   };
 
   window.finOpenNewAccount = function() {
@@ -1798,6 +2111,102 @@
     const btnNewCajita = document.getElementById('btnFinNewCajita');
     if (btnNewCajita) {
       btnNewCajita.addEventListener('click', () => window.finOpenNewCajita());
+    }
+
+    // Modal de inversiones
+    const btnNewInv = document.getElementById('btnFinNewInvestmentLog');
+    if (btnNewInv) {
+      btnNewInv.addEventListener('click', () => window.finOpenNewInvestmentLog());
+    }
+
+    // Preview de Plusvalía / Minusvalía al escribir en el modal de inversión
+    const invCurInput = document.getElementById('invCurrentValue');
+    const invCapInput = document.getElementById('invInvestedCapital');
+    const invInjInput = document.getElementById('invInjectedAmount');
+    const previewBox = document.getElementById('invPreviewBox');
+    const previewRet = document.getElementById('invPreviewReturn');
+    const previewPct = document.getElementById('invPreviewPct');
+
+    function updateInvPreview() {
+      if (!invCurInput || !previewBox) return;
+      const cur = parseFloat(invCurInput.value) || 0;
+      let cap = parseFloat(invCapInput?.value) || 0;
+      const inj = parseFloat(invInjInput?.value) || 0;
+
+      if (!cap && cachedInvestments.length > 0) {
+        const last = cachedInvestments[cachedInvestments.length - 1];
+        cap = (parseFloat(last.investedCapital) || 0) + inj;
+      } else if (!cap && inj > 0) {
+        cap = inj;
+      }
+
+      if (cur > 0 && cap > 0) {
+        const diff = cur - cap;
+        const pct = cap > 0 ? ((diff / cap) * 100).toFixed(2) : 0;
+        previewBox.style.display = 'block';
+        if (previewRet) {
+          previewRet.textContent = `${diff >= 0 ? '+' : ''}${formatMoney(diff)}`;
+          previewRet.style.color = diff >= 0 ? '#10b981' : '#f43f5e';
+        }
+        if (previewPct) {
+          previewPct.textContent = `${diff >= 0 ? 'Plusvalía' : 'Minusvalía'}: ${diff >= 0 ? '+' : ''}${pct}%`;
+          previewPct.style.color = diff >= 0 ? '#10b981' : '#f43f5e';
+        }
+      } else {
+        previewBox.style.display = 'none';
+      }
+    }
+
+    if (invCurInput) invCurInput.addEventListener('input', updateInvPreview);
+    if (invCapInput) invCapInput.addEventListener('input', updateInvPreview);
+    if (invInjInput) invInjInput.addEventListener('input', updateInvPreview);
+
+    // Envío del formulario de inversión
+    const formInv = document.getElementById('formNewInvestmentLog');
+    if (formInv) {
+      formInv.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const accSel = document.getElementById('invAccountId');
+        const accId = accSel.value;
+        const accName = accSel.selectedOptions[0]?.getAttribute('data-name') || 'Revolut Cuenta Inversión';
+        const date = document.getElementById('invDate').value;
+        const currentValue = parseFloat(document.getElementById('invCurrentValue').value) || 0;
+        const investedCapitalVal = document.getElementById('invInvestedCapital').value;
+        const investedCapital = investedCapitalVal ? parseFloat(investedCapitalVal) : null;
+        const injectedAmount = parseFloat(document.getElementById('invInjectedAmount').value) || 0;
+        const sourceAccount = document.getElementById('invSourceAccount').value;
+        const notes = document.getElementById('invNotes').value.trim();
+
+        const payload = {
+          accountId: accId,
+          accountName: accName,
+          date,
+          currentValue,
+          investedCapital,
+          injectedAmount,
+          sourceAccount: sourceAccount || null,
+          platform: accName.toLowerCase().includes('revolut') ? 'Revolut' : (accName.toLowerCase().includes('cetes') ? 'CetesDirecto' : 'Inversión'),
+          notes
+        };
+
+        try {
+          const res = await fetchWithAuth('/api/admin/finance/investments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const d = await res.json();
+          if (res.ok && d.success) {
+            window.finCloseModal('modalNewInvestmentLog');
+            formInv.reset();
+            loadAllFinanceData();
+          } else {
+            alert(d.error || 'Error al guardar corte de inversión');
+          }
+        } catch (err) {
+          alert('Error de conexión al registrar inversión');
+        }
+      });
     }
   });
 })();

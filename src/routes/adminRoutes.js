@@ -90,5 +90,10 @@ router.post('/admin/finance/mobile-plans', requireAuth, requireAdmin, adminContr
 router.post('/admin/finance/mobile-plans/:id/recharge', requireAuth, requireAdmin, adminController.executeMobileRecharge);
 router.delete('/admin/finance/mobile-plans/:id', requireAuth, requireAdmin, adminController.deleteMobilePlan);
 
+// Historial y Rendimiento de Inversiones (Plusvalía / Minusvalía / Gráfica)
+router.get('/admin/finance/investments', requireAuth, requireAdmin, adminController.getInvestmentLogs);
+router.post('/admin/finance/investments', requireAuth, requireAdmin, adminController.saveInvestmentLog);
+router.delete('/admin/finance/investments/:id', requireAuth, requireAdmin, adminController.deleteInvestmentLog);
+
 module.exports = router;
 
