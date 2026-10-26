@@ -65,6 +65,15 @@
         });
       }
 
+      // Cambiar tipo de tarifa (Minorista vs Reseller vs Ambos)
+      const priceTypeSelect = document.getElementById('flyerPriceType');
+      if (priceTypeSelect) {
+        priceTypeSelect.addEventListener('change', () => {
+          this.renderSelectedProducts();
+          this.generatePrompt();
+        });
+      }
+
       // Copiar prompt al portapapeles
       const btnCopy = document.getElementById('btnCopyFlyerPrompt');
       if (btnCopy) {
@@ -302,6 +311,8 @@
     renderSelectedProducts() {
       const container = document.getElementById('flyerSelectedList');
       const countEl = document.getElementById('flyerSelectedCount');
+      const priceTypeEl = document.getElementById('flyerPriceType');
+      const priceType = priceTypeEl ? priceTypeEl.value : 'retail';
       if (!container) return;
 
       if (countEl) {
@@ -313,29 +324,55 @@
         return;
       }
 
-      container.innerHTML = this.selectedProducts.map(p => `
-        <div style="background: rgba(15, 23, 42, 0.9); border: 1px solid #38bdf8; border-radius: 6px; padding: 4px 8px; display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem;">
-          <span style="color: #fff; font-weight: 600;">${p.service}</span>
-          <span style="color: #34d399; font-weight: bold; background: rgba(52,211,153,0.15); padding: 1px 4px; border-radius: 4px;">$${p.retailPrice.toFixed(2)} MXN</span>
-          <button type="button" onclick="MegaApp.FlyerPrompt.toggleProduct('${p.serviceid}')" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 0 2px; font-weight: bold;" title="Eliminar">✕</button>
-        </div>
-      `).join('');
+      container.innerHTML = this.selectedProducts.map((p, idx) => {
+        let displayBadge = '';
+        if (priceType === 'reseller') {
+          displayBadge = `<span style="color: #38bdf8; font-weight: bold; background: rgba(56,189,248,0.15); padding: 1px 6px; border-radius: 4px;">💼 Reseller: $${p.resellerPrice.toFixed(0)} MXN</span>`;
+        } else if (priceType === 'both') {
+          displayBadge = `
+            <span style="color: #f472b6; font-weight: bold; background: rgba(244,114,182,0.15); padding: 1px 6px; border-radius: 4px;">🛒 $${p.retailPrice.toFixed(0)}</span>
+            <span style="color: #38bdf8; font-weight: bold; background: rgba(56,189,248,0.15); padding: 1px 6px; border-radius: 4px;">💼 $${p.resellerPrice.toFixed(0)}</span>
+          `;
+        } else {
+          displayBadge = `<span style="color: #34d399; font-weight: bold; background: rgba(52,211,153,0.15); padding: 1px 6px; border-radius: 4px;">🛒 Minorista: $${p.retailPrice.toFixed(0)} MXN</span>`;
+        }
+
+        return `
+          <div style="background: rgba(15, 23, 42, 0.95); border: 1px solid #38bdf8; border-radius: 6px; padding: 6px 10px; display: inline-flex; align-items: center; gap: 8px; font-size: 0.78rem;">
+            <span style="color: #fff; font-weight: 600;">${p.service}</span>
+            ${displayBadge}
+            <button type="button" onclick="MegaApp.FlyerPrompt.toggleProduct('${p.serviceid}')" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 0 4px; font-weight: bold; font-size: 0.9rem;" title="Eliminar">✕</button>
+          </div>
+        `;
+      }).join('');
     },
 
     generatePrompt() {
       const promptEl = document.getElementById('flyerGeneratedPrompt');
       const ratioEl = document.getElementById('flyerAspectRatio');
       const ratio = ratioEl ? ratioEl.value : '3:4';
+      const priceTypeEl = document.getElementById('flyerPriceType');
+      const priceType = priceTypeEl ? priceTypeEl.value : 'retail';
 
       if (!promptEl) return;
 
-      // Agrupar items por categorías o marcas principales
+      // Agrupar items y formatear según el tipo de tarifa seleccionada
       const productLines = this.selectedProducts.map(p => {
-        return `- ${p.service}: $${p.retailPrice.toFixed(0)} MXN (Entrega Automática / Inmediata)`;
+        if (priceType === 'reseller') {
+          return `- ${p.service}: $${p.resellerPrice.toFixed(0)} MXN (Precio Reseller / Mayorista - Entrega Automática)`;
+        } else if (priceType === 'both') {
+          return `- ${p.service}: Minorista $${p.retailPrice.toFixed(0)} MXN | Reseller $${p.resellerPrice.toFixed(0)} MXN`;
+        } else {
+          return `- ${p.service}: $${p.retailPrice.toFixed(0)} MXN (Minorista / Cliente Final - Entrega Automática)`;
+        }
       }).join('\n');
 
+      const tariffHeader = priceType === 'reseller' 
+        ? 'TABLA DE PRECIOS EXCLUSIVOS RESELLER / MAYORISTA' 
+        : (priceType === 'both' ? 'LISTA DE PRECIOS CLIENTE Y RESELLER' : 'LISTA DE PRECIOS AL PÚBLICO / MINORISTA');
+
       const fullPrompt = 
-`Genera una imagen publicitaria publicitaria de calidad ultra premium y comercial (Cyberpunk / Modern High-Tech Style) con relación de aspecto ${ratio}.
+`Genera una imagen publicitaria de calidad ultra premium y comercial (Cyberpunk / Modern High-Tech Style) con relación de aspecto ${ratio}.
 
 TEMÁTICA Y MARCA:
 - Empresa: MegaUnlockPhone México (Servidor GSM & Licencias Oficiales)
@@ -345,8 +382,8 @@ TEMÁTICA Y MARCA:
 
 ELEMENTOS VISUALES PRINCIPALES:
 1. Encabezado Impactante: "MEGAUNLOCKPHONE - LICENCIAS & RENTAS OFICIALES AL INSTANTE".
-2. Mostrar cajas 3D hiperrealistas de software profesional (UnlockTool y/o las herramientas listadas), con iluminación de borde neón (cian #00ffff, magenta #ec4899 y azul eléctrico) sobre un fondo tecnológico oscuro con sutiles circuitos brillantes y chispas de luz.
-3. Lista de Precios y Servicios Claramente Legibles (renderizados con tipografía moderna, limpia y nítida):
+2. Mostrar cajas 3D hiperrealistas de software profesional (UnlockTool, AMT Android Multi Tool y/o las herramientas listadas), con iluminación de borde neón (cian #00ffff, magenta #ec4899 y azul eléctrico) sobre un fondo tecnológico oscuro con sutiles circuitos brillantes y chispas de luz.
+3. ${tariffHeader} Claramente Legible (renderizado con tipografía moderna, limpia, nítida y perfectamente contrastada):
 ${productLines}
 4. Badges de Confianza y Pagos:
    - "Aceptamos: Mercado Pago, Transferencias SPEI, OXXO, Tarjetas Débito y Crédito"

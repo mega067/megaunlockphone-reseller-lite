@@ -2569,8 +2569,16 @@
           </div>
         </div>
 
-        <!-- Configuración de Reglas y QR -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: rgba(56,189,248,0.05); border: 1px solid rgba(56,189,248,0.2); border-radius: 8px; padding: 12px;">
+        <!-- Configuración de Reglas, Tipo de Precio y QR -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; background: rgba(56,189,248,0.05); border: 1px solid rgba(56,189,248,0.2); border-radius: 8px; padding: 12px;">
+          <div>
+            <label style="font-size: 0.78rem; font-weight: 700; color: #38bdf8; display: block; margin-bottom: 4px;">Tipo de Tarifa</label>
+            <select id="flyerPriceType" style="width: 100%; background: #1e293b; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 6px 10px; color: #fff; font-size: 0.8rem;">
+              <option value="retail" selected>🛒 Minorista / Cliente Final</option>
+              <option value="reseller">💼 Precios Reseller (Mayorista)</option>
+              <option value="both">🤝 Mostrar Ambos (Minorista + Reseller)</option>
+            </select>
+          </div>
           <div>
             <label style="font-size: 0.78rem; font-weight: 700; color: #38bdf8; display: block; margin-bottom: 4px;">Formato de Imagen</label>
             <select id="flyerAspectRatio" style="width: 100%; background: #1e293b; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 6px 10px; color: #fff; font-size: 0.8rem;">
@@ -2580,9 +2588,9 @@
             </select>
           </div>
           <div>
-            <label style="font-size: 0.78rem; font-weight: 700; color: #38bdf8; display: block; margin-bottom: 4px;">Medidas Exactas de Espacio para QR</label>
+            <label style="font-size: 0.78rem; font-weight: 700; color: #38bdf8; display: block; margin-bottom: 4px;">Espacio QR para Montaje</label>
             <div style="font-size: 0.75rem; color: #cbd5e1; background: #090e17; padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);">
-              📐 <strong>Cuadro neón vacío:</strong> 190x190 px en esquina inferior izquierda (con margen 40px)
+              📐 <strong>Cuadro neón vacío:</strong> 190x190 px en esquina inferior izquierda
             </div>
           </div>
         </div>
