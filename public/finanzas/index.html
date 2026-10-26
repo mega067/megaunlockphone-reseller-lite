@@ -1023,13 +1023,23 @@
 
         <div class="fin-grid-2">
           <div class="fin-form-group">
-            <label>Tarjeta o Banco Emisor</label>
-            <input type="text" id="instCard" class="fin-input" placeholder="Ej: Nu, BBVA, Mercado Pago" value="Nu">
+            <label>Tarjeta de Crédito (Línea que financia) *</label>
+            <select id="instCard" class="fin-select" required>
+              <!-- Cuentas dinámicas de tarjeta/crédito -->
+            </select>
           </div>
           <div class="fin-form-group">
-            <label>Notas Adicionales (Opcional)</label>
-            <input type="text" id="instNotes" class="fin-input" placeholder="Ej: Comisión 10%, tasa fija">
+            <label>¿A dónde entró el dinero retirado? *</label>
+            <select id="instDepositAccount" class="fin-select">
+              <option value="none">-- No ingresar a cuenta (Solo registrar deuda a la tarjeta) --</option>
+              <!-- Cuentas dinámicas: Efectivo o Banco/Débito -->
+            </select>
           </div>
+        </div>
+
+        <div class="fin-form-group">
+          <label>Notas Adicionales (Opcional)</label>
+          <input type="text" id="instNotes" class="fin-input" placeholder="Ej: Disposición en cajero, compra en tienda, etc.">
         </div>
 
         <div style="display:flex; justify-content:flex-end; gap:0.6rem; margin-top:1.2rem;">
@@ -1042,6 +1052,6 @@
     </div>
   </div>
 
-  <script src="/finanzas/finanzas.js?v=102"></script>
+  <script src="/finanzas/finanzas.js?v=105"></script>
 </body>
 </html>

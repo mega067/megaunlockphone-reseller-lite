@@ -130,6 +130,35 @@
       }
     });
 
+    // Poblar selector de tarjeta para planes a plazos / disposición
+    const instCardSel = document.getElementById('instCard');
+    if (instCardSel) {
+      // Priorizar cuentas de tipo 'card' o 'credit', o incluir todas
+      const cards = accounts.filter(a => a.type === 'card' || a.type === 'credit');
+      const cardOptions = (cards.length > 0 ? cards : accounts).map(a => {
+        const line = parseFloat(a.creditLimit || a.balance || 0);
+        return `<option value="${escapeHtml(a.name)}" data-id="${a.id}" data-limit="${line}">
+          ${escapeHtml(a.name)} ${line > 0 ? `(Línea: ${formatMoney(line)})` : `(${formatMoney(a.balance || 0)})`}
+        </option>`;
+      }).join('');
+      instCardSel.innerHTML = cardOptions;
+    }
+
+    // Poblar selector de cuenta donde entra el dinero de la disposición (Efectivo o banco)
+    const instDepSel = document.getElementById('instDepositAccount');
+    if (instDepSel) {
+      const depOptions = accounts.map(a => {
+        return `<option value="${escapeHtml(a.name)}">${escapeHtml(a.name)} [Entra el dinero]</option>`;
+      }).join('');
+      instDepSel.innerHTML = `
+        <option value="none">-- No ingresar a ninguna cuenta (Solo aumentar deuda a la tarjeta) --</option>
+        ${depOptions}
+      `;
+      // Seleccionar efectivo o primera cuenta por defecto
+      const cashAcc = accounts.find(a => a.type === 'cash');
+      if (cashAcc) instDepSel.value = cashAcc.name;
+    }
+
     // En transferencias, diferenciar por defecto origen y destino
     const fromSel = document.getElementById('transferFrom');
     const toSel = document.getElementById('transferTo');
@@ -148,7 +177,9 @@
     }
 
     grid.innerHTML = accounts.map(acc => {
-      const balance = parseFloat(acc.balance) || 0;
+      const balance = parseFloat(acc.balance !== undefined ? acc.balance : (acc.currentBalance || 0));
+      const lineLimit = parseFloat(acc.creditLimit || 0);
+      const debt = parseFloat(acc.currentDebt || 0);
       const profit = parseFloat(acc.totalProfit !== undefined ? acc.totalProfit : (acc.netProfit || 0));
       const isCard = acc.type === 'card' || acc.type === 'credit';
       const badgeColor = isCard ? '#8218fc' : (acc.type === 'cash' ? '#f59e0b' : '#10b981');
@@ -158,7 +189,7 @@
         <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 1.25rem; display:flex; flex-direction:column; justify-content:space-between; position:relative; overflow:hidden;">
           <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.8rem;">
             <div>
-              <span class="fin-badge" style="background:${badgeBg}; color:${badgeColor};">${escapeHtml(acc.type || 'Cuenta')}</span>
+              <span class="fin-badge" style="background:${badgeBg}; color:${badgeColor};">${isCard ? 'Tarjeta de Crédito' : escapeHtml(acc.type || 'Cuenta')}</span>
               <h3 style="margin:4px 0 0; font-size:1.1rem; font-weight:700; color:#f8fafc;">${escapeHtml(acc.name)}</h3>
             </div>
             <div style="display:flex; align-items:center; gap:4px;">
@@ -172,10 +203,12 @@
           </div>
           <div style="margin-bottom:0.75rem;">
             <div style="font-size:1.65rem; font-weight:800; color:#ffffff; font-family:'Outfit',sans-serif;">${formatMoney(balance)}</div>
-            <small style="color:var(--fin-text-muted); font-size:0.75rem;">${isCard ? 'Línea de saldo/uso' : 'Saldo actual disponible'}</small>
+            <small style="color:var(--fin-text-muted); font-size:0.75rem;">
+              ${isCard && lineLimit > 0 ? `Línea total: ${formatMoney(lineLimit)} ${debt > 0 ? `• Deuda: ${formatMoney(debt)}` : ''}` : 'Saldo actual disponible'}
+            </small>
           </div>
           <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px dashed rgba(255,255,255,0.08); padding-top:0.6rem; font-size:0.78rem;">
-            <span style="color:var(--fin-text-muted);">Movimientos / Margen:</span>
+            <span style="color:var(--fin-text-muted);">${isCard ? 'Disposición / Margen:' : 'Movimientos / Margen:'}</span>
             <strong style="color:${profit >= 0 ? '#10b981' : '#f43f5e'};">${formatMoney(profit)}</strong>
           </div>
         </div>
@@ -1191,11 +1224,19 @@
         calculatedNotes = calculatedNotes ? `${calculatedNotes} | ${extraNote}` : extraNote;
       }
 
+      const cardSel = document.getElementById('instCard');
+      const selectedCardOpt = cardSel?.selectedOptions[0];
+      const accountId = selectedCardOpt?.getAttribute('data-id') || undefined;
+      const depositAccount = document.getElementById('instDepositAccount')?.value || 'none';
+
       const payload = {
         title: document.getElementById('instTitle').value.trim(),
         totalAmount: total,
+        netReceived: net,
+        depositAccount: depositAccount,
         totalQuotas: quotas,
-        accountName: document.getElementById('instCard').value.trim() || 'Nu',
+        accountId: accountId,
+        accountName: cardSel ? cardSel.value : 'Nu Tarjeta / Crédito',
         dueDay: parseInt(document.getElementById('instDueDay').value) || 13,
         notes: calculatedNotes
       };

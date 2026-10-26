@@ -989,6 +989,61 @@ function saveInstallment(data) {
         quotaAmount, dueDay, interestRate, referenceNumber, status, startDate, notes, createdAt, updatedAt
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
     `).run(id, accountId, accountName, title, totalAmount, totalQuotas, paidQuotas, quotaAmount, dueDay, interestRate, referenceNumber, status, startDate, notes);
+
+    // Si es un nuevo financiamiento / disposición, reflejar en saldos
+    try {
+      // 1. Reducir disponible de la tarjeta y registrar la deuda
+      const findCard = sqliteDb.prepare(`
+        SELECT * FROM FinanceAccounts 
+        WHERE id = ? OR name = ? OR name LIKE ? OR ? LIKE ('%' || name || '%')
+        LIMIT 1
+      `).get(accountId, accountName, `%${accountName}%`, accountName);
+
+      if (findCard) {
+        sqliteDb.prepare(`
+          UPDATE FinanceAccounts 
+          SET currentBalance = MAX(0, currentBalance - ?),
+              currentDebt = currentDebt + ?,
+              updatedAt = datetime('now')
+          WHERE id = ?
+        `).run(totalAmount, totalAmount, findCard.id);
+      }
+
+      // 2. Si se retiró dinero (disposición de efectivo o transferencia) e ingresa a una cuenta receptora
+      const depositAcc = data.depositAccount && data.depositAccount !== 'none' ? String(data.depositAccount).trim() : null;
+      const netReceived = parseFloat(data.netReceived) || 0;
+
+      if (depositAcc && netReceived > 0) {
+        const findDest = sqliteDb.prepare(`
+          SELECT * FROM FinanceAccounts 
+          WHERE id = ? OR name = ? OR name LIKE ? OR ? LIKE ('%' || name || '%')
+          LIMIT 1
+        `).get(depositAcc, depositAcc, `%${depositAcc}%`, depositAcc);
+
+        if (findDest) {
+          sqliteDb.prepare(`
+            UPDATE FinanceAccounts 
+            SET currentBalance = currentBalance + ?,
+                updatedAt = datetime('now')
+            WHERE id = ?
+          `).run(netReceived, findDest.id);
+
+          // Registrar en FinanceLedger el movimiento
+          recordTransaction({
+            type: 'income_manual',
+            category: 'otros',
+            serviceName: `Disposición de saldo: ${title}`,
+            chargedAmount: netReceived,
+            costAmount: 0,
+            account: findDest.name,
+            notes: `Disposición financiada con ${accountName}. Recibido: $${netReceived.toFixed(2)}, Deuda a pagar: $${totalAmount.toFixed(2)} en ${totalQuotas} meses.`,
+            recordedBy: 'Admin'
+          });
+        }
+      }
+    } catch (syncErr) {
+      console.warn('[INSTALLMENT BALANCE SYNC ERR]', syncErr.message);
+    }
   }
 
   return sqliteDb.prepare('SELECT * FROM FinanceInstallments WHERE id = ?').get(id);
