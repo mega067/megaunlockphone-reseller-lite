@@ -542,10 +542,13 @@
                 Cuota mensual: <strong style="color:#ffffff;">${formatMoney(quotaVal)}</strong>
                 <span style="color:#f43f5e; margin-left:0.6rem;">Resta pagar: <strong>${formatMoney(remainingAmount)}</strong></span>
               </div>
-              <div style="display:flex; gap:0.45rem;">
+              <div style="display:flex; gap:0.45rem; flex-wrap:wrap;">
                 ${!isCompleted ? `
-                  <button onclick="window.finPayQuota('${inst.id}', '${escapeHtml(inst.title)}', ${quotaVal}, ${inst.paidQuotas + 1})" class="fin-btn fin-btn-primary" style="padding:0.35rem 0.85rem; font-size:0.78rem;">
+                  <button onclick="window.finOpenInstallmentPayment('${inst.id}', 1)" class="fin-btn fin-btn-primary" style="padding:0.35rem 0.85rem; font-size:0.78rem;">
                     ✓ Abonar Mes #${inst.paidQuotas + 1}
+                  </button>
+                  <button onclick="window.finOpenInstallmentPayment('${inst.id}', ${remainingQuotas})" class="fin-btn" style="padding:0.35rem 0.85rem; font-size:0.78rem; background:rgba(16, 185, 129, 0.15); color:#10b981; border:1px solid rgba(16, 185, 129, 0.3);">
+                    ★ Liquidar Plan (${formatMoney(remainingAmount)})
                   </button>
                 ` : '<span style="color:#10b981; font-weight:700;">✓ Plan Concluido</span>'}
                 <button onclick="window.finDeleteInstallment('${inst.id}')" style="background:none; border:none; color:var(--fin-text-sub); cursor:pointer; font-size:0.9rem;" title="Eliminar plan">
@@ -957,7 +960,43 @@
     }
   };
 
-  // --- ACCIONES RÁPIDAS Y APIS ---
+  // Abrir modal de movimiento preconfigurado para pagar cuota o liquidar plan
+  window.finOpenInstallmentPayment = function(id, quotasCount = 1) {
+    const inst = cachedInstallments.find(i => i.id === id);
+    if (!inst) return;
+
+    const txType = document.getElementById('txType');
+    if (txType) {
+      txType.value = 'pay_credit';
+      window.finToggleTxFields();
+    }
+
+    const txInst = document.getElementById('txInstallmentId');
+    if (txInst) {
+      txInst.value = id;
+      window.finOnSelectInstallmentOption();
+    }
+
+    const remainingQuotas = Math.max(1, (inst.totalQuotas || 0) - (inst.paidQuotas || 0));
+    const isFullSettlement = quotasCount >= remainingQuotas;
+    const totalAmt = parseFloat(inst.totalAmount) || 0;
+    const quotaVal = parseFloat(inst.quotaAmount) || 0;
+    const remainingAmount = (inst.paidQuotas || 0) === 0 ? totalAmt : Math.max(0, parseFloat((totalAmt - ((inst.paidQuotas || 0) * quotaVal)).toFixed(2)));
+
+    const totalInput = document.getElementById('txTotalAmount');
+    const conceptInput = document.getElementById('txConcept');
+
+    if (isFullSettlement) {
+      if (totalInput) totalInput.value = remainingAmount.toFixed(2);
+      if (conceptInput) conceptInput.value = `Liquidación Total Plan: ${inst.title} (${inst.accountName || 'Nu'})`;
+    } else {
+      const qNum = (inst.paidQuotas || 0) + 1;
+      if (totalInput) totalInput.value = quotaVal.toFixed(2);
+      if (conceptInput) conceptInput.value = `Abono Mes #${qNum}: ${inst.title} (${inst.accountName || 'Nu'})`;
+    }
+
+    window.finOpenModal('modalManualTx');
+  };
 
   window.finPayQuota = async function(id, title, amount, quotaNum) {
     const acc = prompt(`Pagar mensualidad #${quotaNum} para "${title}" ($${amount.toFixed(2)}):\n¿Con qué cuenta deseas pagar? (Ej: Nu, BBVA, Efectivo):`, 'Nu');
@@ -1293,11 +1332,26 @@
 
         // Si es un plan de cuotas existente
         if (instVal && !instVal.startsWith('card_')) {
+          const matchedPlan = cachedInstallments.find(i => i.id === instVal);
+          const totalAmt = matchedPlan ? parseFloat(matchedPlan.totalAmount) : 0;
+          const quotaVal = matchedPlan ? (parseFloat(matchedPlan.quotaAmount) || 1) : 1;
+          const remQuotas = matchedPlan ? Math.max(1, (matchedPlan.totalQuotas || 0) - (matchedPlan.paidQuotas || 0)) : 1;
+          
+          // Determinar cuántas cuotas cubre el monto ingresado
+          let quotasToPay = 1;
+          if (matchedPlan && actualPayAmount >= (quotaVal * 1.5)) {
+            quotasToPay = Math.min(remQuotas, Math.max(1, Math.round(actualPayAmount / quotaVal)));
+          }
+
           const payAcc = splits ? splits.map(s => `${s.account} ($${s.amount})`).join(' + ') : account;
           const resInst = await fetchWithAuth(`/api/admin/finance/installments/${encodeURIComponent(instVal)}/pay`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ quotas: 1, account: splits ? splits[0].account : account })
+            body: JSON.stringify({ 
+              quotas: quotasToPay, 
+              amount: actualPayAmount,
+              account: payAcc 
+            })
           });
           const dInst = await resInst.json();
           if (resInst.ok && dInst.success) {

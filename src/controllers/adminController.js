@@ -961,8 +961,14 @@ exports.saveInstallment = (req, res) => {
 
 exports.payInstallmentQuota = (req, res) => {
   try {
-    const { quotas, account } = req.body;
-    const installment = financeManager.payInstallmentQuota(req.params.id, quotas || 1, account || 'Efectivo / Caja');
+    const { quotas, account, amount, recordLedger } = req.body;
+    const installment = financeManager.payInstallmentQuota(
+      req.params.id, 
+      quotas || 1, 
+      account || 'Efectivo / Caja',
+      amount !== undefined ? amount : null,
+      recordLedger !== undefined ? recordLedger : true
+    );
     res.json({ success: true, installment });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });

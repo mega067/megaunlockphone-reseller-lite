@@ -1280,14 +1280,18 @@ function saveInstallment(data) {
   return savedRecord;
 }
 
-function payInstallmentQuota(installmentId, quotaCount = 1, paymentAccount = 'Efectivo / Caja') {
+function payInstallmentQuota(installmentId, quotaCount = 1, paymentAccount = 'Efectivo / Caja', customAmount = null, recordLedger = true) {
   const item = sqliteDb.prepare('SELECT * FROM FinanceInstallments WHERE id = ?').get(installmentId);
   if (!item) throw new Error('Plan de cuotas no encontrado.');
 
   const count = Math.max(1, parseInt(quotaCount) || 1);
   const newPaid = Math.min(item.totalQuotas, (item.paidQuotas || 0) + count);
   const newStatus = newPaid >= item.totalQuotas ? 'completed' : 'active';
-  const paidAmount = parseFloat((item.quotaAmount * count).toFixed(2));
+  
+  // Si se provee customAmount (ej: abono exacto o liquidación), usarlo; de lo contrario cuota * count
+  const paidAmount = customAmount !== null && !isNaN(parseFloat(customAmount)) && parseFloat(customAmount) > 0
+    ? parseFloat(parseFloat(customAmount).toFixed(2))
+    : parseFloat((item.quotaAmount * count).toFixed(2));
 
   sqliteDb.prepare(`
     UPDATE FinanceInstallments 
@@ -1305,43 +1309,45 @@ function payInstallmentQuota(installmentId, quotaCount = 1, paymentAccount = 'Ef
     paymentAccount
   }, 'Admin');
 
-  // 1. Reducir la deuda en la tarjeta de crédito que emitió el plan a plazos
-  try {
-    const cardId = item.accountId;
-    const cardName = item.accountName;
-    const targetCard = sqliteDb.prepare(`
-      SELECT * FROM FinanceAccounts 
-      WHERE (id = ? OR name = ? OR name LIKE ? OR ? LIKE ('%' || name || '%')) 
-        AND type IN ('card', 'credit') AND isArchived = 0
-      LIMIT 1
-    `).get(cardId, cardName, `%${cardName}%`, cardName);
+  // 1. Reducir la deuda en la tarjeta de crédito emisora (solo si recordLedger es true)
+  if (recordLedger) {
+    try {
+      const cardId = item.accountId;
+      const cardName = item.accountName;
+      const targetCard = sqliteDb.prepare(`
+        SELECT * FROM FinanceAccounts 
+        WHERE (id = ? OR name = ? OR name LIKE ? OR ? LIKE ('%' || name || '%')) 
+          AND type IN ('card', 'credit') AND isArchived = 0
+        LIMIT 1
+      `).get(cardId, cardName, `%${cardName}%`, cardName);
 
-    if (targetCard) {
-      sqliteDb.prepare(`
-        UPDATE FinanceAccounts 
-        SET currentDebt = MAX(0, currentDebt - ?),
-            currentBalance = currentBalance + ?,
-            updatedAt = datetime('now')
-        WHERE id = ?
-      `).run(paidAmount, paidAmount, targetCard.id);
+      if (targetCard) {
+        sqliteDb.prepare(`
+          UPDATE FinanceAccounts 
+          SET currentDebt = MAX(0, currentDebt - ?),
+              currentBalance = currentBalance + ?,
+              updatedAt = datetime('now')
+          WHERE id = ?
+        `).run(paidAmount, paidAmount, targetCard.id);
+      }
+    } catch (cardPayErr) {
+      console.warn('[INSTALLMENT CARD AMORTIZE ERR]', cardPayErr.message);
     }
-  } catch (cardPayErr) {
-    console.warn('[INSTALLMENT CARD AMORTIZE ERR]', cardPayErr.message);
-  }
 
-  // 2. Registrar el gasto contable en FinanceLedger y descontar de la cuenta con la que se pagó la mensualidad (ej: Nu Débito o Efectivo)
-  if (paymentAccount) {
-    recordTransaction({
-      type: 'expense_manual',
-      category: 'servicios',
-      serviceName: `Pago Mensualidad (${newPaid}/${item.totalQuotas}): ${item.title}`,
-      orderId: installmentId,
-      chargedAmount: 0,
-      costAmount: paidAmount,
-      account: paymentAccount,
-      notes: `Cuota ${newPaid}/${item.totalQuotas} de ${item.title} (${item.accountName || 'Nu'}). Ref: ${item.referenceNumber || 'N/A'}`,
-      recordedBy: 'Admin'
-    });
+    // 2. Registrar el gasto contable en FinanceLedger y descontar de la cuenta origen
+    if (paymentAccount) {
+      recordTransaction({
+        type: 'expense_manual',
+        category: 'servicios',
+        serviceName: `Pago Mensualidad (${newPaid}/${item.totalQuotas}): ${item.title}`,
+        orderId: installmentId,
+        chargedAmount: 0,
+        costAmount: paidAmount,
+        account: paymentAccount,
+        notes: `Cuota ${newPaid}/${item.totalQuotas} de ${item.title} (${item.accountName || 'Nu'}). Ref: ${item.referenceNumber || 'N/A'}`,
+        recordedBy: 'Admin'
+      });
+    }
   }
 
   return sqliteDb.prepare('SELECT * FROM FinanceInstallments WHERE id = ?').get(installmentId);
