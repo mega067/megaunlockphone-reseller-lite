@@ -101,8 +101,15 @@
     }
 
     const statGross = document.getElementById('statFinGrossProfit');
+    const grossVal = parseFloat(dash.summary?.totalGrossProfit || 0);
     if (statGross) {
-      statGross.textContent = formatMoney(dash.summary?.totalGrossProfit || 0);
+      statGross.textContent = formatMoney(grossVal);
+      statGross.style.color = grossVal >= 0 ? '#10b981' : '#f43f5e';
+    }
+
+    const statGrossTitle = document.getElementById('statFinGrossTitle');
+    if (statGrossTitle) {
+      statGrossTitle.textContent = grossVal >= 0 ? 'Flujo Neto / Ganancias' : 'Balance Neto / Egresos';
     }
 
     const statGrossCount = document.getElementById('statFinGrossCount');
@@ -387,9 +394,14 @@
       let nextQuotaTotal = 0;
 
       active.forEach(i => {
-        const remainingQuotas = Math.max(0, (i.totalQuotas || 0) - (i.paidQuotas || 0));
-        const quota = parseFloat(i.quotaAmount) || ((parseFloat(i.totalAmount) || 0) / (i.totalQuotas || 1));
-        totalPending += quota * remainingQuotas;
+        const totalAmt = parseFloat(i.totalAmount) || 0;
+        const paidQ = parseInt(i.paidQuotas) || 0;
+        const totalQ = Math.max(1, parseInt(i.totalQuotas) || 1);
+        const quota = parseFloat(i.quotaAmount) || (totalAmt / totalQ);
+        
+        // Calcular restante exacto sin discrepancias de centavos
+        const remaining = paidQ === 0 ? totalAmt : Math.max(0, parseFloat((totalAmt - (paidQ * quota)).toFixed(2)));
+        totalPending += remaining;
         nextQuotaTotal += quota;
       });
 
