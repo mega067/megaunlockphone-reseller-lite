@@ -182,6 +182,19 @@ const initTables = () => {
             createdAt TEXT,
             updatedAt TEXT
         );
+        /* Registro idempotente de transacciones bancarias SPEI validadas (Anti-Race condition y Duplicados) */
+        CREATE TABLE IF NOT EXISTS BankTransactions (
+            trackingNumber TEXT PRIMARY KEY,
+            userId TEXT NOT NULL,
+            username TEXT,
+            amount REAL NOT NULL,
+            bankCode TEXT,
+            senderBankName TEXT,
+            receiverBankName TEXT,
+            serverId TEXT,
+            status TEXT DEFAULT 'completed',
+            createdAt TEXT
+        );
     `);
 
     try {

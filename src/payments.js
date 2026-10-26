@@ -151,13 +151,27 @@ module.exports = function(app, deps) {
       return res.status(400).json({ error: 'Faltan datos para la validación (incluyendo servidor)' });
     }
 
+    const cleanTracking = String(trackingNumber).trim().toUpperCase();
+
+    // 1. Verificación en SQLite (Transacciones bancarias inmutables)
+    try {
+      const sqliteDb = require('./database');
+      const existingBankTx = sqliteDb.prepare('SELECT trackingNumber FROM BankTransactions WHERE trackingNumber = ?').get(cleanTracking);
+      if (existingBankTx) {
+        return res.status(400).json({ error: 'Esta clave de rastreo SPEI ya fue procesada y aplicada anteriormente.' });
+      }
+    } catch (e) {}
+
     const processedRastros = readDB('processed_rastreos.json') || [];
-    if (processedRastros.includes(trackingNumber)) {
+    if (processedRastros.includes(cleanTracking)) {
       return res.status(400).json({ error: 'Esta clave de rastreo ya fue procesada anteriormente.' });
     }
 
     try {
       const requestedAmount = parseFloat(amount);
+      if (isNaN(requestedAmount) || requestedAmount <= 0) {
+        return res.status(400).json({ error: 'Monto de recarga inválido.' });
+      }
       let receiverBankName = '';
       let senderBankName = bankCode;
       try {
@@ -188,7 +202,7 @@ module.exports = function(app, deps) {
         
         const userEmail = serverConf ? serverConf.username : '';
 
-        const reportResult = await reportarPagoProveedor(providerAccount, trackingNumber, bankCode, requestedAmount, userEmail);
+        const reportResult = await reportarPagoProveedor(providerAccount, cleanTracking, bankCode, requestedAmount, userEmail);
         
         if (!reportResult.success) {
           return res.status(400).json({ error: reportResult.message });
@@ -201,7 +215,7 @@ module.exports = function(app, deps) {
         
         receiverBankName = adminAccount.bankName || 'NU/STP';
 
-        const banxicoResult = await validarPagoInteligente(trackingNumber, bankCode, adminAccount.bankCode, adminAccount.clabe, requestedAmount);
+        const banxicoResult = await validarPagoInteligente(cleanTracking, bankCode, adminAccount.bankCode, adminAccount.clabe, requestedAmount);
         
         if (!banxicoResult || !banxicoResult.valido) {
           return res.status(400).json({ error: 'No se encontró la transferencia en Banxico. Por favor verifica que la transferencia se haya completado o intenta más tarde. Si crees que hay un error, contacta a soporte al 2216936720.' });
@@ -224,7 +238,16 @@ module.exports = function(app, deps) {
       
       writeDB('users.json', users);
 
-      processedRastros.push(trackingNumber);
+      // Registrar atómicamente en SQLite para evitar duplicados por concurrencia
+      try {
+        const sqliteDb = require('./database');
+        sqliteDb.prepare(`
+          INSERT INTO BankTransactions (trackingNumber, userId, username, amount, bankCode, senderBankName, receiverBankName, serverId, status, createdAt)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'completed', datetime('now'))
+        `).run(cleanTracking, String(userId), users[userIndex].username, requestedAmount, String(bankCode), senderBankName, receiverBankName, serverIdToCredit);
+      } catch (e) {}
+
+      processedRastros.push(cleanTracking);
       writeDB('processed_rastreos.json', processedRastros);
 
       const history = readDB('history.json') || [];
