@@ -268,31 +268,22 @@ function logRecharge(userId, username, amount, type = 'MANUAL_ADMIN', adminUsern
     createAutoBackup(numAmount > 0 ? 'Recarga_Saldo_User_' + userId : 'Deduccion_Saldo_User_' + userId);
   } catch(e) {}
 
-  // Sincronizar automáticamente con el Módulo de Finanzas Personales si es un ingreso
+  // Sincronizar automáticamente con el Módulo de Finanzas: los fondos de recarga de clientes son saldo en el Servidor
   if (numAmount > 0) {
     try {
       const financeManager = require('./financeManager');
-      let targetAccountName = 'Nu Crédito / Débito';
-      const rBank = (extra.receiverBankName || '').toUpperCase();
-      if (rBank.includes('REVOLUT') || rBank.includes('STP')) {
-        targetAccountName = 'Revolut';
-      } else if (rBank.includes('BBVA')) {
-        targetAccountName = 'BBVA';
-      } else if (rBank.includes('MERCADO')) {
-        targetAccountName = 'Mercado Pago';
-      } else if (rBank.includes('EFECTIVO')) {
-        targetAccountName = 'Efectivo / Caja';
-      }
+      // Las recargas de saldo de clientes son saldo asignado en el Servidor, NO en la cuenta bancaria personal del admin
+      const targetAccountName = 'Server (DHRU / Fondos)';
 
       financeManager.recordTransaction({
         type: 'income_ticket',
         serviceName: `Recarga Saldo S${serverId} (${username || userId})`,
         chargedAmount: numAmount,
         costAmount: 0,
-        reinvestPercent: 100, // 100% fondo de saldo disponible para el usuario, 0 ganancia de bolsillo hasta que compre
+        reinvestPercent: 100, // Saldo en servidor disponible para el reseller/usuario
         account: targetAccountName,
         category: 'servidores',
-        notes: `Depósito cliente ${extra.trackingNumber ? 'Rastreo: ' + extra.trackingNumber : 'Ajuste Admin'}`
+        notes: `Depósito cliente en servidor ${extra.trackingNumber ? 'Rastreo: ' + extra.trackingNumber : 'Ajuste Admin'}`
       });
     } catch(finErr) {
       console.warn('[FINANCE RECHARGE SYNC ERR]', finErr.message);
