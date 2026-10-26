@@ -119,21 +119,25 @@
       statGrossCount.textContent = `${dash.summary?.count || 0} movimientos registrados`;
     }
 
-    // Indicador inteligente de Cajita Nu (Fondo de Reinversión acumulado para recargar servidores)
+    // Indicador inteligente de Cajita Nu (Fondo para Reabastecer Servidor: Costo Gastado + Reinversión de Ganancia)
     const statCajitaNu = document.getElementById('statFinCajitaNu');
     const statCajitaHint = document.getElementById('statFinCajitaGoalHint');
     if (statCajitaNu) {
-      const reinvestAccumulated = parseFloat(dash.summary?.totalReinvest || 0);
-      statCajitaNu.textContent = formatMoney(reinvestAccumulated);
+      // Si el backend envía totalCajitaServerFund, usarlo; de lo contrario calcular: costo servidor tickets + reinversión
+      const sFund = parseFloat(dash.summary?.totalCajitaServerFund !== undefined ? dash.summary.totalCajitaServerFund : (parseFloat(dash.summary?.totalTicketServerCost || 0) + parseFloat(dash.summary?.totalReinvest || 0)));
+      const sCost = parseFloat(dash.summary?.totalTicketServerCost || 0);
+      const sReinvest = parseFloat(dash.summary?.totalReinvest || 0);
+
+      statCajitaNu.textContent = formatMoney(sFund);
 
       if (statCajitaHint) {
-        if (reinvestAccumulated >= 100) {
-          statCajitaHint.innerHTML = `<span style="color:#10b981; font-weight:700;">✅ ¡Listo para recargar $100 en Servidor!</span>`;
-        } else if (reinvestAccumulated >= 50) {
-          statCajitaHint.innerHTML = `<span style="color:#38bdf8; font-weight:700;">⚡ ¡Alcanza para recarga mínima de $50!</span> (Faltan ${formatMoney(100 - reinvestAccumulated)} p/ $100)`;
+        if (sFund >= 100) {
+          statCajitaHint.innerHTML = `<span style="color:#10b981; font-weight:700;">✅ ¡Listo para recargar $100 en Servidor!</span> <span style="font-size:0.68rem; opacity:0.8;">(Costo: ${formatMoney(sCost)} + Margen: ${formatMoney(sReinvest)})</span>`;
+        } else if (sFund >= 50) {
+          statCajitaHint.innerHTML = `<span style="color:#38bdf8; font-weight:700;">⚡ ¡Alcanza para recarga mínima de $50!</span> <span style="font-size:0.68rem; opacity:0.8;">(Faltan ${formatMoney(100 - sFund)} p/ $100)</span>`;
         } else {
-          const needed = 50 - reinvestAccumulated;
-          statCajitaHint.innerHTML = `Apartar en Cajita: <strong style="color:#ec4899;">${formatMoney(reinvestAccumulated)}</strong> (Faltan ${formatMoney(needed)} p/ $50)`;
+          const needed = 50 - sFund;
+          statCajitaHint.innerHTML = `Apartar en Cajita: <strong style="color:#ec4899;">${formatMoney(sFund)}</strong> <span style="font-size:0.68rem; opacity:0.8;">(Costo $${sCost.toFixed(2)} + $${sReinvest.toFixed(2)} p/ Servidor. Faltan ${formatMoney(needed)} p/ $50)</span>`;
         }
       }
     }

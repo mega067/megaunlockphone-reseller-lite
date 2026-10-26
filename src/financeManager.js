@@ -408,7 +408,8 @@ async function getFinanceSummary(filterOptions = {}) {
       COALESCE(SUM(costAmount), 0) as totalCost,
       COALESCE(SUM(grossProfit), 0) as totalGrossProfit,
       COALESCE(SUM(reinvestAmount), 0) as totalReinvest,
-      COALESCE(SUM(netProfit), 0) as totalNetProfit
+      COALESCE(SUM(netProfit), 0) as totalNetProfit,
+      COALESCE(SUM(CASE WHEN type = 'income_ticket' THEN costAmount ELSE 0 END), 0) as totalTicketServerCost
     FROM FinanceLedger
   `).get();
 
@@ -511,6 +512,11 @@ async function getFinanceSummary(filterOptions = {}) {
   // Resumen de saldos reales en servidores GSM externos
   const serverBalances = await queryAllServerCredits();
 
+  const totalTicketServerCost = parseFloat(totalRow.totalTicketServerCost || 0);
+  const totalReinvest = parseFloat(totalRow.totalReinvest || 0);
+  // Fondo de Cajita para reponer el servidor: Costo gastado en servidores que hay que reponer + margen de reinversión
+  const totalCajitaServerFund = parseFloat((totalTicketServerCost + totalReinvest).toFixed(2));
+
   return {
     config,
     summary: {
@@ -519,7 +525,9 @@ async function getFinanceSummary(filterOptions = {}) {
       totalCost: totalRow.totalCost,
       totalGrossProfit: totalRow.totalGrossProfit,
       totalReinvest: totalRow.totalReinvest,
-      totalNetProfit: totalRow.totalNetProfit
+      totalNetProfit: totalRow.totalNetProfit,
+      totalTicketServerCost: totalTicketServerCost,
+      totalCajitaServerFund: totalCajitaServerFund
     },
     categories: categoryRows,
     accounts: enrichedAccounts,
