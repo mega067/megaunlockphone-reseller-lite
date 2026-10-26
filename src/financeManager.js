@@ -117,6 +117,7 @@ function saveAccount(accData) {
   // Comprobar si existe por ID o por Nombre (incluso si estaba archivada)
   const existingById = sqliteDb.prepare('SELECT * FROM FinanceAccounts WHERE id = ?').get(id);
   const existingByName = sqliteDb.prepare('SELECT * FROM FinanceAccounts WHERE LOWER(name) = LOWER(?)').get(name);
+  const target = existingById || existingByName;
 
   let savedAccount = null;
   if (target) {
@@ -1123,23 +1124,17 @@ function saveInstallment(data) {
         `).get(depositAcc, depositAcc, `%${depositAcc}%`, depositAcc);
 
         if (findDest) {
-          sqliteDb.prepare(`
-            UPDATE FinanceAccounts 
-            SET currentBalance = currentBalance + ?,
-                updatedAt = datetime('now')
-            WHERE id = ?
-          `).run(netReceived, findDest.id);
-
-          // Registrar en FinanceLedger el movimiento
+          // Registrar en FinanceLedger la disposición de fondos hacia la cuenta receptora (recordTransaction actualiza el saldo automáticamente)
           recordTransaction({
-            type: 'income_manual',
+            type: 'transfer',
             category: 'otros',
             serviceName: `Disposición de saldo: ${title}`,
             orderId: id,
-            chargedAmount: netReceived,
-            costAmount: 0,
-            account: findDest.name,
-            notes: `Disposición financiada con ${accountName}. Recibido: $${netReceived.toFixed(2)}, Deuda a pagar: $${totalAmount.toFixed(2)} en ${totalQuotas} meses.`,
+            chargedAmount: 0,
+            costAmount: netReceived,
+            account: findCard ? findCard.name : accountName,
+            destAccount: findDest.name,
+            notes: `Disposición financiada con ${accountName}. Recibido en ${findDest.name}: $${netReceived.toFixed(2)}, Deuda diferida: $${totalAmount.toFixed(2)} en ${totalQuotas} meses.`,
             recordedBy: 'Admin'
           });
         }
