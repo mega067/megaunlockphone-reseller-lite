@@ -13,6 +13,7 @@
   // Caché de cuentas disponibles para selectores en modales
   let cachedAccounts = [];
   let cachedDebts = [];
+  let cachedInstallments = [];
 
   function formatMoney(num) {
     const val = parseFloat(num) || 0;
@@ -389,6 +390,8 @@
       if (!res.ok || !d.success) return;
 
       const items = d.installments || [];
+      cachedInstallments = items;
+      populateInstallmentSelectOptions(items);
       const active = items.filter(i => i.status === 'active');
       
       let totalPending = 0;
@@ -637,6 +640,90 @@
     if (currentVal) sel.value = currentVal;
   }
 
+  // Poblar selector de tarjetas / planes a meses en el modal de movimientos
+  function populateInstallmentSelectOptions(installments) {
+    const sel = document.getElementById('txInstallmentId');
+    if (!sel) return;
+    const currentVal = sel.value;
+
+    const active = installments.filter(i => i.status === 'active');
+    // Incluir también las tarjetas de crédito configuradas en cuentas
+    const creditCards = cachedAccounts.filter(a => a.type === 'credit' || a.type === 'card' || (parseFloat(a.creditLimit || 0) > 0));
+
+    let html = '<option value="">-- Seleccionar Plan a Meses o Tarjeta --</option>';
+
+    if (active.length > 0) {
+      html += '<optgroup label="Planes a Meses Activos">';
+      active.forEach(inst => {
+        const totalAmt = parseFloat(inst.totalAmount) || 0;
+        const paidQ = parseInt(inst.paidQuotas) || 0;
+        const totalQ = Math.max(1, parseInt(inst.totalQuotas) || 1);
+        const quota = parseFloat(inst.quotaAmount) || (totalAmt / totalQ);
+        const rem = paidQ === 0 ? totalAmt : Math.max(0, parseFloat((totalAmt - (paidQ * quota)).toFixed(2)));
+        html += `<option value="${inst.id}" data-type="installment" data-quota="${quota}" data-remaining="${rem}" data-account="${escapeHtml(inst.accountName || 'Nu')}" data-title="${escapeHtml(inst.title)}" data-paid="${paidQ}" data-totalquotas="${totalQ}">
+          Plan: ${escapeHtml(inst.title)} (${inst.accountName || 'Nu'}) - Cuota: ${formatMoney(quota)} (Resta: ${formatMoney(rem)})
+        </option>`;
+      });
+      html += '</optgroup>';
+    }
+
+    if (creditCards.length > 0) {
+      html += '<optgroup label="Abono Directo a Tarjeta">';
+      creditCards.forEach(c => {
+        const debt = parseFloat(c.currentDebt || 0);
+        html += `<option value="card_${c.id}" data-type="card" data-cardid="${c.id}" data-account="${escapeHtml(c.name)}" data-remaining="${debt}">
+          Tarjeta: ${escapeHtml(c.name)} - Deuda Acumulada: ${formatMoney(debt)}
+        </option>`;
+      });
+      html += '</optgroup>';
+    }
+
+    sel.innerHTML = html;
+    if (currentVal) sel.value = currentVal;
+  }
+
+  window.finOnSelectInstallmentOption = function() {
+    const sel = document.getElementById('txInstallmentId');
+    const hint = document.getElementById('txInstallmentDetailsHint');
+    const conceptInput = document.getElementById('txConcept');
+    const totalInput = document.getElementById('txTotalAmount');
+    if (!sel) return;
+
+    const opt = sel.selectedOptions[0];
+    if (opt && opt.value) {
+      const optType = opt.getAttribute('data-type');
+      const account = opt.getAttribute('data-account') || 'Nu';
+      const quota = parseFloat(opt.getAttribute('data-quota')) || 0;
+      const remaining = parseFloat(opt.getAttribute('data-remaining')) || 0;
+      const title = opt.getAttribute('data-title') || 'Tarjeta';
+
+      if (optType === 'installment') {
+        const paid = parseInt(opt.getAttribute('data-paid')) || 0;
+        totalInput.value = quota > 0 ? quota.toFixed(2) : remaining.toFixed(2);
+        conceptInput.value = `Abono Mes #${paid + 1}: ${title} (${account})`;
+        if (hint) hint.innerHTML = `Mensualidad sugerida: <strong style="color:#a855f7;">${formatMoney(quota)}</strong> (Total restante: ${formatMoney(remaining)})`;
+      } else {
+        totalInput.value = remaining > 0 ? remaining.toFixed(2) : '';
+        conceptInput.value = `Abono directo a tarjeta: ${account}`;
+        if (hint) hint.innerHTML = `Deuda pendiente en tarjeta: <strong style="color:#a855f7;">${formatMoney(remaining)}</strong>`;
+      }
+
+      // Prellenar división si está en modo split
+      const mode = document.getElementById('txPaymentMode')?.value;
+      const tot = parseFloat(totalInput.value) || 0;
+      if (mode === 'split' && tot > 0) {
+        const cashInput = document.getElementById('txSplitCash');
+        const bankInput = document.getElementById('txSplitBank');
+        if (cashInput && bankInput) {
+          cashInput.value = (tot / 2).toFixed(2);
+          bankInput.value = (tot / 2).toFixed(2);
+        }
+      }
+    } else {
+      if (hint) hint.textContent = '';
+    }
+  };
+
   // Al seleccionar una deuda del dropdown
   window.finOnSelectDebtOption = function() {
     const sel = document.getElementById('txDebtId');
@@ -730,8 +817,20 @@
     const categoryGroup = document.getElementById('txCategoryGroup');
     const catSelect = document.getElementById('txCategory');
 
-    // Reset o mostrar bloque de deuda
-    if (type === 'debt_collect' || type === 'debt_pay') {
+    // Reset o mostrar bloque de deuda o tarjeta de crédito
+    const instSelectBlock = document.getElementById('txInstallmentSelectBlock');
+
+    if (type === 'pay_credit') {
+      if (instSelectBlock) instSelectBlock.style.display = 'block';
+      if (debtSelectBlock) debtSelectBlock.style.display = 'none';
+      modeGroup.style.display = 'block';
+      categoryGroup.style.display = 'none';
+      if (catSelect) catSelect.value = 'servicios';
+      if (accLabel) accLabel.textContent = 'Cuenta de donde sale el dinero para pagar (-)';
+      populateInstallmentSelectOptions(cachedInstallments);
+      window.finTogglePaymentMode();
+    } else if (type === 'debt_collect' || type === 'debt_pay') {
+      if (instSelectBlock) instSelectBlock.style.display = 'none';
       debtSelectBlock.style.display = 'block';
       modeGroup.style.display = 'block';
       categoryGroup.style.display = 'none';
@@ -745,6 +844,7 @@
       populateDebtSelectOptions(cachedDebts);
       window.finTogglePaymentMode();
     } else if (type === 'expense_split') {
+      if (instSelectBlock) instSelectBlock.style.display = 'none';
       debtSelectBlock.style.display = 'none';
       modeGroup.style.display = 'none';
       categoryGroup.style.display = 'block';
@@ -758,6 +858,7 @@
       }
     } else {
       // Gasto simple o Ingreso simple
+      if (instSelectBlock) instSelectBlock.style.display = 'none';
       debtSelectBlock.style.display = 'none';
       modeGroup.style.display = 'none';
       categoryGroup.style.display = 'block';
@@ -1059,6 +1160,89 @@
             return;
           } else {
             alert(d.error || 'Error al registrar');
+            return;
+          }
+        }
+      }
+
+      // 2.B: Si es Abono / Pago a Tarjeta de Crédito o Plan a Meses
+      if (type === 'pay_credit') {
+        const instVal = document.getElementById('txInstallmentId').value;
+        const mode = document.getElementById('txPaymentMode')?.value || 'single';
+        let account = document.getElementById('txAccount').value;
+        let splits = null;
+        let actualPayAmount = totalAmount;
+
+        if (mode === 'split') {
+          const cashAmount = parseFloat(document.getElementById('txSplitCash').value) || 0;
+          const bankAmount = parseFloat(document.getElementById('txSplitBank').value) || 0;
+          const splitAcc = document.getElementById('txSplitAccount').value;
+          splits = [
+            { account: 'Efectivo / Caja', amount: cashAmount },
+            { account: splitAcc, amount: bankAmount }
+          ];
+          account = null;
+          actualPayAmount = cashAmount + bankAmount;
+        }
+
+        // Si es un plan de cuotas existente
+        if (instVal && !instVal.startsWith('card_')) {
+          const payAcc = splits ? splits.map(s => `${s.account} ($${s.amount})`).join(' + ') : account;
+          const resInst = await fetchWithAuth(`/api/admin/finance/installments/${encodeURIComponent(instVal)}/pay`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ quotas: 1, account: splits ? splits[0].account : account })
+          });
+          const dInst = await resInst.json();
+          if (resInst.ok && dInst.success) {
+            window.finCloseModal('modalManualTx');
+            formManualTx.reset();
+            window.finToggleTxFields();
+            loadAllFinanceData();
+            return;
+          } else {
+            alert(dInst.error || 'Error al pagar cuota de tarjeta');
+            return;
+          }
+        } else {
+          // Abono directo a tarjeta de crédito para amortizar la deuda (traspaso o gasto que amortiza la tarjeta)
+          const targetCard = instVal.startsWith('card_') ? instVal.replace('card_', '') : 'Nu';
+          let payload = {};
+          if (splits) {
+            payload = {
+              type: 'expense_manual',
+              category: 'servicios',
+              serviceName: concept || `Abono a Tarjeta de Crédito`,
+              notes: concept || `Abono directo para reducir deuda de tarjeta de crédito`,
+              splits
+            };
+          } else {
+            // Transferencia de cuenta origen (débito/efectivo) hacia la tarjeta para amortizar su deuda
+            payload = {
+              type: 'transfer',
+              costAmount: actualPayAmount,
+              account: account,
+              destAccount: targetCard,
+              serviceName: concept || `Abono a Tarjeta de Crédito`,
+              notes: concept || `Abono directo para reducir deuda de tarjeta de crédito`,
+              category: 'servicios'
+            };
+          }
+
+          const res = await fetchWithAuth('/api/admin/finance/record', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const d = await res.json();
+          if (res.ok && d.success) {
+            window.finCloseModal('modalManualTx');
+            formManualTx.reset();
+            window.finToggleTxFields();
+            loadAllFinanceData();
+            return;
+          } else {
+            alert(d.error || 'Error al registrar abono');
             return;
           }
         }

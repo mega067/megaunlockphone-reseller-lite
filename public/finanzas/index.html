@@ -822,9 +822,19 @@
             <option value="expense_simple">Gasto Simple (-)</option>
             <option value="expense_split">Gasto Dividido / Mixto (Efectivo + Banco)</option>
             <option value="income_simple">Ingreso / Venta (+)</option>
+            <option value="pay_credit">Abonar / Pagar Tarjeta de Crédito (Reducir Deuda)</option>
             <option value="debt_collect">Cobrar Deuda a Favor (Alguien me paga)</option>
             <option value="debt_pay">Pagar Deuda que Debo (Yo abono a quien le debo)</option>
           </select>
+        </div>
+
+        <!-- Bloque selector de Tarjeta / Plan a Plazos (si se selecciona Abonar Tarjeta de Crédito) -->
+        <div id="txInstallmentSelectBlock" style="display:none; background:rgba(130, 24, 252, 0.08); border:1px solid rgba(130, 24, 252, 0.25); border-radius:12px; padding:0.9rem; margin-bottom:1rem;">
+          <div style="font-size:0.8rem; font-weight:700; color:#a855f7; margin-bottom:0.5rem;">Seleccionar Plan a Meses o Tarjeta a Abonar:</div>
+          <select id="txInstallmentId" class="fin-select" onchange="window.finOnSelectInstallmentOption()">
+            <option value="">-- Elige un plan a meses específico o abono directo a la tarjeta --</option>
+          </select>
+          <div id="txInstallmentDetailsHint" style="font-size:0.75rem; color:#94a3b8; margin-top:4px;"></div>
         </div>
 
         <!-- Bloque selector de Deuda (si se selecciona Cobrar o Pagar Deuda) -->
