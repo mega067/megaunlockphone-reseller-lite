@@ -513,7 +513,7 @@
           <div id="statFinMobileAlert" style="font-size:0.7rem; color:#94a3b8;">0 por renovar</div>
         </div>
         <div class="fin-quick-stat-item amber">
-          <div style="font-size:0.72rem; color:var(--fin-text-muted); text-transform:uppercase; font-weight:700;">Meses sin Intereses</div>
+          <div style="font-size:0.72rem; color:var(--fin-text-muted); text-transform:uppercase; font-weight:700;">Tarjetas a Plazos</div>
           <div id="statFinInstallmentsPending" style="font-size:1.25rem; font-weight:800; color:#f59e0b;">$0.00</div>
           <div id="statFinInstallmentsNextQuota" style="font-size:0.7rem; color:#94a3b8;">Próxima: $0.00/mes</div>
         </div>
@@ -534,7 +534,7 @@
         <i data-lucide="smartphone" style="width:16px; height:16px;"></i> Recargas & Telefonía
       </button>
       <button class="fin-tab-btn" data-tab="tab-installments">
-        <i data-lucide="credit-card" style="width:16px; height:16px;"></i> Meses Sin Intereses
+        <i data-lucide="credit-card" style="width:16px; height:16px;"></i> Tarjetas & Plazos
       </button>
       <button class="fin-tab-btn" data-tab="tab-debts">
         <i data-lucide="hand-coins" style="width:16px; height:16px;"></i> Deudores & Préstamos
@@ -592,18 +592,18 @@
       </div>
     </div>
 
-    <!-- Pestaña 3: Meses Sin Intereses (Nu, BBVA, etc.) -->
+    <!-- Pestaña 3: Tarjetas, Financiamientos y Compras a Plazos (Nu, BBVA, etc.) -->
     <div id="tab-installments" class="fin-panel">
       <div class="fin-card">
         <div class="fin-card-header">
           <div>
             <h2 class="fin-card-title">
-              <i data-lucide="credit-card" style="color:#8218fc;"></i> Planes a Meses / Tarjetas
+              <i data-lucide="credit-card" style="color:#8218fc;"></i> Tarjetas & Planes a Plazos
             </h2>
-            <small style="color:var(--fin-text-muted); font-size:0.78rem;">Monitorea tus compras diferidas, fechas de corte y mensualidades fijas</small>
+            <small style="color:var(--fin-text-muted); font-size:0.78rem;">Calcula el monto recibido vs lo que cobra la tarjeta, interés y mensualidades exactas</small>
           </div>
           <button id="btnFinNewInstallment" class="fin-btn fin-btn-primary">
-            <i data-lucide="plus" style="width:14px; height:14px;"></i> Nuevo Plan a Meses
+            <i data-lucide="calculator" style="width:14px; height:14px;"></i> + Registrar Compra / Disposición
           </button>
         </div>
         <div id="finInstallmentsContainerList">
@@ -946,46 +946,79 @@
     </div>
   </div>
 
-  <!-- Modal 6: Nuevo Plan a Meses -->
+  <!-- Modal 6: Convertidor Inteligente de Tarjeta / Disposición / Compra a Plazos -->
   <div id="modalNewInstallment" class="fin-modal-overlay">
     <div class="fin-modal-card">
       <div class="fin-modal-header">
-        <h3 style="margin:0; font-size:1.15rem; font-family:'Outfit',sans-serif; color:#f8fafc;">Nuevo Plan a Meses Sin Intereses</h3>
+        <div>
+          <h3 style="margin:0; font-size:1.15rem; font-family:'Outfit',sans-serif; color:#f8fafc;">Calculadora y Registro a Plazos</h3>
+          <small style="color:var(--fin-text-muted); font-size:0.75rem;">Calcula en vivo: Monto en mano vs lo que cobra la tarjeta y cuota mensual</small>
+        </div>
         <button class="fin-modal-close" onclick="window.finCloseModal('modalNewInstallment')"><i data-lucide="x" style="width:16px; height:16px;"></i></button>
       </div>
       <form id="formNewInstallment">
         <div class="fin-form-group">
-          <label>Concepto de la Compra *</label>
-          <input type="text" id="instTitle" class="fin-input" placeholder="Ej: Laptop Nu, Seguro, Teléfono..." required>
+          <label>Concepto o Motivo *</label>
+          <input type="text" id="instTitle" class="fin-input" placeholder="Ej: Disposición Nu, Laptop, Seguro..." required>
         </div>
+
         <div class="fin-grid-2">
           <div class="fin-form-group">
-            <label>Monto Total (MXN) *</label>
-            <input type="number" id="instTotal" class="fin-input" min="0.01" step="any" placeholder="1200.00" required>
+            <label>Monto Neto Recibido / Retirado ($) *</label>
+            <input type="number" id="instNetReceived" class="fin-input" min="0.01" step="any" placeholder="Ej: 1000.00" required>
+            <small style="color:var(--fin-text-muted); font-size:0.7rem;">Lo que realmente recibes o te ceden en mano</small>
           </div>
+          <div class="fin-form-group">
+            <label>Monto Total a Pagar a la Tarjeta ($) *</label>
+            <input type="number" id="instTotal" class="fin-input" min="0.01" step="any" placeholder="Ej: 1150.00" required>
+            <small style="color:var(--fin-text-muted); font-size:0.7rem;">Total final que cobrará el banco con cargos</small>
+          </div>
+        </div>
+
+        <!-- Live Conversion Breakdown Box -->
+        <div style="background: rgba(130, 24, 252, 0.08); border: 1px solid rgba(130, 24, 252, 0.3); border-radius: 12px; padding: 0.85rem 1rem; margin-bottom: 1.1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.6rem;">
+          <div>
+            <div style="font-size:0.72rem; color:var(--fin-text-muted); text-transform:uppercase; font-weight:700;">Costo Financiero / Interés Total</div>
+            <div id="instLiveFee" style="font-size:1.1rem; font-weight:800; color:#f43f5e; font-family:'Outfit',sans-serif;">$0.00 (0%)</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:0.72rem; color:var(--fin-text-muted); text-transform:uppercase; font-weight:700;">Pago Mensual Estimado</div>
+            <div id="instLiveQuota" style="font-size:1.15rem; font-weight:800; color:#34d399; font-family:'Outfit',sans-serif;">$0.00 / mes</div>
+          </div>
+        </div>
+
+        <div class="fin-grid-2">
           <div class="fin-form-group">
             <label>Plazo en Meses *</label>
             <input type="number" id="instQuotas" class="fin-input" min="1" max="48" value="6" required>
           </div>
-        </div>
-        <div class="fin-grid-2">
           <div class="fin-form-group">
-            <label>Tarjeta / Cuenta</label>
-            <input type="text" id="instCard" class="fin-input" placeholder="Ej: Nu, BBVA" value="Nu">
-          </div>
-          <div class="fin-form-group">
-            <label>Día de Pago del Mes</label>
+            <label>Día de Corte / Pago del Mes</label>
             <input type="number" id="instDueDay" class="fin-input" min="1" max="31" value="13">
           </div>
         </div>
+
+        <div class="fin-grid-2">
+          <div class="fin-form-group">
+            <label>Tarjeta o Banco Emisor</label>
+            <input type="text" id="instCard" class="fin-input" placeholder="Ej: Nu, BBVA, Mercado Pago" value="Nu">
+          </div>
+          <div class="fin-form-group">
+            <label>Notas Adicionales (Opcional)</label>
+            <input type="text" id="instNotes" class="fin-input" placeholder="Ej: Comisión 10%, tasa fija">
+          </div>
+        </div>
+
         <div style="display:flex; justify-content:flex-end; gap:0.6rem; margin-top:1.2rem;">
           <button type="button" class="fin-btn fin-btn-soft" onclick="window.finCloseModal('modalNewInstallment')">Cancelar</button>
-          <button type="submit" class="fin-btn fin-btn-primary">Crear Plan</button>
+          <button type="submit" class="fin-btn fin-btn-primary" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9);">
+            <i data-lucide="check" style="width:14px; height:14px;"></i> Guardar Plan
+          </button>
         </div>
       </form>
     </div>
   </div>
 
-  <script src="/finanzas/finanzas.js?v=98"></script>
+  <script src="/finanzas/finanzas.js?v=99"></script>
 </body>
 </html>

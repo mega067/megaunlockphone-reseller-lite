@@ -393,6 +393,7 @@
                 <h4 style="margin:4px 0 0; font-size:1.05rem; font-weight:700; color:#f8fafc;">${escapeHtml(inst.title)}</h4>
                 <div style="font-size:0.8rem; color:var(--fin-text-muted); margin-top:2px;">
                   Día de corte/pago: <strong>${inst.dueDay || 13} de cada mes</strong>
+                  ${inst.notes ? ` • <span style="color:#a855f7;">${escapeHtml(inst.notes)}</span>` : ''}
                 </div>
               </div>
               <div style="text-align:right;">
@@ -408,7 +409,7 @@
             <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.82rem; color:var(--fin-text-muted); flex-wrap:wrap; gap:0.5rem;">
               <div>
                 Cuota mensual: <strong style="color:#ffffff;">${formatMoney(quotaVal)}</strong>
-                <span style="color:#f43f5e; margin-left:0.6rem;">Saldo restante: <strong>${formatMoney(remainingAmount)}</strong></span>
+                <span style="color:#f43f5e; margin-left:0.6rem;">Resta pagar: <strong>${formatMoney(remainingAmount)}</strong></span>
               </div>
               <div style="display:flex; gap:0.45rem;">
                 ${!isCompleted ? `
@@ -929,17 +930,73 @@
     });
   }
 
-  // 6. Guardar Plan a Meses
+  // 6. Calculadora en Vivo y Guardado de Plan a Plazos
+  const instNetReceived = document.getElementById('instNetReceived');
+  const instTotal = document.getElementById('instTotal');
+  const instQuotas = document.getElementById('instQuotas');
+  const instLiveFee = document.getElementById('instLiveFee');
+  const instLiveQuota = document.getElementById('instLiveQuota');
+
+  function updateInstallmentLiveCalc() {
+    if (!instTotal || !instQuotas || !instLiveQuota) return;
+    const net = parseFloat(instNetReceived?.value) || 0;
+    const total = parseFloat(instTotal.value) || 0;
+    const quotas = Math.max(1, parseInt(instQuotas.value) || 1);
+
+    const fee = Math.max(0, total - net);
+    const feePct = net > 0 ? ((fee / net) * 100).toFixed(1) : 0;
+    const monthly = (total / quotas);
+
+    if (instLiveFee) {
+      if (net > 0 && total >= net) {
+        instLiveFee.textContent = `${formatMoney(fee)} (+${feePct}%)`;
+        instLiveFee.style.color = fee > 0 ? '#f43f5e' : '#10b981';
+      } else {
+        instLiveFee.textContent = '$0.00 (0%)';
+        instLiveFee.style.color = '#94a3b8';
+      }
+    }
+
+    if (instLiveQuota) {
+      instLiveQuota.textContent = `${formatMoney(monthly)} / mes`;
+    }
+  }
+
+  if (instNetReceived) {
+    instNetReceived.addEventListener('input', () => {
+      // Si el usuario introduce monto neto y no ha cambiado el total, sugerir el mismo total
+      if (!instTotal.value || parseFloat(instTotal.value) === 0) {
+        instTotal.value = instNetReceived.value;
+      }
+      updateInstallmentLiveCalc();
+    });
+  }
+  if (instTotal) instTotal.addEventListener('input', updateInstallmentLiveCalc);
+  if (instQuotas) instQuotas.addEventListener('input', updateInstallmentLiveCalc);
+
   const formNewInstallment = document.getElementById('formNewInstallment');
   if (formNewInstallment) {
     formNewInstallment.addEventListener('submit', async (e) => {
       e.preventDefault();
+      const net = parseFloat(document.getElementById('instNetReceived')?.value) || 0;
+      const total = parseFloat(document.getElementById('instTotal').value) || 0;
+      const quotas = parseInt(document.getElementById('instQuotas').value) || 6;
+      const customNotes = document.getElementById('instNotes')?.value.trim() || '';
+
+      const fee = Math.max(0, total - net);
+      let calculatedNotes = customNotes;
+      if (net > 0 && fee > 0) {
+        const extraNote = `Recibido: ${formatMoney(net)} • Costo financiamiento: ${formatMoney(fee)}`;
+        calculatedNotes = calculatedNotes ? `${calculatedNotes} | ${extraNote}` : extraNote;
+      }
+
       const payload = {
         title: document.getElementById('instTitle').value.trim(),
-        totalAmount: parseFloat(document.getElementById('instTotal').value) || 0,
-        totalQuotas: parseInt(document.getElementById('instQuotas').value) || 6,
+        totalAmount: total,
+        totalQuotas: quotas,
         accountName: document.getElementById('instCard').value.trim() || 'Nu',
-        dueDay: parseInt(document.getElementById('instDueDay').value) || 13
+        dueDay: parseInt(document.getElementById('instDueDay').value) || 13,
+        notes: calculatedNotes
       };
 
       const res = await fetchWithAuth('/api/admin/finance/installments', {
@@ -950,9 +1007,11 @@
       const d = await res.json();
       if (res.ok && d.success) {
         window.finCloseModal('modalNewInstallment');
+        formNewInstallment.reset();
+        updateInstallmentLiveCalc();
         loadAllFinanceData();
       } else {
-        alert(d.error || 'Error al crear plan a meses');
+        alert(d.error || 'Error al crear plan a plazos');
       }
     });
   }
