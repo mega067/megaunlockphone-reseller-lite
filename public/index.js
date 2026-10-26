@@ -2726,6 +2726,26 @@ if (btnCustomTicket) {
     customTicketUser.value = '';
     customTicketPass.value = '';
     customTicketPrice.value = '';
+    const customCostInput = document.getElementById('customTicketCost');
+    if (customCostInput) customCostInput.value = '';
+    const customAccSel = document.getElementById('customTicketAccount');
+    if (customAccSel && authToken && authRole === 'admin') {
+      fetch('/api/admin/finance/accounts', {
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      }).then(r => r.json()).then(accounts => {
+        if (Array.isArray(accounts) && accounts.length > 0) {
+          const prevVal = customAccSel.value;
+          customAccSel.innerHTML = accounts.map(a => {
+            const isCard = (a.type === 'card' || a.type === 'credit');
+            const isNuDebit = a.name.toLowerCase().includes('nu') && !isCard;
+            return `<option value="${a.name}" ${isNuDebit ? 'selected' : ''}>${a.name} (${isCard ? 'Tarjeta' : 'Saldo: $' + (parseFloat(a.currentBalance || a.balance || 0).toFixed(2))})</option>`;
+          }).join('');
+          if (prevVal && accounts.some(a => a.name === prevVal)) {
+            customAccSel.value = prevVal;
+          }
+        }
+      }).catch(e => console.warn('[LOAD CUSTOM TICKET ACCS ERR]', e));
+    }
     customTicketFormat.value = 'raw';
     customTicketRawContainer.classList.remove('hidden');
     customTicketLoginContainer.classList.add('hidden');
@@ -2849,6 +2869,11 @@ if (btnGenerateCustomTicket) {
       
       // Registro automático en el Gestor de Finanzas / POS si hay precio ingresado
       const chargedCustom = parseFloat(customTicketPrice.value) || 0;
+      const customCostInput = document.getElementById('customTicketCost');
+      const costCustom = customCostInput ? (parseFloat(customCostInput.value) || 0) : 0;
+      const customAccSel = document.getElementById('customTicketAccount');
+      const targetAccCustom = customAccSel?.value || 'Nu Débito / Cuenta';
+
       if (authRole === 'admin' && chargedCustom > 0 && authToken) {
         const manualId = customTicketOrderId.value.trim() || String(Math.floor(Math.random() * 90000) + 10000);
         fetch('/api/admin/finance/transaction', {
@@ -2863,9 +2888,9 @@ if (btnGenerateCustomTicket) {
             orderId: manualId,
             serviceName: title,
             chargedAmount: chargedCustom,
-            costAmount: 0,
-            account: 'General',
-            notes: `Ticket Manual #${manualId} - ${title}`
+            costAmount: costCustom,
+            account: targetAccCustom,
+            notes: `Ticket Manual #${manualId} - ${title} (${targetAccCustom})`
           })
         }).then(res => res.json()).then(resp => {
           if (resp && resp.success && typeof loadFinanceDashboard === 'function') {

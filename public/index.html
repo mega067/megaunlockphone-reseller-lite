@@ -2465,10 +2465,27 @@
           </div>
         </div>
         <div class="custom-field" style="margin-top: 1rem;">
-          <label class="custom-field-label">Precio al Cliente (Opcional)</label>
+          <label class="custom-field-label">Precio Cobrado al Cliente (Opcional)</label>
           <div style="position: relative;">
             <span style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-secondary);">$</span>
             <input type="number" id="customTicketPrice" class="custom-field-input" style="padding-left: 2rem;" placeholder="Ej. 250">
+          </div>
+        </div>
+        <div class="custom-field" style="margin-top: 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div>
+            <label class="custom-field-label">Costo Invertido / Servidor</label>
+            <div style="position: relative;">
+              <span style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-secondary);">$</span>
+              <input type="number" id="customTicketCost" class="custom-field-input" style="padding-left: 2rem;" placeholder="0.00">
+            </div>
+          </div>
+          <div>
+            <label class="custom-field-label">Cuenta Receptora</label>
+            <select id="customTicketAccount" class="custom-field-input" style="padding-left: 0.75rem; width: 100%;">
+              <option value="Nu Débito / Cuenta">Nu Débito / Cuenta</option>
+              <option value="Efectivo / Caja">Efectivo / Caja</option>
+              <option value="Revolut">Revolut</option>
+            </select>
           </div>
         </div>
       </div>
