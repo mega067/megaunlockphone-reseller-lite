@@ -118,19 +118,40 @@ async function vincular(context) {
                 return true;
             }
 
-            // Unlink any old numbers associated with this user
+            // Validar que el WhatsApp desde donde se vincula coincida con el número registrado en su cuenta
+            const rawDigits = remoteJid.split('@')[0].replace(/\D/g, '');
+            if (user.phone) {
+                const uClean = String(user.phone).replace(/\D/g, '');
+                const matches = (uClean === rawDigits) || (uClean.length >= 10 && rawDigits.endsWith(uClean.slice(-10)));
+                if (!matches) {
+                    await sock.sendMessage(remoteJid, { 
+                        text: `⚠️ *Número de teléfono no coincide*\n━━━━━━━━━━━━━━━━━━━━━━\nPor seguridad, tu cuenta *${user.username}* solo puede ser vinculada desde su número oficial registrado (*...${uClean.slice(-4)}*).\n\nSi cambiaste de número, actualízalo en tu perfil del panel web o solicita apoyo con Soporte.` 
+                    });
+                    delete sessionManager.loginSessions[remoteJid];
+                    return true;
+                }
+            } else {
+                // Si el usuario no tenía número registrado, asignarle automáticamente este número como oficial
+                user.phone = rawDigits.length === 10 ? '52' + rawDigits : rawDigits;
+                writeDB(USERS_FILE, users);
+            }
+
+            // Garantizar que solo exista 1 chat vinculado por usuario:
+            // 1. Eliminar cualquier vinculación previa de este usuario
             Object.keys(wusers).forEach(jid => {
-                if (wusers[jid] === user.id) {
+                if (String(wusers[jid]) === String(user.id)) {
                     delete wusers[jid];
                 }
             });
+            // 2. Eliminar cualquier vinculación previa de este remoteJid
+            delete wusers[remoteJid];
 
-            // Success, link new account
+            // Registrar el único enlace oficial
             wusers[remoteJid] = user.id;
             writeDB(WHATSAPP_USERS_FILE, wusers);
             
             delete sessionManager.loginSessions[remoteJid];
-            await sock.sendMessage(remoteJid, { text: `✅ ¡Cuenta vinculada exitosamente!\n\nBienvenido, *${user.username}*.\nAhora puedes usar comandos como /saldo, /recargar, /pedir, etc.` });
+            await sock.sendMessage(remoteJid, { text: `✅ ¡Cuenta vinculada exitosamente!\n\nBienvenido, *${user.username}*.\nTu chat ha quedado como el único número oficial vinculado.\nAhora puedes usar comandos como *saldo*, *recargar*, *pedir*, etc.` });
             return true;
         }
     }

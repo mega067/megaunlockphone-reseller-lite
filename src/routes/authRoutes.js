@@ -195,13 +195,17 @@ router.post('/verify-otp', (req, res) => {
   users.push(newUser);
   writeDB('users.json', users);
 
-  // Link WhatsApp automatically
+  // Link WhatsApp automatically (1 solo chat canónico por usuario)
   const wUsers = readDB('whatsapp_users.json') || {};
-  wUsers[`${pending.phone}@s.whatsapp.net`] = newId;
-  if (pending.phone.startsWith('52') && pending.phone.length === 12) {
-    const withOne = '521' + pending.phone.substring(2);
-    wUsers[`${withOne}@s.whatsapp.net`] = newId;
+  let targetPhone = pending.phone;
+  if (targetPhone.startsWith('52') && targetPhone.length === 12) {
+    targetPhone = '521' + targetPhone.substring(2);
   }
+  // Limpiar cualquier enlace anterior para este usuario
+  for (const [k, v] of Object.entries(wUsers)) {
+    if (String(v) === String(newId)) delete wUsers[k];
+  }
+  wUsers[`${targetPhone}@s.whatsapp.net`] = newId;
   writeDB('whatsapp_users.json', wUsers);
 
   // Cleanup pending
@@ -374,19 +378,19 @@ router.post('/change-phone', requireAuth, (req, res) => {
   let cleanPhone = String(newPhone).replace(/\D/g, '');
   if (cleanPhone.length === 10) cleanPhone = '52' + cleanPhone;
   
-  // Update in whatsapp_users as well
+  // Update in whatsapp_users as well (1 solo chat por usuario)
   const wUsers = readDB('whatsapp_users.json') || {};
   // Find and remove old phone
   for (const [key, val] of Object.entries(wUsers)) {
-    if (val === user.id) delete wUsers[key];
+    if (String(val) === String(user.id)) delete wUsers[key];
   }
   
   user.phone = cleanPhone;
-  wUsers[`${cleanPhone}@s.whatsapp.net`] = user.id;
-  if (cleanPhone.startsWith('52') && cleanPhone.length === 12) {
-    const withOne = '521' + cleanPhone.substring(2);
-    wUsers[`${withOne}@s.whatsapp.net`] = user.id;
+  let targetPhone = cleanPhone;
+  if (targetPhone.startsWith('52') && targetPhone.length === 12) {
+    targetPhone = '521' + targetPhone.substring(2);
   }
+  wUsers[`${targetPhone}@s.whatsapp.net`] = user.id;
   
   writeDB('users.json', users);
   writeDB('whatsapp_users.json', wUsers);

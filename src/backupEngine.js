@@ -154,8 +154,19 @@ function createAutoBackup(reason = 'AUTO_EVENT') {
     const snapshot = generateFullBackupSnapshot(reason);
     fs.writeFileSync(filepath, JSON.stringify(snapshot, null, 2), 'utf8');
 
-    // Mantener los últimos 30 backups instantáneos para no saturar disco
-    pruneOldBackups(INSTANT_DIR, 30);
+    // Mantener los últimos N backups instantáneos según configuración
+    let localKeep = 3;
+    let syncOnEvent = false;
+    try {
+      const { getGDriveConfig } = require('./gdriveSync');
+      const cfg = getGDriveConfig();
+      if (cfg.keepLocalCopies !== undefined && !isNaN(parseInt(cfg.keepLocalCopies, 10))) {
+        localKeep = Math.max(1, parseInt(cfg.keepLocalCopies, 10));
+      }
+      syncOnEvent = Boolean(cfg.syncOnEvent && cfg.enabled);
+    } catch(e) {}
+
+    pruneOldBackups(INSTANT_DIR, localKeep);
 
     // Registrar en la caja negra inalterable
     logAuditTrail('AUTO_BACKUP_CREATED', {
@@ -164,6 +175,20 @@ function createAutoBackup(reason = 'AUTO_EVENT') {
       snapshotHash: snapshot.metadata.snapshotHash,
       usersCount: Array.isArray(snapshot.files['users.json']) ? snapshot.files['users.json'].length : 0
     });
+
+    // Si está configurada la subida por cada pedido/evento a Google Drive, sincronizar en segundo plano
+    if (syncOnEvent) {
+      try {
+        const { syncBackupToGoogleDrive } = require('./gdriveSync');
+        syncBackupToGoogleDrive(filepath).then(syncRes => {
+          if (syncRes && syncRes.success) {
+            console.log(`[Backup Engine] Respaldo instantáneo (${safeReason}) sincronizado con Google Drive exitosamente.`);
+          }
+        }).catch(syncErr => {
+          console.error(`[Backup Engine] Fallo en sincronización de evento a Google Drive:`, syncErr.message);
+        });
+      } catch (e) {}
+    }
 
     return { success: true, filename, filepath };
   } catch (err) {

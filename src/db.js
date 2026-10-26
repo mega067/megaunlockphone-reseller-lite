@@ -25,7 +25,7 @@ function readDB(file) {
   }
 
   // 3. Interceptar AppConfig
-  if (file === 'whatsapp_settings.json') {
+  if (baseFile === 'whatsapp_settings.json') {
     const stmt = sqliteDb.prepare(`SELECT key, value FROM AppConfig`);
     const rows = stmt.all();
     let config = {};
@@ -40,7 +40,7 @@ function readDB(file) {
   }
 
   // 4. Interceptar WhatsApp Links
-  if (file === 'whatsapp_users.json') {
+  if (baseFile === 'whatsapp_users.json') {
     const stmt = sqliteDb.prepare(`SELECT phone, userId FROM WhatsAppLinks`);
     const rows = stmt.all();
     let wUsers = {};

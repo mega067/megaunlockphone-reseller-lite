@@ -1,1 +1,18 @@
-[]
+[
+  {
+    "id": "rec_1792626099892_453",
+    "date": "2026-10-21T23:41:39.892Z",
+    "userId": "5212216936720",
+    "username": "test_user",
+    "amount": 350,
+    "isDeduction": false,
+    "serverId": "1",
+    "type": "SPEI",
+    "adminUsername": "Banxico STP",
+    "processedBy": "Banxico STP",
+    "trackingNumber": "TEST9876543210",
+    "senderBankName": "BBVA",
+    "receiverBankName": "NU MEXICO",
+    "note": "Saldo asignado por Administrador"
+  }
+]

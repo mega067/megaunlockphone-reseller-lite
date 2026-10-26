@@ -25,7 +25,9 @@ function getGDriveConfig() {
     // Para Service Account Directa
     clientEmail: process.env.GDRIVE_CLIENT_EMAIL || '',
     privateKey: process.env.GDRIVE_PRIVATE_KEY || '',
-    keepCopies: parseInt(process.env.GDRIVE_KEEP_COPIES, 10) || 7
+    keepCopies: parseInt(process.env.GDRIVE_KEEP_COPIES, 10) || 7,
+    syncOnEvent: process.env.GDRIVE_SYNC_ON_EVENT === 'true',
+    keepLocalCopies: parseInt(process.env.KEEP_LOCAL_COPIES, 10) || 3
   };
 }
 
@@ -217,10 +219,15 @@ async function uploadViaAppsScript(filePath, config) {
 /**
  * Despachador principal: Si GDrive está habilitado, sube el archivo y rota los viejos
  */
-async function syncBackupToGoogleDrive(filePath) {
+async function syncBackupToGoogleDrive(filePath, forceSync = false) {
   const config = getGDriveConfig();
-  if (!config.enabled) {
-    return { success: false, skipped: true, reason: 'GDRIVE_DISABLED' };
+  if (!config.enabled && !forceSync) {
+    return { 
+      success: false, 
+      skipped: true, 
+      reason: 'GDRIVE_DISABLED', 
+      error: 'Google Drive no está activado. Marca la casilla "Activar subida automática a Google Drive" y haz clic en "Guardar Google Drive".' 
+    };
   }
 
   if (!fs.existsSync(filePath)) {
@@ -234,7 +241,7 @@ async function syncBackupToGoogleDrive(filePath) {
     } else if (config.clientEmail && config.privateKey) {
       result = await uploadViaServiceAccount(filePath, config);
     } else {
-      return { success: false, error: 'Google Drive está habilitado pero faltan credenciales (Apps Script URL o Service Account).' };
+      return { success: false, error: 'Falta la URL de Google Apps Script. Pégala en el campo correspondiente y pulsa Guardar.' };
     }
 
     logAuditTrail('GDRIVE_BACKUP_UPLOADED', {
