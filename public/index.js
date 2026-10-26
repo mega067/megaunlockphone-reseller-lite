@@ -1233,13 +1233,33 @@ function renderOrderHistory() {
 
           // Control de Punto de Venta (POS) y Registro Contable exclusivo del Administrador
           const posBox = document.getElementById('ticketPosProfitBox');
-          const posAccountGroup = document.getElementById('ticketPaymentAccount')?.closest('.input-group');
+          const ticketAccountSel = document.getElementById('ticketPaymentAccount');
+          const posAccountGroup = ticketAccountSel?.closest('.input-group');
           const buyerFieldsGrid = document.getElementById('ticketBuyerPhone')?.closest('div[style*="grid"]');
           const isAdminUser = (authRole === 'admin');
 
           if (posBox) posBox.style.display = isAdminUser ? 'flex' : 'none';
           if (posAccountGroup) posAccountGroup.style.display = isAdminUser ? 'block' : 'none';
           if (buyerFieldsGrid) buyerFieldsGrid.style.display = isAdminUser ? 'grid' : 'none';
+
+          // Cargar cuentas bancarias y billeteras reales desde el módulo de finanzas
+          if (isAdminUser && ticketAccountSel && authToken) {
+            fetch('/api/admin/finance/accounts', {
+              headers: { 'Authorization': `Bearer ${authToken}` }
+            }).then(r => r.json()).then(accounts => {
+              if (Array.isArray(accounts) && accounts.length > 0) {
+                const prevVal = ticketAccountSel.value;
+                ticketAccountSel.innerHTML = accounts.map(a => {
+                  const isCard = (a.type === 'card' || a.type === 'credit');
+                  const isNuDebit = a.name.toLowerCase().includes('nu') && !isCard;
+                  return `<option value="${a.name}" ${isNuDebit ? 'selected' : ''}>${a.name} (${isCard ? 'Tarjeta' : 'Saldo: $' + (parseFloat(a.currentBalance || a.balance || 0).toFixed(2))})</option>`;
+                }).join('');
+                if (prevVal && accounts.some(a => a.name === prevVal)) {
+                  ticketAccountSel.value = prevVal;
+                }
+              }
+            }).catch(e => console.warn('[LOAD TICKET ACCOUNTS ERR]', e));
+          }
 
           ticketModal.classList.remove('hidden');
           if (window.lucide) window.lucide.createIcons();

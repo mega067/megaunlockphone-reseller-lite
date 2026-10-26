@@ -248,11 +248,51 @@ function recordTransaction(data) {
   try {
     const findAcc = (accName) => {
       if (!accName) return null;
+      const clean = String(accName).trim();
+      // 1. Coincidencia exacta por ID o Nombre exacto (no archivada)
+      let found = sqliteDb.prepare(`
+        SELECT id, name, type, isArchived FROM FinanceAccounts 
+        WHERE (id = ? OR LOWER(name) = LOWER(?)) AND isArchived = 0
+        LIMIT 1
+      `).get(clean, clean);
+      if (found) return found;
+
+      // 2. Si el usuario pide débito / cuenta o tarjeta específicamente
+      const lower = clean.toLowerCase();
+      if (lower.includes('débito') || lower.includes('debito') || lower.includes('cuenta')) {
+        found = sqliteDb.prepare(`
+          SELECT id, name, type, isArchived FROM FinanceAccounts 
+          WHERE (LOWER(name) LIKE '%débito%' OR LOWER(name) LIKE '%debito%' OR (LOWER(name) LIKE '%nu%' AND type = 'bank'))
+            AND isArchived = 0
+          LIMIT 1
+        `).get();
+        if (found) return found;
+      }
+      if (lower.includes('tarjeta') || lower.includes('crédito') || lower.includes('credito')) {
+        found = sqliteDb.prepare(`
+          SELECT id, name, type, isArchived FROM FinanceAccounts 
+          WHERE (LOWER(name) LIKE '%crédito%' OR LOWER(name) LIKE '%credito%' OR (LOWER(name) LIKE '%nu%' AND type = 'card'))
+            AND isArchived = 0
+          LIMIT 1
+        `).get();
+        if (found) return found;
+      }
+
+      // 3. Coincidencia parcial general en cuentas no archivadas (priorizando cuentas bancarias de depósito si es un ingreso)
+      found = sqliteDb.prepare(`
+        SELECT id, name, type, isArchived FROM FinanceAccounts 
+        WHERE isArchived = 0 AND (name LIKE ? OR ? LIKE ('%' || name || '%'))
+        ORDER BY CASE WHEN type = 'bank' THEN 1 WHEN type = 'cash' THEN 2 ELSE 3 END
+        LIMIT 1
+      `).get(`%${clean}%`, clean);
+      if (found) return found;
+
+      // 4. Fallback si estuviera archivada
       return sqliteDb.prepare(`
-        SELECT id FROM FinanceAccounts 
+        SELECT id, name, type, isArchived FROM FinanceAccounts 
         WHERE id = ? OR name = ? OR name LIKE ? OR ? LIKE ('%' || name || '%')
         LIMIT 1
-      `).get(accName, accName, `%${accName}%`, accName);
+      `).get(clean, clean, `%${clean}%`, clean);
     };
 
     const targetOrigin = findAcc(account);
@@ -696,11 +736,47 @@ function deleteTransaction(id) {
 
   const findAcc = (accName) => {
     if (!accName) return null;
+    const clean = String(accName).trim();
+    let found = sqliteDb.prepare(`
+      SELECT id, name, type, isArchived FROM FinanceAccounts 
+      WHERE (id = ? OR LOWER(name) = LOWER(?)) AND isArchived = 0
+      LIMIT 1
+    `).get(clean, clean);
+    if (found) return found;
+
+    const lower = clean.toLowerCase();
+    if (lower.includes('débito') || lower.includes('debito') || lower.includes('cuenta')) {
+      found = sqliteDb.prepare(`
+        SELECT id, name, type, isArchived FROM FinanceAccounts 
+        WHERE (LOWER(name) LIKE '%débito%' OR LOWER(name) LIKE '%debito%' OR (LOWER(name) LIKE '%nu%' AND type = 'bank'))
+          AND isArchived = 0
+        LIMIT 1
+      `).get();
+      if (found) return found;
+    }
+    if (lower.includes('tarjeta') || lower.includes('crédito') || lower.includes('credito')) {
+      found = sqliteDb.prepare(`
+        SELECT id, name, type, isArchived FROM FinanceAccounts 
+        WHERE (LOWER(name) LIKE '%crédito%' OR LOWER(name) LIKE '%credito%' OR (LOWER(name) LIKE '%nu%' AND type = 'card'))
+          AND isArchived = 0
+        LIMIT 1
+      `).get();
+      if (found) return found;
+    }
+
+    found = sqliteDb.prepare(`
+      SELECT id, name, type, isArchived FROM FinanceAccounts 
+      WHERE isArchived = 0 AND (name LIKE ? OR ? LIKE ('%' || name || '%'))
+      ORDER BY CASE WHEN type = 'bank' THEN 1 WHEN type = 'cash' THEN 2 ELSE 3 END
+      LIMIT 1
+    `).get(`%${clean}%`, clean);
+    if (found) return found;
+
     return sqliteDb.prepare(`
-      SELECT id FROM FinanceAccounts 
+      SELECT id, name, type, isArchived FROM FinanceAccounts 
       WHERE id = ? OR name = ? OR name LIKE ? OR ? LIKE ('%' || name || '%')
       LIMIT 1
-    `).get(accName, accName, `%${accName}%`, accName);
+    `).get(clean, clean, `%${clean}%`, clean);
   };
 
   const targetOrigin = findAcc(tx.account);
