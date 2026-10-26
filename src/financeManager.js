@@ -173,6 +173,16 @@ function recordTransaction(data) {
     grossProfit = chargedAmount - costAmount;
   }
 
+  // Idempotencia: evitar registrar dos veces el mismo cobro de un ticket/orden si ya existe en el ledger
+  if (data.orderId && type === 'income_ticket') {
+    const existingTicketTx = sqliteDb.prepare(`
+      SELECT * FROM FinanceLedger WHERE orderId = ? AND type = 'income_ticket' LIMIT 1
+    `).get(String(data.orderId));
+    if (existingTicketTx) {
+      return existingTicketTx; // Ya registrado previamente, no duplicar saldo
+    }
+  }
+
   // Soporte de Pagos Divididos / Conexión de Gastos Multi-Cuenta (Ej: parte en efectivo y parte en transferencia o tarjeta)
   if (Array.isArray(data.splits) && data.splits.length > 0) {
     const parentNotes = data.notes || data.serviceName || 'Gasto Dividido';
