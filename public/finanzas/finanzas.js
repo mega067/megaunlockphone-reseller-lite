@@ -177,11 +177,14 @@
     }
 
     grid.innerHTML = accounts.map(acc => {
-      const balance = parseFloat(acc.balance !== undefined ? acc.balance : (acc.currentBalance || 0));
+      const isCard = acc.type === 'card' || acc.type === 'credit';
       const lineLimit = parseFloat(acc.creditLimit || 0);
       const debt = parseFloat(acc.currentDebt || 0);
+      // Para tarjeta de crédito, el disponible real es la línea menos la deuda
+      const balance = isCard && lineLimit > 0
+        ? Math.max(0, parseFloat((lineLimit - debt).toFixed(2)))
+        : parseFloat(acc.balance !== undefined ? acc.balance : (acc.currentBalance || 0));
       const profit = parseFloat(acc.totalProfit !== undefined ? acc.totalProfit : (acc.netProfit || 0));
-      const isCard = acc.type === 'card' || acc.type === 'credit';
       const badgeColor = isCard ? '#8218fc' : (acc.type === 'cash' ? '#f59e0b' : '#10b981');
       const badgeBg = isCard ? 'rgba(130,24,252,0.14)' : (acc.type === 'cash' ? 'rgba(245,158,11,0.14)' : 'rgba(16,185,129,0.14)');
 
@@ -414,8 +417,12 @@
         const isCompleted = inst.status === 'completed' || inst.paidQuotas >= inst.totalQuotas;
         const progressPct = Math.min(100, Math.round(((inst.paidQuotas || 0) / (inst.totalQuotas || 1)) * 100));
         const quotaVal = parseFloat(inst.quotaAmount) || ((parseFloat(inst.totalAmount) || 0) / (inst.totalQuotas || 1));
+        const totalAmt = parseFloat(inst.totalAmount) || 0;
         const remainingQuotas = Math.max(0, (inst.totalQuotas || 0) - (inst.paidQuotas || 0));
-        const remainingAmount = quotaVal * remainingQuotas;
+        // Si no se ha pagado nada, el restante es exactamente el totalAmount para evitar discrepancias de centavos
+        const remainingAmount = (inst.paidQuotas || 0) === 0 
+          ? totalAmt 
+          : Math.max(0, parseFloat((totalAmt - ((inst.paidQuotas || 0) * quotaVal)).toFixed(2)));
 
         return `
           <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid ${isCompleted ? 'rgba(255,255,255,0.08)' : 'rgba(130, 24, 252, 0.3)'}; border-radius: 14px; padding: 1.15rem; margin-bottom: 0.85rem;">
