@@ -1409,6 +1409,159 @@
     if (res.ok) loadAllFinanceData();
   };
 
+  // --- EXPORTACIÓN DE CONTEXTO FINANCIERO COMPLETO PARA IA ---
+
+  window.finOpenAiContextModal = async function() {
+    const txtArea = document.getElementById('txtAiContextJson');
+    const hint = document.getElementById('aiCopySuccessHint');
+    if (hint) hint.style.display = 'none';
+
+    // Generar estructura completa consolidada
+    let netWorth = 0;
+    let usableCashBank = 0;
+    let cajitasNu = 0;
+    let totalInvestments = 0;
+    let totalCreditDebt = 0;
+
+    const accountsStructured = cachedAccounts.map(a => {
+      const bal = parseFloat(a.balance !== undefined ? a.balance : (a.currentBalance || 0));
+      const debt = parseFloat(a.currentDebt || 0);
+      const isCard = a.type === 'card' || a.type === 'credit';
+      const isSavings = a.type === 'savings' || a.name.toLowerCase().includes('cajita');
+      const isInv = a.type === 'investment';
+
+      if (isCard) {
+        totalCreditDebt += debt;
+      } else {
+        netWorth += bal;
+        if (isSavings) cajitasNu += bal;
+        else if (isInv) totalInvestments += bal;
+        else usableCashBank += bal;
+      }
+
+      return {
+        id: a.id,
+        nombre: a.name,
+        tipo: a.type,
+        saldo_actual: bal,
+        deuda_actual: isCard ? debt : 0,
+        limite_credito: parseFloat(a.creditLimit || 0),
+        descripcion: a.description || ''
+      };
+    });
+
+    // Deudas pendientes
+    let totalMeDeben = 0;
+    let totalYoDebo = 0;
+    const deudasStructured = cachedDebts.map(d => {
+      const rem = parseFloat(d.remainingAmount || d.totalAmount || 0);
+      if (d.status !== 'settled') {
+        if (d.type === 'receivable') totalMeDeben += rem;
+        else totalYoDebo += rem;
+      }
+      return {
+        id: d.id,
+        tipo: d.type === 'receivable' ? 'Me deben a favor' : 'Yo debo a terceros',
+        persona: d.personName,
+        concepto: d.concept || '',
+        monto_original: parseFloat(d.totalAmount || 0),
+        monto_pagado: parseFloat(d.paidAmount || 0),
+        saldo_pendiente: rem,
+        estado: d.status
+      };
+    });
+
+    // Planes a plazos
+    let totalInstallmentsDebt = 0;
+    const planesStructured = cachedInstallments.map(inst => {
+      const totalAmt = parseFloat(inst.totalAmount || 0);
+      const quota = parseFloat(inst.quotaAmount || 0);
+      const paidQ = parseInt(inst.paidQuotas || 0);
+      const totalQ = parseInt(inst.totalQuotas || 1);
+      const remainingAmt = Math.max(0, parseFloat((totalAmt - (paidQ * quota)).toFixed(2)));
+      if (inst.status !== 'completed') {
+        totalInstallmentsDebt += remainingAmt;
+      }
+      return {
+        id: inst.id,
+        titulo: inst.title,
+        tarjeta_origen: inst.accountName,
+        total_a_pagar: totalAmt,
+        cuota_mensual: quota,
+        cuotas_cubiertas: `${paidQ}/${totalQ}`,
+        restante_por_pagar: remainingAmt,
+        dia_de_pago: inst.dueDay,
+        estado: inst.status,
+        notas: inst.notes || ''
+      };
+    });
+
+    // Inversiones
+    let capitalInvertidoTotal = 0;
+    let valorPortafolioTotal = 0;
+    let plusvaliaTotal = 0;
+    if (cachedInvestments.length > 0) {
+      const lastInv = cachedInvestments[cachedInvestments.length - 1];
+      capitalInvertidoTotal = parseFloat(lastInv.investedCapital || 0);
+      valorPortafolioTotal = parseFloat(lastInv.currentValue || 0);
+      plusvaliaTotal = parseFloat(lastInv.netReturn || 0);
+    }
+
+    const aiContextObject = {
+      _instrucciones_para_la_ia: "Este es el estado financiero integral de Ángel. Úsalo como contexto para darle recomendaciones, responder consultas sobre su liquidez, flujos, pagos y presupuestos.",
+      fecha_extraccion: new Date().toISOString(),
+      resumen_patrimonial_mxn: {
+        patrimonio_neto_liquido_total: parseFloat(netWorth.toFixed(2)),
+        efectivo_y_debito_usable: parseFloat(usableCashBank.toFixed(2)),
+        apartado_cajitas_nu: parseFloat(cajitasNu.toFixed(2)),
+        portafolio_inversiones_total: parseFloat(valorPortafolioTotal.toFixed(2)),
+        deuda_tarjetas_credito: parseFloat(totalCreditDebt.toFixed(2)),
+        deuda_planes_plazos_restante: parseFloat(totalInstallmentsDebt.toFixed(2)),
+        deudas_que_debo_a_personas: parseFloat(totalYoDebo.toFixed(2)),
+        deudas_a_mi_favor_por_cobrar: parseFloat(totalMeDeben.toFixed(2))
+      },
+      carteras_y_cuentas: accountsStructured,
+      tarjetas_y_planes_a_meses: planesStructured,
+      deudas_y_prestamos: deudasStructured,
+      inversiones_y_rendimientos: {
+        capital_acumulado_invertido: capitalInvertidoTotal,
+        valor_actual_portafolio: valorPortafolioTotal,
+        resultado_pl: plusvaliaTotal,
+        es_plusvalia: plusvaliaTotal >= 0,
+        porcentaje_rendimiento: capitalInvertidoTotal > 0 ? parseFloat(((plusvaliaTotal / capitalInvertidoTotal) * 100).toFixed(2)) : 0,
+        historial_cortes: cachedInvestments.map(i => ({
+          fecha: i.date,
+          plataforma: i.platform,
+          capital_invertido: parseFloat(i.investedCapital),
+          valor_corte: parseFloat(i.currentValue),
+          inyeccion: parseFloat(i.injectedAmount || 0),
+          plusvalia_minusvalia: parseFloat(i.netReturn || 0),
+          rendimiento_pct: parseFloat(i.returnPercentage || 0),
+          notas: i.notes || ''
+        }))
+      }
+    };
+
+    const jsonString = JSON.stringify(aiContextObject, null, 2);
+    if (txtArea) txtArea.value = jsonString;
+
+    // Intentar copiar automáticamente al portapapeles de una vez
+    try {
+      await navigator.clipboard.writeText(jsonString);
+      if (hint) {
+        hint.style.display = 'inline';
+        hint.textContent = '✅ ¡Copiado al portapapeles automáticamente!';
+      }
+    } catch (e) {
+      if (hint) {
+        hint.style.display = 'inline';
+        hint.textContent = '💡 Presiona el botón azul para copiar.';
+      }
+    }
+
+    window.finOpenModal('modalAiContext');
+  };
+
   window.finDeleteTx = async function(id) {
     if (!confirm('¿Eliminar este movimiento? Se revertirá automáticamente el impacto en el balance.')) return;
     const res = await fetchWithAuth(`/api/admin/finance/transactions/${encodeURIComponent(id)}`, { method: 'DELETE' });
@@ -2205,6 +2358,37 @@
           }
         } catch (err) {
           alert('Error de conexión al registrar inversión');
+        }
+      });
+    }
+
+    // Botón superior de Copiar Contexto IA
+    const btnCopyAi = document.getElementById('btnFinCopyAiContext');
+    if (btnCopyAi) {
+      btnCopyAi.addEventListener('click', () => window.finOpenAiContextModal());
+    }
+
+    // Botón dentro del modal para copiar al portapapeles
+    const btnConfirmCopy = document.getElementById('btnConfirmCopyAiJson');
+    if (btnConfirmCopy) {
+      btnConfirmCopy.addEventListener('click', async () => {
+        const txtArea = document.getElementById('txtAiContextJson');
+        const hint = document.getElementById('aiCopySuccessHint');
+        if (txtArea) {
+          try {
+            await navigator.clipboard.writeText(txtArea.value);
+            if (hint) {
+              hint.style.display = 'inline';
+              hint.textContent = '✅ ¡Copiado al portapapeles exitosamente!';
+            }
+          } catch (e) {
+            txtArea.select();
+            document.execCommand('copy');
+            if (hint) {
+              hint.style.display = 'inline';
+              hint.textContent = '✅ ¡Copiado!';
+            }
+          }
         }
       });
     }

@@ -491,6 +491,9 @@
         <button id="btnFinCollegeQuick" class="fin-btn fin-btn-soft" style="color:#10b981; border-color:rgba(16,185,129,0.35);">
           <i data-lucide="backpack" style="width:15px; height:15px;"></i> + Apoyo Semanal Uni
         </button>
+        <button id="btnFinCopyAiContext" class="fin-btn fin-btn-soft" style="color:#38bdf8; border-color:rgba(56,189,248,0.35);" title="Copiar todo el balance, carteras, deudas e inversiones como JSON para pegarlo en una IA">
+          <i data-lucide="bot" style="width:15px; height:15px;"></i> Copiar Contexto IA
+        </button>
         <button id="btnFinRefreshAll" class="fin-btn fin-btn-soft">
           <i data-lucide="rotate-cw" style="width:15px; height:15px;"></i> Actualizar
         </button>
@@ -1283,6 +1286,35 @@
     </div>
   </div>
 
-  <script src="/finanzas/finanzas.js?v=109"></script>
+  <!-- Modal: Contexto Financiero Completo en JSON para IA -->
+  <div id="modalAiContext" class="fin-modal-overlay">
+    <div class="fin-modal-card" style="max-width:840px;">
+      <div class="fin-modal-header">
+        <h3 class="fin-modal-title" style="color:#38bdf8;">
+          <i data-lucide="bot"></i> Contexto Financiero Completo (JSON para IA)
+        </h3>
+        <button class="fin-modal-close" onclick="window.finCloseModal('modalAiContext')">&times;</button>
+      </div>
+      <div style="margin-bottom:0.8rem; font-size:0.82rem; color:var(--fin-text-muted);">
+        Este bloque contiene todo el estado financiero consolidado (patrimonio líquido, saldos por cartera, deudas por cobrar y pagar, planes de tarjeta, cortes de inversión y últimos movimientos). Cópialo y pégalo directamente en ChatGPT, Claude o Gemini para análisis y asesoría financiera.
+      </div>
+      <div style="position:relative;">
+        <textarea id="txtAiContextJson" readonly style="width:100%; height:360px; background:rgba(7, 11, 20, 0.95); border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:1rem; font-family:monospace; font-size:0.78rem; color:#38bdf8; resize:vertical; outline:none; white-space:pre;"></textarea>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1rem; flex-wrap:wrap; gap:0.6rem;">
+        <span id="aiCopySuccessHint" style="font-size:0.82rem; color:#10b981; font-weight:700; display:none;">
+          ✅ ¡Copiado al portapapeles exitosamente!
+        </span>
+        <div style="display:flex; gap:0.6rem; margin-left:auto;">
+          <button type="button" class="fin-btn fin-btn-soft" onclick="window.finCloseModal('modalAiContext')">Cerrar</button>
+          <button type="button" id="btnConfirmCopyAiJson" class="fin-btn fin-btn-primary" style="background: linear-gradient(135deg, #0284c7, #0369a1);">
+            <i data-lucide="copy" style="width:14px; height:14px;"></i> Copiar JSON al Portapapeles
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/finanzas/finanzas.js?v=110"></script>
 </body>
 </html>
