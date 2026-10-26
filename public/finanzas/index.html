@@ -564,6 +564,9 @@
       <button class="fin-tab-btn" data-tab="tab-debts">
         <i data-lucide="hand-coins" style="width:16px; height:16px;"></i> Deudores & Préstamos
       </button>
+      <button class="fin-tab-btn" data-tab="tab-weekly">
+        <i data-lucide="calendar-check" style="width:16px; height:16px; color:#38bdf8;"></i> Cierres Semanales
+      </button>
       <button class="fin-tab-btn" data-tab="tab-audit">
         <i data-lucide="shield-check" style="width:16px; height:16px; color:#10b981;"></i> Caja Negra Audit
       </button>
@@ -800,6 +803,41 @@
             </thead>
             <tbody id="finLedgerTbody">
               <!-- Movimientos -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pestaña: Cierres Semanales y Auditorías de Fin de Semana -->
+    <div id="tab-weekly" class="fin-panel">
+      <div class="fin-card">
+        <div class="fin-card-header">
+          <div>
+            <h2 class="fin-card-title">
+              <i data-lucide="calendar-check" style="color:#38bdf8;"></i> Cortes & Cierres Semanales
+            </h2>
+            <small style="color:var(--fin-text-muted); font-size:0.78rem;">Auditoría integral cada fin de semana: balance de ingresos vs gastos, flujo libre, snapshot de billeteras y respaldo criptográfico</small>
+          </div>
+          <button id="btnFinTriggerWeeklyAudit" class="fin-btn fin-btn-primary" style="background: linear-gradient(135deg, #0ea5e9, #2563eb);">
+            <i data-lucide="sparkles" style="width:14px; height:14px;"></i> Ejecutar Cierre Semanal Ahora
+          </button>
+        </div>
+
+        <div class="fin-table-scroll" style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
+          <table style="width:100%; min-width:760px; border-collapse:collapse; font-size:0.85rem;">
+            <thead>
+              <tr style="border-bottom: 2px solid rgba(255,255,255,0.08); text-align:left; color:var(--fin-text-muted);">
+                <th style="padding: 10px 12px; width:170px;">Periodo (Semana)</th>
+                <th style="padding: 10px 12px; text-align:right;">Ingresos Totales</th>
+                <th style="padding: 10px 12px; text-align:right;">Gastos / Costos</th>
+                <th style="padding: 10px 12px; text-align:right;">Flujo Neto / Ahorro</th>
+                <th style="padding: 10px 12px;">Snapshot de Billeteras</th>
+                <th style="padding: 10px 12px;">Notas / Verificado</th>
+              </tr>
+            </thead>
+            <tbody id="finWeeklyAuditsTbody">
+              <tr><td colspan="6" style="text-align:center; padding:2rem; color:var(--fin-text-muted);">Cargando cortes semanales...</td></tr>
             </tbody>
           </table>
         </div>

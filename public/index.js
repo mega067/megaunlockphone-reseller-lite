@@ -2332,17 +2332,48 @@ if (btnResetTicketConfig) {
 }
 
 // Actualización en tiempo real de ganancia en el modal de ticket (POS)
+function updateTicketPosProfitDisplay() {
+  const charged = parseFloat(ticketClientPrice?.value) || 0;
+  const baseCost = currentTicketData ? parseFloat(currentTicketData.costCharged || currentTicketData.realCost || currentTicketData.price || 0) : 0;
+  
+  const warrantyCheck = document.getElementById('ticketWarrantyCheck');
+  const warrantyCostInput = document.getElementById('ticketWarrantyExtraCost');
+  const extraCost = (warrantyCheck && warrantyCheck.checked) ? (parseFloat(warrantyCostInput?.value) || baseCost) : 0;
+  
+  const totalCost = baseCost + extraCost;
+  const profit = charged - totalCost;
+
+  const costDisp = document.getElementById('ticketCostDisplay');
+  if (costDisp) {
+    costDisp.textContent = extraCost > 0 ? `$${totalCost.toFixed(2)} ($${baseCost.toFixed(2)} + $${extraCost.toFixed(2)} Reposición)` : `$${baseCost.toFixed(2)}`;
+  }
+
+  const profitDisp = document.getElementById('ticketProfitDisplay');
+  if (profitDisp) {
+    profitDisp.textContent = `${profit >= 0 ? '+' : ''}$${profit.toFixed(2)}`;
+    profitDisp.style.color = profit >= 0 ? '#34d399' : '#ef4444';
+  }
+}
+
 if (ticketClientPrice) {
-  ticketClientPrice.addEventListener('input', () => {
-    const charged = parseFloat(ticketClientPrice.value) || 0;
-    const itemCost = currentTicketData ? parseFloat(currentTicketData.costCharged || currentTicketData.realCost || currentTicketData.price || 0) : 0;
-    const profit = charged - itemCost;
-    const profitDisp = document.getElementById('ticketProfitDisplay');
-    if (profitDisp) {
-      profitDisp.textContent = `${profit >= 0 ? '+' : ''}$${profit.toFixed(2)}`;
-      profitDisp.style.color = profit >= 0 ? '#34d399' : '#ef4444';
+  ticketClientPrice.addEventListener('input', updateTicketPosProfitDisplay);
+}
+
+const warrantyCheckEl = document.getElementById('ticketWarrantyCheck');
+const warrantyDetailsEl = document.getElementById('ticketWarrantyDetails');
+const warrantyCostInputEl = document.getElementById('ticketWarrantyExtraCost');
+if (warrantyCheckEl) {
+  warrantyCheckEl.addEventListener('change', () => {
+    if (warrantyDetailsEl) warrantyDetailsEl.style.display = warrantyCheckEl.checked ? 'grid' : 'none';
+    if (warrantyCheckEl.checked && warrantyCostInputEl && !warrantyCostInputEl.value) {
+      const baseCost = currentTicketData ? parseFloat(currentTicketData.costCharged || currentTicketData.realCost || currentTicketData.price || 0) : 0;
+      warrantyCostInputEl.value = baseCost.toFixed(2);
     }
+    updateTicketPosProfitDisplay();
   });
+}
+if (warrantyCostInputEl) {
+  warrantyCostInputEl.addEventListener('input', updateTicketPosProfitDisplay);
 }
 
 btnGenerateTicketFinal.addEventListener('click', async () => {
@@ -2672,12 +2703,22 @@ btnGenerateTicketFinal.addEventListener('click', async () => {
     const isAdminActor = (authRole === 'admin');
 
     if (isAdminActor && registerCheck && registerCheck.checked && chargedVal > 0 && currentTicketData && authToken) {
-      const itemCost = parseFloat(currentTicketData.costCharged || currentTicketData.realCost || currentTicketData.price || 0);
+      const baseCost = parseFloat(currentTicketData.costCharged || currentTicketData.realCost || currentTicketData.price || 0);
+      const warrantyCheck = document.getElementById('ticketWarrantyCheck');
+      const warrantyCostInput = document.getElementById('ticketWarrantyExtraCost');
+      const warrantyReasonInput = document.getElementById('ticketWarrantyReason');
+      
+      const isWarranty = warrantyCheck && warrantyCheck.checked;
+      const extraCost = isWarranty ? (parseFloat(warrantyCostInput?.value) || baseCost) : 0;
+      const totalItemCost = baseCost + extraCost;
+      const warrantyReason = isWarranty ? (warrantyReasonInput?.value?.trim() || 'Garantía / Reposición de cuenta') : '';
+
       const selectedAcc = accountSelect ? accountSelect.value : 'General';
       
       let clientDetails = [];
       if (buyerPhone) clientDetails.push(`Tel: ${buyerPhone}`);
       if (buyerName) clientDetails.push(`Cliente: ${buyerName}`);
+      if (isWarranty) clientDetails.push(`⚠️ GARANTÍA APLICADA: +$${extraCost.toFixed(2)} (${warrantyReason})`);
       const clientSuffix = clientDetails.length > 0 ? ` | ${clientDetails.join(' - ')}` : '';
 
       fetch('/api/admin/finance/transaction', {
@@ -2690,9 +2731,9 @@ btnGenerateTicketFinal.addEventListener('click', async () => {
         body: JSON.stringify({
           type: 'income_ticket',
           orderId: currentTicketData.orderId,
-          serviceName: currentTicketData.serviceName,
+          serviceName: currentTicketData.serviceName + (isWarranty ? ' [Garantía Reposición]' : ''),
           chargedAmount: chargedVal,
-          costAmount: itemCost,
+          costAmount: totalItemCost,
           account: selectedAcc,
           notes: `Ticket Web #${currentTicketData.orderId} (${selectedAcc})${clientSuffix}`
         })

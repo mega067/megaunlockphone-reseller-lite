@@ -2333,12 +2333,33 @@
           </div>
         </div>
 
+        <!-- Opciones avanzadas de Garantía / Reemplazo de Renta (Doble Costo a tu ganancia) -->
+        <div id="ticketWarrantyBlock" style="margin-top: 10px; background: rgba(239, 68, 68, 0.08); border: 1px dashed rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 10px 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label style="font-size: 0.8rem; font-weight: 700; color: #f87171; display: flex; align-items: center; gap: 6px; margin: 0; cursor: pointer;">
+              <input type="checkbox" id="ticketWarrantyCheck" style="accent-color: #ef4444;">
+              🛡️ Aplicar Garantía / Reposición (Consumió 2da Renta)
+            </label>
+            <span style="font-size: 0.72rem; color: #94a3b8;">Carga el 2do costo a tu ganancia</span>
+          </div>
+          <div id="ticketWarrantyDetails" style="display: none; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px;">
+            <div>
+              <label style="font-size: 0.74rem; color: #cbd5e1; display: block; margin-bottom: 2px;">Costo Extra Reposición (MXN):</label>
+              <input type="number" id="ticketWarrantyExtraCost" class="custom-field-input" step="any" placeholder="0.00" style="padding: 6px 10px; font-size: 0.85rem;">
+            </div>
+            <div>
+              <label style="font-size: 0.74rem; color: #cbd5e1; display: block; margin-bottom: 2px;">Motivo / Nota de Garantía:</label>
+              <input type="text" id="ticketWarrantyReason" class="custom-field-input" placeholder="Ej: Cuenta caída, reemplazo de 6h" style="padding: 6px 10px; font-size: 0.85rem;">
+            </div>
+          </div>
+        </div>
+
         <!-- Vista previa de margen POS en tiempo real -->
         <div id="ticketPosProfitBox" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px; padding: 10px 14px; margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
           <div style="font-size: 0.8rem; color: #cbd5e1;">
             <span>Costo Servidor: <strong id="ticketCostDisplay" style="color: #f87171;">$0.00</strong></span>
             <span style="margin: 0 8px; opacity: 0.4;">|</span>
-            <span>Ganancia Estimada: <strong id="ticketProfitDisplay" style="color: #34d399;">$0.00</strong></span>
+            <span>Ganancia Neta: <strong id="ticketProfitDisplay" style="color: #34d399;">$0.00</strong></span>
           </div>
           <label style="font-size: 0.78rem; color: #94a3b8; display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0;">
             <input type="checkbox" id="ticketRegisterFinanceCheck" checked style="accent-color: #10b981;">

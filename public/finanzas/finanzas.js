@@ -73,6 +73,7 @@
         renderAccounts(cachedAccounts);
         renderFinanceServerBalances(dataDash.serverBalances || []);
         renderLedger(dataDash.recent || []);
+        renderWeeklyAudits(dataDash.weeklyAudits || []);
         populateAccountSelects(cachedAccounts);
         renderConfigSettings(dataDash.config || {});
       }
@@ -381,6 +382,66 @@
     }
     if (window.lucide) lucide.createIcons();
   }
+
+  function renderWeeklyAudits(audits) {
+    const tbody = document.getElementById('finWeeklyAuditsTbody');
+    if (!tbody) return;
+
+    if (!audits || audits.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6" style="text-align:center; padding:2.5rem 1rem; color:var(--fin-text-muted);">
+            <i data-lucide="calendar" style="width:32px; height:32px; margin-bottom:8px; opacity:0.4; color:#38bdf8;"></i>
+            <div>No hay cierres semanales ejecutados todavía.</div>
+            <small style="color:var(--fin-text-sub);">Presiona "Ejecutar Cierre Semanal Ahora" para congelar el balance de la semana.</small>
+          </td>
+        </tr>
+      `;
+      if (window.lucide) lucide.createIcons();
+      return;
+    }
+
+    tbody.innerHTML = audits.map(a => {
+      let snapshotHtml = '<span style="color:#64748b; font-size:0.75rem;">Sin snapshot</span>';
+      try {
+        const snap = typeof a.accountsSnapshot === 'string' ? JSON.parse(a.accountsSnapshot) : (a.accountsSnapshot || []);
+        if (Array.isArray(snap) && snap.length > 0) {
+          snapshotHtml = snap.map(acc => {
+            const bal = parseFloat(acc.balance || 0);
+            return `<span style="display:inline-block; margin:2px 4px; padding:2px 6px; background:rgba(255,255,255,0.05); border-radius:4px; font-size:0.72rem; color:#cbd5e1;"><strong>${escapeHtml(acc.name)}:</strong> <span style="color:#38bdf8;">${formatMoney(bal)}</span></span>`;
+          }).join('');
+        }
+      } catch (e) {}
+
+      const savings = parseFloat(a.netSavings || 0);
+      return `
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+          <td style="padding:12px; font-weight:700; color:#f8fafc; font-family:'Outfit',sans-serif;">
+            📅 ${escapeHtml(a.weekStart)} <span style="color:var(--fin-text-sub); font-weight:normal;">al</span> ${escapeHtml(a.weekEnd)}
+          </td>
+          <td style="padding:12px; text-align:right; font-weight:800; color:#10b981; font-family:'Outfit',sans-serif;">
+            +${formatMoney(a.totalIncome)}
+          </td>
+          <td style="padding:12px; text-align:right; font-weight:700; color:#f87171; font-family:'Outfit',sans-serif;">
+            -${formatMoney(a.totalExpenses)}
+          </td>
+          <td style="padding:12px; text-align:right; font-weight:900; color:${savings >= 0 ? '#38bdf8' : '#f43f5e'}; font-family:'Outfit',sans-serif;">
+            ${formatMoney(savings)}
+          </td>
+          <td style="padding:12px; max-width:320px;">
+            ${snapshotHtml}
+          </td>
+          <td style="padding:12px; font-size:0.78rem; color:#94a3b8;">
+            <div>${escapeHtml(a.notes || 'Cierre Semanal')}</div>
+            <div style="font-size:0.7rem; color:var(--fin-text-sub);">Auditado por: <strong>${escapeHtml(a.verifiedBy || 'Admin')}</strong></div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    if (window.lucide) lucide.createIcons();
+  }
+
   async function loadMobilePlans() {
     const listCont = document.getElementById('finMobilePlansContainerList');
     if (!listCont) return;
@@ -2622,6 +2683,39 @@
         await loadAllFinanceData();
         btnRefServers.innerHTML = '<i data-lucide="refresh-cw" style="width:13px; height:13px;"></i> Actualizar Servidores';
         if (window.lucide) lucide.createIcons();
+      });
+    }
+
+    // Botón para ejecutar Cierre Semanal
+    const btnTriggerWeekly = document.getElementById('btnFinTriggerWeeklyAudit');
+    if (btnTriggerWeekly) {
+      btnTriggerWeekly.addEventListener('click', async () => {
+        if (!confirm('¿Deseas ejecutar y congelar el corte de la semana actual?\nSe calculará el flujo de ingresos vs egresos, se guardará el snapshot de tus billeteras y se creará un respaldo inmutable.')) {
+          return;
+        }
+        btnTriggerWeekly.innerHTML = '<i data-lucide="loader" style="width:14px; height:14px; animation:spin 1s linear infinite;"></i> Auditando...';
+        btnTriggerWeekly.disabled = true;
+
+        try {
+          const res = await fetchWithAuth('/api/admin/finance/weekly-audit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ notes: 'Cierre semanal verificado manualmente desde panel' })
+          });
+          const d = await res.json();
+          if (res.ok && d.success) {
+            alert(`✅ ¡Cierre semanal ejecutado con éxito!\nPeriodo: ${d.audit.weekStart} al ${d.audit.weekEnd}\nIngresos: ${formatMoney(d.audit.totalIncome)}\nGastos: ${formatMoney(d.audit.totalExpenses)}\nFlujo Neto: ${formatMoney(d.audit.netSavings)}`);
+            await loadAllFinanceData();
+          } else {
+            alert(d.error || 'Error al ejecutar cierre semanal');
+          }
+        } catch (e) {
+          alert('Error de conexión al ejecutar cierre semanal');
+        } finally {
+          btnTriggerWeekly.innerHTML = '<i data-lucide="sparkles" style="width:14px; height:14px;"></i> Ejecutar Cierre Semanal Ahora';
+          btnTriggerWeekly.disabled = false;
+          if (window.lucide) lucide.createIcons();
+        }
       });
     }
   });
