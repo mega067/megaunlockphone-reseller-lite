@@ -255,6 +255,7 @@ module.exports = function(app, deps) {
           trackingNumber,
           senderBankName,
           receiverBankName,
+          isDirectProvider: !!providerKey,
           note: `Recarga SPEI verificada en ${receiverBankName || 'NU/STP'}`
         });
       }

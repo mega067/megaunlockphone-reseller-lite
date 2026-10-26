@@ -268,22 +268,48 @@ function logRecharge(userId, username, amount, type = 'MANUAL_ADMIN', adminUsern
     createAutoBackup(numAmount > 0 ? 'Recarga_Saldo_User_' + userId : 'Deduccion_Saldo_User_' + userId);
   } catch(e) {}
 
-  // Sincronizar automáticamente con el Módulo de Finanzas: los fondos de recarga de clientes son saldo en el Servidor
+  // Sincronizar automáticamente con el Módulo de Finanzas:
+  // Distinguir si el cliente transfirió a la cuenta bancaria del admin (saldo cedible) o directo al proveedor/servidor
   if (numAmount > 0) {
     try {
       const financeManager = require('./financeManager');
-      // Las recargas de saldo de clientes son saldo asignado en el Servidor, NO en la cuenta bancaria personal del admin
-      const targetAccountName = 'Server (DHRU / Fondos)';
+      const isDirectServer = !!extra.isDirectProvider || String(extra.receiverBankName || '').toLowerCase().includes('proveedor');
+      
+      let targetAccountName = 'Server (DHRU / Fondos)';
+      let isPersonalIncome = false;
+
+      if (!isDirectServer && extra.receiverBankName) {
+        // El cliente transfirió a una cuenta personal del admin (Nu Débito, Revolut, BBVA, etc.)
+        const rBank = String(extra.receiverBankName).toUpperCase();
+        if (rBank.includes('NU')) {
+          targetAccountName = 'Nu Débito / Cuenta';
+          isPersonalIncome = true;
+        } else if (rBank.includes('REVOLUT') || rBank.includes('STP')) {
+          targetAccountName = 'Revolut';
+          isPersonalIncome = true;
+        } else if (rBank.includes('BBVA')) {
+          targetAccountName = 'BBVA';
+          isPersonalIncome = true;
+        } else if (rBank.includes('MERCADO')) {
+          targetAccountName = 'Mercado Pago';
+          isPersonalIncome = true;
+        } else if (rBank.includes('EFECTIVO')) {
+          targetAccountName = 'Efectivo / Caja';
+          isPersonalIncome = true;
+        }
+      }
 
       financeManager.recordTransaction({
         type: 'income_ticket',
         serviceName: `Recarga Saldo S${serverId} (${username || userId})`,
         chargedAmount: numAmount,
         costAmount: 0,
-        reinvestPercent: 100, // Saldo en servidor disponible para el reseller/usuario
+        // Si el dinero entra a tu cuenta personal para ceder créditos, el dinero es tuyo (0% reinversión forzada para no inflar la Cajita)
+        // Si fue directo al servidor, es 100% fondo del servidor
+        reinvestPercent: isPersonalIncome ? 0 : 100,
         account: targetAccountName,
         category: 'servidores',
-        notes: `Depósito cliente en servidor ${extra.trackingNumber ? 'Rastreo: ' + extra.trackingNumber : 'Ajuste Admin'}`
+        notes: `Recarga ${isPersonalIncome ? 'en cuenta personal del admin' : 'directa al servidor'} | ${extra.trackingNumber ? 'Rastreo: ' + extra.trackingNumber : 'Ajuste Admin'}`
       });
     } catch(finErr) {
       console.warn('[FINANCE RECHARGE SYNC ERR]', finErr.message);
