@@ -113,23 +113,28 @@ function saveAccount(accData) {
   const currentDebt = Math.max(0, parseFloat(accData.currentDebt !== undefined ? accData.currentDebt : accData.debt) || 0);
   const minPayment = Math.max(0, parseFloat(accData.minPayment) || 0);
 
-  const existing = sqliteDb.prepare('SELECT id FROM FinanceAccounts WHERE id = ?').get(id);
-  if (existing) {
+  // Comprobar si existe por ID o por Nombre (incluso si estaba archivada)
+  const existingById = sqliteDb.prepare('SELECT * FROM FinanceAccounts WHERE id = ?').get(id);
+  const existingByName = sqliteDb.prepare('SELECT * FROM FinanceAccounts WHERE LOWER(name) = LOWER(?)').get(name);
+
+  const target = existingById || existingByName;
+
+  if (target) {
     sqliteDb.prepare(`
       UPDATE FinanceAccounts 
       SET name = ?, type = ?, currency = ?, currentBalance = ?, color = ?, icon = ?, description = ?,
           creditLimit = ?, cutoffDay = ?, paymentDueDay = ?, currentDebt = ?, minPayment = ?,
-          updatedAt = datetime('now')
+          isArchived = 0, updatedAt = datetime('now')
       WHERE id = ?
-    `).run(name, type, currency, currentBalance, color, icon, description, creditLimit, cutoffDay, paymentDueDay, currentDebt, minPayment, id);
+    `).run(name, type, currency, currentBalance, color, icon, description, creditLimit, cutoffDay, paymentDueDay, currentDebt, minPayment, target.id);
+    return sqliteDb.prepare('SELECT * FROM FinanceAccounts WHERE id = ?').get(target.id);
   } else {
     sqliteDb.prepare(`
-      INSERT INTO FinanceAccounts (id, name, type, currency, initialBalance, currentBalance, color, icon, description, creditLimit, cutoffDay, paymentDueDay, currentDebt, minPayment, createdAt, updatedAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+      INSERT INTO FinanceAccounts (id, name, type, currency, initialBalance, currentBalance, color, icon, description, creditLimit, cutoffDay, paymentDueDay, currentDebt, minPayment, isArchived, createdAt, updatedAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, datetime('now'), datetime('now'))
     `).run(id, name, type, currency, initialBalance, currentBalance, color, icon, description, creditLimit, cutoffDay, paymentDueDay, currentDebt, minPayment);
+    return sqliteDb.prepare('SELECT * FROM FinanceAccounts WHERE id = ?').get(id);
   }
-
-  return sqliteDb.prepare('SELECT * FROM FinanceAccounts WHERE id = ?').get(id);
 }
 
 /**

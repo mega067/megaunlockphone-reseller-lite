@@ -909,22 +909,22 @@
           <div class="fin-form-group">
             <label>Tipo de Cuenta</label>
             <select id="accType" class="fin-select">
-              <option value="bank">Banco / Débito</option>
-              <option value="card">Tarjeta de Crédito</option>
+              <option value="bank">Cuenta Bancaria / Débito (Saldo real en cuenta)</option>
+              <option value="card">Tarjeta de Crédito / Plazos (Línea o tarjeta física)</option>
               <option value="cash">Efectivo / Caja</option>
-              <option value="emergency">Fondo Emergencia</option>
-              <option value="investment">Inversión / Cetes</option>
+              <option value="emergency">Fondo de Emergencia</option>
+              <option value="investment">Inversión / Rendimientos</option>
             </select>
           </div>
           <div class="fin-form-group">
             <label>Saldo Actual Disponible (MXN) *</label>
-            <input type="number" id="accBalance" class="fin-input" step="0.5" value="0.00" required>
-            <small style="color:var(--fin-text-sub); font-size:0.75rem;">Monto real que tienes ahorita en tu cuenta.</small>
+            <input type="number" id="accBalance" class="fin-input" step="any" min="0" value="0.00" required>
+            <small style="color:var(--fin-text-sub); font-size:0.75rem;">Dinero que tienes listo para gastar con tu tarjeta o cuenta.</small>
           </div>
         </div>
         <div class="fin-form-group">
           <label>Descripción o Notas (Opcional)</label>
-          <input type="text" id="accDesc" class="fin-input" placeholder="Ej: Cuenta principal para pagos">
+          <input type="text" id="accDesc" class="fin-input" placeholder="Ej: Tarjeta y cuenta Nu sincronizadas para compras">
         </div>
         <div style="display:flex; justify-content:flex-end; gap:0.6rem; margin-top:1.2rem;">
           <button type="button" class="fin-btn fin-btn-soft" onclick="window.finCloseModal('modalNewAccount')">Cancelar</button>
@@ -1042,6 +1042,6 @@
     </div>
   </div>
 
-  <script src="/finanzas/finanzas.js?v=101"></script>
+  <script src="/finanzas/finanzas.js?v=102"></script>
 </body>
 </html>
