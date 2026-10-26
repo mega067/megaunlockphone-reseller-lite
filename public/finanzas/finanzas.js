@@ -91,15 +91,28 @@
 
   function renderGlobalMetrics(dash) {
     const statNetWorth = document.getElementById('statFinNetWorth');
+    const statUsableBreakdown = document.getElementById('statFinUsableBreakdown');
     if (statNetWorth) {
       let netTotal = 0;
+      let usableTotal = 0;
+      let savingsTotal = 0;
+
       (dash.accounts || []).forEach(a => {
         const isCreditOrCard = a.type === 'credit' || a.type === 'card' || (a.creditLimit && parseFloat(a.creditLimit) > 0);
         if (!isCreditOrCard) {
-          netTotal += parseFloat(a.balance || a.currentBalance || 0);
+          const bal = parseFloat(a.balance || a.currentBalance || 0);
+          netTotal += bal;
+          if (a.type === 'savings' || a.name.toLowerCase().includes('cajita')) {
+            savingsTotal += bal;
+          } else {
+            usableTotal += bal;
+          }
         }
       });
       statNetWorth.textContent = formatMoney(netTotal);
+      if (statUsableBreakdown) {
+        statUsableBreakdown.innerHTML = `Usable en tarjeta: <strong style="color:#38bdf8;">${formatMoney(usableTotal)}</strong> • En Cajitas: <strong style="color:#f472b6;">${formatMoney(savingsTotal)}</strong>`;
+      }
     }
 
     const statGross = document.getElementById('statFinGrossProfit');
@@ -153,7 +166,12 @@
     ];
 
     const optionsHtml = accounts.map(a => {
-      return `<option value="${escapeHtml(a.name)}">${escapeHtml(a.name)} (${formatMoney(a.balance || 0)})</option>`;
+      const isCard = a.type === 'card' || a.type === 'credit';
+      const isSavings = a.type === 'savings' || a.name.toLowerCase().includes('cajita');
+      let typeTag = '';
+      if (isSavings) typeTag = ' [🔒 Cajita Apartada]';
+      else if (isCard) typeTag = ' [💳 Tarjeta]';
+      return `<option value="${escapeHtml(a.name)}">${escapeHtml(a.name)}${typeTag} (${formatMoney(a.balance || 0)})</option>`;
     }).join('');
 
     selects.forEach(sel => {
@@ -210,6 +228,7 @@
 
     grid.innerHTML = accounts.map(acc => {
       const isCard = acc.type === 'card' || acc.type === 'credit';
+      const isSavings = acc.type === 'savings' || acc.name.toLowerCase().includes('cajita');
       const lineLimit = parseFloat(acc.creditLimit || 0);
       const debt = parseFloat(acc.currentDebt || 0);
       // Para tarjeta de crédito, el disponible real es la línea menos la deuda
@@ -217,33 +236,63 @@
         ? Math.max(0, parseFloat((lineLimit - debt).toFixed(2)))
         : parseFloat(acc.balance !== undefined ? acc.balance : (acc.currentBalance || 0));
       const profit = parseFloat(acc.totalProfit !== undefined ? acc.totalProfit : (acc.netProfit || 0));
-      const badgeColor = isCard ? '#8218fc' : (acc.type === 'cash' ? '#f59e0b' : '#10b981');
-      const badgeBg = isCard ? 'rgba(130,24,252,0.14)' : (acc.type === 'cash' ? 'rgba(245,158,11,0.14)' : 'rgba(16,185,129,0.14)');
+      
+      let badgeLabel = 'Cuenta Bancaria';
+      let badgeColor = '#10b981';
+      let badgeBg = 'rgba(16,185,129,0.14)';
+      let subHint = 'Saldo disponible para gastar';
+
+      if (isCard) {
+        badgeLabel = 'Tarjeta de Crédito';
+        badgeColor = '#8218fc';
+        badgeBg = 'rgba(130,24,252,0.14)';
+        subHint = lineLimit > 0 ? `Línea: ${formatMoney(lineLimit)} ${debt > 0 ? `• Deuda: ${formatMoney(debt)}` : ''}` : 'Crédito disponible';
+      } else if (isSavings) {
+        badgeLabel = 'Cajita Nu / Ahorro Apartado';
+        badgeColor = '#ec4899';
+        badgeBg = 'rgba(236,72,153,0.15)';
+        subHint = '🔒 Dinero apartado (No gastable en tarjeta)';
+      } else if (acc.type === 'cash') {
+        badgeLabel = 'Efectivo';
+        badgeColor = '#f59e0b';
+        badgeBg = 'rgba(245,158,11,0.14)';
+        subHint = 'Dinero físico en mano';
+      } else if (acc.type === 'emergency') {
+        badgeLabel = 'Fondo Emergencia';
+        badgeColor = '#ef4444';
+        badgeBg = 'rgba(239,68,68,0.14)';
+        subHint = 'Fondo reservado';
+      } else if (acc.type === 'investment') {
+        badgeLabel = 'Inversión';
+        badgeColor = '#38bdf8';
+        badgeBg = 'rgba(56,189,248,0.14)';
+        subHint = 'Generando rendimientos';
+      }
 
       return `
-        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 1.25rem; display:flex; flex-direction:column; justify-content:space-between; position:relative; overflow:hidden;">
+        <div style="background: ${isSavings ? 'linear-gradient(145deg, rgba(15, 23, 42, 0.85), rgba(236, 72, 153, 0.08))' : 'rgba(15, 23, 42, 0.7)'}; border: 1px solid ${isSavings ? 'rgba(236, 72, 153, 0.3)' : 'rgba(255, 255, 255, 0.08)'}; border-radius: 16px; padding: 1.25rem; display:flex; flex-direction:column; justify-content:space-between; position:relative; overflow:hidden;">
           <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.8rem;">
             <div>
-              <span class="fin-badge" style="background:${badgeBg}; color:${badgeColor};">${isCard ? 'Tarjeta de Crédito' : escapeHtml(acc.type || 'Cuenta')}</span>
+              <span class="fin-badge" style="background:${badgeBg}; color:${badgeColor};">${badgeLabel}</span>
               <h3 style="margin:4px 0 0; font-size:1.1rem; font-weight:700; color:#f8fafc;">${escapeHtml(acc.name)}</h3>
             </div>
             <div style="display:flex; align-items:center; gap:4px;">
-              <button onclick="window.finOpenEditAccount('${acc.id}')" title="Editar cuenta y saldo" style="background:rgba(255,255,255,0.06); border:none; border-radius:8px; color:#cbd5e1; cursor:pointer; font-size:0.85rem; padding:5px 8px;">
+              <button onclick="window.finOpenEditAccount('${acc.id}')" title="Editar cuenta o cajita" style="background:rgba(255,255,255,0.06); border:none; border-radius:8px; color:#cbd5e1; cursor:pointer; font-size:0.85rem; padding:5px 8px;">
                 ✏️
               </button>
-              <button onclick="window.finDeleteAccount('${acc.id}', '${escapeHtml(acc.name)}')" title="Archivar cuenta" style="background:rgba(255,255,255,0.06); border:none; border-radius:8px; color:var(--fin-text-sub); cursor:pointer; font-size:0.85rem; padding:5px 8px;">
+              <button onclick="window.finDeleteAccount('${acc.id}', '${escapeHtml(acc.name)}')" title="Archivar cuenta o cajita" style="background:rgba(255,255,255,0.06); border:none; border-radius:8px; color:var(--fin-text-sub); cursor:pointer; font-size:0.85rem; padding:5px 8px;">
                 🗑️
               </button>
             </div>
           </div>
           <div style="margin-bottom:0.75rem;">
-            <div style="font-size:1.65rem; font-weight:800; color:#ffffff; font-family:'Outfit',sans-serif;">${formatMoney(balance)}</div>
-            <small style="color:var(--fin-text-muted); font-size:0.75rem;">
-              ${isCard && lineLimit > 0 ? `Línea total: ${formatMoney(lineLimit)} ${debt > 0 ? `• Deuda: ${formatMoney(debt)}` : ''}` : 'Saldo actual disponible'}
+            <div style="font-size:1.65rem; font-weight:800; color:${isSavings ? '#f472b6' : '#ffffff'}; font-family:'Outfit',sans-serif;">${formatMoney(balance)}</div>
+            <small style="color:${isSavings ? '#ec4899' : 'var(--fin-text-muted)'}; font-size:0.75rem; font-weight:${isSavings ? '600' : 'normal'};">
+              ${subHint}
             </small>
           </div>
           <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px dashed rgba(255,255,255,0.08); padding-top:0.6rem; font-size:0.78rem;">
-            <span style="color:var(--fin-text-muted);">${isCard ? 'Disposición / Margen:' : 'Movimientos / Margen:'}</span>
+            <span style="color:var(--fin-text-muted);">${isCard ? 'Disposición / Margen:' : (isSavings ? 'Rendimientos / Margen:' : 'Movimientos / Margen:')}</span>
             <strong style="color:${profit >= 0 ? '#10b981' : '#f43f5e'};">${formatMoney(profit)}</strong>
           </div>
         </div>
@@ -961,9 +1010,28 @@
   window.finOpenNewAccount = function() {
     document.getElementById('formNewAccount').reset();
     document.getElementById('accId').value = '';
+    document.getElementById('accType').value = 'bank';
     document.getElementById('modalAccountTitle').textContent = 'Nueva Billetera / Cuenta';
     document.getElementById('btnSubmitAccount').textContent = 'Crear Cuenta';
     window.finOpenModal('modalNewAccount');
+  };
+
+  window.finOpenNewCajita = function() {
+    document.getElementById('formNewAccount').reset();
+    document.getElementById('accId').value = '';
+    document.getElementById('modalAccountTitle').textContent = 'Nueva Cajita Nu / Apartado';
+    document.getElementById('accName').value = 'Cajita Nu - ';
+    document.getElementById('accType').value = 'savings';
+    document.getElementById('accDesc').value = 'Dinero apartado en Cajita Nu (Generando rendimientos, no gastable con tarjeta)';
+    document.getElementById('btnSubmitAccount').textContent = 'Crear Cajita';
+    window.finOpenModal('modalNewAccount');
+    setTimeout(() => {
+      const nameInput = document.getElementById('accName');
+      if (nameInput) {
+        nameInput.focus();
+        nameInput.setSelectionRange(nameInput.value.length, nameInput.value.length);
+      }
+    }, 150);
   };
 
   window.finOpenEditAccount = function(id) {
@@ -1666,5 +1734,14 @@
     initTabs();
     initSplitSyncListeners();
     loadAllFinanceData();
+
+    const btnNewAcc = document.getElementById('btnFinNewAccount');
+    if (btnNewAcc) {
+      btnNewAcc.addEventListener('click', () => window.finOpenNewAccount());
+    }
+    const btnNewCajita = document.getElementById('btnFinNewCajita');
+    if (btnNewCajita) {
+      btnNewCajita.addEventListener('click', () => window.finOpenNewCajita());
+    }
   });
 })();

@@ -78,11 +78,12 @@ function getAllAccounts() {
     SELECT * FROM FinanceAccounts WHERE isArchived = 0 ORDER BY 
       CASE type 
         WHEN 'bank' THEN 1 
-        WHEN 'card' THEN 2 
-        WHEN 'emergency' THEN 3 
-        WHEN 'investment' THEN 4 
-        WHEN 'cash' THEN 5 
-        ELSE 6 
+        WHEN 'savings' THEN 2
+        WHEN 'card' THEN 3 
+        WHEN 'emergency' THEN 4 
+        WHEN 'investment' THEN 5 
+        WHEN 'cash' THEN 6 
+        ELSE 7 
       END, name ASC
   `).all();
 }
@@ -103,8 +104,8 @@ function saveAccount(accData) {
     : (accData.balance !== undefined ? parseFloat(accData.balance) : parseFloat(accData.initialBalance) || 0);
   const initialBalance = parseFloat(accData.initialBalance) || rawBalance || 0;
   const currentBalance = rawBalance || 0;
-  const color = accData.color || (type === 'credit' ? '#ec4899' : '#38bdf8');
-  const icon = accData.icon || (type === 'credit' ? 'credit-card' : 'wallet');
+  const color = accData.color || (type === 'credit' ? '#8218fc' : (type === 'savings' ? '#ec4899' : '#38bdf8'));
+  const icon = accData.icon || (type === 'credit' ? 'credit-card' : (type === 'savings' ? 'archive' : 'wallet'));
   const description = accData.description || '';
 
   // Credit Card fields

@@ -506,10 +506,10 @@
     <div class="fin-balance-hero">
       <div class="fin-hero-main">
         <div class="fin-hero-title">
-          <i data-lucide="sparkles" style="width:15px; height:15px;"></i> Patrimonio Neto Propio (Dinero Real)
+          <i data-lucide="sparkles" style="width:15px; height:15px;"></i> Patrimonio Neto Propio (Total Líquido)
         </div>
         <div class="fin-hero-amount" id="statFinNetWorth">$0.00</div>
-        <small style="color:#94a3b8; font-size:0.75rem;">Efectivo y dinero real en bancos</small>
+        <small id="statFinUsableBreakdown" style="color:#94a3b8; font-size:0.75rem;">Dinero usable en tarjeta: $0.00 • Apartado en Cajitas: $0.00</small>
       </div>
       <div class="fin-quick-stats">
         <div class="fin-quick-stat-item green">
@@ -576,6 +576,9 @@
             <small style="color:var(--fin-text-muted); font-size:0.78rem;">Saldos sincronizados automáticamente ante cualquier compra, recarga o abono</small>
           </div>
           <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+            <button id="btnFinNewCajita" class="fin-btn fin-btn-primary" style="background:linear-gradient(135deg, #ec4899, #be185d);">
+              <i data-lucide="archive" style="width:14px; height:14px;"></i> + Nueva Cajita Nu
+            </button>
             <button id="btnFinNewAccount" class="fin-btn fin-btn-primary">
               <i data-lucide="plus" style="width:14px; height:14px;"></i> Nueva Cuenta
             </button>
@@ -971,7 +974,8 @@
           <div class="fin-form-group">
             <label>Tipo de Cuenta</label>
             <select id="accType" class="fin-select">
-              <option value="bank">Cuenta Bancaria / Débito (Saldo real en cuenta)</option>
+              <option value="bank">Cuenta Bancaria / Débito (Saldo real gastable)</option>
+              <option value="savings">Cajita de Ahorro / Apartado Nu (Ahorro separado / no usable en tarjeta)</option>
               <option value="card">Tarjeta de Crédito / Plazos (Línea o tarjeta física)</option>
               <option value="cash">Efectivo / Caja</option>
               <option value="emergency">Fondo de Emergencia</option>
