@@ -207,8 +207,11 @@ let currentTicketData = null;
 
 // Application State
 let productsList = [];
+window.productsList = productsList;
 let uniqueGroups = new Set();
+window.uniqueGroups = uniqueGroups;
 const frontendCatalogCache = {}; // Cache products per server
+window.frontendCatalogCache = frontendCatalogCache;
 let globalApiCurrency = 'MXN'; // Hardcoded to MXN since backend converts all prices
 let globalApiCreditRaw = 0; // Store the raw user credit balance for comparison
 

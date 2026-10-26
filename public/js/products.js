@@ -159,6 +159,11 @@ async function syncProducts(shouldPersist = false) {
     }
 
 
+    window.productsList = productsList;
+    if (window.MegaApp && window.MegaApp.State) {
+      window.MegaApp.State.productsList = productsList;
+    }
+
     productsList.forEach(p => {
       if (p.group) uniqueGroups.add(p.group);
     });

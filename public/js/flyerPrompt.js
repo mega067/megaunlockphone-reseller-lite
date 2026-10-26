@@ -101,11 +101,44 @@
     },
 
     getAllProducts() {
+      // 1. Si window.productsList está cargado
       if (window.productsList && Array.isArray(window.productsList) && window.productsList.length > 0) {
         return window.productsList;
       }
-      if (window.MegaApp && window.MegaApp.State && Array.isArray(window.MegaApp.State.productsList)) {
+      // 2. Si MegaApp.State tiene la lista
+      if (window.MegaApp && window.MegaApp.State && Array.isArray(window.MegaApp.State.productsList) && window.MegaApp.State.productsList.length > 0) {
         return window.MegaApp.State.productsList;
+      }
+      // 3. Si existe catálogo en frontendCatalogCache (de cualquier servidor 1, 2 o 3)
+      if (typeof frontendCatalogCache === 'object' && frontendCatalogCache !== null) {
+        for (const k in frontendCatalogCache) {
+          const entry = frontendCatalogCache[k];
+          if (entry && entry.data && Array.isArray(entry.data.SUCCESS)) {
+            const listObj = entry.data.SUCCESS[0]?.LIST;
+            if (listObj) {
+              const extracted = [];
+              for (const gk in listObj) {
+                const grp = listObj[gk];
+                const gName = grp.GROUPNAME || gk;
+                if (grp.SERVICES && typeof grp.SERVICES === 'object') {
+                  for (const sid in grp.SERVICES) {
+                    const item = grp.SERVICES[sid];
+                    extracted.push({
+                      serviceid: item.SERVICEID || sid,
+                      service: item.SERVICENAME || item.SERVICE || 'Sin nombre',
+                      group: item._CUSTOM_GROUP || gName,
+                      originalGroup: item._ORIGINAL_GROUP || gName,
+                      credit: item.CREDIT || '0.00',
+                      time: item.TIME || 'N/A',
+                      rawItem: item
+                    });
+                  }
+                }
+              }
+              if (extracted.length > 0) return extracted;
+            }
+          }
+        }
       }
       return [];
     },
@@ -114,19 +147,29 @@
       const container = document.getElementById('flyerProductSearchResults');
       if (!container) return;
 
-      const q = (query || '').toLowerCase().trim();
+      const rawQ = (query || '').trim();
+      const q = rawQ.toLowerCase();
       const all = this.getAllProducts();
 
-      // Filtrar los primeros 25 que coincidan
+      // Si aún no hay catálogo cargado en memoria, avisar al usuario
+      if (all.length === 0) {
+        container.innerHTML = `<div style="color: #cbd5e1; font-size: 0.8rem; padding: 12px; text-align: center;">Cargando catálogo de productos... Si tarda, cambia de servidor o espera un segundo.</div>`;
+        return;
+      }
+
+      // Filtrar los primeros 30 que coincidan por ID exacto, parcial o nombre/grupo
       const filtered = all.filter(p => {
-        const idMatch = String(p.serviceid).includes(q);
-        const nameMatch = (p.service || '').toLowerCase().includes(q);
-        const groupMatch = (p.group || '').toLowerCase().includes(q);
-        return !q || idMatch || nameMatch || groupMatch;
-      }).slice(0, 25);
+        if (!q) return true;
+        const sid = String(p.serviceid || '').toLowerCase();
+        const rawSid = String(p.rawItem?.SERVICEID || '').toLowerCase();
+        const sName = String(p.service || '').toLowerCase();
+        const sGroup = String(p.group || '').toLowerCase();
+
+        return sid === q || rawSid === q || sid.includes(q) || rawSid.includes(q) || sName.includes(q) || sGroup.includes(q);
+      }).slice(0, 30);
 
       if (filtered.length === 0) {
-        container.innerHTML = `<div style="color: #64748b; font-size: 0.8rem; padding: 8px; text-align: center;">No se encontraron servicios con "${query}"</div>`;
+        container.innerHTML = `<div style="color: #64748b; font-size: 0.8rem; padding: 12px; text-align: center;">No se encontraron servicios con "${escapeHtml(rawQ)}"</div>`;
         return;
       }
 
