@@ -536,10 +536,23 @@ async function getFinanceSummary(filterOptions = {}) {
 
   const totalTicketServerCost = parseFloat(totalRow.totalTicketServerCost || 0);
   const totalReinvest = parseFloat(totalRow.totalReinvest || 0);
-  // Fondo meta total que las ventas del negocio exigen apartar (costo consumido + utilidades de reinversión)
+  
+  // Total inyectado/fondeado directamente a los servidores GSM desde cuentas propias
+  const serverInjectionsRow = sqliteDb.prepare(`
+    SELECT COALESCE(SUM(costAmount), 0) as totalInjected
+    FROM FinanceLedger
+    WHERE type = 'transfer' AND (destAccount = 'acc_server' OR LOWER(serviceName) LIKE '%fondeo%' OR LOWER(serviceName) LIKE '%servidor%')
+  `).get();
+  const totalInjectedToServer = parseFloat(serverInjectionsRow?.totalInjected || 0);
+
+  // Fondo meta total que las ventas exigen apartar (costo consumido + utilidades de reinversión)
+  // MENOS lo que ya inyectaste directamente al servidor o lo que ya tienes apartado en Cajitas
   const cajitaTargetFund = parseFloat((totalTicketServerCost + totalReinvest).toFixed(2));
-  // Monto pendiente que aún no has movido a tu Cajita Nu
-  const cajitaPendingToMove = Math.max(0, parseFloat((cajitaTargetFund - cajitaActualBalance).toFixed(2)));
+  
+  // Si ya inyectaste saldo por adelantado al servidor (ej: $100 MXN a Omega), ese saldo cubre con creces el fondo meta requerido
+  const totalCoveredForServers = cajitaActualBalance + totalInjectedToServer;
+  const cajitaPendingToMove = Math.max(0, parseFloat((cajitaTargetFund - totalCoveredForServers).toFixed(2)));
+  const serverFundSurplus = Math.max(0, parseFloat((totalCoveredForServers - cajitaTargetFund).toFixed(2)));
 
   return {
     config,
@@ -553,6 +566,8 @@ async function getFinanceSummary(filterOptions = {}) {
       totalTicketServerCost: totalTicketServerCost,
       totalCajitaServerFund: cajitaTargetFund,
       cajitaActualBalance: cajitaActualBalance,
+      totalInjectedToServer: totalInjectedToServer,
+      serverFundSurplus: serverFundSurplus,
       cajitaTargetFund: cajitaTargetFund,
       cajitaPendingToMove: cajitaPendingToMove
     },
