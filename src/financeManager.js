@@ -330,6 +330,18 @@ function recordTransaction(data) {
           WHERE id = ?
         `).run(chargedAmount, chargedAmount, targetOrigin.id);
       }
+    } else if (type === 'adjustment') {
+      if (targetOrigin) {
+        // En un ajuste/reembolso, chargedAmount es negativo o el monto reembolsado; descontar de la cuenta
+        const refundAmt = Math.abs(parseFloat(data.chargedAmount) || 0);
+        sqliteDb.prepare(`
+          UPDATE FinanceAccounts 
+          SET currentBalance = currentBalance - ?,
+              currentDebt = CASE WHEN type IN ('card', 'credit') THEN currentDebt + ? ELSE currentDebt END,
+              updatedAt = datetime('now') 
+          WHERE id = ?
+        `).run(refundAmt, refundAmt, targetOrigin.id);
+      }
     } else if (type === 'transfer' && targetDest) {
       if (targetOrigin) {
         sqliteDb.prepare(`

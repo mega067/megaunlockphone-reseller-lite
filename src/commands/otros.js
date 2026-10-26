@@ -272,8 +272,8 @@ async function otros(context) {
                 session.step = 'ask_finance_account';
 
                 const financeManager = require('../financeManager');
-                const finCfg = financeManager.getFinanceConfig();
-                const accounts = finCfg.accounts || ['Nu', 'Revolut', 'Mercado Pago', 'BBVA', 'Efectivo'];
+                const liveAccounts = financeManager.getAllAccounts().map(a => a.name);
+                const accounts = liveAccounts.length > 0 ? liveAccounts : ['Nu Débito / Cuenta', 'Revolut', 'Mercado Pago', 'BBVA', 'Efectivo / Caja'];
 
                 try {
                     await sock.sendMessage(remoteJid, {
@@ -298,11 +298,11 @@ async function otros(context) {
             return true;
         } else if (session.step === 'ask_finance_account') {
             const financeManager = require('../financeManager');
-            const finCfg = financeManager.getFinanceConfig();
-            const accounts = finCfg.accounts || ['Nu', 'Revolut', 'Mercado Pago', 'BBVA', 'Efectivo'];
+            const liveAccounts = financeManager.getAllAccounts().map(a => a.name);
+            const accounts = liveAccounts.length > 0 ? liveAccounts : ['Nu Débito / Cuenta', 'Revolut', 'Mercado Pago', 'BBVA', 'Efectivo / Caja'];
 
             const inputVal = text.trim();
-            let selectedAccount = 'General';
+            let selectedAccount = 'Nu Débito / Cuenta';
 
             if (inputVal.toLowerCase() !== 'omitir' && inputVal.toLowerCase() !== 'no') {
                 const optNum = parseInt(inputVal);
@@ -311,7 +311,7 @@ async function otros(context) {
                 } else {
                     const clean = inputVal.replace(/^🏦\s*/, '').trim();
                     const match = accounts.find(a => a.toLowerCase() === clean.toLowerCase() || clean.toLowerCase().includes(a.toLowerCase()));
-                    selectedAccount = match || (clean.length > 0 ? clean : 'General');
+                    selectedAccount = match || (clean.length > 0 ? clean : 'Nu Débito / Cuenta');
                 }
 
                 const o = session.order;
@@ -330,6 +330,8 @@ async function otros(context) {
                     notes: `Ticket #${o.orderId} - ${o.serviceName}${phoneNote}`
                 });
 
+                const totalToApartar = costAmount + (recorded.reinvestAmount || 0);
+
                 let finMsg = `📊 *Registro Contable Guardado* 📊\n` +
                              `━━━━━━━━━━━━━━━━━━━━━━\n` +
                              `🏦 *Cuenta de Destino:* ${selectedAccount}\n` +
@@ -337,7 +339,9 @@ async function otros(context) {
                              `📉 *Costo del Servidor:* $${costAmount.toFixed(2)} MXN\n` +
                              `💰 *Ganancia Bruta:* $${recorded.grossProfit.toFixed(2)} MXN\n` +
                              `━━━━━━━━━━━━━━━━━━━━━━\n` +
-                             `🔄 *Fondo de Reinversión (${recorded.reinvestPercent}%):* $${recorded.reinvestAmount.toFixed(2)} MXN\n` +
+                             `📦 *Apartar en Cajita Nu:* $${totalToApartar.toFixed(2)} MXN\n` +
+                             `   ↳ _Recuperar inversión Servidor: $${costAmount.toFixed(2)}_\n` +
+                             `   ↳ _Fondo Reinversión (${recorded.reinvestPercent}%): $${recorded.reinvestAmount.toFixed(2)}_\n` +
                              `💵 *Tu Ganancia Real (Bolsillo):* $${recorded.netProfit.toFixed(2)} MXN\n` +
                              `━━━━━━━━━━━━━━━━━━━━━━\n` +
                              `_¡Registrado exitosamente en tu Panel de Finanzas!_ 🚀`;
