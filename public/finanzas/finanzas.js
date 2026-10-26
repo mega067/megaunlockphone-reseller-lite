@@ -93,8 +93,9 @@
     if (statNetWorth) {
       let netTotal = 0;
       (dash.accounts || []).forEach(a => {
-        if (a.type !== 'credit') {
-          netTotal += parseFloat(a.balance || 0);
+        const isCreditOrCard = a.type === 'credit' || a.type === 'card' || (a.creditLimit && parseFloat(a.creditLimit) > 0);
+        if (!isCreditOrCard) {
+          netTotal += parseFloat(a.balance || a.currentBalance || 0);
         }
       });
       statNetWorth.textContent = formatMoney(netTotal);
