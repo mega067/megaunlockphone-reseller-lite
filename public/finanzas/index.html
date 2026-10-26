@@ -124,7 +124,7 @@
     }
     .fin-quick-stats {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
       gap: 0.75rem;
       width: 100%;
     }
@@ -137,6 +137,7 @@
     .fin-quick-stat-item.amber { border-color: #f59e0b; }
     .fin-quick-stat-item.blue { border-color: #38bdf8; }
     .fin-quick-stat-item.purple { border-color: #a855f7; }
+    .fin-quick-stat-item.pink { border-color: #ec4899; }
 
     /* Segmented Tab Controls (Touch-Optimized Horizontal Scroll) */
     .fin-tab-nav {
@@ -516,6 +517,11 @@
           <div id="statFinGrossProfit" style="font-size:1.25rem; font-weight:800; color:#10b981;">$0.00</div>
           <small id="statFinGrossCount" style="font-size:0.7rem; color:var(--fin-text-sub);">0 transacciones</small>
         </div>
+        <div class="fin-quick-stat-item pink">
+          <div style="font-size:0.72rem; color:var(--fin-text-muted); text-transform:uppercase; font-weight:700;">Cajita Nu / Reinversión</div>
+          <div id="statFinCajitaNu" style="font-size:1.25rem; font-weight:800; color:#ec4899;">$0.00</div>
+          <div id="statFinCajitaGoalHint" style="font-size:0.7rem; color:#94a3b8;">Faltan $50.00 p/ Recargar Servidor</div>
+        </div>
         <div class="fin-quick-stat-item purple">
           <div style="font-size:0.72rem; color:var(--fin-text-muted); text-transform:uppercase; font-weight:700;">Recargas Móviles</div>
           <div id="statFinMobileEst" style="font-size:1.25rem; font-weight:800; color:#c084fc;">$0.00</div>
@@ -822,6 +828,7 @@
             <option value="expense_simple">Gasto Simple (-)</option>
             <option value="expense_split">Gasto Dividido / Mixto (Efectivo + Banco)</option>
             <option value="income_simple">Ingreso / Venta (+)</option>
+            <option value="server_recharge">Recargar Servidor GSM (De mi cuenta al Servidor) 🚀</option>
             <option value="pay_credit">Abonar / Pagar Tarjeta de Crédito (Reducir Deuda)</option>
             <option value="debt_collect">Cobrar Deuda a Favor (Alguien me paga)</option>
             <option value="debt_pay">Pagar Deuda que Debo (Yo abono a quien le debo)</option>

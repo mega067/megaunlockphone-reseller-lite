@@ -118,6 +118,25 @@
     if (statGrossCount) {
       statGrossCount.textContent = `${dash.summary?.count || 0} movimientos registrados`;
     }
+
+    // Indicador inteligente de Cajita Nu (Fondo de Reinversión acumulado para recargar servidores)
+    const statCajitaNu = document.getElementById('statFinCajitaNu');
+    const statCajitaHint = document.getElementById('statFinCajitaGoalHint');
+    if (statCajitaNu) {
+      const reinvestAccumulated = parseFloat(dash.summary?.totalReinvest || 0);
+      statCajitaNu.textContent = formatMoney(reinvestAccumulated);
+
+      if (statCajitaHint) {
+        if (reinvestAccumulated >= 100) {
+          statCajitaHint.innerHTML = `<span style="color:#10b981; font-weight:700;">✅ ¡Listo para recargar $100 en Servidor!</span>`;
+        } else if (reinvestAccumulated >= 50) {
+          statCajitaHint.innerHTML = `<span style="color:#38bdf8; font-weight:700;">⚡ ¡Alcanza para recarga mínima de $50!</span> (Faltan ${formatMoney(100 - reinvestAccumulated)} p/ $100)`;
+        } else {
+          const needed = 50 - reinvestAccumulated;
+          statCajitaHint.innerHTML = `Apartar en Cajita: <strong style="color:#ec4899;">${formatMoney(reinvestAccumulated)}</strong> (Faltan ${formatMoney(needed)} p/ $50)`;
+        }
+      }
+    }
   }
 
   function populateAccountSelects(accounts) {
@@ -820,7 +839,20 @@
     // Reset o mostrar bloque de deuda o tarjeta de crédito
     const instSelectBlock = document.getElementById('txInstallmentSelectBlock');
 
-    if (type === 'pay_credit') {
+    if (type === 'server_recharge') {
+      if (instSelectBlock) instSelectBlock.style.display = 'none';
+      if (debtSelectBlock) debtSelectBlock.style.display = 'none';
+      modeGroup.style.display = 'none';
+      categoryGroup.style.display = 'block';
+      splitBlock.style.display = 'none';
+      simpleBlock.style.display = 'block';
+      if (catSelect) catSelect.value = 'servidores';
+      if (accLabel) accLabel.textContent = 'Cuenta de donde sale tu dinero personal para recargar el Servidor (-)';
+      const conceptInput = document.getElementById('txConcept');
+      if (conceptInput && !conceptInput.value) {
+        conceptInput.value = 'Recarga de Saldo a Servidor GSM';
+      }
+    } else if (type === 'pay_credit') {
       if (instSelectBlock) instSelectBlock.style.display = 'block';
       if (debtSelectBlock) debtSelectBlock.style.display = 'none';
       modeGroup.style.display = 'block';
@@ -1265,6 +1297,17 @@
             { account: 'Efectivo / Caja', amount: cashAmount },
             { account: splitAcc, amount: bankAmount }
           ]
+        };
+      } else if (type === 'server_recharge') {
+        const account = document.getElementById('txAccount').value;
+        payload = {
+          type: 'transfer',
+          category: 'servidores',
+          serviceName: concept || 'Recarga de Saldo a Servidor GSM',
+          notes: concept || `Recarga a Servidor GSM financiada con fondos de ${account}`,
+          costAmount: totalAmount,
+          account: account,
+          destAccount: 'Server (DHRU / Fondos)'
         };
       } else {
         const isIncome = type === 'income_simple';
