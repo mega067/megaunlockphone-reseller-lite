@@ -1,5 +1,6 @@
 const sqliteDb = require('./database');
 const { readDB, writeDB } = require('./db');
+const { logAuditTrail, createAutoBackup } = require('./backupEngine');
 
 /**
  * Obtener configuración de finanzas (cuentas disponibles, % reinversión por defecto, etc.)
@@ -117,8 +118,7 @@ function saveAccount(accData) {
   const existingById = sqliteDb.prepare('SELECT * FROM FinanceAccounts WHERE id = ?').get(id);
   const existingByName = sqliteDb.prepare('SELECT * FROM FinanceAccounts WHERE LOWER(name) = LOWER(?)').get(name);
 
-  const target = existingById || existingByName;
-
+  let savedAccount = null;
   if (target) {
     sqliteDb.prepare(`
       UPDATE FinanceAccounts 
@@ -127,22 +127,30 @@ function saveAccount(accData) {
           isArchived = 0, updatedAt = datetime('now')
       WHERE id = ?
     `).run(name, type, currency, currentBalance, color, icon, description, creditLimit, cutoffDay, paymentDueDay, currentDebt, minPayment, target.id);
-    return sqliteDb.prepare('SELECT * FROM FinanceAccounts WHERE id = ?').get(target.id);
+    savedAccount = sqliteDb.prepare('SELECT * FROM FinanceAccounts WHERE id = ?').get(target.id);
+    logAuditTrail('FINANCE_ACCOUNT_UPDATED', { id: target.id, name, type, currentBalance, creditLimit, previous: target }, 'Admin');
   } else {
     sqliteDb.prepare(`
       INSERT INTO FinanceAccounts (id, name, type, currency, initialBalance, currentBalance, color, icon, description, creditLimit, cutoffDay, paymentDueDay, currentDebt, minPayment, isArchived, createdAt, updatedAt)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, datetime('now'), datetime('now'))
     `).run(id, name, type, currency, initialBalance, currentBalance, color, icon, description, creditLimit, cutoffDay, paymentDueDay, currentDebt, minPayment);
-    return sqliteDb.prepare('SELECT * FROM FinanceAccounts WHERE id = ?').get(id);
+    savedAccount = sqliteDb.prepare('SELECT * FROM FinanceAccounts WHERE id = ?').get(id);
+    logAuditTrail('FINANCE_ACCOUNT_CREATED', { id, name, type, initialBalance, creditLimit }, 'Admin');
   }
+  return savedAccount;
 }
 
 /**
  * Eliminar / archivar cuenta
  */
 function deleteAccount(id) {
+  const existing = sqliteDb.prepare('SELECT * FROM FinanceAccounts WHERE id = ?').get(id);
   const stmt = sqliteDb.prepare("UPDATE FinanceAccounts SET isArchived = 1, updatedAt = datetime('now') WHERE id = ?");
-  return stmt.run(id).changes > 0;
+  const res = stmt.run(id);
+  if (res.changes > 0) {
+    logAuditTrail('FINANCE_ACCOUNT_ARCHIVED', { id, name: existing?.name, balance: existing?.currentBalance }, 'Admin');
+  }
+  return res.changes > 0;
 }
 
 /**
@@ -290,9 +298,23 @@ function recordTransaction(data) {
       `).run(costAmount, costAmount, targetDest.id);
     }
 
-    // Respaldar automáticamente ante movimientos financieros
+    // Registrar en caja negra inalterable y respaldar automáticamente
     try {
-      const { createAutoBackup } = require('./backupEngine');
+      logAuditTrail('FINANCE_TRANSACTION_RECORDED', {
+        id,
+        type,
+        serviceName: data.serviceName,
+        chargedAmount,
+        costAmount,
+        grossProfit,
+        netProfit,
+        account,
+        destAccount,
+        category,
+        orderId: data.orderId || null,
+        splits: data.splits || null,
+        notes: data.notes || ''
+      }, data.recordedBy || 'Admin');
       createAutoBackup(`Movimiento_Financiero_${type}_${category}`);
     } catch(bErr) {}
   } catch (syncErr) {
@@ -758,9 +780,18 @@ function deleteTransaction(id) {
   // Eliminar el registro del libro contable
   const res = sqliteDb.prepare(`DELETE FROM FinanceLedger WHERE id = ?`).run(id);
 
-  // Auto-backup de seguridad tras reversión
+  // Registrar reversión en caja negra inalterable y respaldar
   try {
-    const { createAutoBackup } = require('./backupEngine');
+    logAuditTrail('FINANCE_TRANSACTION_DELETED_REVERTED', {
+      id,
+      deletedTransaction: tx,
+      revertedImpact: {
+        originAccount: tx.account,
+        destAccount: tx.destAccount,
+        costAmount,
+        chargedAmount
+      }
+    }, 'Admin');
     createAutoBackup(`DeleteTx_Revert_${id}`);
   } catch (e) {}
 
@@ -840,6 +871,7 @@ function saveDebt(data) {
   const notes = data.notes ? String(data.notes).trim() : '';
 
   if (isUpdate) {
+    const prevDebt = sqliteDb.prepare('SELECT * FROM FinanceDebts WHERE id = ?').get(id);
     const stmt = sqliteDb.prepare(`
       UPDATE FinanceDebts 
       SET personName = ?, type = ?, totalAmount = ?, paidAmount = ?, remainingAmount = ?,
@@ -847,12 +879,14 @@ function saveDebt(data) {
       WHERE id = ?
     `);
     stmt.run(personName, type, totalAmount, paidAmount, remainingAmount, concept, dueDate, phone, notes, status, id);
+    logAuditTrail('FINANCE_DEBT_UPDATED', { id, personName, type, totalAmount, paidAmount, previous: prevDebt }, 'Admin');
   } else {
     const stmt = sqliteDb.prepare(`
       INSERT INTO FinanceDebts (id, personName, type, totalAmount, paidAmount, remainingAmount, concept, dueDate, phone, notes, status, createdAt, updatedAt)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
     `);
     stmt.run(id, personName, type, totalAmount, paidAmount, remainingAmount, concept, dueDate, phone, notes, status);
+    logAuditTrail('FINANCE_DEBT_CREATED', { id, personName, type, totalAmount, concept }, 'Admin');
   }
 
   return sqliteDb.prepare('SELECT * FROM FinanceDebts WHERE id = ?').get(id);
@@ -883,6 +917,19 @@ function recordDebtPayment(debtId, paymentAmount, accountName, splits = null) {
     SET paidAmount = ?, remainingAmount = ?, status = ?, updatedAt = datetime('now')
     WHERE id = ?
   `).run(newPaid, newRemaining, newStatus, debtId);
+
+  logAuditTrail('FINANCE_DEBT_PAYMENT_APPLIED', {
+    debtId,
+    personName: debt.personName,
+    type: debt.type,
+    appliedAmount: payment,
+    previousPaid: currentPaid,
+    newPaid,
+    newRemaining,
+    newStatus,
+    account: accountName,
+    splits
+  }, 'Admin');
 
   const isReceivable = debt.type === 'receivable';
   const ledgerType = isReceivable ? 'income_manual' : 'expense_manual';
@@ -922,8 +969,32 @@ function recordDebtPayment(debtId, paymentAmount, accountName, splits = null) {
 }
 
 function deleteDebt(id) {
+  const existingDebt = sqliteDb.prepare('SELECT * FROM FinanceDebts WHERE id = ?').get(id);
+  if (!existingDebt) return false;
+
+  // Revertir y limpiar cualquier transacción del ledger vinculada a esta deuda para que no queden huérfanas
+  try {
+    const linkedTxs = sqliteDb.prepare('SELECT * FROM FinanceLedger WHERE orderId = ?').all(id);
+    linkedTxs.forEach(tx => {
+      deleteTransaction(tx.id);
+    });
+  } catch (err) {
+    console.warn('[DELETE DEBT LINKED TX REVERT ERR]', err.message);
+  }
+
   const stmt = sqliteDb.prepare('DELETE FROM FinanceDebts WHERE id = ?');
   const res = stmt.run(id);
+
+  if (res.changes > 0) {
+    logAuditTrail('FINANCE_DEBT_DELETED_REVERTED', {
+      id,
+      deletedDebt: existingDebt
+    }, 'Admin');
+    try {
+      createAutoBackup(`DeleteDebt_Revert_${id}`);
+    } catch (e) {}
+  }
+
   return res.changes > 0;
 }
 
@@ -1064,6 +1135,7 @@ function saveInstallment(data) {
             type: 'income_manual',
             category: 'otros',
             serviceName: `Disposición de saldo: ${title}`,
+            orderId: id,
             chargedAmount: netReceived,
             costAmount: 0,
             account: findDest.name,
@@ -1077,7 +1149,19 @@ function saveInstallment(data) {
     }
   }
 
-  return sqliteDb.prepare('SELECT * FROM FinanceInstallments WHERE id = ?').get(id);
+  const savedRecord = sqliteDb.prepare('SELECT * FROM FinanceInstallments WHERE id = ?').get(id);
+  logAuditTrail(isUpdate ? 'FINANCE_INSTALLMENT_UPDATED' : 'FINANCE_INSTALLMENT_CREATED', {
+    id,
+    title,
+    accountName,
+    totalAmount,
+    totalQuotas,
+    paidQuotas,
+    quotaAmount,
+    dueDay
+  }, 'Admin');
+
+  return savedRecord;
 }
 
 function payInstallmentQuota(installmentId, quotaCount = 1, paymentAccount = 'Efectivo / Caja') {
@@ -1095,12 +1179,23 @@ function payInstallmentQuota(installmentId, quotaCount = 1, paymentAccount = 'Ef
     WHERE id = ?
   `).run(newPaid, newStatus, installmentId);
 
+  logAuditTrail('FINANCE_INSTALLMENT_QUOTA_PAID', {
+    installmentId,
+    title: item.title,
+    previousPaid: item.paidQuotas,
+    newPaid,
+    totalQuotas: item.totalQuotas,
+    paidAmount,
+    paymentAccount
+  }, 'Admin');
+
   // Registrar el gasto contable en FinanceLedger y descontar de la cuenta con la que se pagó la mensualidad
   if (paymentAccount) {
     recordTransaction({
       type: 'expense_manual',
       category: 'servicios',
       serviceName: `Pago Mensualidad (${newPaid}/${item.totalQuotas}): ${item.title}`,
+      orderId: installmentId,
       chargedAmount: 0,
       costAmount: paidAmount,
       account: paymentAccount,
@@ -1113,8 +1208,58 @@ function payInstallmentQuota(installmentId, quotaCount = 1, paymentAccount = 'Ef
 }
 
 function deleteInstallment(id) {
+  const existing = sqliteDb.prepare('SELECT * FROM FinanceInstallments WHERE id = ?').get(id);
+  if (!existing) return false;
+
+  // 1. Revertir saldo/crédito en la tarjeta emisora
+  try {
+    const findCard = sqliteDb.prepare(`
+      SELECT * FROM FinanceAccounts 
+      WHERE id = ? OR name = ? OR name LIKE ? OR ? LIKE ('%' || name || '%')
+      LIMIT 1
+    `).get(existing.accountId, existing.accountName, `%${existing.accountName}%`, existing.accountName);
+
+    if (findCard) {
+      const totalAmount = parseFloat(existing.totalAmount) || 0;
+      sqliteDb.prepare(`
+        UPDATE FinanceAccounts 
+        SET currentBalance = currentBalance + ?,
+            currentDebt = MAX(0, currentDebt - ?),
+            updatedAt = datetime('now')
+        WHERE id = ?
+      `).run(totalAmount, totalAmount, findCard.id);
+    }
+  } catch (cardErr) {
+    console.warn('[REVERT INSTALLMENT CARD ERR]', cardErr.message);
+  }
+
+  // 2. Revertir y limpiar movimientos del ledger asociados a este plan (tanto la disposición inicial como los pagos de cuotas)
+  try {
+    const linkedTxs = sqliteDb.prepare('SELECT * FROM FinanceLedger WHERE orderId = ? OR serviceName LIKE ? OR notes LIKE ?')
+      .all(id, `%${existing.title}%`, `%${id}%`);
+
+    linkedTxs.forEach(tx => {
+      deleteTransaction(tx.id);
+    });
+  } catch (txErr) {
+    console.warn('[REVERT INSTALLMENT LEDGER TX ERR]', txErr.message);
+  }
+
+  // 3. Eliminar el registro del plan de cuotas
   const stmt = sqliteDb.prepare('DELETE FROM FinanceInstallments WHERE id = ?');
-  return stmt.run(id).changes > 0;
+  const res = stmt.run(id);
+
+  if (res.changes > 0) {
+    logAuditTrail('FINANCE_INSTALLMENT_DELETED_REVERTED', {
+      id,
+      deletedInstallment: existing
+    }, 'Admin');
+    try {
+      createAutoBackup(`DeleteInstallment_Revert_${id}`);
+    } catch (e) {}
+  }
+
+  return res.changes > 0;
 }
 
 /**
@@ -1230,7 +1375,17 @@ function saveMobilePlan(data) {
     `).run(id, carrier, phoneNumber, planName, amount, durationDays, lastRechargeDate, nextRenewalDate, preferredAccount, autoRemind, notes, status);
   }
 
-  return sqliteDb.prepare('SELECT * FROM FinanceMobilePlans WHERE id = ?').get(id);
+  const savedPlan = sqliteDb.prepare('SELECT * FROM FinanceMobilePlans WHERE id = ?').get(id);
+  logAuditTrail('FINANCE_MOBILE_PLAN_SAVED', {
+    id,
+    carrier,
+    phoneNumber,
+    planName,
+    amount,
+    durationDays
+  }, 'Admin');
+
+  return savedPlan;
 }
 
 function executeMobileRecharge(planId, accountUsed, customAmount) {
@@ -1253,11 +1408,21 @@ function executeMobileRecharge(planId, accountUsed, customAmount) {
     WHERE id = ?
   `).run(todayStr, newRenewalDate, planId);
 
+  logAuditTrail('FINANCE_MOBILE_RECHARGE_EXECUTED', {
+    planId,
+    carrier: plan.carrier,
+    phoneNumber: plan.phoneNumber,
+    rechargeAmount,
+    payAccount,
+    newRenewalDate
+  }, 'Admin');
+
   // 2. Registrar el gasto contable en FinanceLedger
   recordTransaction({
     type: 'expense_manual',
     category: 'telefonia',
     serviceName: `Recarga Móvil: ${plan.carrier} ${plan.planName || ''} (${plan.phoneNumber || 'Línea'})`,
+    orderId: plan.id,
     chargedAmount: 0,
     costAmount: rechargeAmount,
     account: payAccount,
@@ -1269,8 +1434,20 @@ function executeMobileRecharge(planId, accountUsed, customAmount) {
 }
 
 function deleteMobilePlan(id) {
+  const existing = sqliteDb.prepare('SELECT * FROM FinanceMobilePlans WHERE id = ?').get(id);
+  if (!existing) return false;
+
   const stmt = sqliteDb.prepare('DELETE FROM FinanceMobilePlans WHERE id = ?');
-  return stmt.run(id).changes > 0;
+  const res = stmt.run(id);
+
+  if (res.changes > 0) {
+    logAuditTrail('FINANCE_MOBILE_PLAN_DELETED', {
+      id,
+      deletedPlan: existing
+    }, 'Admin');
+  }
+
+  return res.changes > 0;
 }
 
 module.exports = {

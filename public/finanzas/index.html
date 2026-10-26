@@ -542,6 +542,9 @@
       <button class="fin-tab-btn" data-tab="tab-ledger">
         <i data-lucide="receipt" style="width:16px; height:16px;"></i> Gastos & Movimientos
       </button>
+      <button class="fin-tab-btn" data-tab="tab-audit">
+        <i data-lucide="shield-check" style="width:16px; height:16px; color:#10b981;"></i> Caja Negra Audit
+      </button>
       <button class="fin-tab-btn" data-tab="tab-settings">
         <i data-lucide="sliders" style="width:16px; height:16px;"></i> Configuración
       </button>
@@ -661,6 +664,39 @@
             </thead>
             <tbody id="finLedgerTbody">
               <!-- Movimientos -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pestaña: Caja Negra Criptográfica (Append-Only Audit Log) -->
+    <div id="tab-audit" class="fin-panel">
+      <div class="fin-card">
+        <div class="fin-card-header">
+          <div>
+            <h2 class="fin-card-title">
+              <i data-lucide="shield-check" style="color:#10b981;"></i> Caja Negra Inalterable (Audit BlackBox)
+            </h2>
+            <small style="color:var(--fin-text-muted); font-size:0.78rem;">Registro criptográfico append-only (SHA-256 Hash Chaining) de cada movimiento, reversión, pago y eliminación.</small>
+          </div>
+          <button id="btnRefreshAudit" class="fin-btn fin-btn-soft" onclick="window.finLoadAuditLogs()">
+            <i data-lucide="refresh-cw" style="width:14px; height:14px;"></i> Actualizar Auditoría
+          </button>
+        </div>
+        <div class="fin-table-scroll" style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
+          <table style="width:100%; min-width:700px; border-collapse:collapse; font-size:0.84rem;">
+            <thead>
+              <tr style="border-bottom: 2px solid rgba(255,255,255,0.08); text-align:left; color:var(--fin-text-muted);">
+                <th style="padding: 10px 12px; width:160px;">Fecha / Hora</th>
+                <th style="padding: 10px 12px; width:190px;">Evento Criptográfico</th>
+                <th style="padding: 10px 12px;">Detalles & Metadatos de la Operación</th>
+                <th style="padding: 10px 12px; width:90px;">Autor</th>
+                <th style="padding: 10px 12px; width:110px; text-align:right;">Firma SHA-256</th>
+              </tr>
+            </thead>
+            <tbody id="finAuditTbody">
+              <tr><td colspan="5" style="text-align:center; padding:2rem; color:var(--fin-text-muted);">Cargando registros de la caja negra...</td></tr>
             </tbody>
           </table>
         </div>

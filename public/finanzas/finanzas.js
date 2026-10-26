@@ -1309,6 +1309,80 @@
     });
   }
 
+  // --- SECCIÓN: CAJA NEGRA AUDIT LOG ---
+  window.finLoadAuditLogs = async function() {
+    const tbody = document.getElementById('finAuditTbody');
+    if (!tbody) return;
+
+    try {
+      const res = await fetchWithAuth('/api/admin/audit-logs?limit=50');
+      const d = await res.json();
+      if (!res.ok || !d.success) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:1.5rem; color:#f43f5e;">Error al consultar registros de la caja negra.</td></tr>';
+        return;
+      }
+
+      const logs = d.logs || [];
+      if (!logs.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:2rem; color:var(--fin-text-muted);">No hay eventos registrados en la caja negra aún.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = logs.map(l => {
+        const dateStr = l.timestamp ? new Date(l.timestamp).toLocaleDateString('es-MX', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit' }) : '-';
+        const isRevert = l.event && l.event.includes('REVERT');
+        const isDelete = l.event && l.event.includes('DELETE');
+        const badgeColor = isRevert ? '#f59e0b' : (isDelete ? '#f43f5e' : '#10b981');
+        const badgeBg = isRevert ? 'rgba(245, 158, 11, 0.15)' : (isDelete ? 'rgba(244, 63, 94, 0.15)' : 'rgba(16, 185, 129, 0.15)');
+
+        // Formatear detalles en resumen legible
+        let detailsHtml = '';
+        if (l.details) {
+          const dObj = l.details;
+          const pieces = [];
+          if (dObj.serviceName) pieces.push(`<strong>${escapeHtml(dObj.serviceName)}</strong>`);
+          if (dObj.concept) pieces.push(`Concepto: <strong>${escapeHtml(dObj.concept)}</strong>`);
+          if (dObj.title) pieces.push(`Plan: <strong>${escapeHtml(dObj.title)}</strong>`);
+          if (dObj.personName) pieces.push(`Persona: <strong>${escapeHtml(dObj.personName)}</strong>`);
+          if (dObj.account) pieces.push(`Cuenta: <code>${escapeHtml(dObj.account)}</code>`);
+          if (dObj.accountName) pieces.push(`Tarjeta: <code>${escapeHtml(dObj.accountName)}</code>`);
+          if (dObj.chargedAmount !== undefined && dObj.chargedAmount > 0) pieces.push(`Cobrado: <span style="color:#10b981;">${formatMoney(dObj.chargedAmount)}</span>`);
+          if (dObj.costAmount !== undefined && dObj.costAmount > 0) pieces.push(`Costo/Gasto: <span style="color:#f43f5e;">${formatMoney(dObj.costAmount)}</span>`);
+          if (dObj.appliedAmount !== undefined) pieces.push(`Abono: <span style="color:#10b981;">${formatMoney(dObj.appliedAmount)}</span>`);
+          if (dObj.totalAmount !== undefined) pieces.push(`Total: <strong>${formatMoney(dObj.totalAmount)}</strong>`);
+          if (dObj.notes) pieces.push(`<span style="color:var(--fin-text-sub);">${escapeHtml(dObj.notes)}</span>`);
+          if (dObj.deletedTransaction) pieces.push(`<span style="color:#f43f5e;">Tx Revertida: ${escapeHtml(dObj.deletedTransaction.serviceName || dObj.deletedTransaction.id)}</span>`);
+          if (dObj.deletedInstallment) pieces.push(`<span style="color:#f43f5e;">Plan Revertido: ${escapeHtml(dObj.deletedInstallment.title)} (${formatMoney(dObj.deletedInstallment.totalAmount)})</span>`);
+          if (dObj.deletedDebt) pieces.push(`<span style="color:#f43f5e;">Deuda Eliminada: ${escapeHtml(dObj.deletedDebt.personName)} (${formatMoney(dObj.deletedDebt.totalAmount)})</span>`);
+          
+          detailsHtml = pieces.length ? pieces.join(' • ') : `<pre style="margin:0; font-size:0.75rem; color:#94a3b8;">${escapeHtml(JSON.stringify(dObj, null, 1))}</pre>`;
+        }
+
+        const shortHash = l.entryHash ? l.entryHash.substring(0, 8) + '...' : '-';
+
+        return `
+          <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+            <td style="padding: 10px 12px; color:var(--fin-text-muted); font-size:0.78rem;">${dateStr}</td>
+            <td style="padding: 10px 12px;">
+              <span class="fin-badge" style="background:${badgeBg}; color:${badgeColor}; font-size:0.75rem;">
+                ${escapeHtml(l.event || 'EVENT')}
+              </span>
+            </td>
+            <td style="padding: 10px 12px; font-size:0.82rem; color:#f8fafc;">
+              ${detailsHtml}
+            </td>
+            <td style="padding: 10px 12px; color:var(--fin-text-muted); font-size:0.8rem;">${escapeHtml(l.author || 'SYSTEM')}</td>
+            <td style="padding: 10px 12px; text-align:right; font-family:monospace; font-size:0.75rem; color:#10b981;" title="${escapeHtml(l.entryHash || '')}">
+              ${shortHash}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    } catch (err) {
+      console.error('[LOAD AUDIT LOGS ERR]', err);
+    }
+  };
+
   // Manejo de Pestañas Segmentadas
   function initTabs() {
     const tabBtns = document.querySelectorAll('.fin-tab-btn');
@@ -1327,6 +1401,9 @@
         const activePanel = document.getElementById(targetId);
         if (activePanel) {
           activePanel.classList.add('active');
+          if (targetId === 'tab-audit') {
+            window.finLoadAuditLogs();
+          }
         }
         if (window.lucide) lucide.createIcons();
       });
