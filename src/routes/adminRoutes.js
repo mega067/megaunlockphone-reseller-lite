@@ -73,6 +73,7 @@ router.post('/admin/finance/weekly-audit', requireAuth, requireAdmin, adminContr
 router.get('/admin/finance/debts', requireAuth, requireAdmin, adminController.getDebts);
 router.post('/admin/finance/debts', requireAuth, requireAdmin, adminController.saveDebt);
 router.post('/admin/finance/debts/:id/pay', requireAuth, requireAdmin, adminController.recordDebtPayment);
+router.post('/admin/finance/debts/cross-offset', requireAuth, requireAdmin, adminController.crossOffsetDebts);
 router.delete('/admin/finance/debts/:id', requireAuth, requireAdmin, adminController.deleteDebt);
 
 // Planes de Meses y Cuotas (Nu, Bancos, etc.)

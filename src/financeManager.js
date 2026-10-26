@@ -1121,6 +1121,95 @@ function deleteDebt(id) {
 }
 
 /**
+ * Compensar / Tabular cruce de deudas entre dos partes
+ * Ejemplo: Le debo a Rick $1,000 (payable), pero él me debe $300 (receivable).
+ * Se amortizan $300 en ambas deudas:
+ * - La deuda que me debe Rick se salda o reduce en $300.
+ * - La deuda que le debo a Rick se reduce en $300 (quedando solo $700 por pagar).
+ * Cero salida de efectivo o bancos requerida.
+ */
+function crossOffsetDebts(debtPayableId, debtReceivableId, offsetAmount = null, notes = '') {
+  const payable = sqliteDb.prepare('SELECT * FROM FinanceDebts WHERE id = ?').get(debtPayableId);
+  const receivable = sqliteDb.prepare('SELECT * FROM FinanceDebts WHERE id = ?').get(debtReceivableId);
+
+  if (!payable) throw new Error('Deuda a pagar (que tú debes) no encontrada.');
+  if (!receivable) throw new Error('Deuda a cobrar (que te deben) no encontrada.');
+
+  const remPayable = parseFloat(payable.remainingAmount || payable.totalAmount || 0);
+  const remReceivable = parseFloat(receivable.remainingAmount || receivable.totalAmount || 0);
+
+  if (remPayable <= 0) throw new Error(`La deuda que le debes a ${payable.personName} ya está liquidada.`);
+  if (remReceivable <= 0) throw new Error(`La deuda que te debe ${receivable.personName} ya está liquidada.`);
+
+  // El monto máximo que se puede cruzar es el mínimo entre lo que debes y lo que te deben
+  const maxPossible = Math.min(remPayable, remReceivable);
+  const amountToOffset = offsetAmount !== null && !isNaN(parseFloat(offsetAmount)) && parseFloat(offsetAmount) > 0
+    ? Math.min(maxPossible, parseFloat(offsetAmount))
+    : maxPossible;
+
+  if (amountToOffset <= 0) throw new Error('El monto de compensación debe ser mayor a 0.');
+
+  // 1. Amortizar deuda por pagar (payable)
+  const newPayablePaid = parseFloat(((payable.paidAmount || 0) + amountToOffset).toFixed(2));
+  const newPayableRem = Math.max(0, parseFloat((payable.totalAmount - newPayablePaid).toFixed(2)));
+  const newPayableStatus = newPayableRem <= 0.009 ? 'settled' : 'partial';
+
+  sqliteDb.prepare(`
+    UPDATE FinanceDebts 
+    SET paidAmount = ?, remainingAmount = ?, status = ?, updatedAt = datetime('now')
+    WHERE id = ?
+  `).run(newPayablePaid, newPayableRem, newPayableStatus, payable.id);
+
+  // 2. Amortizar deuda por cobrar (receivable)
+  const newReceivablePaid = parseFloat(((receivable.paidAmount || 0) + amountToOffset).toFixed(2));
+  const newReceivableRem = Math.max(0, parseFloat((receivable.totalAmount - newReceivablePaid).toFixed(2)));
+  const newReceivableStatus = newReceivableRem <= 0.009 ? 'settled' : 'partial';
+
+  sqliteDb.prepare(`
+    UPDATE FinanceDebts 
+    SET paidAmount = ?, remainingAmount = ?, status = ?, updatedAt = datetime('now')
+    WHERE id = ?
+  `).run(newReceivablePaid, newReceivableRem, newReceivableStatus, receivable.id);
+
+  // 3. Registrar en libro contable como compensación sin movimiento bancario
+  const logConcept = `Cruce / Compensación de deudas: ${payable.personName} [Restan $${newPayableRem}] vs [Abono $${amountToOffset}] de ${receivable.personName}`;
+  recordTransaction({
+    type: 'transfer',
+    category: 'deudas',
+    serviceName: `Compensación de Deudas: ${payable.personName} ↔ ${receivable.personName}`,
+    orderId: `${payable.id}|${receivable.id}`,
+    chargedAmount: 0,
+    costAmount: 0,
+    grossProfit: 0,
+    netProfit: 0,
+    account: 'Compensación Cruzada',
+    destAccount: 'Compensación Cruzada',
+    notes: `${logConcept}. ${notes || ''}`.trim(),
+    recordedBy: 'Admin'
+  });
+
+  logAuditTrail('FINANCE_DEBTS_CROSS_OFFSET', {
+    payableId: payable.id,
+    payablePerson: payable.personName,
+    payableBefore: remPayable,
+    payableAfter: newPayableRem,
+    receivableId: receivable.id,
+    receivablePerson: receivable.personName,
+    receivableBefore: remReceivable,
+    receivableAfter: newReceivableRem,
+    offsetAmount: amountToOffset,
+    notes
+  }, 'Admin');
+
+  return {
+    success: true,
+    offsetAmount: amountToOffset,
+    payable: sqliteDb.prepare('SELECT * FROM FinanceDebts WHERE id = ?').get(payable.id),
+    receivable: sqliteDb.prepare('SELECT * FROM FinanceDebts WHERE id = ?').get(receivable.id)
+  };
+}
+
+/**
  * --- PLANES DE COMPRAS Y PAGOS A MESES (NU, BANCOS, CUOTAS) ---
  */
 function getAllInstallments() {
@@ -1802,6 +1891,7 @@ module.exports = {
   getAllDebts,
   saveDebt,
   recordDebtPayment,
+  crossOffsetDebts,
   deleteDebt,
   getAllInstallments,
   saveInstallment,

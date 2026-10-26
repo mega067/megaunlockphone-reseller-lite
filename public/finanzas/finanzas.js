@@ -628,10 +628,13 @@
                 </small>
               </div>
             </div>
-            <div style="display:flex; justify-content:flex-end; gap:0.5rem; margin-top:0.8rem; border-top:1px solid rgba(255,255,255,0.06); padding-top:0.7rem;">
+            <div style="display:flex; justify-content:flex-end; gap:0.5rem; margin-top:0.8rem; border-top:1px solid rgba(255,255,255,0.06); padding-top:0.7rem; flex-wrap:wrap;">
               ${!isSettled ? `
                 <button onclick="window.finSettleDebt('${debt.id}', '${escapeHtml(debt.personName)}', ${rem})" class="fin-btn fin-btn-primary" style="padding:0.35rem 0.85rem; font-size:0.78rem;">
                   ✓ Abonar / Saldar
+                </button>
+                <button onclick="window.finOpenCrossOffsetForDebt('${debt.id}')" class="fin-btn" style="padding:0.35rem 0.85rem; font-size:0.78rem; background:rgba(245, 158, 11, 0.15); color:#f59e0b; border:1px solid rgba(245, 158, 11, 0.35);" title="Cruzar y tabular esta deuda con otra persona o deuda inversa">
+                  ⚖️ Cruzar Deuda
                 </button>
               ` : ''}
               <button onclick="window.finDeleteDebt('${debt.id}')" style="background:none; border:none; color:var(--fin-text-sub); cursor:pointer; font-size:0.9rem;" title="Eliminar registro">
@@ -1323,6 +1326,111 @@
     if (!confirm('¿Eliminar definitivamente el registro de deuda?')) return;
     const res = await fetchWithAuth(`/api/admin/finance/debts/${encodeURIComponent(id)}`, { method: 'DELETE' });
     if (res.ok) loadAllFinanceData();
+  };
+
+  // --- SECCIÓN: COMPENSACIÓN Y TABULACIÓN CRUZADA DE DEUDAS ---
+
+  window.finOpenCrossOffsetDebtModal = function(preselectedId = null) {
+    const payables = cachedDebts.filter(d => d.type === 'payable' && d.status !== 'settled');
+    const receivables = cachedDebts.filter(d => d.type === 'receivable' && d.status !== 'settled');
+
+    if (payables.length === 0 || receivables.length === 0) {
+      alert('Para tabular y cruzar deudas necesitas tener al menos:\n• 1 deuda que TÚ DEBAS (Yo Debo)\n• 1 deuda que TE DEBAN A TI (Me Deben)');
+      return;
+    }
+
+    const paySel = document.getElementById('offsetPayableId');
+    const recSel = document.getElementById('offsetReceivableId');
+    const form = document.getElementById('formCrossOffsetDebt');
+    if (form) form.reset();
+
+    if (paySel) {
+      paySel.innerHTML = payables.map(p => {
+        const rem = parseFloat(p.remainingAmount || p.totalAmount || 0);
+        return `<option value="${p.id}" data-rem="${rem}" data-person="${escapeHtml(p.personName)}">
+          Debo a ${escapeHtml(p.personName)}: ${formatMoney(rem)} (${escapeHtml(p.concept || 'Deuda')})
+        </option>`;
+      }).join('');
+    }
+
+    if (recSel) {
+      recSel.innerHTML = receivables.map(r => {
+        const rem = parseFloat(r.remainingAmount || r.totalAmount || 0);
+        return `<option value="${r.id}" data-rem="${rem}" data-person="${escapeHtml(r.personName)}">
+          Me debe ${escapeHtml(r.personName)}: ${formatMoney(rem)} (${escapeHtml(r.concept || 'Deuda')})
+        </option>`;
+      }).join('');
+    }
+
+    // Si viene de presionar el botón directo en una tarjeta de deuda
+    if (preselectedId) {
+      const target = cachedDebts.find(d => d.id === preselectedId);
+      if (target) {
+        if (target.type === 'payable' && paySel) {
+          paySel.value = target.id;
+          // Intentar coincidir por nombre de persona si esa misma persona tiene una deuda a favor
+          const matchRec = receivables.find(r => r.personName.trim().toLowerCase() === target.personName.trim().toLowerCase());
+          if (matchRec && recSel) recSel.value = matchRec.id;
+        } else if (target.type === 'receivable' && recSel) {
+          recSel.value = target.id;
+          const matchPay = payables.find(p => p.personName.trim().toLowerCase() === target.personName.trim().toLowerCase());
+          if (matchPay && paySel) paySel.value = matchPay.id;
+        }
+      }
+    }
+
+    window.finRecalcOffsetPreview();
+    window.finOpenModal('modalCrossOffsetDebt');
+  };
+
+  window.finOpenCrossOffsetForDebt = function(debtId) {
+    window.finOpenCrossOffsetDebtModal(debtId);
+  };
+
+  window.finRecalcOffsetPreview = function() {
+    const paySel = document.getElementById('offsetPayableId');
+    const recSel = document.getElementById('offsetReceivableId');
+    const amtInput = document.getElementById('offsetAmount');
+    const hint = document.getElementById('offsetMaxHint');
+    const previewBox = document.getElementById('offsetPreviewBox');
+    const previewText = document.getElementById('offsetPreviewText');
+    if (!paySel || !recSel) return;
+
+    const optPay = paySel.selectedOptions[0];
+    const optRec = recSel.selectedOptions[0];
+    if (!optPay || !optRec) return;
+
+    const remPay = parseFloat(optPay.getAttribute('data-rem') || 0);
+    const remRec = parseFloat(optRec.getAttribute('data-rem') || 0);
+    const personPay = optPay.getAttribute('data-person') || 'Acreedor';
+    const personRec = optRec.getAttribute('data-person') || 'Deudor';
+
+    const maxCompensable = Math.min(remPay, remRec);
+
+    if (amtInput && (!amtInput.value || parseFloat(amtInput.value) > maxCompensable)) {
+      amtInput.value = maxCompensable.toFixed(2);
+    }
+    if (hint) {
+      hint.textContent = `Monto máximo cruzable: ${formatMoney(maxCompensable)} (mínimo entre ambas deudas).`;
+    }
+
+    const currentAmt = parseFloat(amtInput?.value) || maxCompensable;
+    const finalPayRem = Math.max(0, remPay - currentAmt);
+    const finalRecRem = Math.max(0, remRec - currentAmt);
+
+    if (previewText) {
+      previewText.innerHTML = `
+        <div style="margin-bottom:0.4rem;">
+          • <strong>Lo que le debes a ${escapeHtml(personPay)}:</strong> de <span style="color:#f43f5e;">${formatMoney(remPay)}</span> se reduce a <strong style="color:${finalPayRem === 0 ? '#10b981' : '#f59e0b'};">${finalPayRem === 0 ? '✓ $0.00 (Liquidada)' : formatMoney(finalPayRem)}</strong>
+        </div>
+        <div>
+          • <strong>Lo que te debe ${escapeHtml(personRec)}:</strong> de <span style="color:#38bdf8;">${formatMoney(remRec)}</span> se reduce a <strong style="color:${finalRecRem === 0 ? '#10b981' : '#38bdf8'};">${finalRecRem === 0 ? '✓ $0.00 (Liquidada)' : formatMoney(finalRecRem)}</strong>
+        </div>
+        <div style="margin-top:0.5rem; font-size:0.75rem; color:#10b981; font-weight:700;">
+          ⚡ No sale ni entra dinero físico de tus cuentas bancarias; se amortiza internamente en tu balance.
+        </div>
+      `;
+    }
   };
 
   // --- ACCIONES DE INVERSIÓN ---
@@ -2389,6 +2497,47 @@
               hint.textContent = '✅ ¡Copiado!';
             }
           }
+        }
+      });
+    }
+    // Botón para abrir modal de Cruce / Tabulación de Deudas
+    const btnCrossOffset = document.getElementById('btnFinCrossOffsetDebt');
+    if (btnCrossOffset) {
+      btnCrossOffset.addEventListener('click', () => window.finOpenCrossOffsetDebtModal());
+    }
+
+    // Submit de Cruce / Compensación de Deudas
+    const formCrossOffset = document.getElementById('formCrossOffsetDebt');
+    if (formCrossOffset) {
+      formCrossOffset.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payableId = document.getElementById('offsetPayableId').value;
+        const receivableId = document.getElementById('offsetReceivableId').value;
+        const amount = parseFloat(document.getElementById('offsetAmount').value) || 0;
+        const notes = document.getElementById('offsetNotes').value.trim();
+
+        if (amount <= 0) {
+          alert('El monto a cruzar debe ser mayor a 0');
+          return;
+        }
+
+        try {
+          const res = await fetchWithAuth('/api/admin/finance/debts/cross-offset', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ payableId, receivableId, amount, notes })
+          });
+          const d = await res.json();
+          if (res.ok && d.success) {
+            alert(`✅ Compensación aplicada con éxito por ${formatMoney(d.offsetAmount)}.\nSe amortizaron ambas deudas sin requerir salida de efectivo.`);
+            window.finCloseModal('modalCrossOffsetDebt');
+            formCrossOffset.reset();
+            loadAllFinanceData();
+          } else {
+            alert(d.error || 'Error al aplicar compensación de deudas');
+          }
+        } catch (err) {
+          alert('Error de conexión al procesar compensación');
         }
       });
     }

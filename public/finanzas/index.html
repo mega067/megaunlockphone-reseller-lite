@@ -733,9 +733,14 @@
             </h2>
             <small style="color:var(--fin-text-muted); font-size:0.78rem;">Gestiona a quién le prestaste y deudas pendientes con liquidación automática</small>
           </div>
-          <button id="btnFinNewDebt" class="fin-btn fin-btn-primary">
-            <i data-lucide="plus" style="width:14px; height:14px;"></i> Registrar Deuda
-          </button>
+          <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+            <button id="btnFinCrossOffsetDebt" class="fin-btn fin-btn-soft" style="color:#f59e0b; border-color:rgba(245,158,11,0.35);" title="Tabular y cruzar deudas mutuas (ej: le debo a alguien pero esa persona también me debe)">
+              <i data-lucide="scale" style="width:14px; height:14px;"></i> ⚖️ Tabular / Cruzar Deudas
+            </button>
+            <button id="btnFinNewDebt" class="fin-btn fin-btn-primary">
+              <i data-lucide="plus" style="width:14px; height:14px;"></i> + Registrar Deuda
+            </button>
+          </div>
         </div>
         <div id="finDebtsContainerList">
           <!-- Lista de deudas -->
@@ -1120,6 +1125,64 @@
         <div style="display:flex; justify-content:flex-end; gap:0.6rem; margin-top:1.2rem;">
           <button type="button" class="fin-btn fin-btn-soft" onclick="window.finCloseModal('modalNewDebt')">Cancelar</button>
           <button type="submit" class="fin-btn fin-btn-primary">Guardar Deuda</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Compensar / Tabular Cruce de Deudas Mutuas -->
+  <div id="modalCrossOffsetDebt" class="fin-modal-overlay">
+    <div class="fin-modal-card" style="max-width:580px;">
+      <div class="fin-modal-header">
+        <div>
+          <h3 style="margin:0; font-size:1.15rem; font-family:'Outfit',sans-serif; color:#f59e0b;">
+            ⚖️ Tabular / Cruzar Deudas Mutuas
+          </h3>
+          <small style="color:var(--fin-text-muted); font-size:0.75rem;">Amortiza deudas cruzadas sin mover dinero de tus cuentas (ej: Le debo $1,000 pero me debe $300)</small>
+        </div>
+        <button class="fin-modal-close" onclick="window.finCloseModal('modalCrossOffsetDebt')">&times;</button>
+      </div>
+      <form id="formCrossOffsetDebt">
+        <div class="fin-form-group">
+          <label>1. Deuda que TÚ DEBES (Se reducirá lo que debes) *</label>
+          <select id="offsetPayableId" class="fin-select" required onchange="window.finRecalcOffsetPreview()">
+            <!-- Deudas tipo payable -->
+          </select>
+        </div>
+
+        <div class="fin-form-group">
+          <label>2. Deuda que TE DEBEN A TI (Se saldará / abonará a favor) *</label>
+          <select id="offsetReceivableId" class="fin-select" required onchange="window.finRecalcOffsetPreview()">
+            <!-- Deudas tipo receivable -->
+          </select>
+        </div>
+
+        <div class="fin-form-group">
+          <label>Monto a Cruzar / Amortizar (MXN) *</label>
+          <input type="number" id="offsetAmount" class="fin-input" min="0.01" step="any" placeholder="0.00" required oninput="window.finRecalcOffsetPreview()">
+          <small id="offsetMaxHint" style="color:#f59e0b; font-size:0.75rem;"></small>
+        </div>
+
+        <!-- Caja de Previsualización Matemática del Cruce -->
+        <div id="offsetPreviewBox" style="background:rgba(15, 23, 42, 0.85); border:1px solid rgba(245, 158, 11, 0.3); border-radius:12px; padding:0.9rem; margin-bottom:1rem; font-size:0.82rem;">
+          <div style="font-weight:700; color:#f59e0b; margin-bottom:0.4rem; display:flex; align-items:center; gap:0.4rem;">
+            <span>Resultado de la Compensación:</span>
+          </div>
+          <div id="offsetPreviewText" style="color:#cbd5e1; line-height:1.45;">
+            Selecciona ambas deudas para calcular el impacto.
+          </div>
+        </div>
+
+        <div class="fin-form-group">
+          <label>Notas / Acuerdo del Cruce (Opcional)</label>
+          <input type="text" id="offsetNotes" class="fin-input" placeholder="Ej: Tabulación acordada por WhatsApp, pago en especie, etc.">
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:0.6rem; margin-top:1.2rem;">
+          <button type="button" class="fin-btn fin-btn-soft" onclick="window.finCloseModal('modalCrossOffsetDebt')">Cancelar</button>
+          <button type="submit" class="fin-btn fin-btn-primary" style="background: linear-gradient(135deg, #f59e0b, #d97706); color:#000; font-weight:700;">
+            ✓ Aplicar Tabulación / Compensar
+          </button>
         </div>
       </form>
     </div>

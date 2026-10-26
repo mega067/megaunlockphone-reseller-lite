@@ -931,6 +931,16 @@ exports.recordDebtPayment = (req, res) => {
   }
 };
 
+exports.crossOffsetDebts = (req, res) => {
+  try {
+    const { payableId, receivableId, amount, notes } = req.body;
+    const result = financeManager.crossOffsetDebts(payableId, receivableId, amount, notes);
+    res.json({ success: true, ...result });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+};
+
 exports.deleteDebt = (req, res) => {
   try {
     const success = financeManager.deleteDebt(req.params.id);
