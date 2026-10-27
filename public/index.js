@@ -3167,16 +3167,17 @@ async function fetchPublicSettings() {
               img.alt = 'Logo ' + (i+1);
               
               if (url === 'logo.png') {
-                 img.style.height = '42px';
-                 img.style.width = '42px';
+                 img.style.height = '34px';
+                 img.style.width = '34px';
                  img.style.aspectRatio = '1 / 1';
                  img.style.objectFit = 'cover';
                  img.style.borderRadius = '50%';
                  img.style.border = '1px solid rgba(34, 211, 238, 0.6)';
                  img.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.8))';
               } else {
-                 img.style.height = '38px';
+                 img.style.height = '32px';
                  img.style.width = 'auto';
+                 img.style.maxHeight = '34px';
                  img.style.objectFit = 'contain';
               }
               
