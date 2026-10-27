@@ -207,6 +207,12 @@ function recordTransaction(data) {
     return { success: true, count: recordedEntries.length, entries: recordedEntries };
   }
 
+  const account = data.account ? String(data.account).trim() : 'General';
+  const destAccount = data.destAccount ? String(data.destAccount).trim() : null;
+  const category = data.category ? String(data.category).toLowerCase().trim() : 'servicios';
+  const id = 'fin_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+  const createdAt = data.createdAt || new Date().toISOString();
+
   const isBusinessSale = (type === 'income_ticket' || category === 'servidores' || category === 'ventas');
   const reinvestPercent = isBusinessSale 
     ? (data.reinvestPercent !== undefined ? Math.max(0, Math.min(100, parseFloat(data.reinvestPercent))) : config.reinvestPercent)
@@ -222,12 +228,6 @@ function recordTransaction(data) {
     reinvestAmount = 0;
     netProfit = grossProfit;
   }
-
-  const account = data.account ? String(data.account).trim() : 'General';
-  const destAccount = data.destAccount ? String(data.destAccount).trim() : null;
-  const category = data.category ? String(data.category).toLowerCase().trim() : 'servicios';
-  const id = 'fin_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
-  const createdAt = data.createdAt || new Date().toISOString();
 
   const stmt = sqliteDb.prepare(`
     INSERT INTO FinanceLedger (
