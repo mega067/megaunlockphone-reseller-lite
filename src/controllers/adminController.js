@@ -63,7 +63,7 @@ exports.getUsers = (req, res) => {
 };
 
 exports.changePassword = (req, res) => {
-  const { password } = req.body;
+  const { password, notifyWhatsApp } = req.body;
   const userId = String(req.params.id);
   
   if (req.user.role !== 'admin' && String(req.user.id) !== userId) {
@@ -83,8 +83,62 @@ exports.changePassword = (req, res) => {
   
   users[userIndex].password = password;
   writeDB('users.json', users);
+
+  // Sincronizar en SQLite si existe
+  try {
+    const sqliteDb = require('../database');
+    sqliteDb.prepare('UPDATE Users SET password = ? WHERE id = ?').run(password, String(userId));
+  } catch(e) {}
+
+  if (notifyWhatsApp && req.user.role === 'admin') {
+    const targetUser = users[userIndex];
+    const msg = `🔐 *CONTRASEÑA ACTUALIZADA POR ADMINISTRACIÓN*\n━━━━━━━━━━━━━━━━━━━━━━\n\nHola, *${targetUser.username}* 👋\n\nTu contraseña de acceso a *MegaUnlockPhone* ha sido modificada por el Administrador:\n\n🔑 *Nueva Contraseña:* \`\`\`${password}\`\`\`\n🌐 *Portal Web:* https://megaunlockphone-panel.alwaysdata.net\n\n💡 _Puedes ingresar con esta contraseña y cambiarla posteriormente desde tu perfil si lo deseas._`;
+    enqueueWhatsApp('private', msg, targetUser.id);
+  }
   
   res.json({ success: true });
+};
+
+// Generar y restablecer contraseña automáticamente enviándola al usuario por WhatsApp
+exports.resetUserPassword = (req, res) => {
+  const userId = String(req.params.id);
+  const users = readDB('users.json') || [];
+  const userIndex = users.findIndex(u => String(u.id) === userId);
+
+  if (userIndex === -1) {
+    return res.status(404).json({ error: 'Usuario no encontrado' });
+  }
+
+  const targetUser = users[userIndex];
+
+  // Generador de clave segura y fácil de escribir: formato Mega#XXXX (4 dígitos) o 6 caracteres alfanuméricos
+  const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+  const newPassword = `Mega${randomSuffix}`;
+
+  targetUser.password = newPassword;
+  writeDB('users.json', users);
+
+  // Sincronizar en SQLite si existe
+  try {
+    const sqliteDb = require('../database');
+    sqliteDb.prepare('UPDATE Users SET password = ? WHERE id = ?').run(newPassword, String(userId));
+  } catch(e) {}
+
+  createAutoBackup('Restablecer_Clave_User_' + userId);
+
+  // Notificar al usuario por WhatsApp mediante el bot
+  const userMsg = `🔐 *RESTABLECIMIENTO DE CONTRASEÑA*\n━━━━━━━━━━━━━━━━━━━━━━\n\nHola, *${targetUser.username}* 👋\n\nEl administrador ha restablecido tu contraseña de acceso a *MegaUnlockPhone*.\n\n👤 *Usuario:* ${targetUser.username}\n🔑 *Tu nueva contraseña:* \`\`\`${newPassword}\`\`\`\n🌐 *Acceso:* https://megaunlockphone-panel.alwaysdata.net\n\n💡 _Ya puedes ingresar con esta contraseña. Una vez adentro, puedes cambiarla en cualquier momento desde tu Perfil._ 🚀`;
+  enqueueWhatsApp('private', userMsg, targetUser.id);
+
+  // Notificar al admin por el canal de WhatsApp de confirmación
+  const adminAlert = `🔑 *Contraseña Restablecida por Bot*\n\nSe asignó una nueva clave provisional al usuario *${targetUser.username}* (ID: ${targetUser.id}).\nClave generada: \`${newPassword}\`\nMensaje enviado a su WhatsApp.`;
+  enqueueWhatsAppAdmin(adminAlert);
+
+  res.json({
+    success: true,
+    newPassword,
+    message: `Contraseña restablecida exitosamente a "${newPassword}" y enviada por WhatsApp al usuario.`
+  });
 };
 
 exports.createUser = (req, res) => {
@@ -141,7 +195,8 @@ exports.updateUser = (req, res) => {
 
       // Registrar en el historial de recargas (recharges.json)
       logRecharge(user.id, user.username, signedDelta, 'MANUAL_ADMIN', adminUsername, serverId, {
-        note: isAdd ? `Saldo asignado desde Panel Admin (${getServerDisplayName(serverId)})` : `Saldo descontado desde Panel Admin (${getServerDisplayName(serverId)})`
+        note: isAdd ? `Saldo asignado desde Panel Admin (${getServerDisplayName(serverId)})` : `Saldo descontado desde Panel Admin (${getServerDisplayName(serverId)})`,
+        skipWhatsAppNotification: true
       });
       
       const resMsg = `💰 *${isAdd ? 'RECARGA EXITOSA' : 'SALDO DESCONTADO'}*\n\n📥 Tu saldo ha sido actualizado correctamente\n\n💳 Método: Ajuste de Panel\n💵 Monto: $${amount.toFixed(2)} MXN\n💱 Equivalente USD: $${usdEq} USD\n💱 Tipo de cambio: ${exRate} MXN por USD\n✅ Saldo acreditado: $${amount.toFixed(2)} MXN\n📉 Saldo anterior: $${oldCredit.toFixed(2)} MXN\n📈 Saldo actual: $${parseFloat(credits).toFixed(2)} MXN\n\n━━━━━━━━━━━━━━\n🌐 MegaUnlockPhone`;

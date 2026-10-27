@@ -279,7 +279,8 @@ module.exports = function(app, deps) {
           senderBankName,
           receiverBankName,
           isDirectProvider: !!providerKey,
-          note: `Recarga SPEI verificada en ${receiverBankName || 'NU/STP'}`
+          note: `Recarga SPEI verificada en ${receiverBankName || 'NU/STP'}`,
+          skipWhatsAppNotification: true
         });
       }
 

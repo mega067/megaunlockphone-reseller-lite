@@ -344,6 +344,35 @@ function logRecharge(userId, username, amount, type = 'MANUAL_ADMIN', adminUsern
     }
   }
 
+  // Notificaciones automáticas por WhatsApp tanto al usuario como al Administrador
+  try {
+    const { enqueueWhatsApp, enqueueWhatsAppAdmin } = require('./whatsappQueue');
+    const wsettings = readDB('whatsapp_settings.json') || {};
+    
+    // Si la recarga provino de SPEI o MANUAL_ADMIN, verificar si ya fue encolada específicamente para no duplicar
+    if (!extra.skipWhatsAppNotification && wsettings.enabled !== false) {
+      const isAdd = numAmount > 0;
+      const serverLabel = getServerDisplayName(serverId);
+      const displayAmount = Math.abs(numAmount).toFixed(2);
+
+      // 1. Mensaje al usuario
+      const userNotice = isAdd 
+        ? `💰 *¡RECARGA DE SALDO EXITOSA!* 🚀\n━━━━━━━━━━━━━━━━━━━━━━\n\nHola, *${username || 'Cliente'}* 👋\nSe han acreditado exitosamente *$${displayAmount} MXN* a tu cuenta en *${serverLabel}*.\n\n💳 *Método:* ${type === 'SPEI' ? 'Transferencia SPEI' : 'Abono Administrativo'}\n${extra.trackingNumber ? `🧾 *Referencia:* ${extra.trackingNumber}\n` : ''}✅ Tu saldo ya se encuentra disponible para realizar tus pedidos.\n\n_¡Gracias por tu preferencia con MegaUnlockPhone!_ 🌐`
+        : `📉 *AJUSTE DE SALDO*\n━━━━━━━━━━━━━━━━━━━━━━\n\nHola, *${username || 'Cliente'}* 👋\nSe ha realizado un ajuste de *$${displayAmount} MXN* en tu saldo de *${serverLabel}*.\n\n${extra.note ? `📝 *Motivo:* ${extra.note}\n` : ''}Cualquier duda por favor comunícate con un administrador.`;
+
+      enqueueWhatsApp('private', userNotice, userId);
+
+      // 2. Mensaje directo al Administrador
+      const adminNotice = `💸 *${isAdd ? 'NUEVA RECARGA DE SALDO' : 'RETIRO / AJUSTE DE SALDO'}*\n━━━━━━━━━━━━━━━━━━━━━━\n👤 *Usuario:* ${username || userId} (ID: ${userId})\n🏢 *Servidor:* ${serverLabel}\n💰 *Monto:* ${isAdd ? '+' : '-'}$${displayAmount} MXN\n⚙️ *Tipo:* ${type}\n👮 *Operado por:* ${adminUsername || 'Sistema'}\n${extra.trackingNumber ? `🧾 *Rastreo/Folio:* ${extra.trackingNumber}\n` : ''}━━━━━━━━━━━━━━━━━━━━━━`;
+      enqueueWhatsAppAdmin(adminNotice);
+      
+      // 3. Notificación al grupo administrativo (si está configurado)
+      enqueueWhatsApp('group', adminNotice);
+    }
+  } catch (notifErr) {
+    console.warn('[RECHARGE NOTIF ERR]', notifErr.message);
+  }
+
   return entry;
 }
 

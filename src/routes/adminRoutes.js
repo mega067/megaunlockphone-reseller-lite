@@ -10,6 +10,7 @@ router.delete('/users/:id', requireAuth, requireAdmin, adminController.deleteUse
 router.post('/users/:id/impersonate', requireAuth, requireAdmin, adminController.impersonateUser);
 
 router.put('/users/:id/password', requireAuth, adminController.changePassword);
+router.post('/users/:id/reset-password', requireAuth, requireAdmin, adminController.resetUserPassword);
 
 router.get('/admin/stats', requireAuth, requireAdmin, adminController.getStats);
 router.get('/admin/settings', requireAuth, requireAdmin, adminController.getSettings);

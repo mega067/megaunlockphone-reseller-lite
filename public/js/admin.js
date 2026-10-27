@@ -565,10 +565,15 @@ async function loadAdminData() {
                     <i data-lucide="key" style="width: 14px; height: 14px; color: #facc15;"></i>
                     Contraseña & Rol
                   </div>
-                  <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+                  <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
                     <input type="password" class="user-password-field" value="${escapeHtml(u.password || '')}" readonly style="flex: 1; padding: 6px 10px; font-size: 0.8rem; border-radius: 6px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: white; font-family: monospace;">
                     <button type="button" class="btn-icon btn-toggle-pwd" title="Mostrar/Ocultar" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; cursor: pointer; color: white;"><i data-lucide="eye" style="width: 14px; height: 14px;"></i></button>
-                    <button type="button" class="btn-icon btn-edit-pwd" data-id="${u.id}" title="Cambiar Contraseña" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: rgba(250, 204, 21, 0.15); border: 1px solid rgba(250, 204, 21, 0.3); border-radius: 6px; cursor: pointer; color: #facc15;"><i data-lucide="edit-3" style="width: 14px; height: 14px;"></i></button>
+                    <button type="button" class="btn-icon btn-edit-pwd" data-id="${u.id}" data-name="${escapeHtml(u.username)}" title="Cambiar Contraseña Manual" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: rgba(250, 204, 21, 0.15); border: 1px solid rgba(250, 204, 21, 0.3); border-radius: 6px; cursor: pointer; color: #facc15;"><i data-lucide="edit-3" style="width: 14px; height: 14px;"></i></button>
+                    <button type="button" class="btn-icon btn-reset-pwd-bot" data-id="${u.id}" data-name="${escapeHtml(u.username)}" title="Restablecer y Enviar por Bot de WhatsApp" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: rgba(37, 211, 102, 0.15); border: 1px solid rgba(37, 211, 102, 0.35); border-radius: 6px; cursor: pointer; color: #25D366;"><i data-lucide="refresh-cw" style="width: 14px; height: 14px;"></i></button>
+                  </div>
+                  <div style="font-size: 0.72rem; color: #94a3b8; margin-bottom: 8px; display: flex; align-items: center; gap: 4px;">
+                    <i data-lucide="bot" style="width: 12px; height: 12px; color: #25D366;"></i>
+                    <span>Verde: genera clave y la manda al WhatsApp del usuario.</span>
                   </div>
                   <div style="display: flex; justify-content: space-between; align-items: center;">
                     <span style="font-size: 0.75rem; color: #94a3b8;">Rol de usuario:</span>
@@ -819,28 +824,61 @@ async function loadAdminData() {
           });
         });
 
-        // Edit Password Logic
+        // Edit Password Logic (Manual con opción de avisar por WhatsApp)
         document.querySelectorAll('.btn-edit-pwd').forEach(btn => {
           btn.addEventListener('click', async (e) => {
             const id = e.currentTarget.dataset.id;
-            const newPwd = prompt('Ingresa la nueva contraseña para este usuario (mínimo 4 caracteres):');
+            const uname = e.currentTarget.dataset.name || 'este usuario';
+            const newPwd = prompt(`Ingresa la nueva contraseña para ${uname} (mínimo 4 caracteres):`);
             if (!newPwd) return;
             if (newPwd.length < 4) return alert('La contraseña es muy corta.');
+
+            const notify = confirm(`¿Deseas enviar la nueva contraseña directamente al WhatsApp de "${uname}" mediante el Bot?`);
             
             try {
               const res = await fetch(`/api/users/${id}/password`, {
                 method: 'PUT',
                 headers: { 'X-Server-Id': currentServerId, 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-                body: JSON.stringify({ password: newPwd })
+                body: JSON.stringify({ password: newPwd, notifyWhatsApp: notify })
               });
               if(res.ok) {
-                alert('Contraseña actualizada con éxito.');
+                if (window.showToast) window.showToast(`Contraseña de ${uname} actualizada correctamente.`, 'success');
+                else alert('Contraseña actualizada con éxito.');
                 loadAdminData();
               } else {
                 alert('Error al actualizar contraseña.');
               }
             } catch (err) {
               console.error(err);
+            }
+          });
+        });
+
+        // Reset Password Logic (Generación aleatoria automática enviada por WhatsApp vía Bot)
+        document.querySelectorAll('.btn-reset-pwd-bot').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const id = e.currentTarget.dataset.id;
+            const uname = e.currentTarget.dataset.name || 'este usuario';
+            
+            if (!confirm(`🤖 ¿Restablecer la contraseña de "${uname}" y enviársela automáticamente por el Bot de WhatsApp?\n\nEl sistema generará una clave segura y se la mandará en un mensaje privado oficial.`)) {
+              return;
+            }
+
+            try {
+              const res = await fetch(`/api/users/${id}/reset-password`, {
+                method: 'POST',
+                headers: { 'X-Server-Id': currentServerId, 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }
+              });
+              const data = await res.json();
+              if (res.ok && data.success) {
+                alert(`✅ ¡Contraseña restablecida con éxito!\n\nUsuario: ${uname}\nNueva Clave: ${data.newPassword}\n\n📲 Se ha enviado el mensaje al WhatsApp del usuario mediante el Bot.`);
+                loadAdminData();
+              } else {
+                alert(data.error || 'Error al restablecer contraseña.');
+              }
+            } catch (err) {
+              console.error(err);
+              alert('Error de conexión al restablecer contraseña.');
             }
           });
         });
