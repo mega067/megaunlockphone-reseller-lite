@@ -573,11 +573,6 @@ function showCategoriesView() {
   btnBackToCategories.classList.add('hidden');
   catalogTitle.textContent = 'Catálogo de Productos';
   lucide.createIcons();
-  
-  // Regresar suavemente a la cabecera de categorías
-  requestAnimationFrame(() => {
-    scrollToCatalogHeader();
-  });
 }
 
 function showCategoryProducts(groupName, items) {
