@@ -16,6 +16,8 @@
   let cachedInstallments = [];
   let cachedInvestments = [];
   let investmentChart = null;
+  let categoryDoughnutChart = null;
+  let cashFlowBarChart = null;
 
   function formatMoney(num) {
     const val = parseFloat(num) || 0;
@@ -72,6 +74,7 @@
         renderGlobalMetrics(dataDash);
         renderAccounts(cachedAccounts);
         renderFinanceServerBalances(dataDash.serverBalances || []);
+        renderVisualAnalyticsCharts(dataDash);
         renderLedger(dataDash.recent || []);
         renderWeeklyAudits(dataDash.weeklyAudits || []);
         populateAccountSelects(cachedAccounts);
@@ -1031,6 +1034,250 @@
               callback: function(val) {
                 return '$' + val.toLocaleString('es-MX');
               }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // --- Analítica Visual: Gráfica de Torta de Gastos por Categoría y Flujo de Caja ---
+  function renderVisualAnalyticsCharts(dashData) {
+    if (typeof Chart === 'undefined') {
+      console.warn('Chart.js no está disponible para Analítica Visual.');
+      return;
+    }
+
+    renderCategoryDoughnutChart(dashData);
+    renderCashFlowBarChart(dashData);
+  }
+
+  function renderCategoryDoughnutChart(dashData) {
+    const canvas = document.getElementById('chartFinCategoryDoughnut');
+    const emptyMsg = document.getElementById('chartFinCategoryEmpty');
+    if (!canvas) return;
+
+    const catMeta = {
+      'comida': { label: 'Comida / Alimentos', color: '#f97316' },
+      'pasaje': { label: 'Pasajes / Transporte', color: '#06b6d4' },
+      'gustos': { label: 'Gustos / Ocio', color: '#ec4899' },
+      'servidores': { label: 'Fondeo Servidores GSM', color: '#8b5cf6' },
+      'emergencia': { label: 'Fondo Emergencias', color: '#ef4444' },
+      'inversion': { label: 'Inversiones', color: '#eab308' },
+      'servicios': { label: 'Servicios / Rentas', color: '#3b82f6' },
+      'universidad': { label: 'Universidad / Carrera', color: '#10b981' },
+      'otros': { label: 'Otros Gastos', color: '#94a3b8' }
+    };
+
+    // Extraer totales de gastos por categoría desde dashData.categories o calcularlos desde recent
+    let categoryMap = {};
+    if (Array.isArray(dashData.categories) && dashData.categories.length > 0) {
+      dashData.categories.forEach(c => {
+        const cost = parseFloat(c.totalExpense || c.totalCost || 0);
+        if (cost > 0) {
+          const key = (c.category || 'otros').toLowerCase().trim();
+          categoryMap[key] = (categoryMap[key] || 0) + cost;
+        }
+      });
+    }
+
+    // Si categories no venía en el dashboard, agrupar desde el historial reciente
+    if (Object.keys(categoryMap).length === 0 && Array.isArray(dashData.recent)) {
+      dashData.recent.forEach(tx => {
+        const cost = parseFloat(tx.costAmount || 0);
+        if (cost > 0 && tx.type !== 'transfer') {
+          const key = (tx.category || 'otros').toLowerCase().trim();
+          categoryMap[key] = (categoryMap[key] || 0) + cost;
+        }
+      });
+    }
+
+    const keys = Object.keys(categoryMap);
+    if (keys.length === 0) {
+      if (emptyMsg) emptyMsg.style.display = 'block';
+      if (categoryDoughnutChart) {
+        categoryDoughnutChart.destroy();
+        categoryDoughnutChart = null;
+      }
+      return;
+    }
+
+    if (emptyMsg) emptyMsg.style.display = 'none';
+
+    if (categoryDoughnutChart) {
+      categoryDoughnutChart.destroy();
+    }
+
+    const labels = keys.map(k => catMeta[k]?.label || k);
+    const values = keys.map(k => categoryMap[k]);
+    const colors = keys.map(k => catMeta[k]?.color || '#64748b');
+
+    const ctx = canvas.getContext('2d');
+    categoryDoughnutChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: values,
+          backgroundColor: colors,
+          borderWidth: 2,
+          borderColor: 'rgba(15, 23, 42, 0.95)'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'right',
+            labels: {
+              color: '#cbd5e1',
+              font: { family: 'Inter', size: 11, weight: 600 },
+              boxWidth: 10,
+              padding: 10
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+            titleColor: '#f8fafc',
+            bodyColor: '#cbd5e1',
+            borderColor: 'rgba(255, 255, 255, 0.1)',
+            borderWidth: 1,
+            callbacks: {
+              label: (ctx) => ` ${ctx.label}: $${parseFloat(ctx.raw || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })} MXN`
+            }
+          }
+        },
+        cutout: '65%'
+      }
+    });
+  }
+
+  function renderCashFlowBarChart(dashData) {
+    const canvas = document.getElementById('chartFinCashFlowBars');
+    const emptyMsg = document.getElementById('chartFinCashFlowEmpty');
+    if (!canvas) return;
+
+    // Obtener tendencia diaria o cierres semanales para comparar cobrado vs gastado
+    const daily = Array.isArray(dashData.dailyTrends) && dashData.dailyTrends.length > 0 
+      ? [...dashData.dailyTrends].reverse() 
+      : [];
+
+    let labels = [];
+    let incomes = [];
+    let expenses = [];
+    let profits = [];
+
+    if (daily.length > 0) {
+      labels = daily.map(d => d.date ? d.date.substring(5) : 'Día');
+      incomes = daily.map(d => parseFloat(d.income || 0));
+      expenses = daily.map(d => parseFloat(d.expense || 0));
+      profits = daily.map(d => parseFloat(d.profit || (d.income - d.expense) || 0));
+    } else if (Array.isArray(dashData.weeklyAudits) && dashData.weeklyAudits.length > 0) {
+      const audits = [...dashData.weeklyAudits].reverse();
+      labels = audits.map(a => `${a.weekStart.substring(5)}`);
+      incomes = audits.map(a => parseFloat(a.totalIncome || 0));
+      expenses = audits.map(a => parseFloat(a.totalExpenses || 0));
+      profits = audits.map(a => parseFloat(a.netSavings || (a.totalIncome - a.totalExpenses) || 0));
+    } else {
+      // Tomar resumen global
+      const summary = dashData.summary || {};
+      const totIncome = parseFloat(summary.totalCharged || 0);
+      const totCost = parseFloat(summary.totalCost || 0);
+      const totProfit = parseFloat(summary.totalGrossProfit || (totIncome - totCost));
+      if (totIncome > 0 || totCost > 0) {
+        labels = ['Acumulado'];
+        incomes = [totIncome];
+        expenses = [totCost];
+        profits = [totProfit];
+      }
+    }
+
+    if (labels.length === 0) {
+      if (emptyMsg) emptyMsg.style.display = 'block';
+      if (cashFlowBarChart) {
+        cashFlowBarChart.destroy();
+        cashFlowBarChart = null;
+      }
+      return;
+    }
+
+    if (emptyMsg) emptyMsg.style.display = 'none';
+
+    if (cashFlowBarChart) {
+      cashFlowBarChart.destroy();
+    }
+
+    const ctx = canvas.getContext('2d');
+    cashFlowBarChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Ingresos / Cobrado',
+            data: incomes,
+            backgroundColor: 'rgba(16, 185, 129, 0.75)',
+            borderColor: '#10b981',
+            borderWidth: 1,
+            borderRadius: 4
+          },
+          {
+            label: 'Gastos / Costos',
+            data: expenses,
+            backgroundColor: 'rgba(239, 68, 68, 0.75)',
+            borderColor: '#ef4444',
+            borderWidth: 1,
+            borderRadius: 4
+          },
+          {
+            label: 'Ganancia Neta',
+            data: profits,
+            type: 'line',
+            borderColor: '#38bdf8',
+            backgroundColor: 'rgba(56, 189, 248, 0.2)',
+            borderWidth: 2,
+            tension: 0.3,
+            pointBackgroundColor: '#38bdf8',
+            pointRadius: 3
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: {
+              color: '#94a3b8',
+              font: { family: 'Inter', size: 10, weight: 600 },
+              usePointStyle: true,
+              boxWidth: 8
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+            titleColor: '#f8fafc',
+            bodyColor: '#cbd5e1',
+            borderColor: 'rgba(255, 255, 255, 0.1)',
+            borderWidth: 1,
+            callbacks: {
+              label: (ctx) => ` ${ctx.dataset.label}: $${parseFloat(ctx.raw || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })} MXN`
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: { color: '#64748b', font: { family: 'Inter', size: 10 } }
+          },
+          y: {
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: {
+              color: '#64748b',
+              font: { family: 'Inter', size: 10 },
+              callback: (val) => '$' + val.toLocaleString('es-MX')
             }
           }
         }
