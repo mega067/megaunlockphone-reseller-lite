@@ -557,12 +557,27 @@ function isHotCategory(groupName) {
   return gn.includes('renta') || gn.includes('check') || gn.includes('at&t') || gn.includes('att');
 }
 
+function scrollToCatalogHeader() {
+  const target = document.getElementById('productsSection') || document.getElementById('catalogTitle');
+  if (target) {
+    // Calculamos un ligero offset por si la barra superior es fija/sticky
+    const yOffset = -20;
+    const y = target.getBoundingClientRect().top + window.pageYOffset + yOffset;
+    window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+  }
+}
+
 function showCategoriesView() {
   categoriesGrid.classList.remove('hidden');
   productsBody.classList.add('hidden');
   btnBackToCategories.classList.add('hidden');
   catalogTitle.textContent = 'Catálogo de Productos';
   lucide.createIcons();
+  
+  // Regresar suavemente a la cabecera de categorías
+  requestAnimationFrame(() => {
+    scrollToCatalogHeader();
+  });
 }
 
 function showCategoryProducts(groupName, items) {
@@ -572,6 +587,11 @@ function showCategoryProducts(groupName, items) {
   catalogTitle.textContent = groupName;
   
   renderProductCards(items);
+  
+  // Llevar suavemente al inicio del grupo seleccionado
+  requestAnimationFrame(() => {
+    scrollToCatalogHeader();
+  });
 }
 
 // Helper puro de cálculo de sugerencias calibrado con MegaUnlockPhone
