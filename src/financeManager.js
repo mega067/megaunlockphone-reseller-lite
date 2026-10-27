@@ -526,13 +526,32 @@ async function getFinanceSummary(filterOptions = {}) {
   // Resumen de saldos reales en servidores GSM externos
   const serverBalances = await queryAllServerCredits();
 
-  // Obtener saldo real depositado actualmente en cajitas Nu / cuentas de ahorro
-  const cajitaAccounts = sqliteDb.prepare(`
-    SELECT COALESCE(SUM(currentBalance), 0) as totalInSavings
+  // Obtener saldo real depositado específicamente en la Cajita de Reinversión vs otras cajitas
+  const allSavingsAccounts = sqliteDb.prepare(`
+    SELECT id, name, currentBalance
     FROM FinanceAccounts
     WHERE isArchived = 0 AND (type = 'savings' OR LOWER(name) LIKE '%cajita%')
-  `).get();
-  const cajitaActualBalance = parseFloat(cajitaAccounts?.totalInSavings || 0);
+  `).all();
+
+  let cajitaActualBalance = 0;
+  let cajitaReinvestBalance = 0;
+  let otherCajitasBalance = 0;
+
+  allSavingsAccounts.forEach(acc => {
+    const bal = parseFloat(acc.currentBalance || 0);
+    cajitaActualBalance += bal;
+    const lower = acc.name.toLowerCase();
+    if (lower.includes('reinversi') || lower.includes('reinvest')) {
+      cajitaReinvestBalance += bal;
+    } else {
+      otherCajitasBalance += bal;
+    }
+  });
+
+  // Si no hay ninguna cajita con nombre explícito de reinversión pero solo hay 1 cajita, tomar esa
+  if (cajitaReinvestBalance === 0 && allSavingsAccounts.length === 1) {
+    cajitaReinvestBalance = cajitaActualBalance;
+  }
 
   const totalTicketServerCost = parseFloat(totalRow.totalTicketServerCost || 0);
   const totalReinvest = parseFloat(totalRow.totalReinvest || 0);
@@ -546,11 +565,10 @@ async function getFinanceSummary(filterOptions = {}) {
   const totalInjectedToServer = parseFloat(serverInjectionsRow?.totalInjected || 0);
 
   // Fondo meta total que las ventas exigen apartar (costo consumido + utilidades de reinversión)
-  // MENOS lo que ya inyectaste directamente al servidor o lo que ya tienes apartado en Cajitas
+  // Evaluado contra la Cajita de Reinversión específicamente
   const cajitaTargetFund = parseFloat((totalTicketServerCost + totalReinvest).toFixed(2));
   
-  // Si ya inyectaste saldo por adelantado al servidor (ej: $100 MXN a Omega), ese saldo cubre con creces el fondo meta requerido
-  const totalCoveredForServers = cajitaActualBalance + totalInjectedToServer;
+  const totalCoveredForServers = cajitaReinvestBalance + totalInjectedToServer;
   const cajitaPendingToMove = Math.max(0, parseFloat((cajitaTargetFund - totalCoveredForServers).toFixed(2)));
   const serverFundSurplus = Math.max(0, parseFloat((totalCoveredForServers - cajitaTargetFund).toFixed(2)));
 
@@ -566,6 +584,8 @@ async function getFinanceSummary(filterOptions = {}) {
       totalTicketServerCost: totalTicketServerCost,
       totalCajitaServerFund: cajitaTargetFund,
       cajitaActualBalance: cajitaActualBalance,
+      cajitaReinvestBalance: cajitaReinvestBalance,
+      otherCajitasBalance: otherCajitasBalance,
       totalInjectedToServer: totalInjectedToServer,
       serverFundSurplus: serverFundSurplus,
       cajitaTargetFund: cajitaTargetFund,

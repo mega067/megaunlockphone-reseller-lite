@@ -142,17 +142,18 @@
       statGrossCount.textContent = `${dash.summary?.count || 0} movimientos registrados`;
     }
 
-    // Indicador inteligente de Cajita Nu (Saldo Real en Cajita vs Pendiente por Mover)
+    // Indicador inteligente de Cajita Nu (Saldo exclusivo de la Cajita de Reinversión)
     const statCajitaNu = document.getElementById('statFinCajitaNu');
     const statCajitaHint = document.getElementById('statFinCajitaGoalHint');
     if (statCajitaNu) {
-      const actualBalance = parseFloat(dash.summary?.cajitaActualBalance !== undefined ? dash.summary.cajitaActualBalance : 0);
+      const reinvestBalance = parseFloat(dash.summary?.cajitaReinvestBalance !== undefined ? dash.summary.cajitaReinvestBalance : (dash.summary?.cajitaActualBalance || 0));
       const targetFund = parseFloat(dash.summary?.cajitaTargetFund !== undefined ? dash.summary.cajitaTargetFund : 0);
-      const pendingToMove = parseFloat(dash.summary?.cajitaPendingToMove !== undefined ? dash.summary.cajitaPendingToMove : Math.max(0, targetFund - actualBalance));
+      const pendingToMove = parseFloat(dash.summary?.cajitaPendingToMove !== undefined ? dash.summary.cajitaPendingToMove : Math.max(0, targetFund - reinvestBalance));
       const sCost = parseFloat(dash.summary?.totalTicketServerCost || 0);
       const sReinvest = parseFloat(dash.summary?.totalReinvest || 0);
 
-      statCajitaNu.textContent = formatMoney(actualBalance);
+      // Mostrar únicamente el saldo de la Cajita de Reinversión
+      statCajitaNu.textContent = formatMoney(reinvestBalance);
 
       const injected = parseFloat(dash.summary?.totalInjectedToServer || 0);
       const surplus = parseFloat(dash.summary?.serverFundSurplus || 0);
@@ -162,12 +163,12 @@
           statCajitaHint.innerHTML = `⚠️ <span style="color:#ec4899; font-weight:700;">Apartar ${formatMoney(pendingToMove)}</span> <span style="font-size:0.68rem; opacity:0.8;">(Meta: ${formatMoney(targetFund)} • Costo: ${formatMoney(sCost)} + Margen: ${formatMoney(sReinvest)})</span>`;
         } else if (injected > 0 && surplus >= 0) {
           statCajitaHint.innerHTML = `<span style="color:#10b981; font-weight:700;">✅ Ya fondeaste al Servidor por adelantado (${formatMoney(injected)})</span> <span style="font-size:0.68rem; opacity:0.8;">(Meta cubierta: ${formatMoney(targetFund)} • Saldo a favor: +${formatMoney(surplus)})</span>`;
-        } else if (actualBalance >= 100) {
-          statCajitaHint.innerHTML = `<span style="color:#10b981; font-weight:700;">✅ ¡Listo para recargar $100 en Servidor!</span> <span style="font-size:0.68rem; opacity:0.8;">(Cajita al día: ${formatMoney(actualBalance)})</span>`;
-        } else if (actualBalance >= 50) {
-          statCajitaHint.innerHTML = `<span style="color:#38bdf8; font-weight:700;">⚡ ¡Alcanza para recarga mínima de $50!</span> <span style="font-size:0.68rem; opacity:0.8;">(Faltan ${formatMoney(100 - actualBalance)} p/ $100)</span>`;
+        } else if (reinvestBalance >= 100) {
+          statCajitaHint.innerHTML = `<span style="color:#10b981; font-weight:700;">✅ ¡Listo para recargar $100 en Servidor!</span> <span style="font-size:0.68rem; opacity:0.8;">(Cajita Reinversión: ${formatMoney(reinvestBalance)})</span>`;
+        } else if (reinvestBalance >= 50) {
+          statCajitaHint.innerHTML = `<span style="color:#38bdf8; font-weight:700;">⚡ ¡Alcanza para recarga mínima de $50!</span> <span style="font-size:0.68rem; opacity:0.8;">(Faltan ${formatMoney(100 - reinvestBalance)} p/ $100)</span>`;
         } else {
-          statCajitaHint.innerHTML = `<span style="color:#10b981;">✅ Cajita al día</span> <span style="font-size:0.68rem; opacity:0.8;">(Acumulado: ${formatMoney(actualBalance)})</span>`;
+          statCajitaHint.innerHTML = `<span style="color:#10b981;">✅ Cajita al día</span> <span style="font-size:0.68rem; opacity:0.8;">(Reinversión: ${formatMoney(reinvestBalance)})</span>`;
         }
       }
     }
