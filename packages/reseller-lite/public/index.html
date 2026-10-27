@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MegaUnlockPhone Lite - Panel Reseller</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo">⚡</div>
+        <div class="brand-text">
+          <h2>MegaLite</h2>
+          <span>Reseller Portal</span>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <button class="nav-item active" data-tab="catalog">
+          <span class="icon">📱</span> Catálogo & Servicios
+        </button>
+        <button class="nav-item" data-tab="orders">
+          <span class="icon">📦</span> Mis Pedidos
+        </button>
+        <button class="nav-item" data-tab="modules">
+          <span class="icon">🧩</span> Gestor de Módulos
+        </button>
+        <button class="nav-item" data-tab="settings">
+          <span class="icon">⚙️</span> Conexión & API
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="balance-card">
+          <div class="balance-label">Saldo Servidor 1</div>
+          <div class="balance-value" id="s1Balance">$0.00 MXN</div>
+          <div class="balance-label mt-2">Saldo Servidor 3</div>
+          <div class="balance-value" id="s3Balance">$0.00 MXN</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <header class="topbar">
+        <div class="topbar-title">
+          <h1 id="pageTitle">Catálogo de Servicios</h1>
+          <p id="pageSubtitle">Conectado a MegaUnlockPhone API Bridge</p>
+        </div>
+        <div class="topbar-actions">
+          <div class="badge-status" id="connectionBadge">
+            <span class="dot"></span> Enlace Activo
+          </div>
+        </div>
+      </header>
+
+      <div class="content-body">
+        <!-- Tab: Catálogo -->
+        <section id="tab-catalog" class="tab-pane active">
+          <div class="server-tabs">
+            <button class="server-btn active" data-server="1">MEGA-SERVER (IMEI / Liberaciones)</button>
+            <button class="server-btn" data-server="3">OMEGA-SERVER (Streaming / Cuentas / IA)</button>
+          </div>
+          <div class="search-box">
+            <input type="text" id="serviceSearch" placeholder="Buscar por modelo, marca o servicio...">
+          </div>
+          <div id="catalogList" class="catalog-grid">
+            <div class="loading-state">Cargando catálogo en tiempo real...</div>
+          </div>
+        </section>
+
+        <!-- Tab: Pedidos -->
+        <section id="tab-orders" class="tab-pane">
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ID Orden</th>
+                  <th>Servicio</th>
+                  <th>IMEI / Entrada</th>
+                  <th>Precio</th>
+                  <th>Estado</th>
+                  <th>Fecha</th>
+                </tr>
+              </thead>
+              <tbody id="ordersTableBody">
+                <tr>
+                  <td colspan="6" class="text-center">No hay órdenes recientes</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Tab: Gestor Gráfico de Módulos -->
+        <section id="tab-modules" class="tab-pane">
+          <div class="modules-header">
+            <div>
+              <h2>Configuración Visual de Módulos</h2>
+              <p>Activa, apaga o configura cada módulo con el asistente paso a paso.</p>
+            </div>
+          </div>
+          <div id="modulesContainer" class="modules-grid">
+            <!-- Dynamic module cards -->
+          </div>
+        </section>
+
+        <!-- Tab: Conexión API -->
+        <section id="tab-settings" class="tab-pane">
+          <div class="settings-card">
+            <h2>Asistente de Conexión a MegaUnlockPhone</h2>
+            <p>Ingresa tu API Key obtenida en tu panel principal de MegaUnlockPhone.</p>
+            <form id="apiSetupForm" class="setup-form">
+              <div class="form-group">
+                <label>API Key de MegaUnlockPhone</label>
+                <input type="password" id="inputApiKey" placeholder="mup_live_..." required>
+                <small>Tu llave única de autenticación cifrada.</small>
+              </div>
+              <div class="form-group">
+                <label>Nombre de Usuario Reseller</label>
+                <input type="text" id="inputUsername" placeholder="Tu usuario" required>
+              </div>
+              <div class="form-group">
+                <label>Margen de Ganancia para tus Clientes (%)</label>
+                <input type="number" id="inputMargin" value="15" min="0" max="100">
+                <small>Porcentaje que se sumará automáticamente a tus precios de catálogo.</small>
+              </div>
+              <button type="submit" class="btn-primary">Guardar y Vincular API</button>
+            </form>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal de Orden -->
+  <div id="orderModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalServiceTitle">Enviar Pedido</h3>
+        <button class="modal-close" id="modalClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-price" id="modalServicePrice">$0.00 MXN</div>
+        <form id="orderForm">
+          <input type="hidden" id="orderServiceId">
+          <input type="hidden" id="orderServerId">
+          <div class="form-group">
+            <label id="orderInputLabel">IMEI / Serie o Parámetro</label>
+            <input type="text" id="orderInputParam" required placeholder="Ingresa los 15 dígitos...">
+          </div>
+          <button type="submit" class="btn-primary w-full">Confirmar y Enviar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Configuración de Módulo (Paso a Paso) -->
+  <div id="moduleModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modModalTitle">Configurar Módulo</h3>
+        <button class="modal-close" id="modModalClose">&times;</button>
+      </div>
+      <div class="modal-body" id="modModalBody">
+        <!-- Dynamic steps form -->
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
