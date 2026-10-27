@@ -75,7 +75,8 @@
         renderAccounts(cachedAccounts);
         renderFinanceServerBalances(dataDash.serverBalances || []);
         renderVisualAnalyticsCharts(dataDash);
-        renderLedger(dataDash.recent || []);
+        window._cachedRecentTransactions = dataDash.recent || [];
+        renderLedger(window._cachedRecentTransactions);
         renderWeeklyAudits(dataDash.weeklyAudits || []);
         populateAccountSelects(cachedAccounts);
         renderConfigSettings(dataDash.config || {});
@@ -1906,12 +1907,22 @@
 
   // --- EXPORTACIÓN DE CONTEXTO FINANCIERO COMPLETO PARA IA ---
 
-  window.finOpenAiContextModal = async function() {
+  // Generar JSON para IA con filtro configurable de transacciones
+  window.finGenerateAiContextJson = function() {
     const txtArea = document.getElementById('txtAiContextJson');
     const hint = document.getElementById('aiCopySuccessHint');
-    if (hint) hint.style.display = 'none';
+    const rangeSelect = document.getElementById('selAiHistoryRange');
+    const customDaysInput = document.getElementById('inputAiCustomDays');
 
-    // Generar estructura completa consolidada
+    const rangeMode = rangeSelect ? rangeSelect.value : 'week';
+    let daysLimit = 7;
+    if (rangeMode === 'week') daysLimit = 7;
+    else if (rangeMode === '15') daysLimit = 15;
+    else if (rangeMode === '30') daysLimit = 30;
+    else if (rangeMode === 'custom') daysLimit = parseInt(customDaysInput?.value || 7, 10);
+    else if (rangeMode === 'all') daysLimit = 9999;
+    else if (rangeMode === 'none') daysLimit = 0;
+
     let netWorth = 0;
     let usableCashBank = 0;
     let cajitasNu = 0;
@@ -2002,9 +2013,35 @@
       plusvaliaTotal = parseFloat(lastInv.netReturn || 0);
     }
 
+    // Filtrar movimientos del historial por periodo
+    const allRecent = window._cachedRecentTransactions || [];
+    const nowMs = Date.now();
+    const cutoffMs = nowMs - (daysLimit * 24 * 60 * 60 * 1000);
+
+    let filteredTransactions = [];
+    if (daysLimit > 0) {
+      filteredTransactions = allRecent.filter(tx => {
+        if (!tx.createdAt) return true;
+        const txMs = new Date(tx.createdAt).getTime();
+        return isNaN(txMs) || txMs >= cutoffMs;
+      }).map(tx => ({
+        fecha: tx.createdAt,
+        concepto: tx.serviceName || 'Movimiento',
+        tipo: tx.type,
+        cobrado: parseFloat(tx.chargedAmount || 0),
+        costo: parseFloat(tx.costAmount || 0),
+        margen_neto: parseFloat(tx.netProfit || tx.grossProfit || 0),
+        cuenta_origen: tx.accountName || tx.account || '',
+        cuenta_destino: tx.destAccountName || tx.destAccount || '',
+        categoria: tx.category || 'general',
+        notas: tx.notes || ''
+      }));
+    }
+
     const aiContextObject = {
       _instrucciones_para_la_ia: "Este es el estado financiero integral de Ángel. Úsalo como contexto para darle recomendaciones, responder consultas sobre su liquidez, flujos, pagos y presupuestos.",
       fecha_extraccion: new Date().toISOString(),
+      filtro_historial_aplicado: rangeMode === 'none' ? 'Sin transacciones' : (rangeMode === 'all' ? 'Historial completo disponible' : `Últimos ${daysLimit} días (Periodo semanal/personalizado)`),
       resumen_patrimonial_mxn: {
         patrimonio_neto_liquido_total: parseFloat(netWorth.toFixed(2)),
         efectivo_y_debito_usable: parseFloat(usableCashBank.toFixed(2)),
@@ -2034,11 +2071,21 @@
           rendimiento_pct: parseFloat(i.returnPercentage || 0),
           notas: i.notes || ''
         }))
-      }
+      },
+      historial_movimientos: filteredTransactions
     };
 
     const jsonString = JSON.stringify(aiContextObject, null, 2);
     if (txtArea) txtArea.value = jsonString;
+    return jsonString;
+  };
+
+  window.finOpenAiContextModal = async function() {
+    const hint = document.getElementById('aiCopySuccessHint');
+    if (hint) hint.style.display = 'none';
+
+    // Generar JSON según filtro actual
+    const jsonString = window.finGenerateAiContextJson();
 
     // Intentar copiar automáticamente al portapapeles de una vez
     try {
@@ -2877,14 +2924,26 @@
               hint.textContent = '✅ ¡Copiado al portapapeles exitosamente!';
             }
           } catch (e) {
-            txtArea.select();
-            document.execCommand('copy');
-            if (hint) {
-              hint.style.display = 'inline';
-              hint.textContent = '✅ ¡Copiado!';
-            }
+            alert('Por favor selecciona el texto del cuadro y usa Ctrl+C para copiar.');
           }
         }
+      });
+    }
+
+    // Reactividad para el selector de periodo de historial para IA
+    const selAiRange = document.getElementById('selAiHistoryRange');
+    const inputCustomDays = document.getElementById('inputAiCustomDays');
+    if (selAiRange) {
+      selAiRange.addEventListener('change', () => {
+        if (inputCustomDays) {
+          inputCustomDays.style.display = selAiRange.value === 'custom' ? 'inline-block' : 'none';
+        }
+        window.finGenerateAiContextJson();
+      });
+    }
+    if (inputCustomDays) {
+      inputCustomDays.addEventListener('input', () => {
+        window.finGenerateAiContextJson();
       });
     }
     // Botón para abrir modal de Cruce / Tabulación de Deudas

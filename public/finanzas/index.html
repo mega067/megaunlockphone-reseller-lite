@@ -1461,10 +1461,30 @@
         <button class="fin-modal-close" onclick="window.finCloseModal('modalAiContext')">&times;</button>
       </div>
       <div style="margin-bottom:0.8rem; font-size:0.82rem; color:var(--fin-text-muted);">
-        Este bloque contiene todo el estado financiero consolidado (patrimonio líquido, saldos por cartera, deudas por cobrar y pagar, planes de tarjeta, cortes de inversión y últimos movimientos). Cópialo y pégalo directamente en ChatGPT, Claude o Gemini para análisis y asesoría financiera.
+        Este bloque contiene todo el estado financiero consolidado (patrimonio líquido, carteras, deudas por cobrar/pagar, planes a plazos, inversiones y movimientos). Cópialo y pégalo directamente en ChatGPT, Claude o Gemini para análisis y asesoría financiera.
       </div>
+      
+      <!-- Selector de Rango de Historial para IA -->
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.6rem; margin-bottom:0.8rem; background:rgba(255,255,255,0.03); padding:0.6rem 0.9rem; border-radius:10px; border:1px solid rgba(255,255,255,0.06);">
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <i data-lucide="filter" style="width:14px; height:14px; color:#38bdf8;"></i>
+          <span style="font-size:0.8rem; font-weight:700; color:#e2e8f0;">Historial de Movimientos a exportar:</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <select id="selAiHistoryRange" class="fin-select" style="padding:4px 10px; font-size:0.8rem; width:auto; border-color:rgba(56,189,248,0.35); color:#38bdf8;">
+            <option value="week" selected>📅 Solo esta semana (Últimos 7 días)</option>
+            <option value="15">📆 Últimos 15 días</option>
+            <option value="30">🗓️ Últimos 30 días (Mes)</option>
+            <option value="custom">⚙️ Días configurables...</option>
+            <option value="all">📦 Historial completo</option>
+            <option value="none">🚫 Sin historial (Solo balances)</option>
+          </select>
+          <input type="number" id="inputAiCustomDays" class="fin-input" min="1" max="365" value="7" style="display:none; width:70px; padding:4px 8px; font-size:0.8rem;" placeholder="Días">
+        </div>
+      </div>
+
       <div style="position:relative;">
-        <textarea id="txtAiContextJson" readonly style="width:100%; height:360px; background:rgba(7, 11, 20, 0.95); border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:1rem; font-family:monospace; font-size:0.78rem; color:#38bdf8; resize:vertical; outline:none; white-space:pre;"></textarea>
+        <textarea id="txtAiContextJson" readonly style="width:100%; height:340px; background:rgba(7, 11, 20, 0.95); border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:1rem; font-family:monospace; font-size:0.78rem; color:#38bdf8; resize:vertical; outline:none; white-space:pre;"></textarea>
       </div>
       <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1rem; flex-wrap:wrap; gap:0.6rem;">
         <span id="aiCopySuccessHint" style="font-size:0.82rem; color:#10b981; font-weight:700; display:none;">

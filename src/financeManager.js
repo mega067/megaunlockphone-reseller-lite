@@ -759,6 +759,55 @@ function performWeeklyAudit(data = {}) {
 }
 
 /**
+ * Planificador de corte automático a las 12 (Medianoche).
+ * Si es el final de la semana (o cruce de medianoche del domingo al lunes)
+ * y no se ha ejecutado el corte manualmente, se genera automáticamente.
+ */
+let autoAuditTimer = null;
+function initAutoAuditScheduler() {
+  if (autoAuditTimer) clearInterval(autoAuditTimer);
+
+  const checkAutoAudit = () => {
+    try {
+      const now = new Date();
+      // Obtener hora local de México / servidor (0 a 23)
+      const hour = now.getHours();
+      const minute = now.getMinutes();
+      const day = now.getDay(); // 0 es Domingo, 1 es Lunes
+
+      // Si estamos en la ventana de las 12 (00:00 a 00:05) de Domingo a Lunes (o cualquier día que complete ciclo)
+      if (hour === 0 && minute <= 10) {
+        const todayStr = now.toISOString().split('T')[0];
+        const past7Days = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0];
+        
+        // Revisar si ya existe un corte reciente que termine hoy o ayer
+        const existing = sqliteDb.prepare(`
+          SELECT id FROM FinanceWeeklyAudits 
+          WHERE weekEnd >= ? OR createdAt >= datetime('now', '-18 hours')
+        `).get(past7Days);
+
+        if (!existing) {
+          console.log(`[FINANCE AUTO AUDIT] Ejecutando corte automático programado a las 12 (Medianoche)...`);
+          performWeeklyAudit({
+            weekStart: past7Days,
+            weekEnd: todayStr,
+            notes: 'Corte automático de medianoche (12:00 AM) ejecutado por el sistema',
+            verifiedBy: 'Sistema (Corte Automático 12:00)'
+          });
+        }
+      }
+    } catch (schedErr) {
+      console.warn('[FINANCE AUTO AUDIT ERR]', schedErr.message);
+    }
+  };
+
+  // Revisar cada 5 minutos
+  autoAuditTimer = setInterval(checkAutoAudit, 5 * 60 * 1000);
+  // Chequeo inicial
+  checkAutoAudit();
+}
+
+/**
  * Buscar todos los datos contables y de ganancia asociados a una orden específica
  */
 function getOrderFinanceDetails(orderId) {
@@ -1921,6 +1970,7 @@ module.exports = {
   recordManualTransaction: recordTransaction,
   getFinanceSummary,
   performWeeklyAudit,
+  initAutoAuditScheduler,
   getOrderFinanceDetails,
   deleteTransaction,
   getAllDebts,

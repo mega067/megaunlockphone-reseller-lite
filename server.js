@@ -179,12 +179,14 @@ app.get('/api/proxy-image', async (req, res) => {
   }
 });
 
-// Cron Sync, Poller and 24h Backup Scheduler
+// Cron Sync, Poller, 24h Backup Scheduler y Corte Semanal Automático 12:00
 const { initPoller, pollPendingOrders } = require('./src/poller');
 const { initBackupScheduler, createDailyBackup, logAuditTrail } = require('./src/backupEngine');
+const { initAutoAuditScheduler } = require('./src/financeManager');
 
 initPoller();
 initBackupScheduler();
+initAutoAuditScheduler();
 logAuditTrail('SYSTEM_SERVER_STARTED', { port: PORT, ip: IP, pid: process.pid });
 
 app.get('/api/cron/sync', async (req, res) => {
