@@ -58,6 +58,12 @@ Para que tu tienda tenga catálogo en tiempo real y procese los pedidos automát
 4. Copia tu llave criptográfica (formato `mup_live_...`).
 5. Listo. Esa llave es la que ingresarás en tu panel de Reseller Lite en la pestaña **Ajustes & Branding**.
 
+> 💡 **LLAVE DE PRUEBA INMEDIATA (SANDBOX DEMO KEY):**  
+> Si quieres probar el funcionamiento y catálogo de inmediato sin registrarte aún, usa esta credencial activa de pruebas con saldo cargado:
+> - **Usuario Demo:** `demo_reseller`
+> - **API Key:** `mup_live_demo777888999aaaabbbbccccdd`
+> - **Saldo Demo:** `$250.00 MXN` (Servidor 1) / `$250.00 MXN` (Servidor 2)
+
 ---
 
 ## 🚀 Instalación Paso a Paso
