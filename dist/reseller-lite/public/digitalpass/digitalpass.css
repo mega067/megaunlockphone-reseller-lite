@@ -1,0 +1,866 @@
+@import url('/index.css?v=75');
+
+/* ============================================================
+   DIGITALPASS PALETTE: TEMA CLARO SUAVE (UI/UX PRO MAX)
+   Inspirado en el cielo azul suave y degradado del logo original:
+   - Fondo: Tono azul cielo suave elegante (#8ec5ec -> #74b3e3)
+   - Contenedores & Tarjetas: Azul hielo claro translúcido / blanco suave
+   - Textos: Azul marino oscuro intenso (#0a1f33, #0f2a42) -> WCAG AAA
+   - Acentos: Azul celeste eléctrico (#0284c7, #0ea5e9, #38bdf8)
+============================================================ */
+:root {
+  --primary-color: #0284c7;
+  --secondary-color: #0ea5e9;
+  --accent-blue: #38bdf8;
+  --accent-emerald: #059669;
+  --bg-color: #7cbfe8;
+  --panel-bg: rgba(238, 247, 255, 0.92);
+  --border-color: rgba(14, 165, 233, 0.35);
+  --text-primary: #0a1f33;
+  --text-secondary: #1d3e5a;
+  --text-muted: #3d6080;
+  --status-online: #10b981;
+  --status-offline: #ef4444;
+  --status-pending: #f59e0b;
+  --glass-border: rgba(14, 165, 233, 0.28);
+  --glass-shadow: 0 12px 32px rgba(15, 42, 66, 0.12);
+  --btn-hover: rgba(14, 165, 233, 0.16);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-display: 'Outfit', 'Inter', sans-serif;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: #7fbfe9 !important;
+  color: var(--text-primary) !important;
+  background-image: 
+    radial-gradient(circle at 50% 25%, #a6daf9 0%, #76b5e5 65%, #599bca 100%) !important;
+  background-attachment: fixed !important;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display) !important;
+  letter-spacing: -0.02em;
+}
+
+/* App Header */
+.app-header {
+  background: rgba(228, 244, 255, 0.92) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-bottom: 1px solid rgba(14, 165, 233, 0.38) !important;
+  box-shadow: 0 6px 24px rgba(15, 42, 66, 0.1) !important;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg) !important;
+  padding: 1rem 1.4rem !important;
+}
+
+.app-header::before {
+  display: none !important;
+}
+
+/* Logo Oficial DigitalPass en Header */
+.logo-area .logo-icon {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 52px !important;
+  height: 52px !important;
+}
+
+.logo-area .logo-icon img {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  filter: drop-shadow(0 3px 8px rgba(15, 42, 66, 0.22)) !important;
+}
+
+.logo-text h1 {
+  color: #0a1f33 !important;
+  -webkit-text-fill-color: #0a1f33 !important;
+  font-weight: 800 !important;
+  font-size: 1.35rem !important;
+}
+
+/* Marquee Header */
+.header-marquee-container {
+  flex: 1 1 320px !important;
+  min-width: 280px !important;
+  background: rgba(210, 235, 252, 0.8) !important;
+  border: 1px solid rgba(14, 165, 233, 0.4) !important;
+  box-shadow: inset 0 1px 4px rgba(15, 42, 66, 0.08) !important;
+  border-radius: var(--radius-md) !important;
+}
+
+@media (max-width: 1024px) {
+  .header-marquee-container {
+    width: 100% !important;
+    margin: 0.5rem 0 !important;
+    order: 3 !important;
+  }
+}
+
+.header-marquee {
+  gap: 1.25rem !important;
+}
+
+.brand-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(245, 251, 255, 0.95) !important;
+  border: 1px solid rgba(14, 165, 233, 0.4) !important;
+  border-radius: var(--radius-full);
+  padding: 6px 15px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: #0a1f33 !important;
+  box-shadow: 0 2px 8px rgba(15, 42, 66, 0.08);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+}
+
+.brand-chip:hover {
+  background: #ffffff !important;
+  border-color: #0284c7 !important;
+  color: #0284c7 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(14, 165, 233, 0.28);
+}
+
+.brand-chip:active {
+  transform: translateY(0) scale(0.97);
+}
+
+.brand-chip img {
+  height: 22px !important;
+  width: auto !important;
+  max-width: 28px !important;
+  object-fit: contain !important;
+}
+
+/* Category Cards */
+.category-card {
+  background: rgba(238, 247, 255, 0.94) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+  border: 1px solid rgba(14, 165, 233, 0.32) !important;
+  box-shadow: 0 6px 20px rgba(15, 42, 66, 0.08) !important;
+  border-radius: var(--radius-lg) !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.category-card:hover {
+  border-color: #0284c7 !important;
+  box-shadow: 0 12px 30px rgba(14, 165, 233, 0.25) !important;
+  transform: translateY(-4px);
+  background: rgba(250, 253, 255, 0.98) !important;
+}
+
+.category-card:active {
+  transform: translateY(-1px) scale(0.98);
+}
+
+.category-card .category-icon,
+.category-tile .category-icon-wrapper {
+  background: linear-gradient(135deg, #d3ecfd, #bae2fc) !important;
+  border: 1px solid rgba(14, 165, 233, 0.45) !important;
+  color: #0284c7 !important;
+}
+
+body.dark-mode .category-tile .category-icon-wrapper {
+  background: radial-gradient(circle at 50% 35%, rgba(14, 165, 233, 0.22), rgba(15, 23, 42, 0.75)) !important;
+  border: 1px solid rgba(14, 165, 233, 0.35) !important;
+  color: #38bdf8 !important;
+}
+
+body.dark-mode .category-tile .category-icon-wrapper.has-custom-logo {
+  background: radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.08), rgba(15, 23, 42, 0.85)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+}
+
+.category-card .category-name {
+  color: #0a1f33 !important;
+  font-weight: 700 !important;
+}
+
+.category-card .category-count {
+  color: #1d3e5a !important;
+  font-weight: 600 !important;
+}
+
+/* Products Grid & Product Cards (Theme Light) */
+.product-card {
+  background: rgba(240, 248, 255, 0.95) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(14, 165, 233, 0.32) !important;
+  box-shadow: 0 8px 24px rgba(15, 42, 66, 0.09) !important;
+  border-radius: var(--radius-lg) !important;
+  color: #0a1f33 !important;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease, border-color 0.25s ease !important;
+  overflow: hidden;
+}
+
+.product-card:hover {
+  border-color: #0284c7 !important;
+  box-shadow: 0 14px 34px rgba(14, 165, 233, 0.24) !important;
+  transform: translateY(-4px) !important;
+}
+
+.product-card-header .product-id {
+  color: #1d3e5a !important;
+  font-weight: 700 !important;
+}
+
+.product-title {
+  color: #0a1f33 !important;
+  font-weight: 700 !important;
+}
+
+.product-details {
+  border-top: 1px solid rgba(14, 165, 233, 0.22) !important;
+  border-bottom: 1px solid rgba(14, 165, 233, 0.22) !important;
+  color: #0a1f33 !important;
+}
+
+.detail-row span {
+  color: #1d3e5a !important;
+  font-weight: 600 !important;
+}
+
+.detail-row i, .detail-row svg {
+  color: #0284c7 !important;
+}
+
+.detail-row strong {
+  color: #0284c7 !important;
+  font-weight: 800 !important;
+}
+
+.product-card-actions button {
+  min-height: 42px !important;
+  background: rgba(245, 251, 255, 0.95) !important;
+  border: 1px solid rgba(14, 165, 233, 0.38) !important;
+  color: #0a1f33 !important;
+  font-weight: 600 !important;
+  border-radius: var(--radius-md) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.product-card-actions button:active {
+  transform: scale(0.96) !important;
+}
+
+.product-card-actions .btn-action-fav {
+  color: #d97706 !important;
+}
+
+.product-card-actions .btn-action-details {
+  color: #0284c7 !important;
+}
+
+.product-card-actions .btn-action-details:hover {
+  background: #0284c7 !important;
+  border-color: #0284c7 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3) !important;
+}
+
+.product-card-actions .btn-action-buy {
+  background: linear-gradient(135deg, #0284c7, #0ea5e9) !important;
+  border: none !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 14px rgba(14, 165, 233, 0.35) !important;
+}
+
+.product-card-actions .btn-action-buy:hover {
+  background: linear-gradient(135deg, #0369a1, #0284c7) !important;
+  color: #ffffff !important;
+  box-shadow: 0 6px 18px rgba(14, 165, 233, 0.48) !important;
+}
+
+/* Sections, Cards, Search & Modals */
+.card, .table-container, .modal-card, .admin-card, .search-container, .order-history-container {
+  background: rgba(240, 248, 255, 0.94) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+  border: 1px solid rgba(14, 165, 233, 0.32) !important;
+  box-shadow: 0 10px 28px rgba(15, 42, 66, 0.1) !important;
+  border-radius: var(--radius-lg) !important;
+  color: #0a1f33 !important;
+}
+
+.section-header h2, .card-header h2, .card-header h3, .modal-header h2 {
+  color: #0a1f33 !important;
+}
+
+/* Login Card Specific */
+.login-card {
+  background: rgba(240, 248, 255, 0.95) !important;
+  box-shadow: 0 16px 40px rgba(15, 42, 66, 0.18) !important;
+  border: 1px solid rgba(14, 165, 233, 0.4) !important;
+}
+
+/* Inputs & Form Controls */
+input[type="text"], input[type="password"], input[type="number"], select, textarea {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(14, 165, 233, 0.35) !important;
+  color: #0f2a42 !important;
+}
+
+input[type="text"]:focus, input[type="password"]:focus, select:focus, textarea:focus {
+  background: #ffffff !important;
+  border-color: #0284c7 !important;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.22) !important;
+}
+
+/* Buttons */
+.btn-primary {
+  background: linear-gradient(135deg, #0284c7, #0ea5e9) !important;
+  box-shadow: 0 4px 14px rgba(14, 165, 233, 0.35) !important;
+  border: none !important;
+  color: #ffffff !important;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #0369a1, #0284c7) !important;
+  box-shadow: 0 6px 18px rgba(14, 165, 233, 0.45) !important;
+}
+
+.btn-secondary {
+  background: rgba(240, 248, 255, 0.85) !important;
+  border: 1px solid rgba(14, 165, 233, 0.35) !important;
+  color: #0284c7 !important;
+}
+
+.btn-secondary:hover {
+  background: #ffffff !important;
+  border-color: #0284c7 !important;
+}
+
+/* Navigation Tabs */
+.app-tabs .tab-btn {
+  color: #2f5475 !important;
+}
+
+.app-tabs .tab-btn.active {
+  color: #0284c7 !important;
+  border-bottom: 2px solid #0284c7 !important;
+  background: rgba(14, 165, 233, 0.12) !important;
+  font-weight: 700 !important;
+}
+
+/* Tables */
+table th {
+  background: rgba(215, 237, 254, 0.9) !important;
+  color: #0f2a42 !important;
+  border-bottom: 1px solid rgba(14, 165, 233, 0.25) !important;
+}
+
+table td {
+  border-bottom: 1px solid rgba(14, 165, 233, 0.15) !important;
+  color: #123454 !important;
+}
+
+table tr:hover td {
+  background: rgba(195, 228, 252, 0.4) !important;
+}
+
+/* Price Tags */
+.product-price, .detail-price {
+  color: #0284c7 !important;
+  font-weight: 800 !important;
+}
+
+/* Badges & Meta */
+.credits-badge-container {
+  background: rgba(235, 246, 255, 0.9) !important;
+  border: 1px solid rgba(14, 165, 233, 0.4) !important;
+  color: #0284c7 !important;
+  box-shadow: 0 2px 8px rgba(15, 42, 66, 0.08) !important;
+}
+
+.connection-status {
+  background: rgba(235, 246, 255, 0.85) !important;
+  border: 1px solid rgba(14, 165, 233, 0.3) !important;
+  color: #2f5475 !important;
+  padding: 6px !important;
+  width: 24px !important;
+  height: 24px !important;
+  min-width: 24px !important;
+  min-height: 24px !important;
+  border-radius: 50% !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.connection-status .status-text {
+  display: none !important;
+}
+
+/* Server Switch */
+.server-switch-container {
+  background: rgba(225, 242, 254, 0.9) !important;
+  border: 1px solid rgba(14, 165, 233, 0.35) !important;
+}
+
+.btn-server-switch {
+  color: #2f5475 !important;
+}
+
+.btn-server-switch.active {
+  color: #ffffff !important;
+}
+
+/* ============================================================
+   RESPONSIVE MOBILE VIEW (OPTIMIZADO PARA PANTALLAS MÓVILES)
+============================================================ */
+@media (max-width: 768px) {
+  body {
+    padding: 0.5rem !important;
+  }
+
+  .app-container {
+    padding: 0 !important;
+    max-width: 100vw !important;
+  }
+
+  .app-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    padding: 0.5rem 0.6rem !important;
+    border-radius: var(--radius-sm) !important;
+    margin-bottom: 0.65rem !important;
+    gap: 0.4rem !important;
+  }
+
+  .header-marquee-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0.35rem 0 !important;
+    order: 3 !important;
+    min-width: unset !important;
+    flex: 0 0 38px !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    max-height: 38px !important;
+  }
+
+  .brand-chip {
+    padding: 3px 10px !important;
+    font-size: 0.75rem !important;
+  }
+
+  .brand-chip img {
+    height: 16px !important;
+  }
+
+  /* Grid de productos en móvil: 1 columna perfecta que ocupa el ancho */
+  .products-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.85rem !important;
+    margin-top: 1rem !important;
+    padding: 0 !important;
+  }
+
+  .product-card {
+    padding: 1rem !important;
+    margin: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .product-title {
+    font-size: 1rem !important;
+    margin-bottom: 0.75rem !important;
+    word-break: break-word !important;
+  }
+
+  .product-details {
+    padding: 0.6rem 0 !important;
+    margin-bottom: 0.75rem !important;
+  }
+
+  .product-card-actions {
+    gap: 0.4rem !important;
+  }
+
+  .product-card-actions button {
+    padding: 0.55rem 0.4rem !important;
+    font-size: 0.85rem !important;
+  }
+
+  /* Categorías en móvil */
+  .categories-grid, .categories-container {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+    gap: 0.65rem !important;
+  }
+
+  .category-card {
+    padding: 0.75rem !important;
+  }
+
+  /* Header buttons wrapping */
+  .header-right-meta {
+    gap: 0.4rem !important;
+    width: 100% !important;
+  }
+
+  .header-right-meta .btn {
+    font-size: 0.75rem !important;
+    padding: 0.45rem 0.6rem !important;
+  }
+
+  /* Floating WhatsApp button position */
+  .floating-whatsapp-btn {
+    bottom: 20px !important;
+    right: 15px !important;
+    width: 50px !important;
+    height: 50px !important;
+  }
+}
+
+/* ============================================================
+   DIGITALPASS TEMA OSCURO (OPCIONAL VÍA TOGGLE)
+============================================================ */
+body.dark-mode {
+  --primary-color: #38bdf8;
+  --secondary-color: #0ea5e9;
+  --accent-blue: #60a5fa;
+  --bg-color: #070e17;
+  --panel-bg: rgba(15, 28, 45, 0.85);
+  --border-color: rgba(56, 189, 248, 0.25);
+  --text-primary: #f0f9ff;
+  --text-secondary: #94a3b8;
+  --glass-border: rgba(56, 189, 248, 0.15);
+  --glass-shadow: 0 12px 36px 0 rgba(0, 0, 0, 0.55);
+
+  background-color: #070e17 !important;
+  color: #f0f9ff !important;
+  background-image: 
+    radial-gradient(circle at 18% 40%, rgba(56, 189, 248, 0.12), transparent 30%),
+    radial-gradient(circle at 82% 25%, rgba(14, 165, 233, 0.1), transparent 30%),
+    radial-gradient(circle at 50% 85%, rgba(30, 64, 175, 0.08), transparent 35%) !important;
+}
+
+body.dark-mode .app-header {
+  background: linear-gradient(180deg, rgba(15, 28, 45, 0.98), rgba(11, 21, 34, 0.95)) !important;
+  border-bottom: 1px solid rgba(56, 189, 248, 0.3) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+}
+
+body.dark-mode .logo-text h1 {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+body.dark-mode .header-marquee-container {
+  background: rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+body.dark-mode .brand-chip {
+  background: rgba(15, 28, 45, 0.75) !important;
+  border: 1px solid rgba(56, 189, 248, 0.25) !important;
+  color: #e0f2fe !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+body.dark-mode .brand-chip:hover {
+  background: rgba(56, 189, 248, 0.15) !important;
+  border-color: #38bdf8 !important;
+  color: #ffffff !important;
+}
+
+body.dark-mode .category-card {
+  background: linear-gradient(145deg, rgba(15, 28, 45, 0.7), rgba(7, 14, 23, 0.85)) !important;
+  border: 1px solid rgba(56, 189, 248, 0.18) !important;
+}
+
+body.dark-mode .category-card .category-icon {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(14, 165, 233, 0.05)) !important;
+  border: 1px solid rgba(56, 189, 248, 0.3) !important;
+  color: #38bdf8 !important;
+}
+
+body.dark-mode .category-card .category-name {
+  color: #f0f9ff !important;
+}
+
+body.dark-mode .category-card .category-count {
+  color: #94a3b8 !important;
+}
+
+body.dark-mode .product-card {
+  background: rgba(15, 28, 45, 0.8) !important;
+  border: 1px solid rgba(56, 189, 248, 0.2) !important;
+  color: #f0f9ff !important;
+}
+
+body.dark-mode .product-title {
+  color: #f0f9ff !important;
+}
+
+body.dark-mode .product-card-header .product-id {
+  color: #94a3b8 !important;
+}
+
+body.dark-mode .product-details {
+  border-color: rgba(56, 189, 248, 0.2) !important;
+}
+
+body.dark-mode .detail-row span {
+  color: #94a3b8 !important;
+}
+
+body.dark-mode .detail-row strong {
+  color: #38bdf8 !important;
+}
+
+body.dark-mode .product-card-actions button {
+  background: rgba(7, 14, 23, 0.6) !important;
+  border: 1px solid rgba(56, 189, 248, 0.3) !important;
+  color: #f0f9ff !important;
+}
+
+body.dark-mode .card,
+body.dark-mode .table-container,
+body.dark-mode .modal-card,
+body.dark-mode .admin-card,
+body.dark-mode .search-container,
+body.dark-mode .order-history-container,
+body.dark-mode .login-card {
+  background: rgba(11, 21, 34, 0.85) !important;
+  border: 1px solid rgba(56, 189, 248, 0.2) !important;
+  color: #f0f9ff !important;
+}
+
+body.dark-mode .section-header h2,
+body.dark-mode .card-header h2,
+body.dark-mode .card-header h3,
+body.dark-mode .modal-header h2 {
+  color: #f0f9ff !important;
+}
+
+body.dark-mode input[type="text"],
+body.dark-mode input[type="password"],
+body.dark-mode input[type="number"],
+body.dark-mode select,
+body.dark-mode textarea {
+  background: rgba(7, 14, 23, 0.7) !important;
+  border: 1px solid rgba(56, 189, 248, 0.25) !important;
+  color: #f0f9ff !important;
+}
+
+body.dark-mode .btn-secondary {
+  background: rgba(15, 28, 45, 0.6) !important;
+  border: 1px solid rgba(56, 189, 248, 0.3) !important;
+  color: #38bdf8 !important;
+}
+
+body.dark-mode .app-tabs .tab-btn {
+  color: #94a3b8 !important;
+}
+
+body.dark-mode .app-tabs .tab-btn.active {
+  color: #38bdf8 !important;
+  border-bottom: 2px solid #38bdf8 !important;
+  background: rgba(56, 189, 248, 0.1) !important;
+}
+
+body.dark-mode table th {
+  background: rgba(15, 28, 45, 0.95) !important;
+  color: #f0f9ff !important;
+}
+
+body.dark-mode table td {
+  border-bottom: 1px solid rgba(56, 189, 248, 0.12) !important;
+  color: #e2e8f0 !important;
+}
+
+body.dark-mode table tr:hover td {
+  background: rgba(56, 189, 248, 0.08) !important;
+}
+
+body.dark-mode .credits-badge-container {
+  background: rgba(56, 189, 248, 0.1) !important;
+  border: 1px solid rgba(56, 189, 248, 0.3) !important;
+  color: #38bdf8 !important;
+}
+
+body.dark-mode .connection-status {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #94a3b8 !important;
+}
+
+body.dark-mode .server-switch-container {
+  background: rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+/* ========================================================
+   FINANCE SECTION & CREDIT CARD MOBILE-FIRST RESPONSIVE UI
+   (UI/UX Pro Max standards: 44px min touch, safe areas, no overflow)
+======================================================== */
+.finance-header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(6, 78, 59, 0.3));
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.finance-header-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.finance-header-actions .btn {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  #financeSection {
+    padding: 14px !important;
+    margin-top: 10px !important;
+    border-radius: 12px !important;
+  }
+
+  .finance-header-bar {
+    padding: 12px 14px !important;
+    margin-bottom: 16px !important;
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+
+  .finance-header-actions {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .finance-header-actions .btn {
+    width: 100% !important;
+    padding: 10px 8px !important;
+    font-size: 0.76rem !important;
+    text-align: center;
+    white-space: normal !important;
+    word-break: break-word !important;
+  }
+
+  .finance-header-actions #btnReloadFinance {
+    grid-column: span 2 !important;
+  }
+
+  /* KPIs Globales en móvil: 1 columna limpia y bien espaciada */
+  .finance-kpi-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  /* Grid layouts for cards on mobile */
+  #accountsManagerCardsGrid,
+  #financeAccountsGrid,
+  #financeServersGrid,
+  #financeDebtsList {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  /* Categorías de gastos: 2 columnas compactas con ancho flexible que no desborda */
+  #financeCategoriesGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  #financeCategoriesGrid > div {
+    min-width: 0 !important;
+    padding: 8px 10px !important;
+  }
+
+  /* Form responsive adjustments */
+  #formAddEditAccount,
+  #formAddEditDebt,
+  #formManualTransaction,
+  #formFinanceConfig {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  /* Ocultar el botón flotante rosa de precios cuando se está en la pestaña de finanzas para no estorbar */
+  body.viewing-finance #btnBulkSavePrices,
+  #financeSection:not(.hidden) ~ #btnBulkSavePrices {
+    display: none !important;
+  }
+
+  /* Reducir tamaño y posicionamiento de botones flotantes en móvil */
+  .floating-whatsapp-btn {
+    bottom: 18px !important;
+    right: 18px !important;
+    width: 52px !important;
+    height: 52px !important;
+  }
+
+  #btnBulkSavePrices {
+    bottom: 78px !important;
+  }
+
+  /* Credit card detail inputs inside forms */
+  #creditCardExtraFields > div:nth-child(2) {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+
+  /* Search order box on mobile */
+  #financeOrderLookupInput {
+    min-width: 100% !important;
+  }
+
+  /* Table horizontal touch scroll */
+  .finance-table-wrapper {
+    margin: 0 -6px;
+    border-radius: 8px;
+    -webkit-overflow-scrolling: touch;
+    overflow-x: auto !important;
+  }
+}
+
