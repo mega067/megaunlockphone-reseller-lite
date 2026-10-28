@@ -1,17 +1,18 @@
 {
   "apiConnection": {
     "id": "apiConnection",
-    "title": "Conexión MegaUnlockPhone API",
-    "description": "Enlace criptográfico exclusivo con el servidor maestro.",
+    "title": "Conexión Proveedor Mayorista",
+    "description": "Enlace criptográfico seguro con el servidor central mayorista.",
     "enabled": true,
     "locked": true,
-    "status": "configured",
+    "status": "not_configured",
     "setupStep": 1,
     "config": {
-      "apiKey": "mup_live_demo777888999aaaabbbbccccdd",
-      "username": "demo_reseller",
+      "apiKey": "",
+      "username": "",
       "profitMargin": 15,
-      "defaultServer": "1"
+      "defaultServer": "1",
+      "isConfigured": false
     }
   },
   "whatsappBot": {

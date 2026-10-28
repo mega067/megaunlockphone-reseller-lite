@@ -164,8 +164,10 @@
     <div class="login-view-wrapper hidden" id="loginView">
       <section class="card login-card">
         <div class="card-header" style="flex-direction: column; align-items: center; gap: 18px; margin-bottom: 0.5rem;">
-          <img src="favicon.png?v=3" alt="Logo" style="width: 140px; height: 140px; object-fit: cover; border-radius: 50%; box-shadow: 0 0 25px rgba(219, 39, 119, 0.45), 0 0 25px rgba(34, 211, 238, 0.45); border: 3px solid #22d3ee; padding: 2px; background: rgba(15, 23, 42, 0.6);">
-          <h2 style="font-size: 1.65rem; font-weight: 800; letter-spacing: -0.5px; text-align: center; margin: 0; background: linear-gradient(135deg, #ffffff 30%, #38bdf8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Bienvenido a Mega Unlock Phone</h2>
+          <div id="loginLogoWrapper" style="width: 140px; height: 140px; border-radius: 50%; box-shadow: 0 0 25px rgba(56, 189, 248, 0.45); border: 3px solid #38bdf8; display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.6); overflow: hidden;">
+            <img id="loginShopLogoImg" src="favicon.png?v=3" alt="Logo" style="width: 100%; height: 100%; object-fit: cover;">
+          </div>
+          <h2 id="loginShopTitle" style="font-size: 1.65rem; font-weight: 800; letter-spacing: -0.5px; text-align: center; margin: 0; background: linear-gradient(135deg, #ffffff 30%, #38bdf8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Bienvenido a tu Tienda</h2>
         </div>
         <p class="login-subtitle" style="text-align: center;">Ingresa con tu cuenta de acceso.</p>
         
@@ -3344,22 +3346,46 @@
           try {
             const res = await fetch('/api/modules');
             const data = await res.json();
-            if (data.success && data.modules?.apiConnection) {
-              const cfg = data.modules.apiConnection.config || {};
-              const shopName = localStorage.getItem('mup_reseller_shop_name') || 'Mi Tienda Desbloqueos';
-              const shopWa = localStorage.getItem('mup_reseller_shop_wa') || '';
-              
-              document.getElementById('resellerShopTitle').textContent = shopName;
-              document.getElementById('inputResellerShopName').value = shopName;
-              document.getElementById('inputResellerShopWhatsapp').value = shopWa;
-              document.getElementById('inputResellerApiKey').value = cfg.apiKey || '';
-              document.getElementById('inputResellerProfitMargin').value = cfg.profitMargin || 15;
+            const cfg = data.modules?.apiConnection?.config || {};
+            const isConfigured = Boolean(cfg.apiKey && cfg.apiKey.trim() !== '');
 
-              if (shopWa) {
-                const waBtn = document.getElementById('resellerFloatingWhatsapp');
+            const shopName = localStorage.getItem('mup_reseller_shop_name') || 'Mi Tienda Digital';
+            const shopWa = localStorage.getItem('mup_reseller_shop_wa') || '';
+            const customLogo = localStorage.getItem('mup_reseller_logo_url') || '';
+            
+            document.title = shopName + ' - Portal Oficial';
+            const titleEl = document.getElementById('resellerShopTitle');
+            if (titleEl) titleEl.textContent = shopName;
+            const loginTitleEl = document.getElementById('loginShopTitle');
+            if (loginTitleEl) loginTitleEl.textContent = 'Bienvenido a ' + shopName;
+
+            if (customLogo) {
+              const headLogo = document.getElementById('resellerShopLogoImg');
+              if (headLogo) headLogo.src = customLogo;
+              const loginLogo = document.getElementById('loginShopLogoImg');
+              if (loginLogo) loginLogo.src = customLogo;
+            }
+
+            document.getElementById('inputResellerShopName').value = shopName;
+            document.getElementById('inputResellerShopWhatsapp').value = shopWa;
+            document.getElementById('inputResellerApiKey').value = cfg.apiKey || '';
+            document.getElementById('inputResellerProfitMargin').value = cfg.profitMargin || 15;
+
+            if (shopWa) {
+              const waBtn = document.getElementById('resellerFloatingWhatsapp');
+              if (waBtn) {
                 waBtn.href = 'https://wa.me/' + shopWa.replace(/[^0-9]/g, '');
                 waBtn.style.display = 'flex';
               }
+            }
+
+            // MODO SETUP INICIAL: Si la tienda no está configurada, abrir el Wizard de configuración obligatoriamente
+            if (!isConfigured) {
+              modal.style.display = 'flex';
+              modal.classList.remove('hidden');
+              if (btnClose) btnClose.style.display = 'none';
+              const modalTitle = modal.querySelector('h3');
+              if (modalTitle) modalTitle.innerHTML = '<span>🚀</span> Configuración Inicial de tu Tienda';
             }
           } catch(e) {
             console.error('Error cargando módulos del reseller:', e);
@@ -3370,6 +3396,7 @@
           btnOpen.addEventListener('click', () => {
             modal.style.display = 'flex';
             modal.classList.remove('hidden');
+            if (btnClose) btnClose.style.display = 'block';
           });
         }
 
