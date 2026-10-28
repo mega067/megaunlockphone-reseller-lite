@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MegaUnlockPhone Lite - Panel Reseller</title>
+  <title id="htmlAppTitle">Portal de Servicios - Reseller Panel</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -14,34 +14,37 @@
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="brand">
-        <div class="brand-logo">⚡</div>
+        <div class="brand-logo" id="brandLogoIcon">⚡</div>
         <div class="brand-text">
-          <h2>MegaLite</h2>
-          <span>Reseller Portal</span>
+          <h2 id="brandShopName">Mi Tienda</h2>
+          <span id="brandShopTag">Portal Reseller</span>
         </div>
       </div>
 
       <nav class="nav-menu">
         <button class="nav-item active" data-tab="catalog">
-          <span class="icon">📱</span> Catálogo & Servicios
+          <span class="icon">📱</span> Catálogo de Servicios
         </button>
         <button class="nav-item" data-tab="orders">
           <span class="icon">📦</span> Mis Pedidos
+        </button>
+        <button class="nav-item" data-tab="recharge">
+          <span class="icon">💳</span> Recargar Saldo
         </button>
         <button class="nav-item" data-tab="modules">
           <span class="icon">🧩</span> Gestor de Módulos
         </button>
         <button class="nav-item" data-tab="settings">
-          <span class="icon">⚙️</span> Conexión & API
+          <span class="icon">⚙️</span> Ajustes & Branding
         </button>
       </nav>
 
       <div class="sidebar-footer">
         <div class="balance-card">
-          <div class="balance-label">Saldo Servidor 1</div>
+          <div class="balance-label">Tu Saldo Disponible</div>
+          <div class="balance-value" id="userWalletBalance">$0.00 MXN</div>
+          <div class="balance-label mt-2">Billetera Proveedor (API)</div>
           <div class="balance-value" id="s1Balance">$0.00 MXN</div>
-          <div class="balance-label mt-2">Saldo Servidor 3</div>
-          <div class="balance-value" id="s3Balance">$0.00 MXN</div>
         </div>
       </div>
     </aside>
@@ -51,11 +54,11 @@
       <header class="topbar">
         <div class="topbar-title">
           <h1 id="pageTitle">Catálogo de Servicios</h1>
-          <p id="pageSubtitle">Conectado a MegaUnlockPhone API Bridge</p>
+          <p id="pageSubtitle">Conexión Segura vía API Gateway Oficial</p>
         </div>
         <div class="topbar-actions">
           <div class="badge-status" id="connectionBadge">
-            <span class="dot"></span> Enlace Activo
+            <span class="dot"></span> Enlace Seguro Activo
           </div>
         </div>
       </header>
@@ -63,9 +66,29 @@
       <div class="content-body">
         <!-- Tab: Catálogo -->
         <section id="tab-catalog" class="tab-pane active">
+          <!-- Contadores Estadísticos Rápidos -->
+          <div class="stats-row">
+            <div class="stat-box">
+              <span class="stat-number" id="countTotalServices">0</span>
+              <span class="stat-label">Servicios Activos</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-number" id="countServer1">0</span>
+              <span class="stat-label">Telefonía / IMEI</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-number" id="countServer3">0</span>
+              <span class="stat-label">Streaming & Licencias</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-number" id="countProcessedOrders">0</span>
+              <span class="stat-label">Órdenes Procesadas</span>
+            </div>
+          </div>
+
           <div class="server-tabs">
-            <button class="server-btn active" data-server="1">MEGA-SERVER (IMEI / Liberaciones)</button>
-            <button class="server-btn" data-server="3">OMEGA-SERVER (Streaming / Cuentas / IA)</button>
+            <button class="server-btn active" data-server="1">📱 Servidor 1 (Desbloqueos IMEI / Red)</button>
+            <button class="server-btn" data-server="3">🎬 Servidor 2 (Streaming, Licencias & IA)</button>
           </div>
           <div class="search-box">
             <input type="text" id="serviceSearch" placeholder="Buscar por modelo, marca o servicio...">
@@ -98,12 +121,37 @@
           </div>
         </section>
 
+        <!-- Tab: Recargas de Saldo SPEI -->
+        <section id="tab-recharge" class="tab-pane">
+          <div class="settings-card">
+            <h2>Recarga de Saldo por Transferencia SPEI</h2>
+            <p>Transfiere el monto deseado a cualquiera de nuestras cuentas oficiales y captura los datos de tu comprobante.</p>
+            
+            <div id="bankAccountsList" class="bank-accounts-grid">
+              <!-- Renderizado dinámico de cuentas configuradas por el reseller -->
+            </div>
+
+            <form id="rechargeForm" class="setup-form mt-4">
+              <div class="form-group">
+                <label>Monto a Recargar (MXN)</label>
+                <input type="number" id="rechargeAmount" min="50" step="10" placeholder="Ej. 250" required>
+              </div>
+              <div class="form-group">
+                <label>Clave de Rastreo SPEI / Folio de Transferencia</label>
+                <input type="text" id="rechargeTracking" placeholder="Clave de 18 a 30 caracteres..." required>
+                <small>La clave de rastreo numérica o alfanumérica que te proporciona tu banco al transferir.</small>
+              </div>
+              <button type="submit" class="btn-primary">Registrar Notificación de Pago</button>
+            </form>
+          </div>
+        </section>
+
         <!-- Tab: Gestor Gráfico de Módulos -->
         <section id="tab-modules" class="tab-pane">
           <div class="modules-header">
             <div>
-              <h2>Configuración Visual de Módulos</h2>
-              <p>Activa, apaga o configura cada módulo con el asistente paso a paso.</p>
+              <h2>Gestor Visual de Módulos</h2>
+              <p>Activa, apaga o ajusta cada módulo de tu negocio de forma independiente.</p>
             </div>
           </div>
           <div id="modulesContainer" class="modules-grid">
@@ -111,27 +159,49 @@
           </div>
         </section>
 
-        <!-- Tab: Conexión API -->
+        <!-- Tab: Ajustes & Branding Personalizable -->
         <section id="tab-settings" class="tab-pane">
           <div class="settings-card">
-            <h2>Asistente de Conexión a MegaUnlockPhone</h2>
-            <p>Ingresa tu API Key obtenida en tu panel principal de MegaUnlockPhone.</p>
+            <h2>Personalización de tu Tienda (Branding)</h2>
+            <p>Configura tu propio nombre comercial, logotipo y canales de soporte para que tus clientes te identifiquen al 100%.</p>
+            <form id="brandingForm" class="setup-form">
+              <div class="form-group">
+                <label>Nombre de tu Negocio / Tienda</label>
+                <input type="text" id="cfgShopName" placeholder="Ej. Mi Desbloqueos Express" required>
+              </div>
+              <div class="form-group">
+                <label>Subtítulo o Eslogan</label>
+                <input type="text" id="cfgShopTag" placeholder="Ej. Liberaciones & Servicios Digitales">
+              </div>
+              <div class="form-group">
+                <label>Emoji o Ícono de Logo</label>
+                <input type="text" id="cfgShopLogo" placeholder="⚡" maxlength="4">
+              </div>
+              <div class="form-group">
+                <label>Número de WhatsApp para Soporte a tus Clientes</label>
+                <input type="text" id="cfgShopWhatsapp" placeholder="52221xxxxxxx">
+              </div>
+              <div class="form-group">
+                <label>Margen de Ganancia Global sobre el Catálogo (%)</label>
+                <input type="number" id="cfgShopMargin" value="15" min="0" max="100">
+                <small>Porcentaje automático sumado a tus precios base de mayorista.</small>
+              </div>
+              <button type="submit" class="btn-primary">Guardar Cambios de Marca</button>
+            </form>
+          </div>
+
+          <div class="settings-card mt-4">
+            <h2>Conexión Segura al Proveedor (API Gateway)</h2>
             <form id="apiSetupForm" class="setup-form">
               <div class="form-group">
-                <label>API Key de MegaUnlockPhone</label>
+                <label>Tu API Key del Proveedor</label>
                 <input type="password" id="inputApiKey" placeholder="mup_live_..." required>
-                <small>Tu llave única de autenticación cifrada.</small>
               </div>
               <div class="form-group">
-                <label>Nombre de Usuario Reseller</label>
+                <label>Tu Usuario de Reseller</label>
                 <input type="text" id="inputUsername" placeholder="Tu usuario" required>
               </div>
-              <div class="form-group">
-                <label>Margen de Ganancia para tus Clientes (%)</label>
-                <input type="number" id="inputMargin" value="15" min="0" max="100">
-                <small>Porcentaje que se sumará automáticamente a tus precios de catálogo.</small>
-              </div>
-              <button type="submit" class="btn-primary">Guardar y Vincular API</button>
+              <button type="submit" class="btn-primary">Vincular Proveedor</button>
             </form>
           </div>
         </section>
@@ -152,16 +222,16 @@
           <input type="hidden" id="orderServiceId">
           <input type="hidden" id="orderServerId">
           <div class="form-group">
-            <label id="orderInputLabel">IMEI / Serie o Parámetro</label>
-            <input type="text" id="orderInputParam" required placeholder="Ingresa los 15 dígitos...">
+            <label id="orderInputLabel">IMEI (15 dígitos) o Datos Requeridos</label>
+            <input type="text" id="orderInputParam" required placeholder="Ingresa los datos solicitados...">
           </div>
-          <button type="submit" class="btn-primary w-full">Confirmar y Enviar</button>
+          <button type="submit" class="btn-primary w-full">Confirmar y Procesar Orden</button>
         </form>
       </div>
     </div>
   </div>
 
-  <!-- Modal de Configuración de Módulo (Paso a Paso) -->
+  <!-- Modal de Configuración de Módulo -->
   <div id="moduleModal" class="modal">
     <div class="modal-content">
       <div class="modal-header">

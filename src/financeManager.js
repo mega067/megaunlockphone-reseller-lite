@@ -1585,18 +1585,18 @@ function deleteInstallment(id) {
  * --- INGRESO SEMANAL DE PASAJE & COMIDA EN LA UNIVERSIDAD ---
  * Inyecta directamente saldo positivo en efectivo/caja y lo categoriza como apoyo semanal
  */
-function recordCollegeAllowance(amount, notes = 'Pasaje y comida semanal uni', targetAccount = 'Efectivo / Caja') {
+function recordCollegeAllowance(amount, notes = 'Inyección de apoyo semanal / efectivo', targetAccount = 'Efectivo / Caja') {
   const numAmount = Math.max(0, parseFloat(amount) || 0);
   if (numAmount <= 0) throw new Error('El monto de la semana debe ser mayor a 0');
 
   return recordTransaction({
     type: 'income_manual',
     category: 'pasaje',
-    serviceName: `Apoyo Semanal Uni (Pasaje & Comida)`,
+    serviceName: `Apoyo Semanal / Fondo en Efectivo`,
     chargedAmount: numAmount,
     costAmount: 0,
     account: targetAccount,
-    notes: String(notes || 'Dinero en efectivo otorgado para la semana (transporte y comida en la universidad)'),
+    notes: String(notes || 'Dinero en efectivo registrado periódicamente (apoyo o fondo de caja)'),
     recordedBy: 'Admin'
   });
 }

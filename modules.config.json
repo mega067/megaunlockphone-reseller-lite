@@ -30,7 +30,7 @@
     },
     "collegeAllowance": {
       "enabled": true,
-      "label": "Ingresos Semanales Universidad (Pasaje & Comida)",
+      "label": "Ingresos Periódicos / Apoyo Semanal en Efectivo",
       "parent": "finance"
     },
     "whatsappBot": {
