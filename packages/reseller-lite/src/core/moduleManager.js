@@ -89,21 +89,6 @@ class ModuleManager {
             clabe: '',
             beneficiary: ''
           }
-        },
-        digitalPass: {
-          id: 'digitalPass',
-          title: 'Portal DigitalPass (Streaming & IA)',
-          description: 'Venta de licencias, cuentas de entretenimiento y servicios digitales.',
-          icon: 'sparkles',
-          enabled: true,
-          status: 'active',
-          setupStep: 5,
-          repoUrl: 'https://github.com/mega067/mod-digitalpass',
-          downloadZip: 'https://github.com/mega067/mod-digitalpass/archive/refs/heads/main.zip',
-          config: {
-            showStreaming: true,
-            showAiTools: true
-          }
         }
       };
       fs.writeFileSync(MODULES_FILE, JSON.stringify(defaultState, null, 2), 'utf8');
