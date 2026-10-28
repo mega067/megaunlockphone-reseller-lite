@@ -14,11 +14,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Servir página independiente de prueba /digital-pass
-app.get(['/digital-pass', '/digital-pass/'], (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/digitalpass/index.html'));
-});
-
 // ==========================================
 // APIS INTERNAS DE GESTIÓN Y MÓDULOS
 // ==========================================
