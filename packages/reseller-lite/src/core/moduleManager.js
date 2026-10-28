@@ -27,26 +27,30 @@ class ModuleManager {
       const defaultState = {
         apiConnection: {
           id: 'apiConnection',
-          title: 'Conexión MegaUnlockPhone API',
-          description: 'Enlace criptográfico exclusivo con el servidor maestro.',
+          title: 'Conexión Proveedor Mayorista',
+          description: 'Enlace criptográfico seguro con el servidor central mayorista.',
           enabled: true,
-          locked: true, // No se puede desactivar
-          status: 'ready',
+          locked: true,
+          status: 'not_configured',
           setupStep: 1,
           config: {
             apiKey: '',
             username: '',
             profitMargin: 15,
-            defaultServer: '1'
+            defaultServer: '1',
+            isConfigured: false
           }
         },
         whatsappBot: {
           id: 'whatsappBot',
           title: 'Demonio de WhatsApp & Notificaciones',
           description: 'Atención automática de clientes, tickets y avisos de órdenes.',
+          icon: 'bot',
           enabled: false,
-          status: 'not_configured',
+          status: 'available',
           setupStep: 2,
+          repoUrl: 'https://github.com/mega067/mod-whatsapp-bot',
+          downloadZip: 'https://github.com/mega067/mod-whatsapp-bot/archive/refs/heads/main.zip',
           config: {
             botName: 'Mi Bot Reseller',
             adminPhone: '',
@@ -58,22 +62,44 @@ class ModuleManager {
           id: 'finanzas',
           title: 'Motor Financiero & Ganancias',
           description: 'Control de caja, ingresos, deudores y balance neto.',
+          icon: 'wallet',
           enabled: true,
           status: 'active',
           setupStep: 3,
+          repoUrl: 'https://github.com/mega067/mod-finanzas',
+          downloadZip: 'https://github.com/mega067/mod-finanzas/archive/refs/heads/main.zip',
           config: {
             currency: 'MXN',
             trackReinvest: true,
             defaultPaymentMethod: 'Transferencia'
           }
         },
+        rechargeSpei: {
+          id: 'rechargeSpei',
+          title: 'Recargas Bancarias & SPEI Automático',
+          description: 'Módulo de cobro directo a cuentas bancarias y validación de transferencias.',
+          icon: 'credit-card',
+          enabled: false,
+          status: 'available',
+          setupStep: 4,
+          repoUrl: 'https://github.com/mega067/mod-recharge-spei',
+          downloadZip: 'https://github.com/mega067/mod-recharge-spei/archive/refs/heads/main.zip',
+          config: {
+            bankName: '',
+            clabe: '',
+            beneficiary: ''
+          }
+        },
         digitalPass: {
           id: 'digitalPass',
           title: 'Portal DigitalPass (Streaming & IA)',
           description: 'Venta de licencias, cuentas de entretenimiento y servicios digitales.',
+          icon: 'sparkles',
           enabled: true,
           status: 'active',
-          setupStep: 4,
+          setupStep: 5,
+          repoUrl: 'https://github.com/mega067/mod-digitalpass',
+          downloadZip: 'https://github.com/mega067/mod-digitalpass/archive/refs/heads/main.zip',
           config: {
             showStreaming: true,
             showAiTools: true

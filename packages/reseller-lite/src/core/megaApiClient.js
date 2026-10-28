@@ -30,10 +30,11 @@ class MegaApiClient {
       console.error('[MegaApiClient] Error leyendo config:', e.message);
     }
     return {
-      apiKey: process.env.MEGA_API_KEY || '',
-      username: process.env.MEGA_USERNAME || '',
-      serverMode: 'dual', // 's1', 's3', 'dual'
-      profitMarginPercent: 15
+      apiKey: '',
+      username: '',
+      serverMode: 'dual',
+      profitMarginPercent: 15,
+      isConfigured: false
     };
   }
 

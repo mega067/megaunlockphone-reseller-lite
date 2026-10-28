@@ -71,11 +71,37 @@ async function loadCatalog(server) {
     const res = await fetch(`/api/bridge/catalog?serverId=${server}`);
     const data = await res.json();
 
-    if (Array.isArray(data)) {
-      catalogData = data;
+    let rawList = Array.isArray(data) ? data : (data?.SUCCESS || []);
+    let normalized = [];
+
+    rawList.forEach(item => {
+      if (item.LIST) {
+        Object.values(item.LIST).forEach(grp => {
+          let srvList = [];
+          if (grp.SERVICES) {
+            Object.values(grp.SERVICES).forEach(s => {
+              srvList.push({
+                SERVICE_ID: s.SERVICEID || s.id,
+                SERVICE_NAME: s.SERVICENAME || s.name,
+                PRICE: s.CREDIT || s.price || '0.00'
+              });
+            });
+          }
+          normalized.push({
+            GROUP_NAME: grp.GROUPNAME || 'General',
+            SERVICES: srvList
+          });
+        });
+      } else if (item.GROUP_NAME || item.SERVICES) {
+        normalized.push(item);
+      }
+    });
+
+    if (normalized.length > 0) {
+      catalogData = normalized;
       renderCatalog();
     } else {
-      container.innerHTML = `<div class="loading-state">Configura tu API Key en la pestaña de ajustes para ver los servicios.</div>`;
+      container.innerHTML = `<div class="loading-state">No hay servicios en este servidor o configura tu API Key.</div>`;
     }
   } catch (e) {
     container.innerHTML = `<div class="loading-state">Error al conectar con la API de MegaUnlockPhone.</div>`;
@@ -111,6 +137,12 @@ function renderCatalog(filter = '') {
       container.appendChild(card);
     });
   });
+
+  // Actualizar contadores estadísticos en la UI
+  const totalCountEl = document.getElementById('countTotalServices');
+  if (totalCountEl) totalCountEl.textContent = totalServices;
+  const srvCountEl = currentServer === '1' ? document.getElementById('countServer1') : document.getElementById('countServer3');
+  if (srvCountEl) srvCountEl.textContent = totalServices;
 
   if (totalServices === 0) {
     container.innerHTML = '<div class="loading-state">No se encontraron servicios disponibles.</div>';

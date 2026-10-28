@@ -1,0 +1,158 @@
+/**
+ * Módulo de Utilidades (Utils)
+ * 
+ * Contiene funciones puras de formateo, sanitización y parseo que no dependen 
+ * del estado global de la aplicación. Extraídas para aligerar el archivo principal.
+ */
+
+window.AppUtils = {
+  /**
+   * Formatea un número o string a formato de moneda (MXN)
+   * @param {number|string} credits - Cantidad a formatear
+   * @returns {string} String formateado (ej. $10.00 MXN)
+   */
+  formatPrice: function(credits) {
+    const rawVal = parseFloat(credits) || 0;
+    return `$${rawVal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN`;
+  },
+
+  /**
+   * Sanitiza un string para prevenir ataques XSS al inyectarlo en el DOM
+   * @param {string} unsafe - Texto introducido por el usuario
+   * @returns {string} Texto sanitizado
+   */
+  escapeHtml: function(unsafe) {
+    if (!unsafe) return '';
+    return unsafe
+      .toString()
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  },
+
+  /**
+   * Procesa un string crudo del servidor y le añade color HTML para 
+   * resaltar errores, éxitos o advertencias.
+   * @param {string} text - Texto plano del servidor
+   * @returns {string} HTML con estilos de colores
+   */
+  colorizeServerResponse: function(text) {
+    if (!text) return 'Sin comentarios';
+
+    if (typeof text === 'object') {
+        try {
+            text = JSON.stringify(text, null, 2);
+        } catch(e) {
+            text = String(text);
+        }
+    }
+
+    let cleaned = String(text);
+    cleaned = cleaned.replace(/<br\s*\/?>/gi, '\n');
+    cleaned = cleaned.replace(/<\/div>/gi, '\n');
+    cleaned = cleaned.replace(/<\/p>/gi, '\n');
+    cleaned = cleaned.replace(/<\/li>/gi, '\n');
+    cleaned = cleaned.replace(/<[^>]*>?/gm, '');
+    cleaned = cleaned.replace(/\n\s*\n/g, '\n').trim();
+
+    // Use its own escapeHtml
+    let safeText = window.AppUtils.escapeHtml(cleaned);
+
+    // Detect URLs (including Dhru split 'https: //', www, and common TLDs) and make them clickable (ignoring email addresses)
+    const urlRegex = /(https?:\s*\/\/[^\s<]+|https?:\/\/[^\s<]+|www\.[a-zA-Z0-9-]+\.[^\s<]+|(?<![@a-zA-Z0-9._%+-])(?:[a-zA-Z0-9-]+\.)+(?:com|net|org|mx|io|app|dev)(?:\/[^\s<]*)?)/gi;
+    safeText = safeText.replace(urlRegex, (matched, p1, offset, fullStr) => {
+      const beforeChar = offset > 0 ? fullStr[offset - 1] : '';
+      if (beforeChar === '@') return matched;
+      let trailing = '';
+      const trailMatch = matched.match(/[.,;:)]+$/);
+      if (trailMatch) {
+        trailing = trailMatch[0];
+        matched = matched.slice(0, -trailing.length);
+      }
+      let cleanHref = matched.replace(/\s+/g, '');
+      if (!/^https?:\/\//i.test(cleanHref)) cleanHref = 'https://' + cleanHref;
+      return `<a href="${cleanHref}" target="_blank" rel="noopener noreferrer" class="auto-detected-link" style="color: #00f0ff; text-decoration: underline; word-break: break-all; font-weight: 600;"><i data-lucide="external-link" style="width: 12px; height: 12px; display: inline-block; vertical-align: middle; margin-right: 3px;"></i>${matched}</a>${trailing}`;
+    });
+
+    // Match Key: Value pattern and wrap in spans for coloring (exclude http/https)
+    safeText = safeText.replace(/^([a-zA-Z0-9_ \-\.]+):\s*(.*)$/gm, (match, p1, p2) => {
+      if (p1.toLowerCase() === 'http' || p1.toLowerCase() === 'https') {
+        return match; 
+      }
+      const lowerP1 = p1.toLowerCase();
+      let valColor = '#34d399'; // default emerald
+      if (lowerP1.includes('status') || lowerP1.includes('estado')) {
+        if (/activat|success|exito|complet|aprob/i.test(p2)) valColor = '#10b981';
+        else if (/reject|fail|error|rechaz/i.test(p2)) valColor = '#ef4444';
+        else valColor = '#f59e0b';
+      } else if (lowerP1.includes('user') || lowerP1.includes('usuario')) {
+        valColor = '#38bdf8'; // sky blue
+      } else if (lowerP1.includes('email') || lowerP1.includes('correo')) {
+        valColor = '#a78bfa'; // violet purple
+      } else if (lowerP1.includes('pass') || lowerP1.includes('contra') || lowerP1.includes('pin') || lowerP1.includes('code')) {
+        valColor = '#f43f5e'; // rose/pink
+      } else if (lowerP1.includes('date') || lowerP1.includes('fecha') || lowerP1.includes('time')) {
+        valColor = '#cbd5e1'; // light slate
+      }
+      return `<span style="color: #f59e0b; font-weight: 700;">${p1}:</span> <span style="color: ${valColor}; font-weight: 600;">${p2}</span>`;
+    });
+
+    return safeText;
+  },
+
+  /**
+   * Extrae usuario y contraseña (o credenciales) de un string devuelto por la API.
+   * @param {string} text - Texto en bruto del servidor.
+   * @returns {Object} Objeto con propiedades user y pass.
+   */
+  parseCredentials: function(text) {
+    if (!text) return { user: 'N/A', pass: 'N/A' };
+
+    let preCleanText = String(text).replace(/<br\s*\/?>/gi, ' ').replace(/<\/div>/gi, ' ').replace(/<[^>]*>?/gm, '').trim();
+
+    if (preCleanText.includes('✅')) {
+      let parts = preCleanText.split('✅').map(s => s.trim()).filter(Boolean);
+      if (parts.length >= 2) {
+        return { user: parts[0], pass: parts[parts.length - 1] };
+      }
+    }
+
+    let cleanText = preCleanText
+      .replace(/[✨⭐★=|,;]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    let match = cleanText.match(/(?:username|user|usuario|login|email|correo)\s*[:=-]?\s*(\S+)\s+(?:password|pass|contraseña|clave|pin)\s*[:=-]?\s*(\S+)/i);
+    if (match) {
+      let u = match[1].replace(/[:=-]+$/, '');
+      let p = match[2].replace(/[:=-]+$/, '');
+      return { user: u, pass: p };
+    }
+
+    let emailMatch = cleanText.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/);
+
+    let tokens = cleanText.split(/\s+/).filter(t =>
+      t.length > 2 &&
+      !t.toLowerCase().includes('login') &&
+      !t.toLowerCase().includes('detail') &&
+      !t.toLowerCase().includes('success') &&
+      !/^[=]+$/.test(t)
+    );
+
+    if (emailMatch && tokens.length >= 2) {
+      const email = emailMatch[1];
+      const otherTokens = tokens.filter(t => t !== email && !/^[0-9]{1,3}$/.test(t));
+      if (otherTokens.length > 0) {
+        return { user: email, pass: otherTokens[otherTokens.length - 1] };
+      }
+    }
+
+    if (tokens.length >= 2) {
+      return { user: tokens[tokens.length - 2], pass: tokens[tokens.length - 1] };
+    }
+
+    return { user: 'VER_HISTORIAL', pass: 'VER_HISTORIAL' };
+  }
+};

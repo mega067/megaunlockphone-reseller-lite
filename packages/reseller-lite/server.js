@@ -92,14 +92,44 @@ app.post('/api/bridge/order', async (req, res) => {
   }
 });
 
-// Historial de órdenes
-app.get('/api/bridge/history', async (req, res) => {
+// Aliases para máxima compatibilidad con la UI completa
+app.get('/api/products', async (req, res) => {
   try {
-    const serverId = req.query.serverId || '1';
+    const serverId = req.headers['x-server-id'] || req.query.serverId || '1';
+    const catalog = await megaApiClient.getCatalog(serverId);
+    res.json(catalog);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/accountinfo', async (req, res) => {
+  try {
+    const serverId = req.headers['x-server-id'] || '1';
+    const acc = await megaApiClient.getBalance(serverId);
+    res.json(acc);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/orders', async (req, res) => {
+  try {
+    const serverId = req.headers['x-server-id'] || req.body.serverId || '1';
+    const result = await megaApiClient.placeOrder(serverId, req.body);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/orders', async (req, res) => {
+  try {
+    const serverId = req.headers['x-server-id'] || '1';
     const history = await megaApiClient.getHistory(serverId);
     res.json(history);
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 
