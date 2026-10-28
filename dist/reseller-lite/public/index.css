@@ -28,6 +28,86 @@
   --font-display: 'Outfit', 'Inter', sans-serif;
 }
 
+/* --- THEME PALETTES & LIGHT/DARK MODES --- */
+
+/* Palette: Cyber Cyan (Default) */
+body[data-palette="cyan"] {
+  --primary-color: #38bdf8;
+  --primary-glow: rgba(56, 189, 248, 0.35);
+  --secondary-color: #00f0ff;
+  --secondary-glow: rgba(0, 240, 255, 0.3);
+  --border-color: rgba(56, 189, 248, 0.25);
+}
+
+/* Palette: Neon Purple / Violet */
+body[data-palette="purple"] {
+  --primary-color: #a855f7;
+  --primary-glow: rgba(168, 85, 247, 0.35);
+  --secondary-color: #ec4899;
+  --secondary-glow: rgba(236, 72, 153, 0.3);
+  --border-color: rgba(168, 85, 247, 0.25);
+}
+
+/* Palette: Emerald Matrix / Green */
+body[data-palette="emerald"] {
+  --primary-color: #10b981;
+  --primary-glow: rgba(16, 185, 129, 0.35);
+  --secondary-color: #34d399;
+  --secondary-glow: rgba(52, 211, 153, 0.3);
+  --border-color: rgba(16, 185, 129, 0.25);
+}
+
+/* Palette: Sunset Amber / Gold */
+body[data-palette="sunset"] {
+  --primary-color: #f59e0b;
+  --primary-glow: rgba(245, 158, 11, 0.35);
+  --secondary-color: #ef4444;
+  --secondary-glow: rgba(239, 68, 68, 0.3);
+  --border-color: rgba(245, 158, 11, 0.25);
+}
+
+/* Mode: Light */
+body[data-theme-mode="light"] {
+  --bg-color: #f1f5f9;
+  --bg-elevated: #ffffff;
+  --panel-bg: rgba(255, 255, 255, 0.95);
+  --border-color: rgba(0, 0, 0, 0.1);
+  --border-focus: rgba(37, 99, 235, 0.5);
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  background-color: #f8fafc;
+  background-image: radial-gradient(circle at 10% 20%, rgba(56, 189, 248, 0.05), transparent 25%),
+                    radial-gradient(circle at 90% 15%, rgba(99, 102, 241, 0.05), transparent 25%);
+  color: #0f172a;
+}
+
+body[data-theme-mode="light"] .navbar,
+body[data-theme-mode="light"] .service-card,
+body[data-theme-mode="light"] .product-card,
+body[data-theme-mode="light"] .modal-card {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06) !important;
+}
+
+body[data-theme-mode="light"] input,
+body[data-theme-mode="light"] select,
+body[data-theme-mode="light"] textarea {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+body[data-theme-mode="light"] .app-footer {
+  background: #ffffff !important;
+  border-top-color: rgba(0, 0, 0, 0.08) !important;
+  color: #475569 !important;
+}
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {

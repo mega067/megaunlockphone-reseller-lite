@@ -100,9 +100,9 @@
           </button>
         </div>
 
-        <div class="credits-badge-container" id="creditsBadgeContainer" style="display: flex; align-items: center; gap: 6px; background: rgba(34, 211, 238, 0.08); border: 1px solid rgba(34, 211, 238, 0.2); padding: 6px 12px; border-radius: 8px; font-weight: 600; font-family: 'Inter', sans-serif; font-size: 0.9rem; color: #22d3ee; margin-right: 10px;">
+        <div class="credits-badge-container hidden" id="creditsBadgeContainer" style="display: flex; align-items: center; gap: 6px; background: rgba(34, 211, 238, 0.08); border: 1px solid rgba(34, 211, 238, 0.2); padding: 6px 12px; border-radius: 8px; font-weight: 600; font-family: 'Inter', sans-serif; font-size: 0.9rem; color: #22d3ee; margin-right: 10px;">
           <i data-lucide="wallet" style="width: 16px; height: 16px; color: #22d3ee;"></i>
-          <span id="creditsBalanceText">Créditos: $0.00 MXN</span>
+          <span id="creditsBalanceText"></span>
         </div>
         <div class="connection-status" id="connectionStatus" title="Estado del Servidor: Sin conectar" aria-label="Estado de conexión">
           <span class="status-dot offline"></span>
@@ -3313,6 +3313,29 @@
                 <small style="color: #38bdf8; font-size: 0.78rem;">✓ Este logo reemplaza cualquier imagen por defecto en la cabecera, ventana de login y pie de página.</small>
               </div>
             </div>
+
+            <!-- Paleta de Colores y Modo (Oscuro / Claro) -->
+            <div style="margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid rgba(255,255,255,0.08); display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;">
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+                <label style="color: #cbd5e1; font-weight: 600; font-size: 0.88rem;">Tema de Visualización por Defecto</label>
+                <select id="selectResellerThemeMode" style="background: #090e17; border: 1px solid rgba(255,255,255,0.15); padding: 12px 14px; border-radius: 10px; color: #fff; font-size: 0.95rem;">
+                  <option value="dark" selected>🌙 Modo Oscuro (OLED &amp; Dark Neon)</option>
+                  <option value="light">☀️ Modo Claro (Clean Pro &amp; Light UI)</option>
+                </select>
+                <small style="color: #64748b; font-size: 0.75rem;">Define cómo verán la tienda tus clientes por primera vez.</small>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+                <label style="color: #cbd5e1; font-weight: 600; font-size: 0.88rem;">Paleta de Acentos de tu Marca</label>
+                <select id="selectResellerPalette" style="background: #090e17; border: 1px solid rgba(255,255,255,0.15); padding: 12px 14px; border-radius: 10px; color: #fff; font-size: 0.95rem;">
+                  <option value="cyan" selected>💎 Cyber Cyan (Azul Eléctrico &amp; Neón)</option>
+                  <option value="purple">🔮 Royal Purple (Púrpura &amp; Magenta)</option>
+                  <option value="emerald">🌿 Emerald Matrix (Verde Esmeralda)</option>
+                  <option value="sunset">🔥 Sunset Amber (Dorado &amp; Fuego)</option>
+                </select>
+                <small style="color: #64748b; font-size: 0.75rem;">Afecta botones, bordes luminosos y acentos gráficos de la web.</small>
+              </div>
+            </div>
           </div>
 
           <!-- PASO 2: Canales de Atención & Personalización del Footer -->
@@ -3480,6 +3503,12 @@
             const shopWa = localStorage.getItem('mup_reseller_shop_wa') || '';
             const customLogo = localStorage.getItem('mup_reseller_logo_url') || '';
             const footerDesc = localStorage.getItem('mup_reseller_footer_desc') || '';
+            const themeMode = localStorage.getItem('mup_reseller_theme_mode') || 'dark';
+            const palette = localStorage.getItem('mup_reseller_palette') || 'cyan';
+
+            // Aplicar tema y paleta al documento
+            document.body.setAttribute('data-theme-mode', themeMode);
+            document.body.setAttribute('data-palette', palette);
             
             document.title = shopName + ' - ' + shopBadge;
             const titleEl = document.getElementById('resellerShopTitle');
@@ -3516,6 +3545,22 @@
             document.getElementById('inputResellerApiKey').value = cfg.apiKey || '';
             document.getElementById('inputResellerProfitMargin').value = cfg.profitMargin || 15;
             if (footerDesc) document.getElementById('inputResellerFooterDesc').value = footerDesc;
+            const selTheme = document.getElementById('selectResellerThemeMode');
+            if (selTheme) selTheme.value = themeMode;
+            const selPalette = document.getElementById('selectResellerPalette');
+            if (selPalette) selPalette.value = palette;
+
+            // Live preview al cambiar selectores en el wizard
+            if (selTheme) {
+              selTheme.addEventListener('change', (e) => {
+                document.body.setAttribute('data-theme-mode', e.target.value);
+              });
+            }
+            if (selPalette) {
+              selPalette.addEventListener('change', (e) => {
+                document.body.setAttribute('data-palette', e.target.value);
+              });
+            }
 
             if (shopWa) {
               const cleanWa = shopWa.replace(/[^0-9]/g, '');
@@ -3567,11 +3612,15 @@
             const apiKey = document.getElementById('inputResellerApiKey').value;
             const margin = document.getElementById('inputResellerProfitMargin').value;
             const footerDesc = document.getElementById('inputResellerFooterDesc').value;
+            const themeMode = document.getElementById('selectResellerThemeMode').value;
+            const palette = document.getElementById('selectResellerPalette').value;
 
             localStorage.setItem('mup_reseller_shop_name', shopName);
             localStorage.setItem('mup_reseller_shop_badge', shopBadge);
             localStorage.setItem('mup_reseller_shop_wa', shopWa);
             localStorage.setItem('mup_reseller_footer_desc', footerDesc);
+            localStorage.setItem('mup_reseller_theme_mode', themeMode);
+            localStorage.setItem('mup_reseller_palette', palette);
 
             try {
               const res = await fetch('/api/modules/apiConnection/config', {

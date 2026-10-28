@@ -441,10 +441,10 @@ function checkPersistedSession() {
     btnWhatsappBot.classList.add('hidden');
     if (btnUserProfile) btnUserProfile.classList.add('hidden');
     
-    // Always show 0 credits when outside of session
+    // Hide credits badge when outside session (No ghost balance)
     globalApiCreditRaw = 0;
-    creditsBalanceText.textContent = 'Créditos: $0.00 MXN';
-    creditsBadgeContainer.classList.remove('hidden');
+    creditsBalanceText.textContent = '';
+    creditsBadgeContainer.classList.add('hidden');
     
     const ssc = document.getElementById('serverSwitchContainer');
     if (ssc) ssc.classList.remove('hidden');
@@ -499,8 +499,8 @@ window.checkPersistedSession = checkPersistedSession;
 async function updateAccountCredits() {
   if (!authToken) {
     globalApiCreditRaw = 0;
-    creditsBalanceText.textContent = 'Créditos: $0.00 MXN';
-    creditsBadgeContainer.classList.remove('hidden');
+    creditsBalanceText.textContent = '';
+    creditsBadgeContainer.classList.add('hidden');
     return;
   }
   try {
