@@ -3001,113 +3001,76 @@
     </div>
   </div>
 
-  <!-- FOOTER PRO MAX CON INFO DE SERVICIO, GITHUB, DHRU Y REDES SOCIALES -->
+  <!-- FOOTER DINÁMICO & PERSONALIZABLE PARA LA TIENDA DEL RESELLER -->
   <footer class="app-footer" style="background: linear-gradient(180deg, rgba(15, 23, 42, 0.4) 0%, rgba(10, 15, 30, 0.95) 100%); border-top: 1px solid rgba(255, 255, 255, 0.08); padding: 3rem 1.5rem 2rem; margin-top: 3.5rem; text-align: left;">
     <div style="max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 2.5rem; margin-bottom: 2.5rem;">
       
-      <!-- Columna 1: Marca y Propósito -->
+      <!-- Columna 1: Marca y Propósito de la Tienda -->
       <div style="display: flex; flex-direction: column; gap: 12px;">
         <div style="display: flex; align-items: center; gap: 10px;">
-          <img src="favicon.png" alt="MegaUnlockPhone Logo" style="height: 42px; width: 42px; border-radius: 50%; object-fit: cover; border: 2px solid #38bdf8; box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);">
-          <span style="font-weight: 800; font-size: 1.25rem; letter-spacing: -0.5px; background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">MegaUnlockPhone</span>
+          <img id="footerShopLogoImg" src="favicon.png" alt="Logo" style="height: 42px; width: 42px; border-radius: 50%; object-fit: cover; border: 2px solid #38bdf8; box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);">
+          <span id="footerShopTitle" style="font-weight: 800; font-size: 1.25rem; letter-spacing: -0.5px; background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Mi Tienda Digital</span>
         </div>
-        <p style="font-size: 0.85rem; line-height: 1.6; color: var(--text-secondary); margin: 0;">
-          Plataforma mayorista líder de desbloqueos remotos por IMEI, créditos de servidor, herramientas de servicio técnico, licencias digitales y streaming. Arquitectura redundante de alta disponibilidad.
+        <p id="footerShopDescription" style="font-size: 0.85rem; line-height: 1.6; color: var(--text-secondary); margin: 0;">
+          Tu portal de confianza para liberaciones de red por IMEI, licencias de software técnico y cuentas de entretenimiento. Entregas rápidas y seguras.
         </p>
         <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
           <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 9999px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399; font-size: 0.72rem; font-weight: 700;">
-            <span style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981;"></span> SISTEMA OPERATIVO 24/7
+            <span style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981;"></span> SERVICIOS ACTIVOS 24/7
           </span>
           <span style="padding: 4px 10px; border-radius: 9999px; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.25); color: #38bdf8; font-size: 0.72rem; font-weight: 700;">
-            v2.0 CLOUD
+            PORTAL OFICIAL
           </span>
         </div>
       </div>
 
-      <!-- Columna 2: Tecnología & DHRU Fusion API -->
+      <!-- Columna 2: Garantía & Seguridad -->
       <div style="display: flex; flex-direction: column; gap: 12px;">
         <h4 style="margin: 0; font-size: 0.95rem; color: #f1f5f9; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px;">
-          <i data-lucide="cpu" style="width: 16px; height: 16px; color: #38bdf8;"></i> Integración DHRU Fusion
+          <i data-lucide="shield-check" style="width: 16px; height: 16px; color: #38bdf8;"></i> Garantía &amp; Procesamiento
         </h4>
         <p style="font-size: 0.85rem; line-height: 1.6; color: var(--text-secondary); margin: 0;">
-          Potenciado con el protocolo oficial <strong>DHRU Fusion API</strong>. Conexión directa y balanceo de carga multidistribuidor:
+          Procesamiento automatizado de órdenes directo con servidores de red y garantía de devolución automática en caso de pedidos no soportados.
         </p>
         <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; font-size: 0.82rem; color: #cbd5e1;">
           <li style="display: flex; align-items: center; gap: 8px;">
-            <i data-lucide="zap" style="width: 14px; height: 14px; color: #facc15;"></i>
-            <span><strong>⚡ MEGA-SERVER:</strong> Servidor Principal Activo</span>
-          </li>
-          <li style="display: flex; align-items: center; gap: 8px; opacity: 0.6;">
-            <i data-lucide="shield-alert" style="width: 14px; height: 14px; color: #94a3b8;"></i>
-            <span style="text-decoration: line-through; color: #94a3b8;"><strong>🛡 ALPHA-SERVER:</strong> No disponible actualmente</span>
+            <i data-lucide="check" style="width: 14px; height: 14px; color: #10b981;"></i>
+            <span>Verificación instantánea de IMEI</span>
           </li>
           <li style="display: flex; align-items: center; gap: 8px;">
-            <i data-lucide="globe" style="width: 14px; height: 14px; color: #a855f7;"></i>
-            <span><strong>🔱 OMEGA-SERVER:</strong> Gateway Internacional</span>
+            <i data-lucide="check" style="width: 14px; height: 14px; color: #10b981;"></i>
+            <span>Reembolso 100% garantizado en rechazos</span>
           </li>
         </ul>
-        <a href="/api/v1/docs" target="_blank" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; color: #38bdf8; font-weight: 600; text-decoration: underline; margin-top: 4px;">
-          <i data-lucide="book-open" style="width: 14px; height: 14px;"></i> Documentación API para Resellers (/api/v1/docs)
-        </a>
       </div>
 
-      <!-- Columna 3: Código Abierto & GitHub -->
+      <!-- Columna 3: Atención y Soporte Directo -->
       <div style="display: flex; flex-direction: column; gap: 12px;">
         <h4 style="margin: 0; font-size: 0.95rem; color: #f1f5f9; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px;">
-          <i data-lucide="github" style="width: 16px; height: 16px; color: #cbd5e1;"></i> Repositorio &amp; Código
+          <i data-lucide="headphones" style="width: 16px; height: 16px; color: #10b981;"></i> Atención a Clientes
         </h4>
         <p style="font-size: 0.85rem; line-height: 1.6; color: var(--text-secondary); margin: 0;">
-          Proyecto de código abierto mantenido por desarrolladores para la comunidad de técnicos y mayoristas de telefonía móvil.
+          ¿Tienes dudas sobre un servicio o requieres asistencia personalizada? Contáctanos:
         </p>
         <div style="display: flex; flex-direction: column; gap: 8px;">
-          <a href="https://github.com/mega067/MegaUnlockPhone" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; gap: 10px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.1); padding: 8px 12px; border-radius: 8px; color: #f1f5f9; text-decoration: none; font-size: 0.85rem; transition: all 0.2s ease;">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" style="flex-shrink: 0;"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-            <div style="display: flex; flex-direction: column; overflow: hidden;">
-              <strong style="font-size: 0.85rem; color: #fff;">mega067/MegaUnlockPhone</strong>
-              <span style="font-size: 0.72rem; color: #94a3b8;">Repositorio Oficial GitHub (Open Source)</span>
-            </div>
-          </a>
-          <a href="https://github.com/mega067" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; gap: 8px; color: #94a3b8; font-size: 0.82rem; text-decoration: none; padding: 2px 4px;">
-            <i data-lucide="user" style="width: 14px; height: 14px;"></i> Perfil del Desarrollador: <strong>@mega067</strong>
-          </a>
-        </div>
-      </div>
-
-      <!-- Columna 4: Contacto, Redes & Soporte -->
-      <div style="display: flex; flex-direction: column; gap: 12px;">
-        <h4 style="margin: 0; font-size: 0.95rem; color: #f1f5f9; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px;">
-          <i data-lucide="headphones" style="width: 16px; height: 16px; color: #10b981;"></i> Soporte &amp; Redes Sociales
-        </h4>
-        <p style="font-size: 0.85rem; line-height: 1.6; color: var(--text-secondary); margin: 0;">
-          Atención a clientes y activación de distribuidores:
-        </p>
-        <div style="display: flex; flex-direction: column; gap: 8px;">
-          <a href="https://wa.me/522216936720" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; gap: 8px; color: #34d399; font-size: 0.85rem; text-decoration: none; font-weight: 600;">
-            <i data-lucide="message-circle" style="width: 16px; height: 16px;"></i> WhatsApp Soporte: +52 221 693 6720
-          </a>
-          <a href="https://wa.me/527831475482?text=hola" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; gap: 8px; color: #60a5fa; font-size: 0.85rem; text-decoration: none;">
-            <i data-lucide="bot" style="width: 16px; height: 16px;"></i> Bot Asistente Automático: +52 783 147 5482
-          </a>
-          <a href="https://www.facebook.com/share/1DjDKeofvo/" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; gap: 8px; color: #93c5fd; font-size: 0.85rem; text-decoration: none; font-weight: 600;">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg> Facebook Oficial: MegaUnlockPhone
+          <a id="footerWaLink" href="https://wa.me/" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; gap: 8px; color: #34d399; font-size: 0.85rem; text-decoration: none; font-weight: 600;">
+            <i data-lucide="message-circle" style="width: 16px; height: 16px;"></i> <span id="footerWaText">WhatsApp Soporte</span>
           </a>
           <span style="font-size: 0.78rem; color: #94a3b8; display: flex; align-items: center; gap: 6px; margin-top: 2px;">
-            <i data-lucide="map-pin" style="width: 14px; height: 14px; color: #f87171;"></i> México &bull; Cobertura en toda Latinoamérica
+            <i data-lucide="clock" style="width: 14px; height: 14px; color: #38bdf8;"></i> Horario de Atención: Lunes a Domingo
           </span>
         </div>
       </div>
 
     </div>
 
-    <!-- Barra Inferior de Copyright & Términos -->
+    <!-- Barra Inferior de Copyright -->
     <div style="max-width: 1200px; margin: 0 auto; padding-top: 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.05); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; font-size: 0.8rem; color: #64748b;">
       <div>
-        &copy; 2026 <strong>MegaUnlockPhone</strong>. Todos los derechos reservados.
+        &copy; 2026 <strong id="footerCopyrightName">Mi Tienda</strong>. Todos los derechos reservados.
       </div>
       <div style="display: flex; gap: 16px; flex-wrap: wrap;">
-        <span>Servicios por IMEI &bull; Licencias Digitales &bull; Streaming</span>
-        <a href="https://github.com/mega067/MegaUnlockPhone" target="_blank" rel="noopener noreferrer" style="color: #64748b; text-decoration: underline;">GitHub</a>
-        <a href="/digital-pass" style="color: #64748b; text-decoration: underline;">Portal DigitalPass</a>
+        <span>Servicios por IMEI &bull; Herramientas &bull; Licencias Digitales</span>
       </div>
     </div>
   </footer>
@@ -3293,41 +3256,205 @@
       </svg>
     </a>
 
-    <!-- Modal Asistente de Configuración de Tienda & Módulos para el Reseller -->
-    <div class="modal-overlay hidden" id="resellerModulesModal" style="z-index: 999999; display: none; align-items: center; justify-content: center; backdrop-filter: blur(8px); background: rgba(0,0,0,0.8);">
-      <div style="background: #111827; border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 16px; width: 95%; max-width: 600px; padding: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); max-height: 90vh; overflow-y: auto;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px;">
-          <h3 style="color: #fff; font-size: 1.25rem; font-weight: 700; display: flex; align-items: center; gap: 8px;">
-            <span>⚙️</span> Mi Tienda & Ajustes del Reseller
-          </h3>
-          <button type="button" id="btnCloseResellerModules" style="background: transparent; border: none; font-size: 1.5rem; color: #94a3b8; cursor: pointer;">&times;</button>
+    <!-- ASISTENTE DE INSTALACIÓN COMPLETO TIPO OS (SETUP WIZARD / SISTEMA OPERATIVO) -->
+    <div class="modal-overlay hidden" id="resellerModulesModal" style="z-index: 999999; display: none; position: fixed; inset: 0; width: 100vw; height: 100vh; background: radial-gradient(circle at top right, #0f172a 0%, #070a0f 100%); overflow-y: auto; padding: 2rem 1rem; box-sizing: border-box;">
+      <div style="max-width: 1000px; margin: 0 auto; background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 24px; padding: 2.5rem; box-shadow: 0 30px 80px rgba(0,0,0,0.85); backdrop-filter: blur(16px);">
+        
+        <!-- OS Wizard Window Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1.5rem; margin-bottom: 2rem;">
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <div style="display: flex; gap: 8px;">
+              <span style="width: 14px; height: 14px; border-radius: 50%; background: #ef4444; display: inline-block;"></span>
+              <span style="width: 14px; height: 14px; border-radius: 50%; background: #f59e0b; display: inline-block;"></span>
+              <span style="width: 14px; height: 14px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+            </div>
+            <div>
+              <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); padding: 2px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; color: #38bdf8;">
+                <span>🚀</span> INSTALADOR DE SISTEMA WEB &bull; RESELLER OS v1.0
+              </div>
+              <h2 id="wizardMainTitle" style="color: #fff; font-size: 1.65rem; font-weight: 800; margin: 6px 0 0 0; letter-spacing: -0.5px;">Instalación y Puesta en Marcha de tu Tienda</h2>
+            </div>
+          </div>
+          <button type="button" id="btnCloseResellerModules" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); font-size: 1.25rem; color: #94a3b8; cursor: pointer; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">&times;</button>
         </div>
 
-        <form id="resellerSettingsForm" style="display: flex; flex-direction: column; gap: 16px;">
-          <div style="display: flex; flex-direction: column; gap: 6px;">
-            <label style="color: #38bdf8; font-weight: 600; font-size: 0.9rem;">Nombre Comercial de tu Tienda</label>
-            <input type="text" id="inputResellerShopName" placeholder="Ej. GSM Express México" style="background: #0b0f17; border: 1px solid rgba(255,255,255,0.15); padding: 12px; border-radius: 8px; color: #fff;" required>
+        <form id="resellerSettingsForm" style="display: flex; flex-direction: column; gap: 28px;">
+          <!-- PASO 1: Identidad Visual y Logo Propio -->
+          <div style="background: rgba(255,255,255,0.025); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 16px; padding: 1.75rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem;">
+              <h4 style="color: #38bdf8; font-size: 1.15rem; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 10px;">
+                <span>🎨</span> 1. Identidad de Marca & Logo Propio
+              </h4>
+              <span style="font-size: 0.78rem; color: #94a3b8; background: rgba(0,0,0,0.4); padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">100% White-Label</span>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px;">
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+                <label style="color: #cbd5e1; font-weight: 600; font-size: 0.88rem;">Nombre Comercial de tu Tienda</label>
+                <input type="text" id="inputResellerShopName" placeholder="Ej. GSM Express México" style="background: #090e17; border: 1px solid rgba(255,255,255,0.15); padding: 12px 14px; border-radius: 10px; color: #fff; font-size: 0.95rem;" required>
+                <small style="color: #64748b; font-size: 0.75rem;">Aparecerá en la pestaña del navegador, encabezado, login y copyright.</small>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+                <label style="color: #cbd5e1; font-weight: 600; font-size: 0.88rem;">Eslogan o Distintivo</label>
+                <input type="text" id="inputResellerShopBadge" placeholder="Ej. Centro de Liberaciones y Licencias" style="background: #090e17; border: 1px solid rgba(255,255,255,0.15); padding: 12px 14px; border-radius: 10px; color: #fff; font-size: 0.95rem;">
+                <small style="color: #64748b; font-size: 0.75rem;">Texto debajo del nombre en la cabecera.</small>
+              </div>
+            </div>
+
+            <!-- Selector de Logo y Preview -->
+            <div style="margin-top: 1.25rem; display: flex; align-items: center; gap: 24px; flex-wrap: wrap; background: rgba(0,0,0,0.3); border: 1px dashed rgba(56, 189, 248, 0.3); border-radius: 12px; padding: 1.25rem;">
+              <div style="width: 80px; height: 80px; border-radius: 50%; border: 3px solid #38bdf8; overflow: hidden; background: #070a0f; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 15px rgba(56, 189, 248, 0.35);">
+                <img id="wizardLogoPreview" src="favicon.png" alt="Preview Logo" style="width: 100%; height: 100%; object-fit: cover;">
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 8px; flex: 1;">
+                <label style="color: #f1f5f9; font-weight: 700; font-size: 0.9rem;">Subir Logo de tu Tienda (PNG, JPG, SVG o WebP)</label>
+                <input type="file" id="inputResellerLogoFile" accept="image/png, image/jpeg, image/webp, image/svg+xml" style="color: #94a3b8; font-size: 0.85rem; background: #090e17; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.12);">
+                <small style="color: #38bdf8; font-size: 0.78rem;">✓ Este logo reemplaza cualquier imagen por defecto en la cabecera, ventana de login y pie de página.</small>
+              </div>
+            </div>
           </div>
 
-          <div style="display: flex; flex-direction: column; gap: 6px;">
-            <label style="color: #38bdf8; font-weight: 600; font-size: 0.9rem;">WhatsApp de Atención a Clientes (con código de país ej. 52221xxxxxxx)</label>
-            <input type="text" id="inputResellerShopWhatsapp" placeholder="52221xxxxxxx" style="background: #0b0f17; border: 1px solid rgba(255,255,255,0.15); padding: 12px; border-radius: 8px; color: #fff;">
+          <!-- PASO 2: Canales de Atención & Personalización del Footer -->
+          <div style="background: rgba(255,255,255,0.025); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 16px; padding: 1.75rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem;">
+              <h4 style="color: #34d399; font-size: 1.15rem; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 10px;">
+                <span>📞</span> 2. Canales de Atención &amp; Pie de Página (Footer)
+              </h4>
+              <span style="font-size: 0.78rem; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.3);">Sin información ajena</span>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px;">
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+                <label style="color: #cbd5e1; font-weight: 600; font-size: 0.88rem;">Tu WhatsApp de Ventas / Soporte (con código país)</label>
+                <input type="text" id="inputResellerShopWhatsapp" placeholder="Ej. 52221xxxxxxx" style="background: #090e17; border: 1px solid rgba(255,255,255,0.15); padding: 12px 14px; border-radius: 10px; color: #fff; font-size: 0.95rem;">
+                <small style="color: #64748b; font-size: 0.75rem;">Configurará el botón flotante verde y el enlace directo de ayuda en el footer.</small>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+                <label style="color: #cbd5e1; font-weight: 600; font-size: 0.88rem;">Descripción o Mensaje de Confianza del Footer</label>
+                <input type="text" id="inputResellerFooterDesc" placeholder="Tu portal de confianza para liberaciones por IMEI y licencias digitales..." style="background: #090e17; border: 1px solid rgba(255,255,255,0.15); padding: 12px 14px; border-radius: 10px; color: #fff; font-size: 0.95rem;">
+                <small style="color: #64748b; font-size: 0.75rem;">Texto visible en la primera columna del pie de página.</small>
+              </div>
+            </div>
           </div>
 
-          <div style="display: flex; flex-direction: column; gap: 6px;">
-            <label style="color: #38bdf8; font-weight: 600; font-size: 0.9rem;">Tu API Key de MegaUnlockPhone (Proveedor Oficial)</label>
-            <input type="password" id="inputResellerApiKey" placeholder="mup_live_..." style="background: #0b0f17; border: 1px solid rgba(255,255,255,0.15); padding: 12px; border-radius: 8px; color: #fff;" required>
-            <small style="color: #94a3b8; font-size: 0.78rem;">Obtenida en tu panel principal de MegaUnlockPhone en la sección API Bridge.</small>
+          <!-- PASO 3: Conexión API y Margen de Ganancia -->
+          <div style="background: rgba(255,255,255,0.025); border: 1px solid rgba(168, 85, 247, 0.2); border-radius: 16px; padding: 1.75rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem;">
+              <h4 style="color: #c084fc; font-size: 1.15rem; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 10px;">
+                <span>🔑</span> 3. Conexión de API &amp; Margen de Ganancia
+              </h4>
+              <span style="font-size: 0.78rem; color: #c084fc; background: rgba(168, 85, 247, 0.1); padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(168, 85, 247, 0.3);">Enlace Mayorista Seguro</span>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px;">
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+                <label style="color: #cbd5e1; font-weight: 600; font-size: 0.88rem;">Tu API Key de Proveedor Mayorista</label>
+                <input type="password" id="inputResellerApiKey" placeholder="mup_live_..." style="background: #090e17; border: 1px solid rgba(255,255,255,0.15); padding: 12px 14px; border-radius: 10px; color: #fff; font-size: 0.95rem;" required>
+                <small style="color: #94a3b8; font-size: 0.75rem;">Pega tu llave de autenticación API obtenida en tu panel mayorista.</small>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+                <label style="color: #cbd5e1; font-weight: 600; font-size: 0.88rem;">Margen de Ganancia Global sobre el Catálogo (%)</label>
+                <input type="number" id="inputResellerProfitMargin" min="0" max="100" value="15" style="background: #090e17; border: 1px solid rgba(255,255,255,0.15); padding: 12px 14px; border-radius: 10px; color: #fff; font-size: 0.95rem;" required>
+                <small style="color: #94a3b8; font-size: 0.75rem;">Ejemplo: 15% sumará automáticamente 15% sobre tus precios de costo.</small>
+              </div>
+            </div>
           </div>
 
-          <div style="display: flex; flex-direction: column; gap: 6px;">
-            <label style="color: #38bdf8; font-weight: 600; font-size: 0.9rem;">Tu Margen de Ganancia Global (%)</label>
-            <input type="number" id="inputResellerProfitMargin" min="0" max="100" value="15" style="background: #0b0f17; border: 1px solid rgba(255,255,255,0.15); padding: 12px; border-radius: 8px; color: #fff;" required>
-            <small style="color: #94a3b8; font-size: 0.78rem;">Porcentaje adicional sumado automáticamente a tus precios mayoristas.</small>
+          <!-- PASO 4: Descarga y Activación de Módulos (Ecosistema Reseller) -->
+          <div style="background: rgba(255,255,255,0.025); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 16px; padding: 1.75rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+              <h4 style="color: #fbbf24; font-size: 1.15rem; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 10px;">
+                <span>📦</span> 4. Módulos &amp; Extensiones Disponibles
+              </h4>
+              <span style="font-size: 0.78rem; color: #fbbf24; background: rgba(245, 158, 11, 0.1); padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.3);">Repositorios Oficiales</span>
+            </div>
+            <p style="color: #94a3b8; font-size: 0.88rem; margin: 0 0 1.25rem 0;">Puedes descargar e integrar módulos adicionales según las necesidades de tu negocio:</p>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">
+              <!-- Mod 1: WhatsApp Bot -->
+              <div style="background: #090e17; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px;">
+                <div>
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                    <strong style="color: #34d399; font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">
+                      <span>🤖</span> Bot de WhatsApp (Baileys)
+                    </strong>
+                    <span style="font-size: 0.72rem; padding: 2px 8px; border-radius: 10px; background: rgba(52, 211, 153, 0.15); color: #34d399; font-weight: 700;">Disponible</span>
+                  </div>
+                  <p style="color: #94a3b8; font-size: 0.8rem; margin: 0; line-height: 1.4;">
+                    Atención automatizada por WhatsApp, consulta de saldos y avisos de órdenes completadas.
+                  </p>
+                </div>
+                <div style="display: flex; gap: 8px; margin-top: 4px;">
+                  <a href="https://github.com/mega067/mod-whatsapp-bot" target="_blank" rel="noopener noreferrer" style="flex: 1; text-align: center; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; font-size: 0.78rem; padding: 8px; border-radius: 6px; text-decoration: none; font-weight: 600;">Ver Repo</a>
+                  <a href="https://github.com/mega067/mod-whatsapp-bot/archive/refs/heads/main.zip" style="flex: 1; text-align: center; background: rgba(52, 211, 153, 0.15); border: 1px solid rgba(52, 211, 153, 0.3); color: #34d399; font-size: 0.78rem; padding: 8px; border-radius: 6px; text-decoration: none; font-weight: 700;">Descargar .ZIP</a>
+                </div>
+              </div>
+
+              <!-- Mod 2: Finanzas & Gastos -->
+              <div style="background: #090e17; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px;">
+                <div>
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                    <strong style="color: #38bdf8; font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">
+                      <span>💰</span> Finanzas &amp; Caja
+                    </strong>
+                    <span style="font-size: 0.72rem; padding: 2px 8px; border-radius: 10px; background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-weight: 700;">Integrado</span>
+                  </div>
+                  <p style="color: #94a3b8; font-size: 0.8rem; margin: 0; line-height: 1.4;">
+                    Control de ingresos, gastos operativos, reinversión y ganancias netas por cliente.
+                  </p>
+                </div>
+                <div style="display: flex; gap: 8px; margin-top: 4px;">
+                  <a href="https://github.com/mega067/mod-finanzas" target="_blank" rel="noopener noreferrer" style="flex: 1; text-align: center; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; font-size: 0.78rem; padding: 8px; border-radius: 6px; text-decoration: none; font-weight: 600;">Ver Repo</a>
+                  <a href="https://github.com/mega067/mod-finanzas/archive/refs/heads/main.zip" style="flex: 1; text-align: center; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; font-size: 0.78rem; padding: 8px; border-radius: 6px; text-decoration: none; font-weight: 700;">Descargar .ZIP</a>
+                </div>
+              </div>
+
+              <!-- Mod 3: Recargas SPEI & Bancarias -->
+              <div style="background: #090e17; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px;">
+                <div>
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                    <strong style="color: #f472b6; font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">
+                      <span>🏦</span> Recargas SPEI / Banco
+                    </strong>
+                    <span style="font-size: 0.72rem; padding: 2px 8px; border-radius: 10px; background: rgba(244, 114, 182, 0.15); color: #f472b6; font-weight: 700;">Disponible</span>
+                  </div>
+                  <p style="color: #94a3b8; font-size: 0.8rem; margin: 0; line-height: 1.4;">
+                    Recepción de comprobantes, CLABE bancaria de tu negocio y acreditación a cuentas.
+                  </p>
+                </div>
+                <div style="display: flex; gap: 8px; margin-top: 4px;">
+                  <a href="https://github.com/mega067/mod-recharge-spei" target="_blank" rel="noopener noreferrer" style="flex: 1; text-align: center; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; font-size: 0.78rem; padding: 8px; border-radius: 6px; text-decoration: none; font-weight: 600;">Ver Repo</a>
+                  <a href="https://github.com/mega067/mod-recharge-spei/archive/refs/heads/main.zip" style="flex: 1; text-align: center; background: rgba(244, 114, 182, 0.15); border: 1px solid rgba(244, 114, 182, 0.3); color: #f472b6; font-size: 0.78rem; padding: 8px; border-radius: 6px; text-decoration: none; font-weight: 700;">Descargar .ZIP</a>
+                </div>
+              </div>
+
+              <!-- Mod 4: DigitalPass -->
+              <div style="background: #090e17; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px;">
+                <div>
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                    <strong style="color: #a855f7; font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">
+                      <span>✨</span> DigitalPass (Streaming/IA)
+                    </strong>
+                    <span style="font-size: 0.72rem; padding: 2px 8px; border-radius: 10px; background: rgba(168, 85, 247, 0.15); color: #a855f7; font-weight: 700;">Integrado</span>
+                  </div>
+                  <p style="color: #94a3b8; font-size: 0.8rem; margin: 0; line-height: 1.4;">
+                    Portal de venta de cuentas digitales, streaming, licencias y utilidades técnicas.
+                  </p>
+                </div>
+                <div style="display: flex; gap: 8px; margin-top: 4px;">
+                  <a href="https://github.com/mega067/mod-digitalpass" target="_blank" rel="noopener noreferrer" style="flex: 1; text-align: center; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; font-size: 0.78rem; padding: 8px; border-radius: 6px; text-decoration: none; font-weight: 600;">Ver Repo</a>
+                  <a href="https://github.com/mega067/mod-digitalpass/archive/refs/heads/main.zip" style="flex: 1; text-align: center; background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.3); color: #a855f7; font-size: 0.78rem; padding: 8px; border-radius: 6px; text-decoration: none; font-weight: 700;">Descargar .ZIP</a>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <button type="submit" style="background: linear-gradient(90deg, #38bdf8, #2563eb); color: #fff; font-weight: 700; padding: 12px; border-radius: 8px; border: none; cursor: pointer; margin-top: 10px; font-size: 1rem;">
-            Guardar y Aplicar Cambios
+          <!-- Botón de Finalización -->
+          <button type="submit" style="background: linear-gradient(90deg, #38bdf8 0%, #2563eb 100%); color: #fff; font-weight: 800; font-size: 1.15rem; padding: 18px; border-radius: 14px; border: none; cursor: pointer; box-shadow: 0 4px 25px rgba(56, 189, 248, 0.45); display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 10px; transition: transform 0.2s, box-shadow 0.2s;">
+            <span>🚀</span> Guardar y Lanzar Mi Tienda en Línea
           </button>
         </form>
       </div>
@@ -3340,6 +3467,24 @@
         const modal = document.getElementById('resellerModulesModal');
         const btnClose = document.getElementById('btnCloseResellerModules');
         const form = document.getElementById('resellerSettingsForm');
+        const logoInput = document.getElementById('inputResellerLogoFile');
+        const logoPreview = document.getElementById('wizardLogoPreview');
+
+        // Manejo de carga de logo local (Base64)
+        if (logoInput) {
+          logoInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+              const reader = new FileReader();
+              reader.onload = (evt) => {
+                const base64 = evt.target.result;
+                if (logoPreview) logoPreview.src = base64;
+                localStorage.setItem('mup_reseller_logo_url', base64);
+              };
+              reader.readAsDataURL(file);
+            }
+          });
+        }
 
         // Cargar configuración guardada
         async function loadResellerConfig() {
@@ -3350,42 +3495,67 @@
             const isConfigured = Boolean(cfg.apiKey && cfg.apiKey.trim() !== '');
 
             const shopName = localStorage.getItem('mup_reseller_shop_name') || 'Mi Tienda Digital';
+            const shopBadge = localStorage.getItem('mup_reseller_shop_badge') || 'Portal Oficial';
             const shopWa = localStorage.getItem('mup_reseller_shop_wa') || '';
             const customLogo = localStorage.getItem('mup_reseller_logo_url') || '';
+            const footerDesc = localStorage.getItem('mup_reseller_footer_desc') || '';
             
-            document.title = shopName + ' - Portal Oficial';
+            document.title = shopName + ' - ' + shopBadge;
             const titleEl = document.getElementById('resellerShopTitle');
             if (titleEl) titleEl.textContent = shopName;
+            const badgeEl = document.getElementById('resellerShopBadge');
+            if (badgeEl) badgeEl.textContent = shopBadge;
+
             const loginTitleEl = document.getElementById('loginShopTitle');
             if (loginTitleEl) loginTitleEl.textContent = 'Bienvenido a ' + shopName;
+
+            const footerTitleEl = document.getElementById('footerShopTitle');
+            if (footerTitleEl) footerTitleEl.textContent = shopName;
+            const footerCopyEl = document.getElementById('footerCopyrightName');
+            if (footerCopyEl) footerCopyEl.textContent = shopName;
+
+            if (footerDesc) {
+              const descEl = document.getElementById('footerShopDescription');
+              if (descEl) descEl.textContent = footerDesc;
+            }
 
             if (customLogo) {
               const headLogo = document.getElementById('resellerShopLogoImg');
               if (headLogo) headLogo.src = customLogo;
               const loginLogo = document.getElementById('loginShopLogoImg');
               if (loginLogo) loginLogo.src = customLogo;
+              const footLogo = document.getElementById('footerShopLogoImg');
+              if (footLogo) footLogo.src = customLogo;
+              if (logoPreview) logoPreview.src = customLogo;
             }
 
             document.getElementById('inputResellerShopName').value = shopName;
+            document.getElementById('inputResellerShopBadge').value = shopBadge;
             document.getElementById('inputResellerShopWhatsapp').value = shopWa;
             document.getElementById('inputResellerApiKey').value = cfg.apiKey || '';
             document.getElementById('inputResellerProfitMargin').value = cfg.profitMargin || 15;
+            if (footerDesc) document.getElementById('inputResellerFooterDesc').value = footerDesc;
 
             if (shopWa) {
+              const cleanWa = shopWa.replace(/[^0-9]/g, '');
               const waBtn = document.getElementById('resellerFloatingWhatsapp');
               if (waBtn) {
-                waBtn.href = 'https://wa.me/' + shopWa.replace(/[^0-9]/g, '');
+                waBtn.href = 'https://wa.me/' + cleanWa;
                 waBtn.style.display = 'flex';
               }
+              const footWaLink = document.getElementById('footerWaLink');
+              if (footWaLink) footWaLink.href = 'https://wa.me/' + cleanWa;
+              const footWaText = document.getElementById('footerWaText');
+              if (footWaText) footWaText.textContent = 'WhatsApp Soporte: +' + cleanWa;
             }
 
-            // MODO SETUP INICIAL: Si la tienda no está configurada, abrir el Wizard de configuración obligatoriamente
+            // MODO SETUP INICIAL TIPO SO: Si no está configurada, abrir asistente a pantalla completa
             if (!isConfigured) {
-              modal.style.display = 'flex';
+              modal.style.display = 'block';
               modal.classList.remove('hidden');
               if (btnClose) btnClose.style.display = 'none';
-              const modalTitle = modal.querySelector('h3');
-              if (modalTitle) modalTitle.innerHTML = '<span>🚀</span> Configuración Inicial de tu Tienda';
+              const mainTitle = document.getElementById('wizardMainTitle');
+              if (mainTitle) mainTitle.textContent = 'Instalación y Puesta en Marcha de tu Tienda';
             }
           } catch(e) {
             console.error('Error cargando módulos del reseller:', e);
@@ -3394,9 +3564,9 @@
 
         if (btnOpen && modal) {
           btnOpen.addEventListener('click', () => {
-            modal.style.display = 'flex';
+            modal.style.display = 'block';
             modal.classList.remove('hidden');
-            if (btnClose) btnClose.style.display = 'block';
+            if (btnClose) btnClose.style.display = 'flex';
           });
         }
 
@@ -3411,12 +3581,16 @@
           form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const shopName = document.getElementById('inputResellerShopName').value;
+            const shopBadge = document.getElementById('inputResellerShopBadge').value;
             const shopWa = document.getElementById('inputResellerShopWhatsapp').value;
             const apiKey = document.getElementById('inputResellerApiKey').value;
             const margin = document.getElementById('inputResellerProfitMargin').value;
+            const footerDesc = document.getElementById('inputResellerFooterDesc').value;
 
             localStorage.setItem('mup_reseller_shop_name', shopName);
+            localStorage.setItem('mup_reseller_shop_badge', shopBadge);
             localStorage.setItem('mup_reseller_shop_wa', shopWa);
+            localStorage.setItem('mup_reseller_footer_desc', footerDesc);
 
             try {
               const res = await fetch('/api/modules/apiConnection/config', {
@@ -3430,7 +3604,7 @@
               });
               const resData = await res.json();
               if (resData.success) {
-                alert('¡Configuración guardada exitosamente! Tu tienda está conectada.');
+                alert('¡Instalación completada con éxito! Tu tienda está en línea.');
                 modal.style.display = 'none';
                 modal.classList.add('hidden');
                 window.location.reload();
@@ -3444,7 +3618,5 @@
         loadResellerConfig();
       });
     </script>
-      </svg>
-    </a>
   </body>
 </html>
