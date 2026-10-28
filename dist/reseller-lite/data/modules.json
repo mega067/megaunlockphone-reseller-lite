@@ -1,0 +1,56 @@
+{
+  "apiConnection": {
+    "id": "apiConnection",
+    "title": "Conexión MegaUnlockPhone API",
+    "description": "Enlace criptográfico exclusivo con el servidor maestro.",
+    "enabled": true,
+    "locked": true,
+    "status": "configured",
+    "setupStep": 1,
+    "config": {
+      "apiKey": "mup_live_demo777888999aaaabbbbccccdd",
+      "username": "demo_reseller",
+      "profitMargin": 15,
+      "defaultServer": "1"
+    }
+  },
+  "whatsappBot": {
+    "id": "whatsappBot",
+    "title": "Demonio de WhatsApp & Notificaciones",
+    "description": "Atención automática de clientes, tickets y avisos de órdenes.",
+    "enabled": false,
+    "status": "not_configured",
+    "setupStep": 2,
+    "config": {
+      "botName": "Mi Bot Reseller",
+      "adminPhone": "",
+      "welcomeMessage": "¡Hola! Bienvenido a nuestro servicio de desbloqueos y cuentas.",
+      "autoNotifyOrders": true
+    }
+  },
+  "finanzas": {
+    "id": "finanzas",
+    "title": "Motor Financiero & Ganancias",
+    "description": "Control de caja, ingresos, deudores y balance neto.",
+    "enabled": true,
+    "status": "active",
+    "setupStep": 3,
+    "config": {
+      "currency": "MXN",
+      "trackReinvest": true,
+      "defaultPaymentMethod": "Transferencia"
+    }
+  },
+  "digitalPass": {
+    "id": "digitalPass",
+    "title": "Portal DigitalPass (Streaming & IA)",
+    "description": "Venta de licencias, cuentas de entretenimiento y servicios digitales.",
+    "enabled": true,
+    "status": "active",
+    "setupStep": 4,
+    "config": {
+      "showStreaming": true,
+      "showAiTools": true
+    }
+  }
+}
